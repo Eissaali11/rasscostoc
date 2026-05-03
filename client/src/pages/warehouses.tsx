@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,7 +70,8 @@ export default function WarehousesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: itemTypes } = useActiveItemTypes();
+  const queryClient = useQueryClient();
+  const { data: itemTypes, refetch: refetchItemTypes } = useActiveItemTypes();
 
   const { data: allWarehouses = [], isLoading } = useQuery<WarehouseData[]>({
     queryKey: user?.role === 'admin' ? ["/api/warehouses"] : ["/api/supervisor/warehouses"],
@@ -85,7 +86,15 @@ export default function WarehousesPage() {
   const handleExportWarehouses = async () => {
     if (warehouses && warehouses.length > 0) {
       try {
-        await exportWarehousesToExcel({ warehouses, itemTypes });
+        // Always fetch the latest item types so any newly added types appear in Excel headers
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            typeof query.queryKey[0] === "string" &&
+            query.queryKey[0].startsWith("/api/item-types"),
+        });
+        const fresh = await refetchItemTypes();
+        const latestItemTypes = fresh.data ?? itemTypes;
+        await exportWarehousesToExcel({ warehouses, itemTypes: latestItemTypes });
         toast({ 
           title: "تم تصدير التقرير بنجاح", 
           description: "تم حفظ ملف Excel في جهازك" 

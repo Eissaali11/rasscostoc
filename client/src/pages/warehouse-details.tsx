@@ -50,7 +50,7 @@ export default function WarehouseDetailsPage() {
     enabled: !!warehouseId,
   });
 
-  const { data: itemTypesData } = useActiveItemTypes();
+  const { data: itemTypesData, refetch: refetchItemTypes } = useActiveItemTypes();
 
   const { data: inventoryEntriesData } = useQuery<InventoryEntry[]>({
     queryKey: ["/api/warehouses", warehouseId, "inventory-entries"],
@@ -142,7 +142,16 @@ export default function WarehouseDetailsPage() {
   const handleExportToExcel = async () => {
     if (!warehouse) return;
 
-    const transfersData = buildTransferExportRows(allTransfers, itemTypesData);
+    // Always fetch the latest item types so any newly added types appear in Excel
+    await queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === "string" &&
+        query.queryKey[0].startsWith("/api/item-types"),
+    });
+    const fresh = await refetchItemTypes();
+    const latestItemTypes = fresh.data ?? itemTypesData;
+
+    const transfersData = buildTransferExportRows(allTransfers, latestItemTypes);
 
     await exportSingleWarehouseToExcel({
       warehouse: {
@@ -151,7 +160,7 @@ export default function WarehouseDetailsPage() {
         description: warehouse.description
       },
       inventory: warehouse.inventory,
-      itemTypes: itemTypesData?.filter(t => t.isActive && t.isVisible),
+      itemTypes: latestItemTypes?.filter(t => t.isActive && t.isVisible),
       entries: inventoryEntriesData,
       transfers: transfersData
     });
