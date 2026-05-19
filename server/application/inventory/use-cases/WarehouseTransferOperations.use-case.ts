@@ -45,6 +45,8 @@ const legacyCreateSchema = z.object({
   zainSimPackagingType: z.enum(['box', 'unit']).optional(),
   lebara: z.number().optional(),
   lebaraPackagingType: z.enum(['box', 'unit']).optional(),
+  lebaraSim: z.number().optional(),
+  lebaraSimPackagingType: z.enum(['box', 'unit']).optional(),
 });
 
 export type CreateWarehouseTransfersInput = {
@@ -87,6 +89,7 @@ export function normalizeCreateWarehouseTransferPayload(payload: unknown): Omit<
     'stcSim',
     'zainSim',
     'lebara',
+    'lebaraSim',
   ] as const;
 
   for (const itemType of itemTypes) {

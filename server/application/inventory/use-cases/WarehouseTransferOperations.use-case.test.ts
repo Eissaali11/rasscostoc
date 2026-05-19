@@ -72,7 +72,7 @@ class InMemoryWarehouseTransferOperationsRepository implements IWarehouseTransfe
 
   async acceptWarehouseTransfer(transferId: string, performedBy?: string): Promise<WarehouseTransfer> {
     this.acceptCalls.push({ transferId, performedBy });
-    return transferFixture({ id: transferId, status: 'approved', performedBy: performedBy || 'admin-1' });
+    return transferFixture({ id: transferId, status: 'accepted', performedBy: performedBy || 'admin-1' });
   }
 
   async rejectWarehouseTransfer(transferId: string, reason: string, performedBy?: string): Promise<WarehouseTransfer> {
@@ -119,6 +119,19 @@ describe('WarehouseTransferOperations use cases', () => {
     ]);
   });
 
+  it('normalizes legacy lebaraSim transfer payload', () => {
+    const result = normalizeCreateWarehouseTransferPayload({
+      warehouseId: 'w-1',
+      technicianId: 'tech-1',
+      lebaraSim: 4,
+      lebaraSimPackagingType: 'unit',
+    });
+
+    expect(result.items).toEqual([
+      { itemType: 'lebaraSim', packagingType: 'unit', quantity: 4 },
+    ]);
+  });
+
   it('creates multiple transfers and returns expected summary', async () => {
     const repository = new InMemoryWarehouseTransferOperationsRepository();
     const useCase = new CreateWarehouseTransfersUseCase(repository);
@@ -157,7 +170,7 @@ describe('WarehouseTransferOperations use cases', () => {
 
     const result = await useCase.execute({ transferId: 't-accept' });
 
-    expect(result.status).toBe('approved');
+    expect(result.status).toBe('accepted');
     expect(repository.acceptCalls).toEqual([{ transferId: 't-accept', performedBy: undefined }]);
   });
 
