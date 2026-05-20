@@ -179,20 +179,20 @@ export default function TransferFromWarehouseModal({
 
   const transferMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const transferData: any = {
+      const items = Object.entries(itemTransfers)
+        .filter(([_, transfer]) => transfer.selected && transfer.quantity > 0)
+        .map(([itemKey, transfer]) => ({
+          itemType: itemKey,
+          packagingType: transfer.packagingType,
+          quantity: transfer.quantity,
+        }));
+
+      return await apiRequest("POST", "/api/warehouse-transfers", {
         warehouseId,
         technicianId: data.technicianId,
         notes: data.notes,
-      };
-
-      Object.entries(itemTransfers).forEach(([itemKey, transfer]) => {
-        if (transfer.selected && transfer.quantity > 0) {
-          transferData[itemKey] = transfer.quantity;
-          transferData[`${itemKey}PackagingType`] = transfer.packagingType;
-        }
+        items,
       });
-
-      return await apiRequest("POST", "/api/warehouse-transfers", transferData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouses", warehouseId] });
