@@ -129,7 +129,7 @@ class InMemoryWarehouseBatchRepository implements IWarehouseTransferBatchReposit
       transferIds.includes(transfer.id)
         ? {
             ...transfer,
-            status: 'approved',
+            status: 'accepted',
           }
         : transfer
     );
@@ -273,7 +273,7 @@ describe('AcceptWarehouseTransferBatchUseCase', () => {
     const result = await useCase.execute(['t1', 't2']);
 
     expect(result).toHaveLength(2);
-    expect(result.every((transfer) => transfer.status === 'approved')).toBe(true);
+    expect(result.every((transfer) => transfer.status === 'accepted')).toBe(true);
     expect(movementRepo.movements).toHaveLength(2);
   });
 

@@ -116,7 +116,7 @@ describe('WarehouseTransferBatchRejection use cases', () => {
       execute: async () => [],
     } as IInventoryUnitOfWork);
     vi.spyOn(acceptBatchUseCase, 'execute').mockResolvedValue([
-      transferFixture({ id: 't-9', status: 'approved' }),
+      transferFixture({ id: 't-9', status: 'accepted' }),
     ]);
     const useCase = new AcceptWarehouseTransferByRequestIdUseCase(
       new FakeInventoryUnitOfWork({
@@ -130,7 +130,7 @@ describe('WarehouseTransferBatchRejection use cases', () => {
     const result = await useCase.execute({ requestId: 'req-9' });
 
     expect(result.id).toBe('t-9');
-    expect(result.status).toBe('approved');
+    expect(result.status).toBe('accepted');
     expect(repository.findLatestTransferIdByRequestId).toHaveBeenCalledWith('req-9');
     expect(acceptBatchUseCase.execute).toHaveBeenCalledWith(['t-9']);
   });

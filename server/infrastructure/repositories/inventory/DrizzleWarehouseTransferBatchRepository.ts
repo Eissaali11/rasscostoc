@@ -296,7 +296,7 @@ export class DrizzleWarehouseTransferBatchRepository {
     return this.executor
       .update(warehouseTransfers)
       .set({
-        status: 'approved',
+        status: 'accepted',
         respondedAt: new Date(),
       })
       .where(and(inArray(warehouseTransfers.id, transferIds), eq(warehouseTransfers.status, 'pending')))

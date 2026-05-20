@@ -1,5 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { getDatabase } from "../database/connection";
+import { DrizzleInventoryUnitOfWork } from "./inventory/DrizzleInventoryUnitOfWork";
+import { processWarehouseTransferBatch } from "../../application/inventory/use-cases/warehouse-transfer-batch.processor";
 import {
   warehouseTransfers,
   warehouseInventory,
@@ -106,33 +108,15 @@ export class TransferExecutionRepository implements ITransferExecutionRepository
   }
 
   async acceptWarehouseTransfer(transferId: string, performedBy?: string): Promise<WarehouseTransfer> {
-    return await this.db.transaction(async (tx) => {
-      const [transfer] = await tx
-        .select()
-        .from(warehouseTransfers)
-        .where(eq(warehouseTransfers.id, transferId));
+    const [transfer] = await new DrizzleInventoryUnitOfWork().execute(async (context) =>
+      processWarehouseTransferBatch(context, [transferId])
+    );
 
-      if (!transfer) {
-        throw new Error('Transfer not found');
-      }
+    if (!transfer) {
+      throw new Error('Transfer not found');
+    }
 
-      if (transfer.status !== 'pending') {
-        throw new Error(`Transfer already ${transfer.status}`);
-      }
-
-      // Update transfer status
-      const [updatedTransfer] = await tx
-        .update(warehouseTransfers)
-        .set({
-          status: 'approved',
-          performedBy: performedBy || transfer.performedBy,
-          respondedAt: new Date(),
-        })
-        .where(eq(warehouseTransfers.id, transferId))
-        .returning();
-
-      return updatedTransfer;
-    });
+    return transfer;
   }
 
   async rejectWarehouseTransfer(transferId: string, reason: string, performedBy?: string): Promise<WarehouseTransfer> {

@@ -94,6 +94,7 @@ export class TransferQueryRepository implements ITransferQueryRepository {
 
     return transfers.map(transfer => ({
       ...transfer,
+      status: transfer.status === 'approved' ? 'accepted' : transfer.status,
       itemNameAr: itemNameMap[transfer.itemType] || transfer.itemType,
       warehouseName: transfer.warehouseName || undefined,
       technicianName: transfer.technicianName || undefined,

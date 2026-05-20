@@ -99,7 +99,7 @@ export class SystemAnalyticsService {
       .select({
         totalTransfers: count(warehouseTransfers.id),
         pendingTransfers: sql<number>`COUNT(CASE WHEN ${warehouseTransfers.status} = 'pending' THEN 1 END)`,
-        acceptedTransfers: sql<number>`COUNT(CASE WHEN ${warehouseTransfers.status} = 'accepted' THEN 1 END)`,
+        acceptedTransfers: sql<number>`COUNT(CASE WHEN ${warehouseTransfers.status} = 'accepted' OR ${warehouseTransfers.status} = 'approved' THEN 1 END)`,
         rejectedTransfers: sql<number>`COUNT(CASE WHEN ${warehouseTransfers.status} = 'rejected' THEN 1 END)`
       })
       .from(warehouseTransfers);

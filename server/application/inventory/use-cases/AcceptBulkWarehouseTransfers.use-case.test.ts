@@ -123,7 +123,7 @@ class InMemoryWarehouseBatchRepository implements IWarehouseTransferBatchReposit
 
   async markTransfersApproved(transferIds: string[]): Promise<WarehouseTransfer[]> {
     this.transfers = this.transfers.map((transfer) =>
-      transferIds.includes(transfer.id) ? { ...transfer, status: 'approved' } : transfer
+      transferIds.includes(transfer.id) ? { ...transfer, status: 'accepted' } : transfer
     );
 
     return this.transfers
@@ -245,7 +245,7 @@ describe('AcceptBulkWarehouseTransfersUseCase', () => {
       [
         transferFixture({ id: 't1', warehouseId: 'w1', quantity: 2, status: 'pending' }),
         transferFixture({ id: 't2', warehouseId: 'w2', quantity: 1, status: 'pending' }),
-        transferFixture({ id: 't3', warehouseId: 'w1', quantity: 3, status: 'approved' }),
+        transferFixture({ id: 't3', warehouseId: 'w1', quantity: 3, status: 'accepted' }),
       ],
       new Map([
         ['w1:n950', { boxes: 10, units: 0, source: 'entries' }],
@@ -270,7 +270,7 @@ describe('AcceptBulkWarehouseTransfersUseCase', () => {
 
   it('returns empty array when criteria resolves no pending transfers', async () => {
     const repository = new InMemoryWarehouseBatchRepository(
-      [transferFixture({ id: 't1', status: 'approved' })],
+      [transferFixture({ id: 't1', status: 'accepted' })],
       new Map([['w1:n950', { boxes: 10, units: 0, source: 'entries' }]]),
       new Map([['tech1:n950', { boxes: 1, units: 0 }]])
     );
