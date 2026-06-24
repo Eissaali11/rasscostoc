@@ -401,65 +401,95 @@ export class DevicesService {
       updatedDevice = device;
     }
 
-    // If status transitioned to approved, increment inventory
-    if (status === "approved" && existingDevice.status !== "approved" && updatedDevice.itemTypeId) {
-      const technicianId = updatedDevice.technicianId;
-      const itemTypeId = updatedDevice.itemTypeId;
-      const isFixed = (updatedDevice as any).inventoryType === "moving" ? false : true;
+    // If status transitioned to approved, create a withdrawn device entry and increment inventory
+    if (status === "approved" && existingDevice.status !== "approved") {
+      // Get technician user details
+      const [technician] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, updatedDevice.technicianId))
+        .limit(1);
 
-      if (isFixed) {
-        const [existingStock] = await db
-          .select()
-          .from(technicianFixedInventoryEntries)
-          .where(and(
-            eq(technicianFixedInventoryEntries.technicianId, technicianId),
-            eq(technicianFixedInventoryEntries.itemTypeId, itemTypeId)
-          ));
+      if (technician) {
+        await db.insert(withdrawnDevices).values({
+          city: technician.city || "غير محدد",
+          technicianName: technician.fullName || "غير محدد",
+          terminalId: updatedDevice.terminalId || "غير محدد",
+          serialNumber: updatedDevice.serialNumber,
+          battery: updatedDevice.battery ? "جيدة" : "سيئة",
+          chargerCable: updatedDevice.chargerCable ? "موجود" : "غير موجود",
+          chargerHead: updatedDevice.chargerHead ? "موجود" : "غير موجود",
+          hasSim: updatedDevice.hasSim ? "نعم" : "لا",
+          simCardType: updatedDevice.simCardType || "غير محدد",
+          damagePart: updatedDevice.damagePart || "سليم",
+          notes: adminNotes || null,
+          createdBy: approvedBy,
+          regionId: updatedDevice.regionId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
 
-        if (existingStock) {
-          await db
-            .update(technicianFixedInventoryEntries)
-            .set({
-              units: existingStock.units + 1,
-              updatedAt: new Date()
-            })
-            .where(eq(technicianFixedInventoryEntries.id, existingStock.id));
+      // Increment inventory if itemTypeId exists
+      if (updatedDevice.itemTypeId) {
+        const technicianId = updatedDevice.technicianId;
+        const itemTypeId = updatedDevice.itemTypeId;
+        const isFixed = (updatedDevice as any).inventoryType === "moving" ? false : true;
+
+        if (isFixed) {
+          const [existingStock] = await db
+            .select()
+            .from(technicianFixedInventoryEntries)
+            .where(and(
+              eq(technicianFixedInventoryEntries.technicianId, technicianId),
+              eq(technicianFixedInventoryEntries.itemTypeId, itemTypeId)
+            ));
+
+          if (existingStock) {
+            await db
+              .update(technicianFixedInventoryEntries)
+              .set({
+                units: existingStock.units + 1,
+                updatedAt: new Date()
+              })
+              .where(eq(technicianFixedInventoryEntries.id, existingStock.id));
+          } else {
+            await db
+              .insert(technicianFixedInventoryEntries)
+              .values({
+                technicianId,
+                itemTypeId,
+                boxes: 0,
+                units: 1
+              });
+          }
         } else {
-          await db
-            .insert(technicianFixedInventoryEntries)
-            .values({
-              technicianId,
-              itemTypeId,
-              boxes: 0,
-              units: 1
-            });
-        }
-      } else {
-        const [existingStock] = await db
-          .select()
-          .from(technicianMovingInventoryEntries)
-          .where(and(
-            eq(technicianMovingInventoryEntries.technicianId, technicianId),
-            eq(technicianMovingInventoryEntries.itemTypeId, itemTypeId)
-          ));
+          const [existingStock] = await db
+            .select()
+            .from(technicianMovingInventoryEntries)
+            .where(and(
+              eq(technicianMovingInventoryEntries.technicianId, technicianId),
+              eq(technicianMovingInventoryEntries.itemTypeId, itemTypeId)
+            ));
 
-        if (existingStock) {
-          await db
-            .update(technicianMovingInventoryEntries)
-            .set({
-              units: existingStock.units + 1,
-              updatedAt: new Date()
-            })
-            .where(eq(technicianMovingInventoryEntries.id, existingStock.id));
-        } else {
-          await db
-            .insert(technicianMovingInventoryEntries)
-            .values({
-              technicianId,
-              itemTypeId,
-              boxes: 0,
-              units: 1
-            });
+          if (existingStock) {
+            await db
+              .update(technicianMovingInventoryEntries)
+              .set({
+                units: existingStock.units + 1,
+                updatedAt: new Date()
+              })
+              .where(eq(technicianMovingInventoryEntries.id, existingStock.id));
+          } else {
+            await db
+              .insert(technicianMovingInventoryEntries)
+              .values({
+                technicianId,
+                itemTypeId,
+                boxes: 0,
+                units: 1
+              });
+          }
         }
       }
     }
