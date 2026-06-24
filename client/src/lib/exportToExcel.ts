@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { InventoryItemWithStatus, SystemLog } from '@shared/schema';
+import { InventoryItemWithStatus, SystemLog, WithdrawnDevice } from '@shared/schema';
 import { legacyFieldMapping, getInventoryValueForItemType, type ItemType, type InventoryEntry } from '@/hooks/use-item-types';
 
 interface ExportData {
@@ -1798,4 +1798,135 @@ export const exportSingleWarehouseToExcel = async (data: SingleWarehouseExportDa
     const fileName = `سجل_عمليات_النظام_${new Date().toISOString().split('T')[0]}.xlsx`;
     saveAs(blob, fileName);
   };
+
+export const exportWithdrawnDevicesToExcel = async ({
+  devices,
+  companyName = 'نظام إدارة المخزون - RAS Saudi',
+  reportTitle = 'تقرير الأجهزة المسحوبة والمرتجعة الشامل'
+}: {
+  devices: (WithdrawnDevice & { regionName?: string })[];
+  companyName?: string;
+  reportTitle?: string;
+}) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('الأجهزة المرتجعة');
+
+  worksheet.views = [{ rightToLeft: true }];
+
+  const currentDate = new Date().toLocaleDateString('ar-SA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  worksheet.mergeCells('A1:N1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = companyName;
+  titleCell.font = { size: 18, bold: true, color: { argb: 'FF18B2B0' } };
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  worksheet.mergeCells('A2:N2');
+  const subtitleCell = worksheet.getCell('A2');
+  subtitleCell.value = reportTitle;
+  subtitleCell.font = { size: 14, bold: true };
+  subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  worksheet.mergeCells('A3:N3');
+  const dateCell = worksheet.getCell('A3');
+  dateCell.value = `تاريخ التقرير: ${currentDate}`;
+  dateCell.font = { size: 11 };
+  dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  worksheet.addRow([]); // Blank spacer
+
+  // Header row
+  const headerRow = worksheet.addRow([
+    '#',
+    'المدينة (City)',
+    'اسم الفني (Tec Name)',
+    'رقم الجهاز (Terminal ID)',
+    'الرقم التسلسلي للجهاز (serial number)',
+    'البطارية سليمة ام لا (Battery)',
+    'كابل الشاحن (charger cable)',
+    'رأس الشاحن (charger head)',
+    'وجود شريحة الاتصال في الجهاز (SIM)',
+    'نوع شريحة الاتصال (SIM card type)',
+    'يرجى ذكر الضرر ان وجد (damage part)',
+    'ملاحظات (Notes)',
+    '',
+    'إجمالي عدد الأجهزة (Total Terminal ID)'
+  ]);
+
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+  headerRow.height = 35;
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF18B2B0' }
+    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+    };
+  });
+
+  // Populate data rows
+  devices.forEach((device, index) => {
+    const dataRow = worksheet.addRow([
+      index + 1,
+      device.city || '-',
+      device.technicianName || '-',
+      device.terminalId || '-',
+      device.serialNumber || '-',
+      device.battery || '-',
+      device.chargerCable || '-',
+      device.chargerHead || '-',
+      device.hasSim || '-',
+      device.simCardType || '-',
+      device.damagePart || '-',
+      device.notes || '-',
+      '',
+      index === 0 ? devices.length : ''
+    ]);
+
+    dataRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    dataRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      };
+    });
+  });
+
+  // Apply column widths
+  worksheet.columns = [
+    { width: 6 },   // #
+    { width: 15 },  // City
+    { width: 22 },  // Tec Name
+    { width: 18 },  // Terminal ID
+    { width: 24 },  // serial number
+    { width: 22 },  // Battery
+    { width: 18 },  // charger cable
+    { width: 18 },  // charger head
+    { width: 28 },  // SIM
+    { width: 20 },  // SIM card type
+    { width: 28 },  // damage part
+    { width: 30 },  // Notes
+    { width: 5 },   // Blank spacer
+    { width: 28 }   // Total Terminal ID
+  ];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const fileName = `تقرير_الأجهزة_المسحوبة_${new Date().toISOString().split('T')[0]}.xlsx`;
+  saveAs(blob, fileName);
+};
 

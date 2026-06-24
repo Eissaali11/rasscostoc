@@ -15,6 +15,7 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleEllipsis,
+  Download,
   FileClock,
   MapPin,
   Search,
@@ -24,6 +25,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { WithdrawnDevice } from "@shared/schema";
+import { exportWithdrawnDevicesToExcel } from "@/lib/exportToExcel";
 
 type DeviceReviewStatus = "pending" | "approved" | "rejected";
 
@@ -189,6 +191,15 @@ export default function WithdrawnDevicesAllPage() {
                 <p className="text-sm text-slate-400">سجل كامل بجميع عمليات الأجهزة المرتجعة الموافق عليها والمرفوضة بالتفصيل</p>
               </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              onClick={() => exportWithdrawnDevicesToExcel({ devices: filteredDevices })}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            >
+              <Download className="h-4 w-4 ml-2" />
+              تصدير إكسل Excel
+            </Button>
           </div>
         </div>
 
