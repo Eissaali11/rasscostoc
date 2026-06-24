@@ -21,6 +21,7 @@ import {
   Settings,
   ShieldAlert,
   Smartphone,
+  Trash2,
   User,
   Wrench,
   XCircle,
@@ -227,6 +228,34 @@ export default function WithdrawnDeviceDetailsPage() {
       });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!device?.id) throw new Error("الجهاز غير متاح");
+      await apiRequest("DELETE", `/api/withdrawn-devices/${device.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/withdrawn-devices"] });
+      toast({
+        title: "تم الحذف بنجاح",
+        description: "تم حذف سجل العملية المرتجعة بالكامل.",
+      });
+      setLocation("/withdrawn-devices");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "تعذر الحذف",
+        description: error?.message || "حدث خطأ أثناء محاولة الحذف",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    if (window.confirm("هل أنت متأكد من حذف هذه العملية المرتجعة نهائياً؟")) {
+      deleteMutation.mutate();
+    }
+  };
 
   if (isLoading) {
     return (
@@ -499,6 +528,17 @@ export default function WithdrawnDeviceDetailsPage() {
           <p className="text-sm text-slate-400 hidden lg:block">{statusUi.footerHint}</p>
 
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending || decisionMutation.isPending}
+              className="border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20"
+            >
+              <Trash2 className="h-4 w-4 ml-1" />
+              حذف العملية
+            </Button>
+
             <Button
               type="button"
               variant="outline"
