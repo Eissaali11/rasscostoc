@@ -25,7 +25,8 @@ import {
   Sparkles,
   TrendingUp,
   Filter,
-  Home
+  Home,
+  FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -34,15 +35,17 @@ import { useLocation } from "wouter";
 
 interface ReceivedDevice {
   id: string;
-  terminalId: string;
+  terminalId: string | null;
   serialNumber: string;
+  itemTypeId: string | null;
+  inventoryType: 'fixed' | 'moving';
   battery: boolean;
   chargerCable: boolean;
   chargerHead: boolean;
   hasSim: boolean;
   simCardType: string | null;
-  damagePart: string;
-  status: 'pending' | 'approved' | 'rejected';
+  damagePart: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'delivered';
   technicianId: string;
   supervisorId: string | null;
   regionId: string | null;
@@ -71,6 +74,10 @@ export default function ReceivedDevicesReview() {
 
   const { data: devices = [], isLoading } = useQuery<ReceivedDevice[]>({
     queryKey: ["/api/received-devices"],
+  });
+
+  const { data: itemTypes = [] } = useQuery<any[]>({
+    queryKey: ["/api/item-types"],
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -124,9 +131,30 @@ export default function ReceivedDevicesReview() {
     return foundUser?.fullName || foundUser?.username || `مندوب #${userId.slice(0, 8)}`;
   };
 
+  const getItemName = (itemTypeId: string | null, terminalId: string | null) => {
+    if (itemTypeId) {
+      const it = itemTypes.find(t => t.id === itemTypeId);
+      if (it) return it.nameAr;
+    }
+    return terminalId || "منتج غير معروف";
+  };
+
+  const getCategoryIcon = (itemTypeId: string | null) => {
+    if (itemTypeId) {
+      const it = itemTypes.find(t => t.id === itemTypeId);
+      if (it) {
+        if (it.category === 'papers') return <FileText className="w-5 h-5 text-[#18B2B0]" />;
+        if (it.category === 'sim') return <CreditCard className="w-5 h-5 text-[#18B2B0]" />;
+        if (it.category === 'accessories') return <Package className="w-5 h-5 text-[#18B2B0]" />;
+      }
+    }
+    return <Smartphone className="w-5 h-5 text-[#18B2B0]" />;
+  };
+
   const pendingDevices = devices.filter(d => d.status === 'pending');
   const approvedDevices = devices.filter(d => d.status === 'approved');
   const rejectedDevices = devices.filter(d => d.status === 'rejected');
+  const deliveredDevices = devices.filter(d => d.status === 'delivered');
 
   const renderDeviceCard = (device: ReceivedDevice) => {
     const statusConfig = {
@@ -148,10 +176,17 @@ export default function ReceivedDevicesReview() {
         text: "مرفوض",
         badgeClass: "bg-red-500/20 text-red-300 border-red-500/30"
       },
+      delivered: { 
+        color: "from-teal-500/20 to-cyan-500/20 border-teal-500/30", 
+        icon: Sparkles, 
+        text: "تم التسليم",
+        badgeClass: "bg-teal-500/20 text-teal-300 border-teal-500/30"
+      },
     };
 
-    const status = statusConfig[device.status];
+    const status = statusConfig[device.status] || statusConfig.pending;
     const StatusIcon = status.icon;
+    const isDevice = !device.itemTypeId || itemTypes.find(t => t.id === device.itemTypeId)?.category === 'devices';
 
     return (
       <motion.div
@@ -173,15 +208,23 @@ export default function ReceivedDevicesReview() {
               <div className="space-y-3">
                 <CardTitle className="flex items-center gap-2 text-xl text-slate-100">
                   <div className="p-2 bg-gradient-to-br from-[#18B2B0]/20 to-cyan-500/20 rounded-lg">
-                    <Smartphone className="w-5 h-5 text-[#18B2B0]" />
+                    {getCategoryIcon(device.itemTypeId)}
                   </div>
-                  {device.terminalId}
+                  {getItemName(device.itemTypeId, device.terminalId)}
                 </CardTitle>
-                <p className="flex items-center gap-2 text-sm text-slate-400">
-                  <span className="font-mono px-2 py-1 bg-slate-800/50 rounded">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                  <span className="font-mono px-2 py-0.5 bg-slate-800/50 rounded">
                     {device.serialNumber}
                   </span>
-                </p>
+                  {device.terminalId && (
+                    <span className="text-xs px-2 py-0.5 bg-slate-800/50 rounded text-slate-400">
+                      Terminal: {device.terminalId}
+                    </span>
+                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${device.inventoryType === 'moving' ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-blue-500/15 text-blue-300 border border-blue-500/20'}`}>
+                    {device.inventoryType === 'moving' ? 'مخزون متحرك' : 'مخزون ثابت'}
+                  </span>
+                </div>
               </div>
               <Badge className={`${status.badgeClass} flex items-center gap-1.5 px-3 py-1.5 border`}>
                 <StatusIcon className="w-4 h-4" />
@@ -203,39 +246,41 @@ export default function ReceivedDevicesReview() {
               </div>
             </div>
 
-            {/* Accessories */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                <Package className="w-4 h-4 text-[#18B2B0]" />
-                الملحقات:
+            {/* Accessories (Only for devices) */}
+            {isDevice && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                  <Package className="w-4 h-4 text-[#18B2B0]" />
+                  الملحقات:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {device.battery && (
+                    <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
+                      <Battery className="w-3 h-3 ml-1" />
+                      بطارية
+                    </Badge>
+                  )}
+                  {device.chargerCable && (
+                    <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
+                      <Cable className="w-3 h-3 ml-1" />
+                      كابل
+                    </Badge>
+                  )}
+                  {device.chargerHead && (
+                    <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
+                      <Cable className="w-3 h-3 ml-1" />
+                      رأس
+                    </Badge>
+                  )}
+                  {device.hasSim && (
+                    <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
+                      <CreditCard className="w-3 h-3 ml-1" />
+                      {device.simCardType || 'SIM'}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {device.battery && (
-                  <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
-                    <Battery className="w-3 h-3 ml-1" />
-                    بطارية
-                  </Badge>
-                )}
-                {device.chargerCable && (
-                  <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
-                    <Cable className="w-3 h-3 ml-1" />
-                    كابل
-                  </Badge>
-                )}
-                {device.chargerHead && (
-                  <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
-                    <Cable className="w-3 h-3 ml-1" />
-                    رأس
-                  </Badge>
-                )}
-                {device.hasSim && (
-                  <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
-                    <CreditCard className="w-3 h-3 ml-1" />
-                    {device.simCardType || 'SIM'}
-                  </Badge>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Damage Info */}
             {device.damagePart && (
@@ -270,7 +315,7 @@ export default function ReceivedDevicesReview() {
             )}
 
             {/* Action Buttons */}
-            {device.status === 'pending' && user?.role === 'supervisor' && (
+            {device.status === 'pending' && (user?.role === 'supervisor' || user?.role === 'admin') && (
               <div className="flex gap-3 pt-4">
                 <Button
                   onClick={(e) => {
@@ -333,12 +378,12 @@ export default function ReceivedDevicesReview() {
               </div>
               <h1 className="text-5xl md:text-6xl font-bold">
                 <span className="bg-gradient-to-r from-[#18B2B0] via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                  مراجعة الأجهزة
+                  مراجعة الأجهزة والمواد
                 </span>
               </h1>
             </div>
             <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto">
-              راجع الأجهزة المستلمة واتخذ القرار المناسب
+              راجع الأجهزة والمواد المستلمة في المستودعات واتخذ القرار المناسب
             </p>
             
             {/* Back Button */}
@@ -364,7 +409,7 @@ export default function ReceivedDevicesReview() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="grid md:grid-cols-3 gap-6"
+            className="grid grid-cols-2 md:grid-cols-4 gap-6"
           >
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
@@ -401,6 +446,23 @@ export default function ReceivedDevicesReview() {
             </div>
 
             <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
+              <Card className="relative bg-slate-900/70 backdrop-blur-xl border-teal-500/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-teal-300 mb-1">تم تسليمها</p>
+                      <p className="text-4xl font-bold text-teal-100">{deliveredDevices.length}</p>
+                    </div>
+                    <div className="p-4 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-xl">
+                      <Sparkles className="w-10 h-10 text-teal-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
               <Card className="relative bg-slate-900/70 backdrop-blur-xl border-red-500/30">
                 <CardContent className="p-6">
@@ -425,7 +487,7 @@ export default function ReceivedDevicesReview() {
             transition={{ delay: 0.4 }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-14 bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 p-1">
+              <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 p-1">
                 <TabsTrigger 
                   value="pending" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#18B2B0] data-[state=active]:to-teal-600 data-[state=active]:text-white text-slate-400"
@@ -441,6 +503,14 @@ export default function ReceivedDevicesReview() {
                 >
                   <CheckCircle2 className="w-4 h-4 ml-2" />
                   موافق ({approvedDevices.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="delivered" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-cyan-600 data-[state=active]:text-white text-slate-400"
+                  data-testid="tab-delivered"
+                >
+                  <Sparkles className="w-4 h-4 ml-2" />
+                  تم التسليم ({deliveredDevices.length})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="rejected" 
@@ -493,6 +563,24 @@ export default function ReceivedDevicesReview() {
                 )}
               </TabsContent>
 
+              <TabsContent value="delivered" className="mt-8">
+                {deliveredDevices.length === 0 ? (
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-transparent rounded-2xl blur-xl" />
+                    <Card className="relative bg-slate-900/70 backdrop-blur-xl border-slate-700/50 p-16 text-center">
+                      <Sparkles className="w-20 h-20 mx-auto text-slate-600 mb-4" />
+                      <p className="text-2xl text-slate-400">لا توجد أجهزة مسلّمة بعد</p>
+                    </Card>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <AnimatePresence>
+                      {deliveredDevices.map(renderDeviceCard)}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </TabsContent>
+
               <TabsContent value="rejected" className="mt-8">
                 {rejectedDevices.length === 0 ? (
                   <div className="relative group">
@@ -534,7 +622,7 @@ export default function ReceivedDevicesReview() {
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               {selectedDevice && (
-                <>جهاز: {selectedDevice.terminalId} - {selectedDevice.serialNumber}</>
+                <>مادة: {getItemName(selectedDevice.itemTypeId, selectedDevice.terminalId)} - {selectedDevice.serialNumber}</>
               )}
             </DialogDescription>
           </DialogHeader>

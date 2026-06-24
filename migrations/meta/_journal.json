@@ -5,8 +5,43 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1770047240878,
-      "tag": "0000_glossy_hercules",
+      "when": 1782159739107,
+      "tag": "0000_fixed_daimon_hellstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782160689493,
+      "tag": "0001_overconfident_zemo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782163987379,
+      "tag": "0002_magenta_falcon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782167002041,
+      "tag": "0003_whole_hiroim",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782167114378,
+      "tag": "0004_clear_ultimatum",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782180396856,
+      "tag": "0005_colorful_shard",
       "breakpoints": true
     }
   ]

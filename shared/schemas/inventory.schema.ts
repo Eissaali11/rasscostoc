@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { itemTypes, regions } from "./catalog.schema";
@@ -17,7 +17,10 @@ export const inventoryItems = pgTable("inventory_items", {
   regionId: varchar("region_id").references(() => regions.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  inventoryItemsRegionIdx: index("inventory_items_region_idx").on(table.regionId),
+  inventoryItemsTypeIdx: index("inventory_items_type_idx").on(table.type),
+}));
 
 export const techniciansInventory = pgTable("technicians_inventory", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -48,7 +51,10 @@ export const techniciansInventory = pgTable("technicians_inventory", {
   regionId: varchar("region_id").references(() => regions.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  techInvCreatedByIdx: index("tech_inv_created_by_idx").on(table.createdBy),
+  techInvRegionIdx: index("tech_inv_region_idx").on(table.regionId),
+}));
 
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -58,7 +64,10 @@ export const transactions = pgTable("transactions", {
   quantity: integer("quantity").notNull(),
   reason: text("reason"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  transactionItemIdIdx: index("transactions_item_id_idx").on(table.itemId),
+  transactionUserIdIdx: index("transactions_user_id_idx").on(table.userId),
+}));
 
 export const withdrawnDevices = pgTable("withdrawn_devices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -77,14 +86,18 @@ export const withdrawnDevices = pgTable("withdrawn_devices", {
   regionId: varchar("region_id").references(() => regions.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  withdrawnCreatedByIdx: index("withdrawn_devices_created_by_idx").on(table.createdBy),
+  withdrawnRegionIdx: index("withdrawn_devices_region_idx").on(table.regionId),
+  withdrawnSerialIdx: index("withdrawn_devices_serial_idx").on(table.serialNumber),
+}));
 
 export const receivedDevices = pgTable("received_devices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   technicianId: varchar("technician_id").notNull().references(() => users.id),
   supervisorId: varchar("supervisor_id").references(() => users.id),
   itemTypeId: varchar("item_type_id").references(() => itemTypes.id),
-  terminalId: text("terminal_id").notNull(),
+  terminalId: text("terminal_id"),
   serialNumber: text("serial_number").notNull(),
   battery: boolean("battery").notNull().default(false),
   chargerCable: boolean("charger_cable").notNull().default(false),
@@ -93,13 +106,21 @@ export const receivedDevices = pgTable("received_devices", {
   simCardType: text("sim_card_type"),
   damagePart: text("damage_part").default(""),
   status: text("status").notNull().default("pending"),
+  inventoryType: text("inventory_type").notNull().default("fixed"),
   adminNotes: text("admin_notes"),
   approvedBy: varchar("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
   regionId: varchar("region_id").references(() => regions.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  receivedTechIdx: index("received_devices_tech_idx").on(table.technicianId),
+  receivedSupervisorIdx: index("received_devices_supervisor_idx").on(table.supervisorId),
+  receivedApprovedByIdx: index("received_devices_approved_by_idx").on(table.approvedBy),
+  receivedItemIdx: index("received_devices_item_type_idx").on(table.itemTypeId),
+  receivedRegionIdx: index("received_devices_region_idx").on(table.regionId),
+  receivedSerialIdx: index("received_devices_serial_idx").on(table.serialNumber),
+}));
 
 export const technicianFixedInventories = pgTable("technician_fixed_inventories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -128,7 +149,9 @@ export const technicianFixedInventories = pgTable("technician_fixed_inventories"
   criticalStockThreshold: integer("critical_stock_threshold").notNull().default(70),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  techFixedInvTechIdx: index("tech_fixed_inv_tech_idx").on(table.technicianId),
+}));
 
 export const stockMovements = pgTable("stock_movements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -142,7 +165,10 @@ export const stockMovements = pgTable("stock_movements", {
   performedBy: varchar("performed_by").notNull().references(() => users.id),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  stockMovTechIdx: index("stock_movements_tech_idx").on(table.technicianId),
+  stockMovPerfIdx: index("stock_movements_perf_idx").on(table.performedBy),
+}));
 
 export const technicianFixedInventoryEntries = pgTable("technician_fixed_inventory_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -151,7 +177,10 @@ export const technicianFixedInventoryEntries = pgTable("technician_fixed_invento
   boxes: integer("boxes").notNull().default(0),
   units: integer("units").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  fixedEntriesTechIdx: index("fixed_entries_tech_idx").on(table.technicianId),
+  fixedEntriesItemIdx: index("fixed_entries_item_idx").on(table.itemTypeId),
+}));
 
 export const technicianMovingInventoryEntries = pgTable("technician_moving_inventory_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -160,7 +189,10 @@ export const technicianMovingInventoryEntries = pgTable("technician_moving_inven
   boxes: integer("boxes").notNull().default(0),
   units: integer("units").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  movingEntriesTechIdx: index("moving_entries_tech_idx").on(table.technicianId),
+  movingEntriesItemIdx: index("moving_entries_item_idx").on(table.itemTypeId),
+}));
 
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
   id: true,

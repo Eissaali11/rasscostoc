@@ -1408,18 +1408,6 @@ export const exportTechnicianToExcel = async (data: TechnicianInventoryData) => 
   saveAs(blob, fileName);
 };
 
-interface ItemType {
-  id: string;
-  nameAr: string;
-  nameEn: string;
-  sortOrder: number;
-}
-
-interface InventoryEntry {
-  itemTypeId: string;
-  boxes: number;
-  units: number;
-}
 
 interface SingleWarehouseExportData {
   warehouse: {

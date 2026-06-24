@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth";
@@ -163,6 +164,7 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: itemTypes } = useActiveItemTypes();
+  const [, setLocation] = useLocation();
 
   const isAdminOrSupervisor = hasRoleOrAbove(user?.role || "", ROLES.SUPERVISOR);
   const isSupervisor = user?.role === ROLES.SUPERVISOR;
@@ -942,8 +944,11 @@ export default function NotificationsPage() {
                               return (
                                 <div
                                   key={device.id}
-                                  onClick={() => setReadNotificationIds((current) => Array.from(new Set([...current, cardId])))}
-                                  className={`rounded-xl border p-4 transition-all ${
+                                  onClick={() => {
+                                    setReadNotificationIds((current) => Array.from(new Set([...current, cardId])));
+                                    setLocation(`/received-devices/${device.id}`);
+                                  }}
+                                  className={`rounded-xl border p-4 cursor-pointer transition-all ${
                                     unread
                                       ? "border-cyan-400/40 bg-cyan-500/[0.06] border-r-4 border-r-cyan-400"
                                       : "border-slate-700/60 bg-slate-950/30 hover:bg-slate-900/40"
@@ -1002,7 +1007,7 @@ export default function NotificationsPage() {
                                     <Button
                                       onClick={(event) => {
                                         event.stopPropagation();
-                                        window.location.href = `/received-devices/${device.id}`;
+                                        setLocation(`/received-devices/${device.id}`);
                                       }}
                                       variant="outline"
                                       className="bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"

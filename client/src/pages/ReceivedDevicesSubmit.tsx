@@ -238,6 +238,7 @@ export default function ReceivedDevicesSubmit() {
                                 <div className="relative group">
                                   <Input
                                     {...field}
+                                    value={field.value ?? ""}
                                     placeholder="أدخل رقم التيرمينال"
                                     className="h-12 bg-slate-800/50 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-[#18B2B0] focus:ring-[#18B2B0]/20"
                                     data-testid="input-terminalId"

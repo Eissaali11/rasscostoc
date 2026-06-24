@@ -1,6 +1,7 @@
 export * from "./catalog.schema";
 export * from "./organization.schema";
 export * from "./inventory.schema";
+export * from "./inventory_v2.schema";
 export * from "./accounting.schema";
 export * from "./system.schema";
 export * from "./auth.schema";

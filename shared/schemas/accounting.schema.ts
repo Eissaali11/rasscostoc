@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   varchar,
+  index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -25,7 +26,9 @@ export const chartOfAccounts = pgTable("chart_of_accounts", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  parentIdIdx: index("coa_parent_id_idx").on(table.parentId),
+}));
 
 export const journalEntries = pgTable("journal_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -40,7 +43,11 @@ export const journalEntries = pgTable("journal_entries", {
   postedBy: varchar("posted_by").references(() => users.id),
   postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  createdByIdx: index("journal_entries_created_by_idx").on(table.createdBy),
+  postedByIdx: index("journal_entries_posted_by_idx").on(table.postedBy),
+  sourceIdx: index("journal_entries_source_idx").on(table.sourceType, table.sourceId),
+}));
 
 export const journalEntryLines = pgTable("journal_entry_lines", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -51,7 +58,11 @@ export const journalEntryLines = pgTable("journal_entry_lines", {
   description: text("description"),
   costCenter: text("cost_center"),
   regionId: varchar("region_id").references(() => regions.id),
-});
+}, (table) => ({
+  entryIdIdx: index("journal_entry_lines_entry_id_idx").on(table.entryId),
+  accountIdIdx: index("journal_entry_lines_account_id_idx").on(table.accountId),
+  regionIdIdx: index("journal_entry_lines_region_id_idx").on(table.regionId),
+}));
 
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -97,7 +108,12 @@ export const salesInvoices = pgTable("sales_invoices", {
   postedBy: varchar("posted_by").references(() => users.id),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  customerIdIdx: index("sales_invoices_customer_id_idx").on(table.customerId),
+  postedByIdx: index("sales_invoices_posted_by_idx").on(table.postedBy),
+  createdByIdx: index("sales_invoices_created_by_idx").on(table.createdBy),
+  issueDatetimeIdx: index("sales_invoices_issue_datetime_idx").on(table.issueDatetime),
+}));
 
 export const salesInvoiceLines = pgTable("sales_invoice_lines", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -114,7 +130,11 @@ export const salesInvoiceLines = pgTable("sales_invoice_lines", {
   sourceInventoryType: text("source_inventory_type"),
   qtyBeforeSale: doublePrecision("qty_before_sale"),
   qtyAfterSale: doublePrecision("qty_after_sale"),
-});
+}, (table) => ({
+  invoiceIdIdx: index("sales_invoice_lines_invoice_id_idx").on(table.invoiceId),
+  itemTypeIdIdx: index("sales_invoice_lines_item_type_id_idx").on(table.itemTypeId),
+  technicianIdIdx: index("sales_invoice_lines_technician_id_idx").on(table.technicianId),
+}));
 
 export const technicianSalesMetricsDaily = pgTable("technician_sales_metrics_daily", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -130,7 +150,11 @@ export const technicianSalesMetricsDaily = pgTable("technician_sales_metrics_dai
   avgSellingPrice: doublePrecision("avg_selling_price").notNull().default(0),
   lastSaleAt: timestamp("last_sale_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  techSalesMetricsTechIdx: index("tech_sales_metrics_tech_idx").on(table.technicianId),
+  techSalesMetricsRegionIdx: index("tech_sales_metrics_region_idx").on(table.regionId),
+  techSalesMetricsItemIdx: index("tech_sales_metrics_item_idx").on(table.itemTypeId),
+}));
 
 export const purchaseBills = pgTable("purchase_bills", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -149,7 +173,11 @@ export const purchaseBills = pgTable("purchase_bills", {
   postedBy: varchar("posted_by").references(() => users.id),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  supplierIdIdx: index("purchase_bills_supplier_id_idx").on(table.supplierId),
+  postedByIdx: index("purchase_bills_posted_by_idx").on(table.postedBy),
+  createdByIdx: index("purchase_bills_created_by_idx").on(table.createdBy),
+}));
 
 export const purchaseBillLines = pgTable("purchase_bill_lines", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -162,7 +190,10 @@ export const purchaseBillLines = pgTable("purchase_bill_lines", {
   taxCodeId: varchar("tax_code_id"),
   lineTotal: doublePrecision("line_total").notNull().default(0),
   warehouseId: varchar("warehouse_id"),
-});
+}, (table) => ({
+  billIdIdx: index("purchase_bill_lines_bill_id_idx").on(table.billId),
+  itemTypeIdIdx: index("purchase_bill_lines_item_type_id_idx").on(table.itemTypeId),
+}));
 
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -177,7 +208,10 @@ export const payments = pgTable("payments", {
   paymentType: text("payment_type").notNull().default("receipt"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  partyIdx: index("payments_party_idx").on(table.partyType, table.partyId),
+  createdByIdx: index("payments_created_by_idx").on(table.createdBy),
+}));
 
 export const paymentAllocations = pgTable("payment_allocations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -186,7 +220,10 @@ export const paymentAllocations = pgTable("payment_allocations", {
   documentId: varchar("document_id").notNull(),
   allocatedAmount: doublePrecision("allocated_amount").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  paymentIdIdx: index("payment_allocations_payment_id_idx").on(table.paymentId),
+  documentIdx: index("payment_allocations_document_idx").on(table.documentType, table.documentId),
+}));
 
 export const taxCodes = pgTable("tax_codes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -207,7 +244,10 @@ export const taxTransactions = pgTable("tax_transactions", {
   taxAmount: doublePrecision("tax_amount").notNull().default(0),
   direction: text("direction").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  taxCodeIdIdx: index("tax_transactions_tax_code_id_idx").on(table.taxCodeId),
+  sourceIdx: index("tax_transactions_source_idx").on(table.sourceType, table.sourceId),
+}));
 
 export const einvoiceDocuments = pgTable("einvoice_documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -227,7 +267,9 @@ export const einvoiceDocuments = pgTable("einvoice_documents", {
   errorCode: text("error_code"),
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  sourceIdx: index("einvoice_documents_source_idx").on(table.sourceType, table.sourceId),
+}));
 
 export const numberSequences = pgTable("number_sequences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

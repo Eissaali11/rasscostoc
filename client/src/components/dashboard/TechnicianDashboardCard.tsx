@@ -26,8 +26,8 @@ interface ProductStatus {
 }
 
 export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboardCardProps) => {
-  const fixedInv = technician.fixedInventory;
-  const movingInv = technician.movingInventory;
+  const fixedInv = technician.fixedInventory as any;
+  const movingInv = technician.movingInventory as any;
   
   // تحديد مستوى التنبيه لكل منتج (بناءً على المجموع الكلي)
   const getAlertLevel = (total: number): 'good' | 'warning' | 'critical' => {

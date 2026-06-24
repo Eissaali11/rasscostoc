@@ -33,24 +33,27 @@ import {
   Search,
   Shield,
   Smartphone,
+  Sparkles,
   Truck,
   User,
   Warehouse,
   XCircle,
 } from "lucide-react";
 
-type DeviceStatus = "pending" | "approved" | "rejected";
+type DeviceStatus = "pending" | "approved" | "rejected" | "delivered";
 
 interface ReceivedDevice {
   id: string;
-  terminalId: string;
+  terminalId: string | null;
   serialNumber: string;
+  itemTypeId: string | null;
+  inventoryType: 'fixed' | 'moving';
   battery: boolean;
   chargerCable: boolean;
   chargerHead: boolean;
   hasSim: boolean;
   simCardType: string | null;
-  damagePart: string;
+  damagePart: string | null;
   status: DeviceStatus;
   technicianId: string;
   supervisorId: string | null;
@@ -303,7 +306,7 @@ const statusConfig: Record<
     icon: Clock,
   },
   approved: {
-    text: "تم التسليم",
+    text: "موافق عليه",
     badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
     icon: CheckCircle2,
   },
@@ -311,6 +314,11 @@ const statusConfig: Record<
     text: "مرفوض",
     badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
     icon: XCircle,
+  },
+  delivered: {
+    text: "تم التسليم",
+    badgeClass: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+    icon: Sparkles,
   },
 };
 
@@ -334,10 +342,17 @@ export default function ReceivedDeviceDetails() {
     enabled: !!id,
   });
 
+  const { data: itemTypes = [] } = useQuery<any[]>({
+    queryKey: ["/api/item-types"],
+  });
+
   const { data: logs = [] } = useQuery<SystemLogEntry[]>({
     queryKey: [id ? `/api/system-logs?entityType=device&entityId=${id}&limit=50` : ""],
     enabled: !!id,
   });
+
+  const itemType = itemTypes.find(t => t.id === device?.itemTypeId);
+  const itemName = itemType?.nameAr ?? device?.terminalId ?? "منتج غير معروف";
 
   const deliveryProof = useMemo<DeliveryProof | null>(() => {
     const deliveryLog = logs.find((log) => {
@@ -464,7 +479,7 @@ export default function ReceivedDeviceDetails() {
             title: "تم رفع إثبات التسليم من تطبيق المندوب",
             description: log.description,
             createdAt: new Date(log.createdAt),
-            kind: (device?.status === "approved" ? "done" : "active") as TimelineItem["kind"],
+            kind: (device?.status === "approved" || device?.status === "delivered" ? "done" : "active") as TimelineItem["kind"],
             action,
             icon: Smartphone,
           };
@@ -617,7 +632,7 @@ export default function ReceivedDeviceDetails() {
       : deliveryProof?.createdAt || null;
 
     const deliveryStatus: JourneyStage["status"] =
-      device.status === "approved"
+      device.status === "approved" || device.status === "delivered"
         ? "done"
         : device.status === "rejected"
           ? "warn"
@@ -666,7 +681,7 @@ export default function ReceivedDeviceDetails() {
         title: "رفع ملف التسليم",
         description: "تم رفع ملف التسليم/فرم الاستلام الموقّع من تطبيق المندوب وإرساله للمشرف للمراجعة.",
         createdAt: deliveryProof?.createdAt || receiptFormProof?.createdAt || new Date(deliveryProofLog?.createdAt || Date.now()),
-        status: device.status === "approved" ? "done" : "active",
+        status: device.status === "approved" || device.status === "delivered" ? "done" : "active",
         icon: FileText,
       });
     }
@@ -675,7 +690,7 @@ export default function ReceivedDeviceDetails() {
       id: "delivery",
       title: "تسليم العميل",
       description:
-        device.status === "approved"
+        device.status === "approved" || device.status === "delivered"
           ? "تم تسليم الجهاز للعميل واعتماد العملية."
           : device.status === "rejected"
             ? "تم إيقاف التسليم بعد المراجعة."
@@ -742,7 +757,7 @@ export default function ReceivedDeviceDetails() {
     );
   }
 
-  const status = statusConfig[device.status];
+  const status = statusConfig[device.status] || statusConfig.pending;
   const StatusIcon = status.icon;
   const primaryPreviewFile = previewFile || deliveryProof || receiptFormProof || null;
 
@@ -753,7 +768,7 @@ export default function ReceivedDeviceDetails() {
 
     try {
       await exportReceivedDeviceDetailsToPDF({
-        device,
+        device: device as any,
         statusText: status.text,
         journeyStages,
         timeline: timelineItems,
@@ -783,7 +798,7 @@ export default function ReceivedDeviceDetails() {
       <div className="relative z-10 max-w-6xl mx-auto space-y-6">
         <header className="h-20 border border-white/10 bg-slate-900/60 backdrop-blur-xl rounded-2xl flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-white tracking-tight">رحلة الجهاز</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">رحلة {itemName}</h1>
             <div className="h-6 w-px bg-white/10" />
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -816,16 +831,16 @@ export default function ReceivedDeviceDetails() {
 
         <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400">رقم الجهاز</p>
-            <p className="text-white font-bold mt-1">{device.terminalId}</p>
+            <p className="text-xs text-slate-400">اسم المنتج / رقم الجهاز</p>
+            <p className="text-white font-bold mt-1">{itemName}</p>
           </article>
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
             <p className="text-xs text-slate-400">السيريال</p>
             <p className="text-cyan-300 font-mono font-bold mt-1">{device.serialNumber}</p>
           </article>
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400">المنطقة</p>
-            <p className="text-white font-bold mt-1">{device.regionId || "-"}</p>
+            <p className="text-xs text-slate-400">نوع المخزون المستهدف</p>
+            <p className="text-white font-bold mt-1">{device.inventoryType === 'moving' ? "متحرك (سيارة)" : "ثابت (مستودع)"}</p>
           </article>
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
             <p className="text-xs text-slate-400">تاريخ الإدخال</p>
@@ -969,7 +984,7 @@ export default function ReceivedDeviceDetails() {
           </div>
         </section>
 
-        <section className="bg-slate-900/60 border border-white/10 rounded-2xl p-5">
+        <section className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-cyan-300" />
@@ -1081,14 +1096,14 @@ export default function ReceivedDeviceDetails() {
           )}
         </section>
 
-        {device.status === "pending" && user?.role === "supervisor" && (
+        {device.status === "pending" && (user?.role === "supervisor" || user?.role === "admin") && (
           <section className="bg-slate-900/60 border border-white/10 rounded-2xl p-5 flex flex-col md:flex-row gap-4">
             <Button
               onClick={() => handleAction("approve")}
               className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-500 text-white"
             >
               <CheckCircle2 className="h-5 w-5 ml-2" />
-              موافقة على الجهاز
+              موافقة على التسجيل
             </Button>
             <Button
               onClick={() => handleAction("reject")}
@@ -1096,7 +1111,7 @@ export default function ReceivedDeviceDetails() {
               className="flex-1 h-12"
             >
               <XCircle className="h-5 w-5 ml-2" />
-              رفض الجهاز
+              رفض التسجيل
             </Button>
             <Button variant="outline" className="h-12 border-white/15 bg-white/5 text-white" onClick={() => setLocation("/received-devices/review")}>
               <ArrowLeft className="h-4 w-4 ml-2" />
@@ -1105,32 +1120,34 @@ export default function ReceivedDeviceDetails() {
           </section>
         )}
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className={`rounded-xl border p-3 ${device.battery ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
-            <div className="flex items-center justify-between text-sm">
-              <span>البطارية</span>
-              {device.battery ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+        {(!device.itemTypeId || itemType?.category === 'devices') && (
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className={`rounded-xl border p-3 ${device.battery ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
+              <div className="flex items-center justify-between text-sm">
+                <span>البطارية</span>
+                {device.battery ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+              </div>
             </div>
-          </div>
-          <div className={`rounded-xl border p-3 ${device.chargerCable ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
-            <div className="flex items-center justify-between text-sm">
-              <span>كابل الشاحن</span>
-              {device.chargerCable ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+            <div className={`rounded-xl border p-3 ${device.chargerCable ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
+              <div className="flex items-center justify-between text-sm">
+                <span>كابل الشاحن</span>
+                {device.chargerCable ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+              </div>
             </div>
-          </div>
-          <div className={`rounded-xl border p-3 ${device.chargerHead ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
-            <div className="flex items-center justify-between text-sm">
-              <span>رأس الشاحن</span>
-              {device.chargerHead ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+            <div className={`rounded-xl border p-3 ${device.chargerHead ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
+              <div className="flex items-center justify-between text-sm">
+                <span>رأس الشاحن</span>
+                {device.chargerHead ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+              </div>
             </div>
-          </div>
-          <div className={`rounded-xl border p-3 ${device.hasSim ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
-            <div className="flex items-center justify-between text-sm">
-              <span>{device.simCardType || "شريحة SIM"}</span>
-              {device.hasSim ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+            <div className={`rounded-xl border p-3 ${device.hasSim ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
+              <div className="flex items-center justify-between text-sm">
+                <span>{device.simCardType || "شريحة SIM"}</span>
+                {device.hasSim ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {(device.adminNotes || device.damagePart) && (
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">

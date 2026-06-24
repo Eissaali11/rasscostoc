@@ -41,8 +41,8 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
       // Aggregate from technicians
       if (technicians) {
         technicians.forEach(tech => {
-          const fixedInv = tech.fixedInventory;
-          const movingInv = tech.movingInventory;
+          const fixedInv = tech.fixedInventory as any;
+          const movingInv = tech.movingInventory as any;
 
           switch (product.name) {
             case "N950":
