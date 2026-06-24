@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   CheckCircle2,
   CircleEllipsis,
+  FileClock,
   Pencil,
   Plus,
   Search,
@@ -204,6 +205,12 @@ export default function WithdrawnDevicesManagementPage() {
               >
                 <Plus className="h-4 w-4 ml-2" />
                 إضافة جهاز جديد
+              </Button>
+              <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20">
+                <Link href="/withdrawn-devices/all">
+                  <FileClock className="h-4 w-4 ml-2" />
+                  سجل العمليات المرتجعة
+                </Link>
               </Button>
               <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20">
                 <Link href="/withdrawn-devices">العودة للملخص</Link>

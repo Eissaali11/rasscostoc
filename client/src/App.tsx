@@ -11,6 +11,7 @@ import AdminPage from "@/pages/admin";
 import { TransactionHistoryPage } from "@/pages/transaction-history";
 import WithdrawnDevicesPage from "./pages/withdrawn-devices";
 import WithdrawnDevicesManagementPage from "./pages/withdrawn-devices-management";
+import WithdrawnDevicesAllPage from "./pages/withdrawn-devices-all";
 import WithdrawnDeviceDetailsPage from "@/pages/WithdrawnDeviceDetails";
 import ReceivedDevicesSubmit from "@/pages/ReceivedDevicesSubmit";
 import ReceivedDevicesReview from "@/pages/ReceivedDevicesReview";
@@ -80,6 +81,7 @@ function AuthenticatedRouter() {
       <Route path="/operations-search" component={withShell(OperationsSearchPage, "البحث في العمليات")} />
       <Route path="/withdrawn-devices" component={withShell(WithdrawnDevicesPage, "الأصناف المرتجعة")} />
       <Route path="/withdrawn-devices/management" component={withShell(WithdrawnDevicesManagementPage, "إدارة الأصناف المرتجعة")} />
+      <Route path="/withdrawn-devices/all" component={withShell(WithdrawnDevicesAllPage, "سجل العمليات المرتجعة")} />
       <Route path="/withdrawn-devices/:id" component={withShell(WithdrawnDeviceDetailsPage, "تفاصيل الجهاز المرتجع")} />
       <Route path="/received-devices/submit" component={withShell(ReceivedDevicesSubmit, "إدخال أجهزة مستقبلة")} />
       <Route path="/received-devices/review" component={withShell(ReceivedDevicesReview, "مراجعة الأجهزة المستقبلة")} />

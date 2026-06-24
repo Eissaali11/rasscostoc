@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   CircleEllipsis,
   ClipboardCheck,
+  FileClock,
   PackageX,
   Search,
   Settings2,
@@ -296,12 +297,20 @@ export default function WithdrawnDevicesPage() {
             </div>
           </div>
 
-          <Button asChild className="bg-cyan-600 hover:bg-cyan-500 text-white">
-            <Link href="/withdrawn-devices/management" data-testid="button-open-management">
-              <Settings2 className="h-4 w-4 ml-2" />
-              إدارة الأصناف المرتجعة
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20">
+              <Link href="/withdrawn-devices/all">
+                <FileClock className="h-4 w-4 ml-2" />
+                سجل العمليات المرتجعة
+              </Link>
+            </Button>
+            <Button asChild className="bg-cyan-600 hover:bg-cyan-500 text-white">
+              <Link href="/withdrawn-devices/management" data-testid="button-open-management">
+                <Settings2 className="h-4 w-4 ml-2" />
+                إدارة الأصناف المرتجعة
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import {
   withdrawnDevices,
   receivedDevices,
   users,
+  regions,
   technicianFixedInventoryEntries,
   technicianMovingInventoryEntries,
   type WithdrawnDevice,
@@ -41,20 +42,58 @@ export class DevicesService {
   /**
    * Get all withdrawn devices
    */
-  async getWithdrawnDevices(): Promise<WithdrawnDevice[]> {
+  async getWithdrawnDevices(): Promise<any[]> {
     return db
-      .select()
+      .select({
+        id: withdrawnDevices.id,
+        city: withdrawnDevices.city,
+        technicianName: withdrawnDevices.technicianName,
+        terminalId: withdrawnDevices.terminalId,
+        serialNumber: withdrawnDevices.serialNumber,
+        battery: withdrawnDevices.battery,
+        chargerCable: withdrawnDevices.chargerCable,
+        chargerHead: withdrawnDevices.chargerHead,
+        hasSim: withdrawnDevices.hasSim,
+        simCardType: withdrawnDevices.simCardType,
+        damagePart: withdrawnDevices.damagePart,
+        notes: withdrawnDevices.notes,
+        createdBy: withdrawnDevices.createdBy,
+        regionId: withdrawnDevices.regionId,
+        createdAt: withdrawnDevices.createdAt,
+        updatedAt: withdrawnDevices.updatedAt,
+        regionName: regions.name,
+      })
       .from(withdrawnDevices)
+      .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id))
       .orderBy(desc(withdrawnDevices.createdAt));
   }
 
   /**
    * Get withdrawn devices by region
    */
-  async getWithdrawnDevicesByRegion(regionId: string): Promise<WithdrawnDevice[]> {
+  async getWithdrawnDevicesByRegion(regionId: string): Promise<any[]> {
     return db
-      .select()
+      .select({
+        id: withdrawnDevices.id,
+        city: withdrawnDevices.city,
+        technicianName: withdrawnDevices.technicianName,
+        terminalId: withdrawnDevices.terminalId,
+        serialNumber: withdrawnDevices.serialNumber,
+        battery: withdrawnDevices.battery,
+        chargerCable: withdrawnDevices.chargerCable,
+        chargerHead: withdrawnDevices.chargerHead,
+        hasSim: withdrawnDevices.hasSim,
+        simCardType: withdrawnDevices.simCardType,
+        damagePart: withdrawnDevices.damagePart,
+        notes: withdrawnDevices.notes,
+        createdBy: withdrawnDevices.createdBy,
+        regionId: withdrawnDevices.regionId,
+        createdAt: withdrawnDevices.createdAt,
+        updatedAt: withdrawnDevices.updatedAt,
+        regionName: regions.name,
+      })
       .from(withdrawnDevices)
+      .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id))
       .where(eq(withdrawnDevices.regionId, regionId))
       .orderBy(desc(withdrawnDevices.createdAt));
   }
@@ -62,10 +101,29 @@ export class DevicesService {
   /**
    * Get single withdrawn device
    */
-  async getWithdrawnDevice(id: string): Promise<WithdrawnDevice | undefined> {
+  async getWithdrawnDevice(id: string): Promise<any | undefined> {
     const [device] = await db
-      .select()
+      .select({
+        id: withdrawnDevices.id,
+        city: withdrawnDevices.city,
+        technicianName: withdrawnDevices.technicianName,
+        terminalId: withdrawnDevices.terminalId,
+        serialNumber: withdrawnDevices.serialNumber,
+        battery: withdrawnDevices.battery,
+        chargerCable: withdrawnDevices.chargerCable,
+        chargerHead: withdrawnDevices.chargerHead,
+        hasSim: withdrawnDevices.hasSim,
+        simCardType: withdrawnDevices.simCardType,
+        damagePart: withdrawnDevices.damagePart,
+        notes: withdrawnDevices.notes,
+        createdBy: withdrawnDevices.createdBy,
+        regionId: withdrawnDevices.regionId,
+        createdAt: withdrawnDevices.createdAt,
+        updatedAt: withdrawnDevices.updatedAt,
+        regionName: regions.name,
+      })
       .from(withdrawnDevices)
+      .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id))
       .where(eq(withdrawnDevices.id, id))
       .limit(1);
 
