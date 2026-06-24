@@ -43,7 +43,8 @@ export class DevicesService {
    * Get all withdrawn devices
    */
   async getWithdrawnDevices(): Promise<any[]> {
-    return db
+    // 1. Fetch withdrawn devices (approved/manual)
+    const withdrawnList = await db
       .select({
         id: withdrawnDevices.id,
         city: withdrawnDevices.city,
@@ -62,17 +63,67 @@ export class DevicesService {
         createdAt: withdrawnDevices.createdAt,
         updatedAt: withdrawnDevices.updatedAt,
         regionName: regions.name,
+        status: sql<string>`'approved'`,
+        isReceived: sql<boolean>`false`,
       })
       .from(withdrawnDevices)
-      .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id))
-      .orderBy(desc(withdrawnDevices.createdAt));
+      .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id));
+
+    // 2. Fetch pending and rejected received devices
+    const receivedList = await db
+      .select({
+        id: receivedDevices.id,
+        city: users.city,
+        technicianName: users.fullName,
+        terminalId: receivedDevices.terminalId,
+        serialNumber: receivedDevices.serialNumber,
+        battery: receivedDevices.battery,
+        chargerCable: receivedDevices.chargerCable,
+        chargerHead: receivedDevices.chargerHead,
+        hasSim: receivedDevices.hasSim,
+        simCardType: receivedDevices.simCardType,
+        damagePart: receivedDevices.damagePart,
+        notes: receivedDevices.adminNotes,
+        createdBy: receivedDevices.supervisorId,
+        regionId: receivedDevices.regionId,
+        createdAt: receivedDevices.createdAt,
+        updatedAt: receivedDevices.updatedAt,
+        regionName: regions.name,
+        status: receivedDevices.status,
+        isReceived: sql<boolean>`true`,
+      })
+      .from(receivedDevices)
+      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
+      .leftJoin(regions, eq(receivedDevices.regionId, regions.id))
+      .where(sql`${receivedDevices.status} IN ('pending', 'rejected')`);
+
+    // 3. Format received devices fields to match withdrawn schema
+    const formattedReceivedList = receivedList.map(device => ({
+      ...device,
+      city: device.city || "غير محدد",
+      technicianName: device.technicianName || "غير محدد",
+      terminalId: device.terminalId || "غير محدد",
+      battery: device.battery ? "جيدة" : "سيئة",
+      chargerCable: device.chargerCable ? "موجود" : "غير موجود",
+      chargerHead: device.chargerHead ? "موجود" : "غير موجود",
+      hasSim: device.hasSim ? "نعم" : "لا",
+    }));
+
+    // 4. Combine and sort by createdAt descending
+    const combined = [...withdrawnList, ...formattedReceivedList];
+    return combined.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
   }
 
   /**
    * Get withdrawn devices by region
    */
   async getWithdrawnDevicesByRegion(regionId: string): Promise<any[]> {
-    return db
+    // 1. Fetch withdrawn devices
+    const withdrawnList = await db
       .select({
         id: withdrawnDevices.id,
         city: withdrawnDevices.city,
@@ -91,18 +142,71 @@ export class DevicesService {
         createdAt: withdrawnDevices.createdAt,
         updatedAt: withdrawnDevices.updatedAt,
         regionName: regions.name,
+        status: sql<string>`'approved'`,
+        isReceived: sql<boolean>`false`,
       })
       .from(withdrawnDevices)
       .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id))
-      .where(eq(withdrawnDevices.regionId, regionId))
-      .orderBy(desc(withdrawnDevices.createdAt));
+      .where(eq(withdrawnDevices.regionId, regionId));
+
+    // 2. Fetch pending and rejected received devices
+    const receivedList = await db
+      .select({
+        id: receivedDevices.id,
+        city: users.city,
+        technicianName: users.fullName,
+        terminalId: receivedDevices.terminalId,
+        serialNumber: receivedDevices.serialNumber,
+        battery: receivedDevices.battery,
+        chargerCable: receivedDevices.chargerCable,
+        chargerHead: receivedDevices.chargerHead,
+        hasSim: receivedDevices.hasSim,
+        simCardType: receivedDevices.simCardType,
+        damagePart: receivedDevices.damagePart,
+        notes: receivedDevices.adminNotes,
+        createdBy: receivedDevices.supervisorId,
+        regionId: receivedDevices.regionId,
+        createdAt: receivedDevices.createdAt,
+        updatedAt: receivedDevices.updatedAt,
+        regionName: regions.name,
+        status: receivedDevices.status,
+        isReceived: sql<boolean>`true`,
+      })
+      .from(receivedDevices)
+      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
+      .leftJoin(regions, eq(receivedDevices.regionId, regions.id))
+      .where(and(
+        eq(receivedDevices.regionId, regionId),
+        sql`${receivedDevices.status} IN ('pending', 'rejected')`
+      ));
+
+    // 3. Format received devices fields
+    const formattedReceivedList = receivedList.map(device => ({
+      ...device,
+      city: device.city || "غير محدد",
+      technicianName: device.technicianName || "غير محدد",
+      terminalId: device.terminalId || "غير محدد",
+      battery: device.battery ? "جيدة" : "سيئة",
+      chargerCable: device.chargerCable ? "موجود" : "غير موجود",
+      chargerHead: device.chargerHead ? "موجود" : "غير موجود",
+      hasSim: device.hasSim ? "نعم" : "لا",
+    }));
+
+    // 4. Combine and sort
+    const combined = [...withdrawnList, ...formattedReceivedList];
+    return combined.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
   }
 
   /**
    * Get single withdrawn device
    */
   async getWithdrawnDevice(id: string): Promise<any | undefined> {
-    const [device] = await db
+    // 1. First search in withdrawn_devices
+    const [withdrawnDevice] = await db
       .select({
         id: withdrawnDevices.id,
         city: withdrawnDevices.city,
@@ -121,13 +225,61 @@ export class DevicesService {
         createdAt: withdrawnDevices.createdAt,
         updatedAt: withdrawnDevices.updatedAt,
         regionName: regions.name,
+        status: sql<string>`'approved'`,
+        isReceived: sql<boolean>`false`,
       })
       .from(withdrawnDevices)
       .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id))
       .where(eq(withdrawnDevices.id, id))
       .limit(1);
 
-    return device || undefined;
+    if (withdrawnDevice) {
+      return withdrawnDevice;
+    }
+
+    // 2. If not found, search in received_devices
+    const [receivedDevice] = await db
+      .select({
+        id: receivedDevices.id,
+        city: users.city,
+        technicianName: users.fullName,
+        terminalId: receivedDevices.terminalId,
+        serialNumber: receivedDevices.serialNumber,
+        battery: receivedDevices.battery,
+        chargerCable: receivedDevices.chargerCable,
+        chargerHead: receivedDevices.chargerHead,
+        hasSim: receivedDevices.hasSim,
+        simCardType: receivedDevices.simCardType,
+        damagePart: receivedDevices.damagePart,
+        notes: receivedDevices.adminNotes,
+        createdBy: receivedDevices.supervisorId,
+        regionId: receivedDevices.regionId,
+        createdAt: receivedDevices.createdAt,
+        updatedAt: receivedDevices.updatedAt,
+        regionName: regions.name,
+        status: receivedDevices.status,
+        isReceived: sql<boolean>`true`,
+      })
+      .from(receivedDevices)
+      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
+      .leftJoin(regions, eq(receivedDevices.regionId, regions.id))
+      .where(eq(receivedDevices.id, id))
+      .limit(1);
+
+    if (receivedDevice) {
+      return {
+        ...receivedDevice,
+        city: receivedDevice.city || "غير محدد",
+        technicianName: receivedDevice.technicianName || "غير محدد",
+        terminalId: receivedDevice.terminalId || "غير محدد",
+        battery: receivedDevice.battery ? "جيدة" : "سيئة",
+        chargerCable: receivedDevice.chargerCable ? "موجود" : "غير موجود",
+        chargerHead: receivedDevice.chargerHead ? "موجود" : "غير موجود",
+        hasSim: receivedDevice.hasSim ? "نعم" : "لا",
+      };
+    }
+
+    return undefined;
   }
 
   /**
@@ -174,11 +326,22 @@ export class DevicesService {
    * Delete withdrawn device
    */
   async deleteWithdrawnDevice(id: string): Promise<boolean> {
-    const result = await db
+    // Try to delete from withdrawn_devices first
+    const withdrawnResult = await db
       .delete(withdrawnDevices)
       .where(eq(withdrawnDevices.id, id));
 
-    return ((result as any).rowCount || (result as any).changes || 0) > 0;
+    const deletedWithdrawn = ((withdrawnResult as any).rowCount || (withdrawnResult as any).changes || 0) > 0;
+    if (deletedWithdrawn) {
+      return true;
+    }
+
+    // If not deleted, try to delete from received_devices
+    const receivedResult = await db
+      .delete(receivedDevices)
+      .where(eq(receivedDevices.id, id));
+
+    return ((receivedResult as any).rowCount || (receivedResult as any).changes || 0) > 0;
   }
 
   /**

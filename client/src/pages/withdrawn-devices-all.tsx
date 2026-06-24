@@ -64,7 +64,11 @@ const statusConfig: Record<
 
 const normalize = (value?: string | null): string => (value || "").trim().toLowerCase();
 
-const inferDeviceReviewStatus = (device: WithdrawnDevice): DeviceReviewStatus => {
+const inferDeviceReviewStatus = (device: WithdrawnDevice & { status?: string }): DeviceReviewStatus => {
+  if (device.status === "approved" || device.status === "rejected" || device.status === "pending") {
+    return device.status as DeviceReviewStatus;
+  }
+
   const combined = `${normalize(device.notes)} ${normalize(device.damagePart)}`;
 
   if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) {

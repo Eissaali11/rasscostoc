@@ -84,25 +84,77 @@ export class DevicesController {
    */
   updateWithdrawnDevice = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
-    const updates = insertWithdrawnDeviceSchema.partial().parse(req.body);
-    const device = await devicesService.updateWithdrawnDevice(req.params.id, updates);
+    const id = req.params.id;
 
-    // Log the activity
-    await repositories.systemLogs.createSystemLog({
-      userId: user.id,
-      userName: user.username,
-      userRole: user.role,
-      regionId: device.regionId,
-      action: "update",
-      entityType: "device",
-      entityId: device.id,
-      entityName: device.serialNumber,
-      description: `تم تحديث جهاز مسحوب: ${device.serialNumber}`,
-      severity: "info",
-      success: true,
-    });
+    // Check if the device exists and whether it is a received_device (pending/rejected)
+    const existingDevice = await devicesService.getWithdrawnDevice(id);
+    if (!existingDevice) {
+      throw new NotFoundError("Device not found");
+    }
 
-    res.json(device);
+    if (existingDevice.isReceived) {
+      // It is a received_device. The supervisor is updating its status/decision from the withdrawn details page
+      const updates = req.body;
+      const notes = updates.notes || "";
+
+      let status = "pending";
+      if (/(موافق|approved|accept)/i.test(notes)) {
+        status = "approved";
+      } else if (/(مرفوض|rejected|reject)/i.test(notes)) {
+        status = "rejected";
+      } else if (/(صيانة|maintenance)/i.test(notes)) {
+        status = "rejected";
+      }
+
+      const updatedDevice = await devicesService.updateReceivedDeviceStatus(
+        id,
+        status,
+        user.id,
+        notes
+      );
+
+      // Log the activity
+      await repositories.systemLogs.createSystemLog({
+        userId: user.id,
+        userName: user.username,
+        userRole: user.role,
+        regionId: updatedDevice.regionId,
+        action: status === "approved" ? "approve" : "reject",
+        entityType: "device",
+        entityId: updatedDevice.id,
+        entityName: updatedDevice.serialNumber,
+        description: `تم ${status === "approved" ? "الموافقة على" : "رفض"} استلام جهاز من صفحة المرتجعات: ${updatedDevice.serialNumber}`,
+        severity: "info",
+        success: true,
+      });
+
+      res.json({
+        ...updatedDevice,
+        notes: updatedDevice.adminNotes,
+        status: updatedDevice.status,
+      });
+    } else {
+      // It's a standard withdrawn_devices entry
+      const updates = insertWithdrawnDeviceSchema.partial().parse(req.body);
+      const device = await devicesService.updateWithdrawnDevice(id, updates);
+
+      // Log the activity
+      await repositories.systemLogs.createSystemLog({
+        userId: user.id,
+        userName: user.username,
+        userRole: user.role,
+        regionId: device.regionId,
+        action: "update",
+        entityType: "device",
+        entityId: device.id,
+        entityName: device.serialNumber,
+        description: `تم تحديث جهاز مسحوب: ${device.serialNumber}`,
+        severity: "info",
+        success: true,
+      });
+
+      res.json(device);
+    }
   });
 
   /**
