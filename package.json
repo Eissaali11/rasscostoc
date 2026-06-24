@@ -7,7 +7,7 @@
     "dev": "cross-env NODE_ENV=development PORT=3001 tsx server/src/server.ts",
     "dev:clean": "node scripts/kill-port.cjs 3001 && npm run dev",
     "build": "vite build && esbuild server/src/server.ts --platform=node --packages=external --bundle --format=esm --splitting --minify --sourcemap=external --metafile=dist/meta.json --outdir=dist",
-    "start": "cross-env NODE_ENV=production node dist/index.js",
+    "start": "cross-env NODE_ENV=production node dist/server.js",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "check": "tsc -p tsconfig.runtime-check.json",

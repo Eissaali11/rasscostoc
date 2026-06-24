@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "tech_product_unique" ON "technician_product_stock" USING btree ("technician_id","product_id");
