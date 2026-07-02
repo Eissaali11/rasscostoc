@@ -133,6 +133,39 @@ export class UsersController {
 
     res.json({ message: "User deleted successfully" });
   });
+
+  /**
+   * POST /api/users/bulk-status
+   * Activate or deactivate all users except current admin
+   */
+  bulkStatus = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== "boolean") {
+      res.status(400).json({ message: "isActive must be a boolean" });
+      return;
+    }
+
+    const count = await usersContainer.userManagementUseCase.updateAllStatus(isActive, user.id);
+
+    // Log the activity
+    await repositories.systemLogs.createSystemLog({
+      userId: user.id,
+      userName: user.username,
+      userRole: user.role,
+      regionId: null,
+      action: "update",
+      entityType: "user",
+      entityId: "bulk",
+      entityName: "جميع المستخدمين",
+      description: `تم ${isActive ? 'تفعيل' : 'إيقاف'} جميع المستخدمين (عدد: ${count}) باستثناء مدير النظام الحالي`,
+      severity: isActive ? "info" : "warn",
+      success: true,
+    });
+
+    res.json({ message: `Successfully updated ${count} users`, count });
+  });
 }
 
 export const usersController = new UsersController();

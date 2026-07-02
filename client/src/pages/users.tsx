@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Plus, Edit, Trash2, Users as UsersIcon, Home, ArrowRight, Sparkles, UserCircle } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Users as UsersIcon, Home, ArrowRight, Sparkles, UserCircle, UserCheck, UserX } from "lucide-react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import type { UserSafe } from "@shared/schema";
@@ -43,6 +43,29 @@ export default function UsersPage() {
       toast({
         title: "خطأ",
         description: "فشل حذف المستخدم",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkStatusMutation = useMutation({
+    mutationFn: async (isActive: boolean) => {
+      const res = await apiRequest("POST", "/api/users/bulk-status", { isActive });
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "تمت العملية بنجاح",
+        description: variables 
+          ? `تم تفعيل جميع المستخدمين بنجاح (عدد: ${data.count})` 
+          : `تم إيقاف جميع المستخدمين بنجاح (عدد: ${data.count})`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل تحديث حالة المستخدمين",
         variant: "destructive",
       });
     },
@@ -231,7 +254,7 @@ export default function UsersPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between"
+          className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between"
         >
           <div className="relative flex-1 max-w-md">
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
@@ -244,16 +267,51 @@ export default function UsersPage() {
               data-testid="input-search"
             />
           </div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold shadow-lg h-12 px-6"
-              data-testid="button-add-user"
-            >
-              <Plus className="h-5 w-5 ml-2" />
-              إضافة مستخدم جديد
-            </Button>
-          </motion.div>
+          
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center justify-end">
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-initial">
+              <Button
+                onClick={() => {
+                  if (confirm("هل أنت متأكد من تفعيل جميع المستخدمين؟")) {
+                    bulkStatusMutation.mutate(true);
+                  }
+                }}
+                disabled={bulkStatusMutation.isPending}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg h-12 px-5 flex items-center justify-center gap-2 border-2 border-emerald-500/20"
+                data-testid="button-activate-all"
+              >
+                <UserCheck className="h-5 w-5" />
+                تفعيل جميع المستخدمين
+              </Button>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-initial">
+              <Button
+                onClick={() => {
+                  if (confirm("هل أنت متأكد من إيقاف جميع المستخدمين؟ (لن يتم إيقاف حسابك الحالي)")) {
+                    bulkStatusMutation.mutate(false);
+                  }
+                }}
+                disabled={bulkStatusMutation.isPending}
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-lg h-12 px-5 flex items-center justify-center gap-2 border-2 border-rose-500/20"
+                data-testid="button-deactivate-all"
+              >
+                <UserX className="h-5 w-5" />
+                إيقاف جميع المستخدمين
+              </Button>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-initial">
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold shadow-lg h-12 px-6 flex items-center justify-center gap-2"
+                data-testid="button-add-user"
+              >
+                <Plus className="h-5 w-5" />
+                إضافة مستخدم جديد
+              </Button>
+            </motion.div>
+          </div>
         </motion.div>
 
         {/* Users Grid */}

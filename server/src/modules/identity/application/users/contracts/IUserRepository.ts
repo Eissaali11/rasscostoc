@@ -9,4 +9,5 @@ export interface IUserRepository {
   createUser(insertUser: InsertUser): Promise<UserSafe>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<UserSafe>;
   deleteUser(id: string): Promise<boolean>;
+  updateAllUsersStatus(isActive: boolean, excludeUserId?: string): Promise<number>;
 }

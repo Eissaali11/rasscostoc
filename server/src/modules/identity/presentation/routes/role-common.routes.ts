@@ -14,6 +14,7 @@ import { registerTechnicianInventoryEntriesRoutes } from "@modules/inventory/pre
 import { registerInventoryEntriesMigrationRoutes } from "@modules/inventory/presentation/routes/inventory-entries-migration.routes";
 import { registerTechniciansAdminRoutes } from "@modules/inventory/presentation/routes/technicians-admin.routes";
 import { registerInventoryScanRoutes } from "@modules/inventory/presentation/routes/inventory-scan.routes";
+import { registerSerializedItemsRoutes } from "@modules/inventory/presentation/routes/serialized-items.routes";
 import { registerAccountingRoutes } from "@modules/accounting/presentation/routes/accounting.routes";
 
 /**
@@ -37,7 +38,9 @@ export function registerCommonRoleRoutes(app: Express): void {
   registerTechnicianInventoryEntriesRoutes(app);
   registerInventoryEntriesMigrationRoutes(app);
   registerInventoryScanRoutes(app);
+  registerSerializedItemsRoutes(app);
   registerAccountingRoutes(app);
 
   registerTechniciansAdminRoutes(app);
 }
+

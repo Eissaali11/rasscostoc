@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, ne } from 'drizzle-orm';
 import type { IUserRepository } from '../../application/users/contracts/IUserRepository';
 import { getDatabase } from "@core/database/connection";
 import { type InsertUser, type User, type UserSafe, users } from "@shared/schema";
@@ -189,5 +189,21 @@ export class DrizzleUserRepository implements IUserRepository {
       .where(eq(users.id, id));
 
     return (result.rowCount || 0) > 0;
+  }
+
+  async updateAllUsersStatus(isActive: boolean, excludeUserId?: string): Promise<number> {
+    const updateObj = { isActive, updatedAt: new Date() };
+    let result;
+    if (excludeUserId) {
+      result = await this.db
+        .update(users)
+        .set(updateObj)
+        .where(ne(users.id, excludeUserId));
+    } else {
+      result = await this.db
+        .update(users)
+        .set(updateObj);
+    }
+    return result.rowCount || 0;
   }
 }

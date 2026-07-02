@@ -35,4 +35,8 @@ export class UserManagementUseCase {
   async softDelete(id: string): Promise<boolean> {
     return this.userRepository.deleteUser(id);
   }
+
+  async updateAllStatus(isActive: boolean, excludeUserId?: string): Promise<number> {
+    return this.userRepository.updateAllUsersStatus(isActive, excludeUserId);
+  }
 }

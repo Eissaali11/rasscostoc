@@ -43,6 +43,13 @@
       "when": 1782180396856,
       "tag": "0005_colorful_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782335912798,
+      "tag": "0006_public_firebrand",
+      "breakpoints": true
     }
   ]
 }

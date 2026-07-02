@@ -7,3 +7,5 @@ export * from "./system.schema";
 export * from "./auth.schema";
 export * from "./api-types";
 export * from "./relations.schema";
+export * from "./serialized_items.schema";
+

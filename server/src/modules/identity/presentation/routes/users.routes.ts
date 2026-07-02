@@ -35,4 +35,12 @@ export function registerUsersRoutes(app: Express): void {
 
   // Delete user
   app.delete("/api/users/:id", requireAuth, requireAdmin, usersController.delete);
+
+  // Bulk status update
+  app.post(
+    "/api/users/bulk-status",
+    requireAuth,
+    requireAdmin,
+    usersController.bulkStatus
+  );
 }
