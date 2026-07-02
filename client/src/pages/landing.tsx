@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { useLanguage } from "@/lib/language";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import stockProLogo from "@assets/image_1763138350041.png";
 import stockproDashboardShowcase from "@assets/stockpro_dashboard_showcase.png";
@@ -29,7 +28,32 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
   const statsRef = useRef<HTMLDivElement>(null);
   const [isStatsInView, setIsStatsInView] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
   
+  // Dynamic data states
+  const [liveStats, setLiveStats] = useState({
+    warehouses: 9,
+    products: 14,
+    technicians: 65,
+    cities: 29
+  });
+  const [liveProducts, setLiveProducts] = useState<any[]>([]);
+
+  // Fetch live stats and product catalog from database
+  useEffect(() => {
+    fetch("/api/public/stock")
+      .then(res => res.json())
+      .then(data => {
+        if (data.stats) {
+          setLiveStats(data.stats);
+        }
+        if (data.products) {
+          setLiveProducts(data.products);
+        }
+      })
+      .catch(err => console.error("Error fetching live stock stats:", err));
+  }, []);
+
   const features = [
     {
       icon: Package,
@@ -89,7 +113,6 @@ export default function LandingPage() {
   ];
 
   const [animatedStats, setAnimatedStats] = useState([0, 0, 0, 0]);
-  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -115,14 +138,19 @@ export default function LandingPage() {
   useEffect(() => {
     if (!isStatsInView) return;
     
-    // Database actual values: Warehouses: 9, Product Types: 14, Technicians: 65, Cities: 29
-    const targets = [9, 14, 65, 29];
+    // Animate up to the live stats values loaded from database
+    const targets = [
+      liveStats.warehouses,
+      liveStats.products,
+      liveStats.technicians,
+      liveStats.cities
+    ];
     const durations = [1000, 1200, 1500, 1100];
     const timers: ReturnType<typeof setInterval>[] = [];
     
     targets.forEach((target, index) => {
       let current = 0;
-      const increment = target / (durations[index] / 16);
+      const increment = Math.max(1, target / (durations[index] / 16));
       const timer = setInterval(() => {
         current += increment;
         if (current >= target) {
@@ -141,7 +169,7 @@ export default function LandingPage() {
     return () => {
       timers.forEach(timer => clearInterval(timer));
     };
-  }, [isStatsInView]);
+  }, [isStatsInView, liveStats]);
 
   return (
     <div className="landing-body">
@@ -267,7 +295,7 @@ export default function LandingPage() {
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
-                <div className="bg-gray-950/80 backdrop-blur-md border border-[#18B2B0]/30 rounded-2xl p-3 flex items-center gap-2">
+                <div className="bg-gray-950/90 backdrop-blur-md border border-[#18B2B0]/30 rounded-2xl p-3 flex items-center gap-2 text-white">
                   <Warehouse className="text-[#18B2B0]" size={20} />
                   <span className="text-xs font-bold">{language === 'ar' ? 'المستودعات' : 'Warehouses'}</span>
                 </div>
@@ -278,7 +306,7 @@ export default function LandingPage() {
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
               >
-                <div className="bg-gray-950/80 backdrop-blur-md border border-[#18B2B0]/30 rounded-2xl p-3 flex items-center gap-2">
+                <div className="bg-gray-950/90 backdrop-blur-md border border-[#18B2B0]/30 rounded-2xl p-3 flex items-center gap-2 text-white">
                   <Users className="text-cyan-400" size={20} />
                   <span className="text-xs font-bold">{language === 'ar' ? 'العهد الفنية' : 'Custody'}</span>
                 </div>
@@ -324,17 +352,17 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <Card className="glass-card p-6 h-full border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300">
+                <div className="glass-card p-6 h-full border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300">
                   <div className="feature-icon-wrapper">
                     <feature.icon size={26} />
                   </div>
                   <h3 className="text-xl font-bold mb-3 text-white">
                     {t(feature.titleKey)}
                   </h3>
-                  <p className="text-gray-400 leading-relaxed text-sm">
+                  <p className="text-gray-300 leading-relaxed text-sm">
                     {t(feature.descKey)}
                   </p>
-                </Card>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -363,6 +391,58 @@ export default function LandingPage() {
             </div>
           </motion.div>
         </section>
+
+        {/* Live Product Catalog Section */}
+        {liveProducts.length > 0 && (
+          <section className="container mx-auto px-4 py-20 border-t border-white/5">
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-4xl lg:text-5xl font-black mb-4 bg-gradient-to-r from-[#18B2B0] to-cyan-400 bg-clip-text text-transparent">
+                {language === 'ar' ? 'كتالوج المنتجات الفعلي' : 'Live Product Catalog'}
+              </h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                {language === 'ar' 
+                  ? 'الأصناف والمنتجات المعرفة والنشطة حالياً في قاعدة بيانات النظام والمخازن' 
+                  : 'Active product models and categories configured and tracked in the platform database'}
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {liveProducts.map((prod, idx) => (
+                <motion.div
+                  key={prod.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: idx * 0.05 }}
+                >
+                  <div className="glass-card p-6 border-white/5 flex items-center justify-between hover:border-[#18B2B0]/40 hover:scale-[1.03] transition-all">
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl p-3 bg-white/5 rounded-2xl border border-white/10 block">{prod.icon || '📦'}</span>
+                      <div>
+                        <h4 className="font-bold text-white text-lg">
+                          {language === 'ar' ? prod.nameAr : prod.nameEn}
+                        </h4>
+                        <span className="text-xs text-[#18B2B0] uppercase tracking-wider font-semibold">
+                          {prod.category}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {language === 'ar' ? 'نشط' : 'Active'}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* CTA Banner */}
         <section className="container mx-auto px-4 py-20">
@@ -431,7 +511,7 @@ export default function LandingPage() {
                   <img 
                     src={stockProLogo} 
                     alt="Stock Pro Logo" 
-                    className="h-32 w-32 lg:h-44 lg:w-44 object-contain rounded-full bg-gray-950 p-2 border border-[#18B2B0]/20"
+                    className="h-32 w-32 lg:h-44 lg:w-44 object-contain rounded-full bg-gray-950 p-2 border border-[#18B2B0]/25"
                   />
                 </motion.div>
               </div>
@@ -463,9 +543,9 @@ export default function LandingPage() {
               whileInView={{ y: 0, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="group"
+              className="group block"
             >
-              <Card className="glass-card p-6 h-full text-center border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300 cursor-pointer">
+              <div className="glass-card p-6 h-full text-center border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300 cursor-pointer">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 p-0.5 mb-4 mx-auto group-hover:scale-110 transition-transform">
                   <div className="w-full h-full rounded-2xl bg-gray-950 flex items-center justify-center">
                     <Mail className="text-white" size={24} />
@@ -474,10 +554,10 @@ export default function LandingPage() {
                 <h3 className="text-lg font-bold mb-2 text-[#18B2B0]">
                   {t('landing.contact.email')}
                 </h3>
-                <p className="text-gray-400 text-sm break-all">
+                <p className="text-gray-300 text-sm break-all">
                   skrkhtan@gmail.com
                 </p>
-              </Card>
+              </div>
             </motion.a>
 
             <motion.a
@@ -488,9 +568,9 @@ export default function LandingPage() {
               whileInView={{ y: 0, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="group"
+              className="group block"
             >
-              <Card className="glass-card p-6 h-full text-center border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300 cursor-pointer">
+              <div className="glass-card p-6 h-full text-center border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300 cursor-pointer">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-0.5 mb-4 mx-auto group-hover:scale-110 transition-transform">
                   <div className="w-full h-full rounded-2xl bg-gray-950 flex items-center justify-center">
                     <Linkedin className="text-white" size={24} />
@@ -499,10 +579,10 @@ export default function LandingPage() {
                 <h3 className="text-lg font-bold mb-2 text-[#18B2B0]">
                   {t('landing.contact.linkedin')}
                 </h3>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-300 text-sm">
                   Eissa Ail
                 </p>
-              </Card>
+              </div>
             </motion.a>
 
             <motion.a
@@ -511,9 +591,9 @@ export default function LandingPage() {
               whileInView={{ y: 0, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="group"
+              className="group block"
             >
-              <Card className="glass-card p-6 h-full text-center border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300 cursor-pointer">
+              <div className="glass-card p-6 h-full text-center border-white/5 hover:border-[#18B2B0]/30 transition-all duration-300 cursor-pointer">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 p-0.5 mb-4 mx-auto group-hover:scale-110 transition-transform">
                   <div className="w-full h-full rounded-2xl bg-gray-950 flex items-center justify-center">
                     <Phone className="text-white" size={24} />
@@ -522,10 +602,10 @@ export default function LandingPage() {
                 <h3 className="text-lg font-bold mb-2 text-[#18B2B0]">
                   {t('landing.contact.phone')}
                 </h3>
-                <p className="text-gray-400 text-sm" dir="ltr">
+                <p className="text-gray-300 text-sm" dir="ltr">
                   +966 558 619 232
                 </p>
-              </Card>
+              </div>
             </motion.a>
           </div>
         </section>
