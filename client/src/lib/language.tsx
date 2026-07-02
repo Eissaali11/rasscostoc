@@ -270,10 +270,10 @@ const translations: Record<Language, Record<string, string>> = {
     'landing.feature.mobile.title': 'تصميم عصري متجاوب',
     'landing.feature.mobile.description': 'تجربة مستخدم سلسة وأنيقة على جميع الأجهزة والشاشات، من الهاتف الذكي إلى الحاسب المكتبي',
     
-    'landing.stats.warehouses': 'مستودعات',
-    'landing.stats.products': 'منتجات',
-    'landing.stats.technicians': 'مندوبين',
-    'landing.stats.cities': 'مدن',
+    'landing.stats.warehouses': 'مستودعات رئيسية وفرعية',
+    'landing.stats.products': 'أصناف المنتجات المعرفة',
+    'landing.stats.technicians': 'مناديب نشطين بالعهد',
+    'landing.stats.cities': 'مدن مغطاة بالخدمة',
     
     'landing.cta.title': 'ابدأ في إدارة مخزونك اليوم',
     'landing.cta.description': 'انضم إلى مئات الشركات التي تستخدم StockPro',
@@ -473,10 +473,10 @@ const translations: Record<Language, Record<string, string>> = {
     'landing.feature.mobile.title': 'Modern Responsive Design',
     'landing.feature.mobile.description': 'Smooth and elegant user experience across all devices and screens, from smartphone to desktop computer',
     
-    'landing.stats.warehouses': 'Warehouses',
-    'landing.stats.products': 'Products',
-    'landing.stats.technicians': 'Technicians',
-    'landing.stats.cities': 'Cities',
+    'landing.stats.warehouses': 'Active Warehouses',
+    'landing.stats.products': 'Product Categories',
+    'landing.stats.technicians': 'Active Technicians',
+    'landing.stats.cities': 'Covered Cities',
     
     'landing.cta.title': 'Start Managing Your Inventory Today',
     'landing.cta.description': 'Join hundreds of companies using StockPro',
