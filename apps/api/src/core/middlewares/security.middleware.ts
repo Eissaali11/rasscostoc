@@ -94,3 +94,35 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 
   next();
 }
+
+/**
+ * CSRF protection middleware for cookie-authenticated sessions.
+ */
+export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+  const mutatingMethods = ["POST", "PUT", "PATCH", "DELETE"];
+  
+  if (mutatingMethods.includes(req.method)) {
+    const authHeader = req.headers.authorization;
+    const hasBearer = authHeader && authHeader.startsWith("Bearer ");
+    const hasTokenQuery = req.query.token;
+
+    // If request uses Bearer token, CSRF is not possible (immune)
+    if (hasBearer || hasTokenQuery) {
+      return next();
+    }
+
+    // If session-cookie is present and active, enforce custom header presence
+    const sessionObj = (req as any).session;
+    if (sessionObj && sessionObj.user) {
+      const csrfHeader = req.headers["x-requested-with"] || req.headers["x-csrf-token"];
+      if (!csrfHeader) {
+        res.status(403).json({
+          error: "Forbidden",
+          message: "طلب غير صالح (حماية CSRF). يرجى تضمين ترويسة X-Requested-With أو X-CSRF-Token.",
+        });
+        return;
+      }
+    }
+  }
+  next();
+}

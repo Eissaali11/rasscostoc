@@ -182,9 +182,6 @@ export class AuthService {
     return user;
   }
 
-  /**
-   * Verify password - supports both hashed and plain text (for migration)
-   */
   private async verifyUserPassword(
     plainPassword: string,
     storedPassword: string
@@ -193,8 +190,14 @@ export class AuthService {
     if (storedPassword.startsWith("$2")) {
       return utilVerifyPassword(plainPassword, storedPassword);
     }
-    // Plain text comparison (for migration purposes)
-    return plainPassword === storedPassword;
+    // Safe constant-time comparison to prevent timing attacks
+    const plainBuffer = Buffer.from(plainPassword, "utf8");
+    const storedBuffer = Buffer.from(storedPassword, "utf8");
+    if (plainBuffer.length !== storedBuffer.length) {
+      crypto.timingSafeEqual(plainBuffer, plainBuffer);
+      return false;
+    }
+    return crypto.timingSafeEqual(plainBuffer, storedBuffer);
   }
 
   /**

@@ -6,7 +6,7 @@ import { log } from "@core/utils/vite";
 import { correlationMiddleware } from "@core/telemetry/telemetry";
 import { tracer } from "@core/telemetry/tracer";
 import { configService } from "@core/config/config.service";
-import { rateLimiter, securityHeaders } from "@core/middlewares/security.middleware";
+import { rateLimiter, securityHeaders, csrfProtection } from "@core/middlewares/security.middleware";
 
 const app = express();
 
@@ -27,11 +27,26 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   const host = req.get('host') || '';
   
-  // In development, allow all origins
-  // In production, allow same-origin requests
-  if (configService.isDevelopment || !origin || origin.includes(host) || origin.includes('stoc.fun')) {
+  // Safe origin validation: same-origin or *.stoc.fun
+  const isAllowedOrigin = (orig: string): boolean => {
+    try {
+      const parsedUrl = new URL(orig);
+      return parsedUrl.hostname === 'stoc.fun' || parsedUrl.hostname.endsWith('.stoc.fun');
+    } catch {
+      return false;
+    }
+  };
+
+  if (configService.isDevelopment) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+  } else if (origin) {
+    if (origin.includes(host) || isAllowedOrigin(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
@@ -45,6 +60,9 @@ app.use((req, res, next) => {
 
 // Setup session
 setupSession(app);
+
+// Enable CSRF protection for cookie-authenticated sessions
+app.use(csrfProtection);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
