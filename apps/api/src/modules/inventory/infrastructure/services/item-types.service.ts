@@ -383,8 +383,8 @@ export class ItemTypesService {
         color: '#3B82F6',
         requiresSerial: true,
         serialPrefix: 'NCC,NCD',
-        serialLength: 12,
-        serialRegex: '^(NCC|NCD)[0-9]{9}$'
+        serialLength: 9,
+        serialRegex: '^(NCC|NCD)[0-9]{6}$'
       },
       {
         id: 'i9000s',
@@ -399,8 +399,8 @@ export class ItemTypesService {
         color: '#10B981',
         requiresSerial: true,
         serialPrefix: 'SAS',
-        serialLength: 14,
-        serialRegex: '^SAS[0-9]{11}$'
+        serialLength: 11,
+        serialRegex: '^SAS[A-Z0-9]{8}$'
       },
       {
         id: 'i9100',
@@ -415,8 +415,8 @@ export class ItemTypesService {
         color: '#8B5CF6',
         requiresSerial: true,
         serialPrefix: 'SAW',
-        serialLength: 14,
-        serialRegex: '^SAW[0-9]{11}$'
+        serialLength: 11,
+        serialRegex: '^SAW[A-Z0-9]{8}$'
       },
       {
         id: 'rollPaper',
