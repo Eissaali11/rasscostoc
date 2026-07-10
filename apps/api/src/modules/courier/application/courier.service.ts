@@ -29,7 +29,7 @@ import { CompletionGuard, isCompletedStatus } from "./guards/CompletionGuard";
 import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
-import { AppError, OptimisticLockException } from "@core/errors/AppError";
+import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
 
 
 export interface ListFilters {
@@ -1144,7 +1144,7 @@ export class CourierService {
       );
 
       if (!updatedExecution) {
-        throw new OptimisticLockException("Optimistic lock failed while starting route");
+        throw new OptimisticLockException("courier_executions", execution.id, execution.version);
       }
 
       await drizzleCourierRepository.insertAuditLog({
@@ -1180,7 +1180,7 @@ export class CourierService {
       );
 
       if (!updatedExecution) {
-        throw new OptimisticLockException("Optimistic lock failed while arriving at customer");
+        throw new OptimisticLockException("courier_executions", execution.id, execution.version);
       }
 
       await drizzleCourierRepository.insertAuditLog({
@@ -1216,7 +1216,7 @@ export class CourierService {
       );
 
       if (!updatedExecution) {
-        throw new OptimisticLockException("Optimistic lock failed while starting installation");
+        throw new OptimisticLockException("courier_executions", execution.id, execution.version);
       }
 
       await drizzleCourierRepository.insertAuditLog({
@@ -1311,7 +1311,7 @@ export class CourierService {
         );
 
         if (!updatedExecution) {
-          throw new OptimisticLockException("Optimistic lock failed while completing execution");
+          throw new OptimisticLockException("courier_executions", execution.id, execution.version);
         }
 
         // Update request items status to INSTALLED
@@ -1362,7 +1362,7 @@ export class CourierService {
         );
 
         if (!updatedExecution) {
-          throw new OptimisticLockException("Optimistic lock failed while failing execution");
+          throw new OptimisticLockException("courier_executions", execution.id, execution.version);
         }
 
         await drizzleCourierRepository.insertAuditLog({

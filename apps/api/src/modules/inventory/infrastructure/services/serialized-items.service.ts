@@ -129,9 +129,9 @@ export class SerializedItemsService {
       // Log to Custody Ledger (custodyMovements)
       await tx.insert(custodyMovements).values({
         itemId: item.id,
-        fromOwnerId: previousOwnerId,
+        fromOwnerId: null,
         toOwnerId: technicianId,
-        reason: previousOwnerId ? "TRANSFER" : "INTAKE",
+        reason: "INTAKE",
         performedById: technicianId,
         notes: "استلام عهدة بالمسح الميداني",
       });

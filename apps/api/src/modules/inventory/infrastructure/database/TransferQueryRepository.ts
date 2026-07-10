@@ -58,6 +58,7 @@ export class TransferQueryRepository implements ITransferQueryRepository {
         performedBy: warehouseTransfers.performedBy,
         notes: warehouseTransfers.notes,
         status: warehouseTransfers.status,
+        transferType: warehouseTransfers.transferType,
         rejectionReason: warehouseTransfers.rejectionReason,
         respondedAt: warehouseTransfers.respondedAt,
         createdAt: warehouseTransfers.createdAt,
