@@ -227,7 +227,9 @@ async function run() {
       reportLines.push('> [!WARNING]\n> **PRODUCTION GO-LIVE VERDICT: CONDITIONAL APPROVED / PENDING ACTIONS**\n> The system requires manual review. Ensure pending outbox events are flushed and any custody owner mismatches are synchronized.');
     }
 
-    const reportPath = 'C:\\Users\\TWc\\.gemini\\antigravity\\brain\\df03bceb-803e-405d-b658-34972f33b0c0\\prv_checklist_report.md';
+    const reportPath = os.platform() === 'win32'
+      ? 'C:\\Users\\TWc\\.gemini\\antigravity\\brain\\df03bceb-803e-405d-b658-34972f33b0c0\\prv_checklist_report.md'
+      : './prv_checklist_report.md';
     fs.writeFileSync(reportPath, reportLines.join('\n'));
     console.log(`\n💾 Saved detailed PRV report to ${reportPath}`);
 
