@@ -12,6 +12,15 @@ export class AuthController {
    * POST /api/auth/login
    */
   login = asyncHandler(async (req: Request, res: Response) => {
+    // Regenerate session to prevent session fixation
+    if (req.session) {
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
     const result = await authService.login(req.body, req.session);
     res.json(result);
   });

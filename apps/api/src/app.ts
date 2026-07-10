@@ -90,6 +90,23 @@ app.use((req, res, next) => {
     url: req.originalUrl,
   });
 
+  const sanitizeResponse = (obj: any): any => {
+    if (!obj || typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) {
+      return obj.map(sanitizeResponse);
+    }
+    const sanitized = { ...obj };
+    const sensitiveKeys = ["token", "password", "refreshToken", "accessToken", "secret", "internalToken", "session", "cookie"];
+    for (const key of Object.keys(sanitized)) {
+      if (sensitiveKeys.some(s => key.toLowerCase().includes(s.toLowerCase()))) {
+        sanitized[key] = "[REDACTED]";
+      } else if (typeof sanitized[key] === "object") {
+        sanitized[key] = sanitizeResponse(sanitized[key]);
+      }
+    }
+    return sanitized;
+  };
+
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -105,7 +122,8 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const sanitized = sanitizeResponse(capturedJsonResponse);
+        logLine += ` :: ${JSON.stringify(sanitized)}`;
       }
 
       if (logLine.length > 120) {

@@ -39,13 +39,91 @@ const excelUpload = multer({
   dest: path.join(process.cwd(), "uploads", "temp")
 });
 
+function validateFileMagicBytes(req: any, res: any, next: any) {
+  if (!req.file) {
+    return next();
+  }
+  
+  try {
+    const fd = fs.openSync(req.file.path, "r");
+    const buffer = Buffer.alloc(12);
+    fs.readSync(fd, buffer, 0, 12, 0);
+    fs.closeSync(fd);
+
+    const hex = buffer.toString("hex").toUpperCase();
+
+    // Check PDF: %PDF (25504446)
+    const isPdf = hex.startsWith("25504446");
+    
+    // Check PNG: 89504E47
+    const isPng = hex.startsWith("89504E47");
+    
+    // Check JPEG: FFD8FF
+    const isJpeg = hex.startsWith("FFD8FF");
+    
+    // Check WEBP: RIFF....WEBP (52494646....57454250)
+    const isWebp = hex.startsWith("52494646") && hex.endsWith("57454250");
+
+    if (isPdf || isPng || isJpeg || isWebp) {
+      return next();
+    }
+
+    // Delete the invalid file
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({
+      success: false,
+      message: "الملف المرفوع غير صالح. الأنواع المسموح بها هي PDF و PNG و JPG و WEBP فقط بناءً على محتوى الملف."
+    });
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+    }
+    return next(err);
+  }
+}
+
+function validateExcelMagicBytes(req: any, res: any, next: any) {
+  if (!req.file) {
+    return next();
+  }
+  
+  try {
+    const fd = fs.openSync(req.file.path, "r");
+    const buffer = Buffer.alloc(4);
+    fs.readSync(fd, buffer, 0, 4, 0);
+    fs.closeSync(fd);
+
+    const hex = buffer.toString("hex").toUpperCase();
+
+    // Check ZIP/Office Open XML (PK..): 504B0304 or legacy D0CF11E0
+    const isXlsx = hex === "504B0304";
+    const isXls = hex === "D0CF11E0";
+
+    if (isXlsx || isXls) {
+      return next();
+    }
+
+    // Delete the invalid file
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({
+      success: false,
+      message: "الملف المرفوع غير صالح. يجب أن يكون ملف Excel حقيقي (.xlsx أو .xls)."
+    });
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+    }
+    return next(err);
+  }
+}
+
 export function registerCourierRoutes(app: Express): void {
   const controller = new CourierController();
 
   // Requests CRUD
   app.get("/api/courier/requests", requireAuth, controller.getRequests);
   app.get("/api/courier/requests/export", requireAuth, controller.exportExcel);
-  app.post("/api/courier/requests/import", requireAuth, excelUpload.single("file"), controller.importExcel);
+  app.post("/api/courier/requests/import", requireAuth, excelUpload.single("file"), validateExcelMagicBytes, controller.importExcel);
   app.get("/api/courier/requests/:id", requireAuth, controller.getRequest);
   app.post("/api/courier/requests", requireAuth, controller.createRequest);
   app.put("/api/courier/requests/:id", requireAuth, controller.updateRequest);
@@ -86,6 +164,7 @@ export function registerCourierRoutes(app: Express): void {
     "/api/courier/pdf/upload",
     requireAuth,
     upload.single("file"),
+    validateFileMagicBytes,
     async (req: any, res, next) => {
       if (req.file) {
         // Read file buffer for OCR
