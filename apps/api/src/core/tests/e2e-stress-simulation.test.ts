@@ -131,7 +131,7 @@ describe('StockPro v3.2 E2E Stress & Lifecycle Simulation', () => {
     
     await expect(
       CustodyEngine.scanItem(testSn, itemTypeId, conflictingTech, mockTx)
-    ).rejects.toThrow('الجهاز مرتبط بالفعل بعهدة الفني الآخر');
+    ).rejects.toThrow('المنتج موجود مسبقاً وحالته نشط');
 
     console.log(`[Simulation] ✓ Double-custody check passed (successfully blocked concurrent technician scans).`);
 

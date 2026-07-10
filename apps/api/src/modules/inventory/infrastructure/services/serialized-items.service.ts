@@ -80,53 +80,34 @@ export class SerializedItemsService {
         .where(eq(items.serialNumber, serialNumber))
         .limit(1);
 
-      let item: typeof items.$inferSelect;
-      let previousStatus = "NONE";
-      let previousOwnerId = null;
-
-      if (!existingItem) {
-        // Create new item
-        const [newItem] = await tx
-          .insert(items)
-          .values({
-            itemTypeId,
-            serialNumber,
-            barcode: serialNumber, // default barcode to serialNumber
-            status: "IN_TRANSIT_CUSTODY",
-            currentOwnerId: technicianId,
-            warehouseId: null,
-            carrierName: carrierName || null,
-            simPackageType: simPackageType || null,
-          })
-          .returning();
-
-        if (!newItem) {
-          throw new Error("فشل إنشاء سجل للمادة المسلسلة");
+      if (existingItem) {
+        if (existingItem.status === "DELIVERED") {
+          throw new AppError("المنتج موجود وحالته مغلق", 400);
+        } else {
+          throw new AppError("المنتج موجود مسبقاً وحالته نشط", 400);
         }
-        item = newItem;
-      } else {
-        previousStatus = existingItem.status;
-        previousOwnerId = existingItem.currentOwnerId;
-        
-        // Update existing item status and owner
-        const [updatedItem] = await tx
-          .update(items)
-          .set({
-            status: "IN_TRANSIT_CUSTODY",
-            currentOwnerId: technicianId,
-            warehouseId: null,
-            carrierName: carrierName || existingItem.carrierName,
-            simPackageType: simPackageType || existingItem.simPackageType,
-            updatedAt: new Date(),
-          })
-          .where(eq(items.id, existingItem.id))
-          .returning();
-
-        if (!updatedItem) {
-          throw new Error("فشل تحديث حالة المادة المسلسلة");
-        }
-        item = updatedItem;
       }
+
+      // Create new item
+      const [newItem] = await tx
+        .insert(items)
+        .values({
+          itemTypeId,
+          serialNumber,
+          barcode: serialNumber, // default barcode to serialNumber
+          status: "IN_TRANSIT_CUSTODY",
+          currentOwnerId: technicianId,
+          warehouseId: null,
+          carrierName: carrierName || null,
+          simPackageType: simPackageType || null,
+        })
+        .returning();
+
+      if (!newItem) {
+        throw new Error("فشل إنشاء سجل للمادة المسلسلة");
+      }
+      const item = newItem;
+      const previousStatus = "NONE";
 
       // Log transaction
       await tx.insert(inventoryTransactions).values({
@@ -193,53 +174,35 @@ export class SerializedItemsService {
           .where(eq(items.serialNumber, serialNumber))
           .limit(1);
 
-        let item: typeof items.$inferSelect;
-        let previousStatus = "NONE";
-        let previousOwnerId = null;
-
-        if (!existingItem) {
-          // Create new item
-          const [newItem] = await tx
-            .insert(items)
-            .values({
-              itemTypeId,
-              serialNumber,
-              barcode: serialNumber,
-              status: "IN_TRANSIT_CUSTODY",
-              currentOwnerId: technicianId,
-              warehouseId: null,
-              carrierName: carrierName || null,
-              simPackageType: simPackageType || null,
-            })
-            .returning();
-
-          if (!newItem) {
-            throw new Error(`فشل إنشاء سجل للمادة المسلسلة: ${serialNumber}`);
+        if (existingItem) {
+          if (existingItem.status === "DELIVERED") {
+            throw new AppError(`المنتج موجود وحالته مغلق (${serialNumber})`, 400);
+          } else {
+            throw new AppError(`المنتج موجود مسبقاً وحالته نشط (${serialNumber})`, 400);
           }
-          item = newItem;
-        } else {
-          previousStatus = existingItem.status;
-          previousOwnerId = existingItem.currentOwnerId;
-          
-          // Update existing item status and owner
-          const [updatedItem] = await tx
-            .update(items)
-            .set({
-              status: "IN_TRANSIT_CUSTODY",
-              currentOwnerId: technicianId,
-              warehouseId: null,
-              carrierName: carrierName || existingItem.carrierName,
-              simPackageType: simPackageType || existingItem.simPackageType,
-              updatedAt: new Date(),
-            })
-            .where(eq(items.id, existingItem.id))
-            .returning();
-
-          if (!updatedItem) {
-            throw new Error(`فشل تحديث حالة المادة المسلسلة: ${serialNumber}`);
-          }
-          item = updatedItem;
         }
+
+        // Create new item
+        const [newItem] = await tx
+          .insert(items)
+          .values({
+            itemTypeId,
+            serialNumber,
+            barcode: serialNumber,
+            status: "IN_TRANSIT_CUSTODY",
+            currentOwnerId: technicianId,
+            warehouseId: null,
+            carrierName: carrierName || null,
+            simPackageType: simPackageType || null,
+          })
+          .returning();
+
+        if (!newItem) {
+          throw new Error(`فشل إنشاء سجل للمادة المسلسلة: ${serialNumber}`);
+        }
+        const item = newItem;
+        const previousStatus = "NONE";
+        const previousOwnerId = null;
 
         // Log transaction
         await tx.insert(inventoryTransactions).values({

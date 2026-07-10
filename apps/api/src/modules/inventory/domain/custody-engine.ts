@@ -27,75 +27,44 @@ export class CustodyEngine {
     const existing = await this.lookupItem(serialNumber, tx);
 
     if (existing) {
-      // التحقق مما إذا كان الجهاز بعهدة فني آخر
-      if (existing.currentOwnerId && existing.currentOwnerId !== technicianId && existing.status === "RECEIVED_BY_TECHNICIAN") {
-        throw new Error(`الجهاز مرتبط بالفعل بعهدة الفني الآخر (معرف: ${existing.currentOwnerId}) ولا يمكن إضافته`);
+      if (existing.status === "DELIVERED") {
+        throw new Error("المنتج موجود وحالته مغلق");
+      } else {
+        throw new Error("المنتج موجود مسبقاً وحالته نشط");
       }
-
-      const previousOwnerId = existing.currentOwnerId;
-
-      // تحديث ملكية وحالة الجهاز الحالية
-      await tx
-        .update(items)
-        .set({
-          currentOwnerId: technicianId,
-          status: "RECEIVED_BY_TECHNICIAN",
-          updatedAt: new Date(),
-        })
-        .where(eq(items.id, existing.id));
-
-      // تسجيل الحركة في السجل اللوجستي التاريخي
-      await tx.insert(inventoryTransactions).values({
-        itemId: existing.id,
-        transactionType: "TRANSFER",
-        destinationOwnerId: technicianId,
-        notes: "تم تحديث حيازة العهدة الفعالة بالفحص الميداني",
-      });
-
-      // تسجيل في دفتر العهدة الدائم (Custody Ledger)
-      await tx.insert(custodyMovements).values({
-        itemId: existing.id,
-        fromOwnerId: previousOwnerId,
-        toOwnerId: technicianId,
-        reason: "TRANSFER",
-        performedById: technicianId,
-        notes: "نقل ملكية عهدة بالمسح الميداني",
-      });
-
-      return { id: existing.id, action: "updated" };
-    } else {
-      // توليد باركود تلقائي مطابق للسيريال في حال عدم توفره
-      const [inserted] = await tx
-        .insert(items)
-        .values({
-          itemTypeId,
-          serialNumber,
-          barcode: serialNumber,
-          status: "RECEIVED_BY_TECHNICIAN",
-          currentOwnerId: technicianId,
-        })
-        .returning({ id: items.id });
-
-      // تسجيل الحركة
-      await tx.insert(inventoryTransactions).values({
-        itemId: inserted.id,
-        transactionType: "INTAKE",
-        destinationOwnerId: technicianId,
-        notes: "تم إدخال جهاز جديد للعهدة لأول مرة بالمسح الميداني",
-      });
-
-      // تسجيل في دفتر العهدة الدائم (Custody Ledger)
-      await tx.insert(custodyMovements).values({
-        itemId: inserted.id,
-        fromOwnerId: null,
-        toOwnerId: technicianId,
-        reason: "INTAKE",
-        performedById: technicianId,
-        notes: "إنشاء وتسجيل عهدة جديدة بالمسح الميداني",
-      });
-
-      return { id: inserted.id, action: "inserted" };
     }
+
+    // توليد باركود تلقائي مطابق للسيريال في حال عدم توفره
+    const [inserted] = await tx
+      .insert(items)
+      .values({
+        itemTypeId,
+        serialNumber,
+        barcode: serialNumber,
+        status: "RECEIVED_BY_TECHNICIAN",
+        currentOwnerId: technicianId,
+      })
+      .returning({ id: items.id });
+
+    // تسجيل الحركة
+    await tx.insert(inventoryTransactions).values({
+      itemId: inserted.id,
+      transactionType: "INTAKE",
+      destinationOwnerId: technicianId,
+      notes: "تم إدخال جهاز جديد للعهدة لأول مرة بالمسح الميداني",
+    });
+
+    // تسجيل في دفتر العهدة الدائم (Custody Ledger)
+    await tx.insert(custodyMovements).values({
+      itemId: inserted.id,
+      fromOwnerId: null,
+      toOwnerId: technicianId,
+      reason: "INTAKE",
+      performedById: technicianId,
+      notes: "إنشاء وتسجيل عهدة جديدة بالمسح الميداني",
+    });
+
+    return { id: inserted.id, action: "inserted" };
   }
 
   /**

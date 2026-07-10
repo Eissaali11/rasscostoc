@@ -210,10 +210,12 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
         .where(eq(items.serialNumber, sn))
         .limit(1);
 
-      if (existingItem && existingItem.currentOwnerId && existingItem.currentOwnerId !== user.id && existingItem.status !== 'DELIVERED') {
-        return res.status(409).json({
-          message: `هذا الرقم التسلسلي (${sn}) مسجل بالفعل في عهدة فني آخر`
-        });
+      if (existingItem) {
+        if (existingItem.status === "DELIVERED") {
+          return res.status(400).json({ message: "المنتج موجود وحالته مغلق" });
+        } else {
+          return res.status(400).json({ message: "المنتج موجود مسبقاً وحالته نشط" });
+        }
       }
 
       // 3. تحديد الـ carrier name للشرائح
@@ -227,38 +229,22 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
       const carrierName = simCarrierMap[transfer.itemType] ?? null;
 
       // 4. إنشاء أو تحديث السيريال (first-scan-creates model)
-      let item;
-      let prevStatus = 'NONE';
+      // 4. إنشاء السيريال (first-scan-creates model)
+      const [newItem] = await db
+        .insert(items)
+        .values({
+          itemTypeId: transfer.itemType,
+          serialNumber: sn,
+          barcode: sn,
+          status: 'RECEIVED_BY_TECHNICIAN',
+          currentOwnerId: user.id,
+          warehouseId: null,
+          carrierName,
+        })
+        .returning();
 
-      if (!existingItem) {
-        // إنشاء جديد
-        const [newItem] = await db
-          .insert(items)
-          .values({
-            itemTypeId: transfer.itemType,
-            serialNumber: sn,
-            barcode: sn,
-            status: 'RECEIVED_BY_TECHNICIAN',
-            currentOwnerId: user.id,
-            warehouseId: null,
-            carrierName,
-          })
-          .returning();
-        item = newItem;
-      } else {
-        prevStatus = existingItem.status;
-        const [updatedItem] = await db
-          .update(items)
-          .set({
-            status: 'RECEIVED_BY_TECHNICIAN',
-            currentOwnerId: user.id,
-            warehouseId: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(items.id, existingItem.id))
-          .returning();
-        item = updatedItem;
-      }
+      const item = newItem;
+      const prevStatus = 'NONE';
 
       // 5. تسجيل سجل المعاملة والتاريخ
       await db.insert(inventoryTransactions).values({

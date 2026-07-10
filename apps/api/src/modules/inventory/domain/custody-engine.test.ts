@@ -49,25 +49,22 @@ describe('CustodyEngine Unit Tests', () => {
       expect(mockTx.insert).toHaveBeenCalledWith(custodyMovements);
     });
 
-    it('updates item owner and registers custody when item exists and is not active for others', async () => {
+    it('throws error when item already exists and is active', async () => {
       const existingItem = { id: 'item-1', serialNumber: 'SN123', currentOwnerId: null, status: 'WAREHOUSE' };
-      mockTx.limit.mockResolvedValueOnce([existingItem]);
-
-      const result = await CustodyEngine.scanItem('SN123', 'type-1', 'tech-1', mockTx);
-
-      expect(result).toEqual({ id: 'item-1', action: 'updated' });
-      expect(mockTx.update).toHaveBeenCalledWith(items);
-      expect(mockTx.insert).toHaveBeenCalledWith(inventoryTransactions);
-      expect(mockTx.insert).toHaveBeenCalledWith(custodyMovements);
-    });
-
-    it('throws error when item is already active for another technician', async () => {
-      const existingItem = { id: 'item-1', serialNumber: 'SN123', currentOwnerId: 'tech-2', status: 'RECEIVED_BY_TECHNICIAN' };
       mockTx.limit.mockResolvedValueOnce([existingItem]);
 
       await expect(
         CustodyEngine.scanItem('SN123', 'type-1', 'tech-1', mockTx)
-      ).rejects.toThrow('الجهاز مرتبط بالفعل بعهدة الفني الآخر');
+      ).rejects.toThrow('المنتج موجود مسبقاً وحالته نشط');
+    });
+
+    it('throws error when item already exists and is closed', async () => {
+      const existingItem = { id: 'item-1', serialNumber: 'SN123', currentOwnerId: null, status: 'DELIVERED' };
+      mockTx.limit.mockResolvedValueOnce([existingItem]);
+
+      await expect(
+        CustodyEngine.scanItem('SN123', 'type-1', 'tech-1', mockTx)
+      ).rejects.toThrow('المنتج موجود وحالته مغلق');
     });
   });
 
