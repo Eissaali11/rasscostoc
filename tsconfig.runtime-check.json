@@ -1,22 +1,22 @@
 {
   "extends": "./tsconfig.json",
   "include": [
-    "shared/**/*.ts",
-    "server/composition/**/*.ts",
-    "server/infrastructure/database/**/*.ts",
-    "server/infrastructure/schemas/**/*.ts",
-    "server/infrastructure/repositories/**/*.ts"
+    "packages/shared-types/**/*.ts",
+    "apps/api/src/composition/**/*.ts",
+    "apps/api/src/infrastructure/database/**/*.ts",
+    "apps/api/src/infrastructure/schemas/**/*.ts",
+    "apps/api/src/infrastructure/repositories/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "build",
     "dist",
-    "client/**",
-    "server/routes.ts",
-    "server/routes-legacy.ts",
-    "server/storage.ts",
-    "server/repositories/**",
-    "server/services/**",
+    "apps/portal/**",
+    "apps/api/src/routes.ts",
+    "apps/api/src/routes-legacy.ts",
+    "apps/api/src/storage.ts",
+    "apps/api/src/repositories/**",
+    "apps/api/src/services/**",
     "**/*.test.ts"
   ]
 }

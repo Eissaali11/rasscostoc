@@ -1,0 +1,75 @@
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { initializeDefaults } from "@modules/inventory/presentation/routes/bootstrap";
+import { registerIdentityRoutes } from "@modules/identity/presentation/routes/index";
+import { registerInventoryRoutes } from "@modules/inventory/presentation/routes/index";
+import { registerAccountingRoutes } from "@modules/accounting/presentation/routes/accounting.routes";
+import { registerCourierRoutes } from "@modules/courier/presentation/routes/courier.routes";
+import { readinessManager } from "@core/telemetry/readiness";
+import { metrics } from "@core/telemetry/metrics";
+import { getRecentSpans } from "@core/telemetry/tracer";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize default data on startup
+  await initializeDefaults();
+
+  const healthHandler = (_req: Request, res: Response) => {
+    res.json({
+      status: "healthy",
+      service: "stockpro-api",
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  app.get("/api/health", healthHandler);
+  app.get("/health", healthHandler);
+
+  app.get("/health/live", (_req, res) => {
+    res.json({ status: "UP" });
+  });
+
+  app.get("/health/ready", (_req, res) => {
+    const ready = readinessManager.isReady();
+    const details = readinessManager.getDetails();
+    if (ready) {
+      res.json({ status: "UP", details });
+    } else {
+      res.status(503).json({ status: "DOWN", details });
+    }
+  });
+
+  app.get("/api/observability/metrics", (_req, res) => {
+    res.json(metrics.getAllMetrics());
+  });
+
+  app.get("/api/observability/spans", (_req, res) => {
+    res.json(getRecentSpans());
+  });
+
+  // Config endpoint for Flutter app dynamic base URL
+  app.get("/api/config", (_req, res) => {
+    let host = _req.get("host") || "localhost:3001";
+    if (host.includes("127.0.0.1") || host.includes("localhost")) {
+      host = host.replace("127.0.0.1", "10.0.2.2").replace("localhost", "10.0.2.2");
+    }
+    res.json({
+      baseUrl: `${_req.protocol}://${host}`,
+    });
+  });
+
+  // Register identity routes
+  registerIdentityRoutes(app);
+
+  // Register inventory routes
+  registerInventoryRoutes(app);
+
+  // Register accounting routes
+  registerAccountingRoutes(app);
+
+  // Register courier routes
+  registerCourierRoutes(app);
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
+

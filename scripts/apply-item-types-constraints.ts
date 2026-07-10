@@ -4,7 +4,7 @@
  */
 
 import 'dotenv/config';
-import { db } from '../server/db';
+import { db } from '../apps/api/src/core/config/db';
 import { sql } from 'drizzle-orm';
 
 async function applyItemTypesConstraints() {

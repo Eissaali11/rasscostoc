@@ -1,0 +1,12 @@
+{
+  "name": "@stockpro/shared-types",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./schema.ts",
+  "types": "./schema.ts",
+  "dependencies": {
+    "zod": "^3.24.2",
+    "drizzle-zod": "^0.7.0",
+    "drizzle-orm": "^0.39.1"
+  }
+}

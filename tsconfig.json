@@ -1,5 +1,14 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
+  "include": [
+    "apps/portal/src/**/*",
+    "packages/shared-types/**/*",
+    "apps/api/src/**/*",
+    "packages/core/src/**/*",
+    "packages/kernel/src/**/*",
+    "packages/observability/src/**/*",
+    "packages/contracts/src/**/*",
+    "packages/testing/src/**/*"
+  ],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
@@ -16,11 +25,21 @@
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"],
-      "@server/*": ["./server/src/*"],
-      "@core/*": ["./server/src/core/*"],
-      "@modules/*": ["./server/src/modules/*"]
+      "@/*": ["./apps/portal/src/*"],
+      "@shared/*": ["./packages/shared-types/*"],
+      "@server/*": ["./apps/api/src/*"],
+      "@core/*": ["./apps/api/src/core/*"],
+      "@modules/*": ["./apps/api/src/modules/*"],
+      "@stockpro/core": ["./packages/core/src/index.ts"],
+      "@stockpro/core/*": ["./packages/core/src/*"],
+      "@stockpro/kernel": ["./packages/kernel/src/index.ts"],
+      "@stockpro/kernel/*": ["./packages/kernel/src/*"],
+      "@stockpro/observability": ["./packages/observability/src/index.ts"],
+      "@stockpro/observability/*": ["./packages/observability/src/*"],
+      "@stockpro/contracts": ["./packages/contracts/src/index.ts"],
+      "@stockpro/contracts/*": ["./packages/contracts/src/*"],
+      "@stockpro/testing": ["./packages/testing/src/index.ts"],
+      "@stockpro/testing/*": ["./packages/testing/src/*"]
     }
   }
 }

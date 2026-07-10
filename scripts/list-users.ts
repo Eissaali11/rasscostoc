@@ -1,5 +1,5 @@
-import { db } from "../server/src/core/config/db";
-import { users } from "../shared/schema";
+import { db } from "../apps/api/src/core/config/db";
+import { users } from "../packages/shared-types/schema";
 
 async function main() {
   const allUsers = await db.select().from(users);

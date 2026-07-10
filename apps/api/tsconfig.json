@@ -1,0 +1,25 @@
+{
+  "extends": "@stockpro/tsconfig/express.json",
+  "include": ["src/**/*", "vitest.config.ts", "../../vitest.config.ts"],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../../packages/shared-types/*"],
+      "@server/*": ["./src/*"],
+      "@core/*": ["./src/core/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@stockpro/core": ["../../packages/core/src/index.ts"],
+      "@stockpro/core/*": ["../../packages/core/src/*"],
+      "@stockpro/kernel": ["../../packages/kernel/src/index.ts"],
+      "@stockpro/kernel/*": ["../../packages/kernel/src/*"],
+      "@stockpro/observability": ["../../packages/observability/src/index.ts"],
+      "@stockpro/observability/*": ["../../packages/observability/src/*"],
+      "@stockpro/contracts": ["../../packages/contracts/src/index.ts"],
+      "@stockpro/contracts/*": ["../../packages/contracts/src/*"],
+      "@stockpro/testing": ["../../packages/testing/src/index.ts"],
+      "@stockpro/testing/*": ["../../packages/testing/src/*"]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@stockpro/config",
+  "version": "1.0.0",
+  "main": "./index.ts",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
+}

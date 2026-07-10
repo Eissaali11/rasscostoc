@@ -1,0 +1,5 @@
+{
+  "extends": "@stockpro/tsconfig/vite.json",
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}

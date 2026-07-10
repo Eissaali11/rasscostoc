@@ -1,0 +1,1 @@
+ALTER TABLE "warehouse_transfers" ADD COLUMN "transfer_type" text DEFAULT 'WAREHOUSE_TRANSFER' NOT NULL;

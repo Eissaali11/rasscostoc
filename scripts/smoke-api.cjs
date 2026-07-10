@@ -141,8 +141,8 @@ async function run() {
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           id: smokeId,
-          nameAr: 'نوع اختبار',
-          nameEn: 'Smoke Type',
+          nameAr: `نوع اختبار ${smokeId}`,
+          nameEn: `Smoke Type ${smokeId}`,
           category: 'devices',
           unitsPerBox: 10,
           isActive: true,
@@ -155,7 +155,7 @@ async function run() {
       const updateItemType = await request(`/api/item-types/${smokeId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ nameAr: 'نوع اختبار معدل', unitsPerBox: 12 }),
+        body: JSON.stringify({ nameAr: `نوع اختبار معدل ${smokeId}`, unitsPerBox: 12 }),
       });
       expectStatus(updateItemType, 200, 'PATCH /api/item-types/:id', failures);
 
