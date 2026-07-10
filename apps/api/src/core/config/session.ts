@@ -26,9 +26,13 @@ const PgSession = connectPgSimple(session);
 export function setupSession(app: Express): void {
   const isProduction = process.env.NODE_ENV === "production";
   const isHttps = process.env.HTTPS === "true" || (isProduction && process.env.TRUST_PROXY === "true");
-  
+
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required");
+  }
+
   const sessionConfig: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {

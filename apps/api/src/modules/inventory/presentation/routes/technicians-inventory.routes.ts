@@ -43,6 +43,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
   app.get(
     "/api/technician-fixed-inventory/:technicianId",
     requireAuth,
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بالوصول لمخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.getFixedInventory
   );
 
@@ -50,6 +58,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
   app.put(
     "/api/technician-fixed-inventory/:technicianId",
     requireAuth,
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بتعديل مخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.updateFixedInventory
   );
 
@@ -57,6 +73,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
   app.delete(
     "/api/technician-fixed-inventory/:technicianId",
     requireAuth,
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بحذف مخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.deleteFixedInventory
   );
 
@@ -72,6 +96,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
     "/api/stock-transfer",
     requireAuth,
     validateBody(stockTransferSchema),
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.body;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بإجراء مناقلة لهذا الفني" });
+      }
+      next();
+    },
     techniciansController.transferStock
   );
 
@@ -87,6 +119,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
   app.get(
     "/api/technicians/:technicianId/fixed-inventory-entries",
     requireAuth,
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بالوصول لمدخلات مخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.getFixedInventoryEntries
   );
 
@@ -95,6 +135,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
     "/api/technicians/:technicianId/fixed-inventory-entries",
     requireAuth,
     validateBody(inventoryEntrySchema),
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بتحديث مخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.upsertFixedInventoryEntry
   );
 
@@ -102,6 +150,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
   app.get(
     "/api/technicians/:technicianId/moving-inventory-entries",
     requireAuth,
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بالوصول لمخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.getMovingInventoryEntries
   );
 
@@ -109,6 +165,14 @@ export function registerTechniciansInventoryRoutes(app: Express): void {
   app.post(
     "/api/technicians/:technicianId/moving-inventory-entries",
     requireAuth,
+    async (req, res, next) => {
+      const user = req.user!;
+      const { technicianId } = req.params;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && user.id !== technicianId) {
+        return res.status(403).json({ message: "غير مصرح لك بتحديث مخزون هذا الفني" });
+      }
+      next();
+    },
     techniciansController.upsertMovingInventoryEntry
   );
 

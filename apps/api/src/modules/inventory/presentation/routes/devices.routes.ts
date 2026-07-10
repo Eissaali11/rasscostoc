@@ -2,6 +2,7 @@
  * Devices routes (Withdrawn & Received)
  */
 
+import crypto from "crypto";
 import type { Express } from "express";
 import { devicesContainer } from "@server/composition/devices.container";
 import { requireAuth, requireAdmin, requireSupervisor } from "@core/middlewares/auth.middleware";
@@ -118,8 +119,23 @@ export function registerDevicesRoutes(app: Express): void {
     "/api/technicians/deduct-inventory",
     async (req, res, next) => {
       const token = req.headers["x-system-token"] || req.headers["authorization"];
-      const expectedToken = process.env.SYSTEM_INTERNAL_TOKEN || "rassco-stockpro-secret-token";
-      if (token === expectedToken || token === `Bearer ${expectedToken}`) {
+      const expectedToken = process.env.SYSTEM_INTERNAL_TOKEN;
+
+      // Constant-time comparison: hash both sides to a fixed-length digest first
+      // so timingSafeEqual never throws on mismatched lengths, and so the
+      // comparison itself doesn't leak timing information about the secret.
+      const constantTimeEquals = (a: string, b: string): boolean => {
+        const hashA = crypto.createHash("sha256").update(a).digest();
+        const hashB = crypto.createHash("sha256").update(b).digest();
+        return crypto.timingSafeEqual(hashA, hashB);
+      };
+
+      if (
+        expectedToken &&
+        typeof token === "string" &&
+        (constantTimeEquals(token, expectedToken) ||
+          constantTimeEquals(token, `Bearer ${expectedToken}`))
+      ) {
         req.user = {
           id: "system",
           role: "admin",

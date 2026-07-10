@@ -19,7 +19,12 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
   // عرض جميع المناقلات
   app.get("/api/warehouse-transfers", requireAuth, async (req, res) => {
     try {
-      const transfers = await inventoryContainer.getWarehouseTransfersUseCase.execute();
+      const user = req.user!;
+      const filters = user.role === 'admin' || user.role === 'supervisor'
+        ? {}
+        : { technicianId: user.id };
+
+      const transfers = await inventoryContainer.getWarehouseTransfersUseCase.execute(filters);
       res.json(transfers);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -33,6 +38,11 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
     try {
       const user = req.user!;
       const normalized = normalizeCreateWarehouseTransferPayload(req.body);
+
+      if (user.role !== 'admin' && user.role !== 'supervisor' && normalized.technicianId !== user.id) {
+        return res.status(403).json({ message: "غير مصرح لك بإنشاء مناقلة لهذا الفني" });
+      }
+
       const result = await inventoryContainer.createWarehouseTransfersUseCase.execute({
         warehouseId: normalized.warehouseId,
         technicianId: normalized.technicianId,
@@ -58,20 +68,35 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
   // تحديث حالة المناقلة
   app.patch("/api/warehouse-transfers/:id/status", requireAuth, async (req, res) => {
     try {
+      const [transfer] = await db
+        .select()
+        .from(warehouseTransfers)
+        .where(eq(warehouseTransfers.id, req.params.id))
+        .limit(1);
+
+      if (!transfer) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      const user = req.user!;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && transfer.technicianId !== user.id) {
+        return res.status(403).json({ message: "غير مصرح لك بتحديث حالة هذا الطلب" });
+      }
+
       const status = String(req.body?.status || '').toLowerCase();
       if (status === 'approved' || status === 'accepted') {
-        const transfer = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
+        const result = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
           transferId: req.params.id,
         });
-        return res.json(transfer);
+        return res.json(result);
       }
       if (status === 'rejected') {
         const reason = typeof req.body?.reason === 'string' ? req.body.reason : 'Rejected via status endpoint';
-        const transfer = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
+        const result = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
           transferId: req.params.id,
           reason,
         });
-        return res.json(transfer);
+        return res.json(result);
       }
 
       return res.status(400).json({ message: "Invalid status. Use approved|accepted|rejected" });
@@ -88,10 +113,25 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
   // قبول مناقلة
   app.post("/api/warehouse-transfers/:id/accept", requireAuth, async (req, res) => {
     try {
-      const transfer = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
+      const [transfer] = await db
+        .select()
+        .from(warehouseTransfers)
+        .where(eq(warehouseTransfers.id, req.params.id))
+        .limit(1);
+
+      if (!transfer) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      const user = req.user!;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && transfer.technicianId !== user.id) {
+        return res.status(403).json({ message: "غير مصرح لك بقبول هذا الطلب" });
+      }
+
+      const result = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
         transferId: req.params.id,
       });
-      res.json(transfer);
+      res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Error accepting warehouse transfer:", message);
@@ -102,12 +142,27 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
   // رفض مناقلة
   app.post("/api/warehouse-transfers/:id/reject", requireAuth, async (req, res) => {
     try {
+      const [transfer] = await db
+        .select()
+        .from(warehouseTransfers)
+        .where(eq(warehouseTransfers.id, req.params.id))
+        .limit(1);
+
+      if (!transfer) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      const user = req.user!;
+      if (user.role !== 'admin' && user.role !== 'supervisor' && transfer.technicianId !== user.id) {
+        return res.status(403).json({ message: "غير مصرح لك برفض هذا الطلب" });
+      }
+
       const { reason } = req.body;
-      const transfer = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
+      const result = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
         transferId: req.params.id,
         reason,
       });
-      res.json(transfer);
+      res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Error rejecting warehouse transfer:", message);
@@ -138,6 +193,10 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
 
       if (!transfer) {
         return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      if (user.role !== 'admin' && user.role !== 'supervisor' && transfer.technicianId !== user.id) {
+        return res.status(403).json({ message: "غير مصرح لك بمسح الأرقام التسلسلية لهذا الطلب" });
       }
 
       if (transfer.status !== 'accepted') {
@@ -247,6 +306,10 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
 
       if (!transfer) {
         return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      if (user.role !== 'admin' && user.role !== 'supervisor' && transfer.technicianId !== user.id) {
+        return res.status(403).json({ message: "غير مصرح لك بتأكيد استلام هذا الطلب" });
       }
 
       if (transfer.status !== 'accepted') {

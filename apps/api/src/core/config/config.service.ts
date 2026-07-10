@@ -72,15 +72,15 @@ export class ConfigService {
   }
 
   get databaseUrl(): string {
-    return this.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/nulip_inventory");
+    return this.get("DATABASE_URL");
   }
 
   get sessionSecret(): string {
-    return this.get("SESSION_SECRET", "stockpro_secret_session_key_12345");
+    return this.get("SESSION_SECRET");
   }
 
   get jwtSecret(): string {
-    return this.get("JWT_SECRET", "stockpro_jwt_secure_signing_secret_998877");
+    return this.get("JWT_SECRET");
   }
 
   get trustProxy(): boolean {
