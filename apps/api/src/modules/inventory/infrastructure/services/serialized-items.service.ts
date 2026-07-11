@@ -182,14 +182,14 @@ export class SerializedItemsService {
           }
         }
 
-        // Create new item
+        // Create new item — status RECEIVED_BY_TECHNICIAN (direct batch receipt)
         const [newItem] = await tx
           .insert(items)
           .values({
             itemTypeId,
             serialNumber,
             barcode: serialNumber,
-            status: "IN_TRANSIT_CUSTODY",
+            status: "RECEIVED_BY_TECHNICIAN",
             currentOwnerId: technicianId,
             warehouseId: null,
             carrierName: carrierName || null,
@@ -216,9 +216,9 @@ export class SerializedItemsService {
         await tx.insert(itemHistoryLogs).values({
           itemId: item.id,
           fromStatus: previousStatus,
-          toStatus: "IN_TRANSIT_CUSTODY",
+          toStatus: "RECEIVED_BY_TECHNICIAN",
           changedById: technicianId,
-          notes: "تم استلام العهدة في سيارة/حقيبة الفني (دفعة واحدة)",
+          notes: "تم استلام العهدة مباشرة من قبل الفني (دفعة واحدة)",
         });
 
         // Log to Custody Ledger (custodyMovements)
