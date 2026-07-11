@@ -440,6 +440,7 @@ export class TechnicianService {
         totalMobilySim: sql<number>`COALESCE(SUM(${technicianFixedInventories.mobilySimBoxes} * 10 + ${technicianFixedInventories.mobilySimUnits}), 0)`,
         totalStcSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.stcSimBoxes} * 10 + ${technicianFixedInventories.stcSimUnits}), 0)`,
         totalZainSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.zainSimBoxes} * 10 + ${technicianFixedInventories.zainSimUnits}), 0)`,
+        totalLebaraSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.lebaraBoxes} * 10 + ${technicianFixedInventories.lebaraUnits}), 0)`,
         totalTechnicians: sql<number>`COUNT(DISTINCT ${technicianFixedInventories.technicianId})`
       })
       .from(technicianFixedInventories)
@@ -458,6 +459,7 @@ export class TechnicianService {
       totalMobilySim: summary?.totalMobilySim || 0,
       totalStcSim: summary?.totalStcSim || 0,
       totalZainSim: summary?.totalZainSim || 0,
+      totalLebaraSim: summary?.totalLebaraSim || 0,
       techniciansWithCriticalStock: 0,
       techniciansWithWarningStock: 0,
       techniciansWithGoodStock: techniciansCount,

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Bell,
   Boxes,
@@ -29,6 +30,15 @@ import {
   Inbox,
   UserCheck,
   Zap,
+  PackageCheck,
+  Timer,
+  BarChart2,
+  Database,
+  ClipboardCheck,
+  BarChart3,
+  Download,
+  AlertCircle,
+  Truck,
 } from "lucide-react";
 import {
   AreaChart,
@@ -237,8 +247,59 @@ function getTrendLabels(period: TrendPeriod): string[] {
   });
 }
 
+// ─── Courier Types ────────────────────────────────────────────────────────────
+interface CourierDashboardStats {
+  totalRequests: number;
+  statuses: Record<string, number>;
+  failures: Record<string, number>;
+}
+interface CourierAiStats {
+  totalProcessed: number;
+  totalApplied: number;
+  averageConfidence: number;
+}
+
+const COURIER_COLORS = {
+  completed: "#10b981",
+  notCompleted: "#ef4444",
+  inProgress: "#f59e0b",
+};
+
+function CourierStatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+  onClick,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className={`bg-[#1a3636] border border-slate-700/50 rounded-xl p-5 flex items-center gap-4 shadow transition-all duration-300 ${
+        onClick ? "cursor-pointer hover:border-emerald-500/50 hover:bg-[#1f3d3d] hover:-translate-y-0.5" : ""
+      }`}
+    >
+      <div className={`p-3 rounded-lg ${color} shadow-inner`}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <div>
+        <p className="text-xs text-slate-400 mb-1">{label}</p>
+        <p className="text-2xl font-bold text-slate-100">{value}</p>
+      </div>
+    </div>
+  );
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("monthly");
 
   const canSeeGlobalData = user?.role === "admin" || user?.role === "supervisor";
@@ -374,6 +435,39 @@ export default function Dashboard() {
   }, [allTransfers]);
 
   const totalPendingActions = pendingRequestsCount + pendingTransfersCount;
+
+  // ── Courier queries (admin/supervisor only) ──
+  const { data: courierStats } = useQuery<CourierDashboardStats>({
+    queryKey: ["/api/courier/dashboard/stats"],
+    queryFn: () => apiRequest("GET", "/api/courier/dashboard/stats").then((r) => r.json()),
+    enabled: !!user?.id && canSeeGlobalData,
+  });
+
+  const { data: courierAiStats } = useQuery<CourierAiStats>({
+    queryKey: ["/api/courier/ai-monitor/stats"],
+    queryFn: () => apiRequest("GET", "/api/courier/ai-monitor/stats").then((r) => r.json()),
+    enabled: !!user?.id && canSeeGlobalData,
+  });
+
+  const courierCompleted = courierStats?.statuses?.["Installation Completed - NL"] || courierStats?.statuses?.["Installation Completed"] || 0;
+  const courierNotCompleted = courierStats?.statuses?.["Not Completed"] || 0;
+  const courierInProgress = Math.max(0, (courierStats?.totalRequests || 0) - courierCompleted - courierNotCompleted);
+  const courierCompletionRate = courierStats?.totalRequests ? Math.round((courierCompleted / courierStats.totalRequests) * 100) : 0;
+
+  const courierDonutData = [
+    { name: "مكتمل", value: courierCompleted, color: COURIER_COLORS.completed, statusKey: "Installation Completed" },
+    { name: "غير مكتمل", value: courierNotCompleted, color: COURIER_COLORS.notCompleted, statusKey: "Not Completed" },
+    { name: "قيد المعالجة", value: courierInProgress, color: COURIER_COLORS.inProgress, statusKey: "pending" },
+  ].filter((d) => d.value > 0);
+
+  const courierTopFailures = Object.entries(courierStats?.failures || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const courierBarData = courierTopFailures.map(([reason, count]) => ({
+    name: reason.replace(/_/g, " "),
+    count,
+    reasonKey: reason,
+  }));
 
   // Render Admin/Supervisor Dashboard
   if (canSeeGlobalData) {
@@ -519,6 +613,15 @@ export default function Dashboard() {
             <TabsTrigger value="team" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-400/30">
               <Users className="size-4" />
               طاقم العمل والمستودعات
+            </TabsTrigger>
+            <TabsTrigger value="courier" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-300 data-[state=active]:border data-[state=active]:border-emerald-400/30">
+              <Truck className="size-4" />
+              التوصيل والتركيب
+              {(courierStats?.totalRequests ?? 0) > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">
+                  {courierStats?.totalRequests}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -1009,6 +1112,165 @@ export default function Dashboard() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* TAB 5: COURIER & INSTALLATION */}
+          <TabsContent value="courier" className="space-y-6 outline-none">
+            {/* Quick Access Shortcuts */}
+            <div className="bg-[#1a3636]/60 border border-slate-700/40 rounded-2xl p-4 shadow-lg space-y-3">
+              <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                ⚡ روابط الوصول السريع — وحدة التوصيل والتركيب
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {[
+                  { label: "البيانات الخام", path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30" },
+                  { label: "التحقق والطلبات", path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30" },
+                  { label: "تقارير PDF", path: "/courier/pdf", icon: FileText, color: "hover:bg-purple-500/10 hover:border-purple-500/30" },
+                  { label: "التقارير الإجمالية", path: "/courier/reports", icon: BarChart3, color: "hover:bg-indigo-500/10 hover:border-indigo-500/30" },
+                  { label: "تصدير Excel", path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30" },
+                ].map((btn) => {
+                  const BtnIcon = btn.icon;
+                  return (
+                    <button
+                      key={btn.label}
+                      onClick={() => setLocation(btn.path)}
+                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold bg-[#102222]/85 border border-slate-700/70 text-slate-200 transition-all duration-300 hover:-translate-y-0.5 shadow-sm ${btn.color}`}
+                    >
+                      <BtnIcon className="w-4 h-4 text-slate-400" />
+                      <span>{btn.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CourierStatCard label="إجمالي طلبات التركيب" value={courierStats?.totalRequests ?? "—"} icon={BarChart2} color="bg-blue-600" onClick={() => setLocation("/courier/requests")} />
+              <CourierStatCard label="مكتملة بنجاح" value={courierCompleted} icon={PackageCheck} color="bg-emerald-600" onClick={() => setLocation("/courier/requests?status=Installation Completed")} />
+              <CourierStatCard label="غير مكتملة" value={courierNotCompleted} icon={XCircle} color="bg-red-600" onClick={() => setLocation("/courier/requests?status=Not Completed")} />
+              <CourierStatCard label="قيد المعالجة" value={courierInProgress} icon={Timer} color="bg-amber-600" onClick={() => setLocation("/courier/requests?status=pending")} />
+              <CourierStatCard label="تقارير PDF معالجة" value={courierAiStats?.totalProcessed ?? "—"} icon={FileText} color="bg-purple-600" />
+              <CourierStatCard label="تقارير مُطبَّقة" value={courierAiStats?.totalApplied ?? "—"} icon={PackageCheck} color="bg-cyan-600" />
+              <CourierStatCard label="متوسط دقة الاستخراج" value={courierAiStats?.averageConfidence ? `${courierAiStats.averageConfidence}%` : "—"} icon={TrendingUp} color="bg-indigo-600" />
+              <CourierStatCard label="معدل الإتمام الكلي" value={`${courierCompletionRate}%`} icon={TrendingUp} color="bg-teal-600" />
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Donut Chart: Completion Status */}
+              <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-100">نسبة توزيع الطلبات وإتمامها</h2>
+                  <p className="text-xs text-slate-400 mt-1">توزيع نسبي لحالات التركيب والمعالجة الحالية</p>
+                </div>
+
+                <div className="h-64 mt-4 flex items-center justify-center relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={courierDonutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65}
+                        outerRadius={90}
+                        paddingAngle={4}
+                        dataKey="value"
+                        cursor="pointer"
+                        onClick={(data: any) => setLocation(`/courier/requests?status=${encodeURIComponent(data.statusKey)}`)}
+                      >
+                        {courierDonutData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right", direction: "rtl" }}
+                        itemStyle={{ color: "#e2e8f0" }}
+                        formatter={(value: any, name: any) => [`${value} طلب`, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  <div className="absolute text-center pointer-events-none">
+                    <span className="text-[10px] text-slate-400 block font-semibold">إجمالي الطلبات</span>
+                    <span className="text-2xl font-black text-white block mt-0.5">{courierStats?.totalRequests || 0}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-700/40">
+                  {courierDonutData.map((d) => (
+                    <button
+                      key={d.name}
+                      onClick={() => setLocation(`/courier/requests?status=${encodeURIComponent(d.statusKey)}`)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-[#102222]/40 border border-slate-800 hover:border-slate-600 transition-colors text-center cursor-pointer"
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full block" style={{ backgroundColor: d.color }} />
+                      <span className="text-[10px] text-slate-400 font-bold">{d.name}</span>
+                      <span className="text-xs font-black text-slate-100">{d.value}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bar Chart: Failure Reasons */}
+              <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-100">أسباب الفشل الأكثر شيوعاً</h2>
+                  <p className="text-xs text-slate-400 mt-1">المعوقات التشغيلية الأكثر تكراراً في الميدان</p>
+                </div>
+
+                <div className="h-64 mt-4">
+                  {courierBarData.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
+                      <AlertCircle className="w-8 h-8 text-slate-600" />
+                      <span className="text-xs">لا توجد حالات فشل مسجلة حتى الآن</span>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={courierBarData}
+                        layout="vertical"
+                        margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                        onClick={(state: any) => {
+                          if (state?.activePayload?.[0]?.payload?.reasonKey) {
+                            setLocation(`/courier/requests?reason=${encodeURIComponent(state.activePayload[0].payload.reasonKey)}`);
+                          }
+                        }}
+                      >
+                        <XAxis type="number" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          stroke="#94a3b8"
+                          fontSize={9}
+                          tickLine={false}
+                          width={100}
+                          axisLine={false}
+                          tickFormatter={(val: string) => val.length > 15 ? `${val.substring(0, 15)}...` : val}
+                        />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right", direction: "rtl" }}
+                          itemStyle={{ color: "#e2e8f0" }}
+                          formatter={(value: any) => [`${value} تكرار`, "عدد الحالات"]}
+                        />
+                        <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer">
+                          {courierBarData.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#ef4444" : "#f87171"} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-700/40 text-xs text-slate-400 flex items-center justify-between">
+                  <span>إجمالي حالات الفشل المصنفة</span>
+                  <span className="text-slate-200 font-bold">
+                    {Object.values(courierStats?.failures || {}).reduce((s, v) => s + v, 0)} حالة
+                  </span>
                 </div>
               </div>
             </div>

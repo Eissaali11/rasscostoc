@@ -54,6 +54,8 @@ export class DrizzleWarehouseTransferAdminRepository implements IWarehouseTransf
         stcSimUnits: warehouseInventory.stcSimUnits,
         zainSimBoxes: warehouseInventory.zainSimBoxes,
         zainSimUnits: warehouseInventory.zainSimUnits,
+        lebaraBoxes: warehouseInventory.lebaraBoxes,
+        lebaraUnits: warehouseInventory.lebaraUnits,
       })
       .from(warehouseInventory)
       .where(eq(warehouseInventory.warehouseId, warehouseId));
@@ -98,6 +100,8 @@ export class DrizzleWarehouseTransferAdminRepository implements IWarehouseTransf
         stcSimUnits: techniciansInventory.stcSimUnits,
         zainSimBoxes: techniciansInventory.zainSimBoxes,
         zainSimUnits: techniciansInventory.zainSimUnits,
+        lebaraBoxes: techniciansInventory.lebaraBoxes,
+        lebaraUnits: techniciansInventory.lebaraUnits,
       })
       .from(techniciansInventory)
       .where(eq(techniciansInventory.technicianName, technicianName));

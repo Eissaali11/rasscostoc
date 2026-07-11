@@ -16,7 +16,9 @@ export type LegacyStockField =
   | 'stcSimBoxes'
   | 'stcSimUnits'
   | 'zainSimBoxes'
-  | 'zainSimUnits';
+  | 'zainSimUnits'
+  | 'lebaraBoxes'
+  | 'lebaraUnits';
 
 export type LegacyStockSnapshot = Record<LegacyStockField, number>;
 

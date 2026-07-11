@@ -171,8 +171,8 @@ export default function UpdateWarehouseInventoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>تحديث مخزون المستودع</DialogTitle>
           <DialogDescription>
             قم بتحديث كميات جميع الأصناف في المستودع
@@ -180,12 +180,12 @@ export default function UpdateWarehouseInventoryModal({
         </DialogHeader>
         
         {itemTypesLoading ? (
-          <div className="flex items-center justify-center py-10">
+          <div className="flex items-center justify-center py-10 shrink-0">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="space-y-2 shrink-0">
               <Label>البحث عن المنتج</Label>
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -209,106 +209,112 @@ export default function UpdateWarehouseInventoryModal({
               <p className="text-xs text-muted-foreground">عرض {filteredVisibleItems.length} من {visibleItems.length} صنف</p>
             </div>
 
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-6">
-                {filteredVisibleItems.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                    لا توجد منتجات مطابقة لبحثك
-                  </div>
-                ) : filteredVisibleItems.map((item) => {
-                  const Icon = item.icon;
-                  const values = formData[item.id] || { boxes: 0, units: 0 };
-                  return (
-                    <div key={item.id} className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className={`p-2 rounded-lg bg-gradient-to-r ${item.gradient} text-white`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <h4 className="font-semibold text-lg">{item.nameAr}</h4>
+            <div className="flex-1 min-h-0 pr-2 overflow-y-auto max-h-[55vh] sm:max-h-[500px] space-y-4">
+              {filteredVisibleItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  لا توجد منتجات مطابقة لبحثك
+                </div>
+              ) : filteredVisibleItems.map((item) => {
+                const Icon = item.icon;
+                const values = formData[item.id] || { boxes: 0, units: 0 };
+                return (
+                  <div key={item.id} className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${item.gradient} text-white shrink-0`}>
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>الكراتين</Label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleValueChange(item.id, 'boxes', values.boxes - 1)}
-                              disabled={values.boxes <= 0}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={values.boxes}
-                              onChange={(e) => handleValueChange(item.id, 'boxes', parseInt(e.target.value) || 0)}
-                              className="text-center"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleValueChange(item.id, 'boxes', values.boxes + 1)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={() => handleValueChange(item.id, 'boxes', 0)}
-                              disabled={values.boxes === 0}
-                            >
-                              تصفير
-                            </Button>
-                          </div>
+                      <h4 className="font-semibold text-base sm:text-lg">{item.nameAr}</h4>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm">الكراتين</Label>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleValueChange(item.id, 'boxes', values.boxes - 1)}
+                            disabled={values.boxes <= 0}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={values.boxes}
+                            onChange={(e) => handleValueChange(item.id, 'boxes', parseInt(e.target.value) || 0)}
+                            className="text-center h-8 px-1 min-w-[50px] flex-1 sm:flex-initial"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleValueChange(item.id, 'boxes', values.boxes + 1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 px-2 text-xs shrink-0"
+                            onClick={() => handleValueChange(item.id, 'boxes', 0)}
+                            disabled={values.boxes === 0}
+                          >
+                            تصفير
+                          </Button>
                         </div>
-                        <div className="space-y-2">
-                          <Label>الوحدات</Label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleValueChange(item.id, 'units', values.units - 1)}
-                              disabled={values.units <= 0}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={values.units}
-                              onChange={(e) => handleValueChange(item.id, 'units', parseInt(e.target.value) || 0)}
-                              className="text-center"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleValueChange(item.id, 'units', values.units + 1)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={() => handleValueChange(item.id, 'units', 0)}
-                              disabled={values.units === 0}
-                            >
-                              تصفير
-                            </Button>
-                          </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm">الوحدات</Label>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleValueChange(item.id, 'units', values.units - 1)}
+                            disabled={values.units <= 0}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={values.units}
+                            onChange={(e) => handleValueChange(item.id, 'units', parseInt(e.target.value) || 0)}
+                            className="text-center h-8 px-1 min-w-[50px] flex-1 sm:flex-initial"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleValueChange(item.id, 'units', values.units + 1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 px-2 text-xs shrink-0"
+                            onClick={() => handleValueChange(item.id, 'units', 0)}
+                            disabled={values.units === 0}
+                          >
+                            تصفير
+                          </Button>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+                  </div>
+                );
+              })}
+            </div>
 
-            <div className="flex items-center space-x-3 space-x-reverse pt-4">
+            <div className="flex items-center space-x-3 space-x-reverse pt-4 shrink-0 border-t mt-auto">
               <Button
                 type="submit"
                 disabled={updateInventoryMutation.isPending}

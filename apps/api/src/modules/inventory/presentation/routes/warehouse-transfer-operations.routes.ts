@@ -353,8 +353,9 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
             )
             .limit(1);
 
-          const addUnits = transfer.packagingType === 'boxes' ? 0 : transfer.quantity;
-          const addBoxes = transfer.packagingType === 'boxes' ? transfer.quantity : 0;
+          const isBoxes = transfer.packagingType === 'box' || transfer.packagingType === 'boxes';
+          const addUnits = isBoxes ? 0 : transfer.quantity;
+          const addBoxes = isBoxes ? transfer.quantity : 0;
 
           if (existingEntry) {
             await tx

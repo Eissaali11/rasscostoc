@@ -33,6 +33,8 @@ const legacyFields: LegacyStockField[] = [
   'stcSimUnits',
   'zainSimBoxes',
   'zainSimUnits',
+  'lebaraBoxes',
+  'lebaraUnits',
 ];
 
 const legacyTransferFieldMap: Record<string, { box: LegacyStockField; unit: LegacyStockField }> = {
@@ -45,6 +47,8 @@ const legacyTransferFieldMap: Record<string, { box: LegacyStockField; unit: Lega
   mobilySim: { box: 'mobilySimBoxes', unit: 'mobilySimUnits' },
   stcSim: { box: 'stcSimBoxes', unit: 'stcSimUnits' },
   zainSim: { box: 'zainSimBoxes', unit: 'zainSimUnits' },
+  lebara: { box: 'lebaraBoxes', unit: 'lebaraUnits' },
+  lebaraSim: { box: 'lebaraBoxes', unit: 'lebaraUnits' },
 };
 
 function emptyLegacyStock(): LegacyStockSnapshot {
@@ -67,6 +71,8 @@ function emptyLegacyStock(): LegacyStockSnapshot {
     stcSimUnits: 0,
     zainSimBoxes: 0,
     zainSimUnits: 0,
+    lebaraBoxes: 0,
+    lebaraUnits: 0,
   };
 }
 

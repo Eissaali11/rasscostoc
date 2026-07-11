@@ -303,7 +303,7 @@ export default function TransferFromWarehouseModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>نقل من المستودع إلى مندوب</DialogTitle>
           <DialogDescription>
@@ -362,7 +362,7 @@ export default function TransferFromWarehouseModal({
                       </SelectContent>
                     </Select>
                     {selectedTechnician && (
-                      <div className="mt-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                      <div className="mt-2 rounded-md border bg-muted/20 px-3 py-1.5 text-xs sm:text-sm">
                         المندوب المختار: <span className="font-semibold">{selectedTechnician.fullName}</span>
                         {selectedTechnician.city ? <span className="text-muted-foreground"> - {selectedTechnician.city}</span> : null}
                       </div>
@@ -372,7 +372,7 @@ export default function TransferFromWarehouseModal({
                 )}
               />
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -394,128 +394,130 @@ export default function TransferFromWarehouseModal({
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                  <label className="inline-flex items-center gap-2 text-xs sm:text-sm text-muted-foreground cursor-pointer">
                     <Checkbox
                       checked={showAvailableOnly}
                       onCheckedChange={(checked) => setShowAvailableOnly(checked === true)}
                     />
                     عرض الأصناف المتاحة فقط
                   </label>
-                  <span className="text-xs text-muted-foreground">{filteredVisibleItems.length} صنف</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">{filteredVisibleItems.length} صنف</span>
                 </div>
               </div>
 
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-4">
-                  {filteredVisibleItems.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      لا توجد أصناف مطابقة للبحث أو الفلتر الحالي
-                    </div>
-                  ) : filteredVisibleItems.map((item) => {
-                    const Icon = item.icon;
-                    const transfer = itemTransfers[item.id] || { selected: false, quantity: 0, packagingType: "unit" };
-                    const availableBoxes = getAvailableStock(item.id, "box");
-                    const availableUnits = getAvailableStock(item.id, "unit");
-                    const totalAvailable = availableBoxes + availableUnits;
-                    const isUnavailable = totalAvailable === 0;
-                    const selectedPackagingAvailable = getAvailableStock(item.id, transfer.packagingType);
-                    const hasQuantityError = transfer.selected && transfer.quantity > selectedPackagingAvailable;
+              <div className="h-[220px] sm:h-[350px] overflow-y-auto pr-2 space-y-3 border rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/50">
+                {filteredVisibleItems.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    لا توجد أصناف مطابقة للبحث أو الفلتر الحالي
+                  </div>
+                ) : filteredVisibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const transfer = itemTransfers[item.id] || { selected: false, quantity: 0, packagingType: "unit" };
+                  const availableBoxes = getAvailableStock(item.id, "box");
+                  const availableUnits = getAvailableStock(item.id, "unit");
+                  const totalAvailable = availableBoxes + availableUnits;
+                  const isUnavailable = totalAvailable === 0;
+                  const selectedPackagingAvailable = getAvailableStock(item.id, transfer.packagingType);
+                  const hasQuantityError = transfer.selected && transfer.quantity > selectedPackagingAvailable;
 
-                    return (
-                      <div key={item.id} className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border">
-                        <div className="flex items-center gap-3 mb-3">
-                          <Checkbox
-                            disabled={isUnavailable}
-                            checked={transfer.selected}
-                            onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              updateItemTransfer(item.id, "selected", isChecked);
-                              if (!isChecked) updateItemTransfer(item.id, "quantity", 0);
-                            }}
-                          />
-                          <div className={`p-2 rounded-lg bg-gradient-to-r ${item.gradient} text-white`}>
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{item.nameAr}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              متاح: {availableBoxes} كرتون، {availableUnits} وحدة
-                            </p>
-                            {isUnavailable && <p className="text-xs text-red-500 mt-1">غير متاح حاليًا</p>}
-                          </div>
+                  return (
+                    <div key={item.id} className="p-4 rounded-lg bg-white dark:bg-gray-800 border shadow-sm">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Checkbox
+                          disabled={isUnavailable}
+                          checked={transfer.selected}
+                          onCheckedChange={(checked) => {
+                            const isChecked = checked === true;
+                            updateItemTransfer(item.id, "selected", isChecked);
+                            if (!isChecked) updateItemTransfer(item.id, "quantity", 0);
+                          }}
+                        />
+                        <div className={`p-2 rounded-lg bg-gradient-to-r ${item.gradient} text-white shrink-0`}>
+                          <Icon className="h-5 w-5" />
                         </div>
-
-                        {transfer.selected && (
-                          <div className="space-y-3 mr-8">
-                            <div className="flex items-center gap-4">
-                              <Label>نوع التغليف:</Label>
-                              <RadioGroup
-                                value={transfer.packagingType}
-                                onValueChange={(value) => updateItemTransfer(item.id, "packagingType", value as "box" | "unit")}
-                                className="flex gap-4"
-                              >
-                                <div className="flex items-center space-x-2 space-x-reverse">
-                                  <RadioGroupItem value="box" id={`${item.id}-box`} />
-                                  <Label htmlFor={`${item.id}-box`}>كرتون ({availableBoxes})</Label>
-                                </div>
-                                <div className="flex items-center space-x-2 space-x-reverse">
-                                  <RadioGroupItem value="unit" id={`${item.id}-unit`} />
-                                  <Label htmlFor={`${item.id}-unit`}>وحدة ({availableUnits})</Label>
-                                </div>
-                              </RadioGroup>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <Label>الكمية:</Label>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => updateItemTransfer(item.id, "quantity", Math.max(0, transfer.quantity - 1))}
-                                  disabled={transfer.quantity <= 0}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={selectedPackagingAvailable}
-                                  value={transfer.quantity}
-                                  onChange={(e) => updateItemTransfer(item.id, "quantity", Math.max(0, parseInt(e.target.value) || 0))}
-                                  className="w-24 text-center"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => updateItemTransfer(item.id, "quantity", Math.min(selectedPackagingAvailable, transfer.quantity + 1))}
-                                  disabled={transfer.quantity >= selectedPackagingAvailable}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  onClick={() => updateItemTransfer(item.id, "quantity", selectedPackagingAvailable)}
-                                  disabled={selectedPackagingAvailable === 0}
-                                >
-                                  الحد الأقصى
-                                </Button>
-                              </div>
-                            </div>
-                            {hasQuantityError && (
-                              <div className="inline-flex items-center gap-1 text-xs text-red-500">
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                                الكمية المدخلة أكبر من المتاح ({selectedPackagingAvailable})
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm sm:text-base truncate">{item.nameAr}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            متاح: {availableBoxes} كرتون، {availableUnits} وحدة
+                          </p>
+                          {isUnavailable && <p className="text-xs text-red-500 mt-1">غير متاح حاليًا</p>}
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+
+                      {transfer.selected && (
+                        <div className="space-y-3 mr-8 border-t pt-2 mt-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <Label className="text-xs font-medium">نوع التغليف:</Label>
+                            <RadioGroup
+                              value={transfer.packagingType}
+                              onValueChange={(value) => updateItemTransfer(item.id, "packagingType", value as "box" | "unit")}
+                              className="flex gap-4"
+                            >
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <RadioGroupItem value="box" id={`${item.id}-box`} />
+                                <Label htmlFor={`${item.id}-box`} className="text-xs cursor-pointer">كرتون ({availableBoxes})</Label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <RadioGroupItem value="unit" id={`${item.id}-unit`} />
+                                <Label htmlFor={`${item.id}-unit`} className="text-xs cursor-pointer">وحدة ({availableUnits})</Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Label className="text-xs font-medium">الكمية:</Label>
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => updateItemTransfer(item.id, "quantity", Math.max(0, transfer.quantity - 1))}
+                                disabled={transfer.quantity <= 0}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <Input
+                                type="number"
+                                min="0"
+                                max={selectedPackagingAvailable}
+                                value={transfer.quantity}
+                                onChange={(e) => updateItemTransfer(item.id, "quantity", Math.max(0, parseInt(e.target.value) || 0))}
+                                className="text-center h-8 px-1 min-w-[50px] w-20 flex-1 sm:flex-initial"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => updateItemTransfer(item.id, "quantity", Math.min(selectedPackagingAvailable, transfer.quantity + 1))}
+                                disabled={transfer.quantity >= selectedPackagingAvailable}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 px-2 text-xs shrink-0"
+                                onClick={() => updateItemTransfer(item.id, "quantity", selectedPackagingAvailable)}
+                                disabled={selectedPackagingAvailable === 0}
+                              >
+                                الحد الأقصى
+                              </Button>
+                            </div>
+                          </div>
+                          {hasQuantityError && (
+                            <div className="inline-flex items-center gap-1 text-xs text-red-500">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              الكمية المدخلة أكبر من المتاح ({selectedPackagingAvailable})
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
               <FormField
                 control={form.control}
@@ -526,7 +528,7 @@ export default function TransferFromWarehouseModal({
                     <FormControl>
                       <Textarea
                         placeholder="أضف ملاحظات حول عملية النقل..."
-                        className="resize-none"
+                        className="resize-none h-16 text-xs sm:text-sm"
                         {...field}
                       />
                     </FormControl>
@@ -535,7 +537,7 @@ export default function TransferFromWarehouseModal({
                 )}
               />
 
-              <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm space-y-1">
+              <div className="rounded-lg border bg-muted/20 px-3 py-1.5 text-xs sm:text-sm space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">الأصناف المختارة</span>
                   <span className="font-semibold">{selectedItemsCount}</span>
@@ -552,7 +554,7 @@ export default function TransferFromWarehouseModal({
                 )}
               </div>
 
-              <div className="flex items-center space-x-3 space-x-reverse pt-4">
+              <div className="flex items-center space-x-3 space-x-reverse pt-2">
                 <Button
                   type="submit"
                   disabled={transferMutation.isPending || selectedItemsCount === 0 || overflowItemsCount > 0}

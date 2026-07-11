@@ -104,6 +104,24 @@ const itemDefinitions: LegacyItemDefinition[] = [
     stockLabelBoxes: 'شريحة زين (صناديق)',
     stockLabelUnits: 'شريحة زين (وحدات)',
   },
+  {
+    itemType: 'lebara',
+    requestBoxesField: 'lebaraBoxes',
+    requestUnitsField: 'lebaraUnits',
+    inventoryBoxesField: 'lebaraBoxes',
+    inventoryUnitsField: 'lebaraUnits',
+    stockLabelBoxes: 'شريحة ليبارا (صناديق)',
+    stockLabelUnits: 'شريحة ليبارا (وحدات)',
+  },
+  {
+    itemType: 'lebaraSim',
+    requestBoxesField: 'lebaraBoxes',
+    requestUnitsField: 'lebaraUnits',
+    inventoryBoxesField: 'lebaraBoxes',
+    inventoryUnitsField: 'lebaraUnits',
+    stockLabelBoxes: 'شريحة ليبارا (صناديق)',
+    stockLabelUnits: 'شريحة ليبارا (وحدات)',
+  },
 ];
 
 function asNumber(value: unknown): number {
@@ -225,6 +243,8 @@ export class ApproveInventoryRequestUseCase {
         stcSimUnits: asNumber(warehouseInventory.stcSimUnits) - asNumber(request.stcSimUnits),
         zainSimBoxes: asNumber(warehouseInventory.zainSimBoxes) - asNumber(request.zainSimBoxes),
         zainSimUnits: asNumber(warehouseInventory.zainSimUnits) - asNumber(request.zainSimUnits),
+        lebaraBoxes: asNumber(warehouseInventory.lebaraBoxes) - asNumber(request.lebaraBoxes),
+        lebaraUnits: asNumber(warehouseInventory.lebaraUnits) - asNumber(request.lebaraUnits),
       });
 
       return approvedRequest;

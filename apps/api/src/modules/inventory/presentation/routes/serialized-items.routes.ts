@@ -27,6 +27,7 @@ export function registerSerializedItemsRoutes(app: Express): void {
             createdAt: items.createdAt,
             itemTypeNameAr: itemTypes.nameAr,
             itemTypeNameEn: itemTypes.nameEn,
+            itemTypeId: items.itemTypeId,
           })
           .from(items)
           .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
@@ -59,6 +60,7 @@ export function registerSerializedItemsRoutes(app: Express): void {
             createdAt: items.createdAt,
             itemTypeNameAr: itemTypes.nameAr,
             itemTypeNameEn: itemTypes.nameEn,
+            itemTypeId: items.itemTypeId,
           })
           .from(items)
           .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
