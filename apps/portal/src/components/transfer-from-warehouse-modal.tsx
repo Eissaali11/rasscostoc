@@ -303,8 +303,8 @@ export default function TransferFromWarehouseModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
-        <DialogHeader className="shrink-0">
+      <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader>
           <DialogTitle>نقل من المستودع إلى مندوب</DialogTitle>
           <DialogDescription>
             نقل أصناف من {warehouseName} إلى مندوب
@@ -312,17 +312,17 @@ export default function TransferFromWarehouseModal({
         </DialogHeader>
         
         {itemTypesLoading ? (
-          <div className="flex items-center justify-center py-10 shrink-0">
+          <div className="flex items-center justify-center py-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="technicianId"
                 render={({ field }) => (
-                  <FormItem className="shrink-0">
+                  <FormItem>
                     <FormLabel>اختر المندوب</FormLabel>
                     <div className="relative mb-2">
                       <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -372,7 +372,7 @@ export default function TransferFromWarehouseModal({
                 )}
               />
 
-              <div className="space-y-2 shrink-0">
+              <div className="space-y-2">
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -405,7 +405,7 @@ export default function TransferFromWarehouseModal({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 pr-2 overflow-y-auto max-h-[35vh] sm:max-h-[350px] space-y-3">
+              <div className="h-[220px] sm:h-[350px] overflow-y-auto pr-2 space-y-3 border rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/50">
                 {filteredVisibleItems.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                     لا توجد أصناف مطابقة للبحث أو الفلتر الحالي
@@ -421,7 +421,7 @@ export default function TransferFromWarehouseModal({
                   const hasQuantityError = transfer.selected && transfer.quantity > selectedPackagingAvailable;
 
                   return (
-                    <div key={item.id} className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border">
+                    <div key={item.id} className="p-4 rounded-lg bg-white dark:bg-gray-800 border shadow-sm">
                       <div className="flex items-center gap-3 mb-3">
                         <Checkbox
                           disabled={isUnavailable}
@@ -445,7 +445,7 @@ export default function TransferFromWarehouseModal({
                       </div>
 
                       {transfer.selected && (
-                        <div className="space-y-3 mr-8">
+                        <div className="space-y-3 mr-8 border-t pt-2 mt-2">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                             <Label className="text-xs font-medium">نوع التغليف:</Label>
                             <RadioGroup
@@ -523,7 +523,7 @@ export default function TransferFromWarehouseModal({
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
-                  <FormItem className="shrink-0">
+                  <FormItem>
                     <FormLabel>ملاحظات (اختياري)</FormLabel>
                     <FormControl>
                       <Textarea
@@ -537,7 +537,7 @@ export default function TransferFromWarehouseModal({
                 )}
               />
 
-              <div className="rounded-lg border bg-muted/20 px-3 py-1.5 text-xs sm:text-sm space-y-1 shrink-0">
+              <div className="rounded-lg border bg-muted/20 px-3 py-1.5 text-xs sm:text-sm space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">الأصناف المختارة</span>
                   <span className="font-semibold">{selectedItemsCount}</span>
@@ -554,7 +554,7 @@ export default function TransferFromWarehouseModal({
                 )}
               </div>
 
-              <div className="flex items-center space-x-3 space-x-reverse pt-2 shrink-0 mt-auto">
+              <div className="flex items-center space-x-3 space-x-reverse pt-2">
                 <Button
                   type="submit"
                   disabled={transferMutation.isPending || selectedItemsCount === 0 || overflowItemsCount > 0}
