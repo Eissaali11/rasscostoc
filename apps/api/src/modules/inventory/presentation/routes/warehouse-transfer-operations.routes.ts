@@ -411,7 +411,7 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
         .where(
           and(
             eq(items.currentOwnerId, technicianId),
-            eq(items.status, 'RECEIVED_BY_TECHNICIAN'),
+            inArray(items.status, ['RECEIVED_BY_TECHNICIAN', 'IN_TRANSIT_CUSTODY']),
           )
         )
         .orderBy(items.createdAt);

@@ -484,6 +484,11 @@ export default function TechnicianDetailsPage() {
           }
         }
 
+        if (itemType.requiresSerial) {
+          movingUnits = (serializedItems || []).filter((item: any) => item.itemTypeId === itemType.id).length;
+          movingBoxes = 0;
+        }
+
         const colors = categoryColorMap[itemType.category] || categoryColorMap.other;
 
         return {
@@ -502,7 +507,7 @@ export default function TechnicianDetailsPage() {
           color: colors[index % colors.length],
         };
       });
-  }, [itemTypes, effectiveFixedInventory, effectiveMovingInventory, fixedEntries, movingEntries, selectedTechnician]);
+  }, [itemTypes, effectiveFixedInventory, effectiveMovingInventory, fixedEntries, movingEntries, selectedTechnician, serializedItems]);
 
   const totalFixed = products.reduce((sum, product) => sum + product.fixedTotal, 0);
   const totalMoving = products.reduce((sum, product) => sum + product.movingTotal, 0);
