@@ -484,7 +484,7 @@ export default function TechnicianDetailsPage() {
           }
         }
 
-        if (itemType.requiresSerial) {
+        if (itemType.requiresSerial || itemType.category === 'sim' || itemType.category === 'devices') {
           movingUnits = (serializedItems || []).filter((item: any) => item.itemTypeId === itemType.id).length;
           movingBoxes = 0;
         }

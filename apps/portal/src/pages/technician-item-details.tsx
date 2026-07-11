@@ -319,7 +319,12 @@ export default function TechnicianItemDetailsPage() {
     enabled: !!technicianId,
   });
 
-  const isLoading = isLoadingItemTypes || isLoadingFixed || isLoadingMoving || isLoadingReceived;
+  const { data: serializedItems = [], isLoading: isLoadingSerialized } = useQuery<any[]>({
+    queryKey: [`/api/technicians/${technicianId}/serialized-items`],
+    enabled: !!technicianId,
+  });
+
+  const isLoading = isLoadingItemTypes || isLoadingFixed || isLoadingMoving || isLoadingReceived || isLoadingSerialized;
 
   const itemType = useMemo(() => {
     return itemTypes.find((item) => item.id === itemTypeId);
@@ -329,12 +334,44 @@ export default function TechnicianItemDetailsPage() {
   const movingEntry = movingEntries.find((entry) => entry.itemTypeId === itemTypeId);
 
   const fixedTotal = Number(fixedEntry?.boxes || 0) + Number(fixedEntry?.units || 0);
-  const movingTotal = Number(movingEntry?.boxes || 0) + Number(movingEntry?.units || 0);
+  const isSerialized = itemType?.requiresSerial || itemType?.category === 'sim' || itemType?.category === 'devices';
+  const movingTotal = isSerialized
+    ? (serializedItems || []).filter((item: any) => item.itemTypeId === itemTypeId).length
+    : Number(movingEntry?.boxes || 0) + Number(movingEntry?.units || 0);
   const totalStock = fixedTotal + movingTotal;
 
   const liveOperations = useMemo(() => {
     const productNameAr = itemType?.nameAr || "منتج";
     const productNameEn = itemType?.nameEn || "";
+
+    const activeSerializedRows: ProductOperationRow[] = (serializedItems || [])
+      .filter((item) => item.itemTypeId === itemTypeId)
+      .map((item) => {
+        const inStockClass = "text-orange-400 bg-orange-500/10 border border-orange-500/20";
+        return {
+          id: `active-${item.id}`,
+          productName: item.itemTypeName || productNameAr,
+          serial: item.serialNumber || "-",
+          status: "في المخزون",
+          statusClass: inStockClass,
+          datetime: formatDateTime(item.createdAt),
+          raw: {
+            id: item.id,
+            serialNumber: item.serialNumber,
+            itemTypeId: item.itemTypeId,
+            status: "approved",
+            createdAt: item.createdAt,
+            technicianId,
+            inventoryType: "moving",
+            simCardType: item.carrierName,
+            hasSim: !!item.carrierName,
+            battery: !item.carrierName,
+            chargerCable: !item.carrierName,
+            chargerHead: !item.carrierName,
+          },
+          type: "device",
+        };
+      });
 
     const receivedRows: ProductOperationRow[] = receivedDevices
       .filter((device) => device.technicianId === technicianId)
@@ -380,10 +417,24 @@ export default function TechnicianItemDetailsPage() {
         };
       });
 
-    const rows = [...receivedRows, ...transferRows];
+    const rows = [...activeSerializedRows, ...receivedRows, ...transferRows];
 
-    if (rows.length > 0) {
-      return rows;
+    // De-duplicate rows by serial number, preferring activeSerializedRows or receivedRows with serial number
+    const seenSerials = new Set<string>();
+    const uniqueRows: ProductOperationRow[] = [];
+
+    for (const row of rows) {
+      if (row.serial && row.serial !== "-") {
+        if (seenSerials.has(row.serial)) {
+          continue;
+        }
+        seenSerials.add(row.serial);
+      }
+      uniqueRows.push(row);
+    }
+
+    if (uniqueRows.length > 0) {
+      return uniqueRows;
     }
 
     if (totalStock > 0) {
@@ -400,7 +451,7 @@ export default function TechnicianItemDetailsPage() {
     }
 
     return [];
-  }, [itemType, itemTypeId, movingTotal, receivedDevices, technicianId, totalStock, warehouseTransfers]);
+  }, [itemType, itemTypeId, movingTotal, receivedDevices, technicianId, totalStock, warehouseTransfers, serializedItems]);
 
   const hasLiveData = totalStock > 0 || liveOperations.length > 0;
   const useMockData = !hasLiveData;
@@ -437,6 +488,7 @@ export default function TechnicianItemDetailsPage() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/fixed-inventory-entries`] }),
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/moving-inventory-entries`] }),
+      queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/serialized-items`] }),
       queryClient.invalidateQueries({ queryKey: ["/api/received-devices"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/item-types/active"] }),

@@ -157,8 +157,39 @@ export default function MyMovingInventory() {
       lebaraBoxes: inventory.lebaraBoxes || 0,
       lebaraUnits: inventory.lebaraUnits || 0,
     } : undefined;
-    return buildInventoryDisplayItems(itemTypes, entries, legacyInventory);
-  }, [itemTypes, inventory, dynamicMovingEntries]);
+    
+    const items = buildInventoryDisplayItems(itemTypes, entries, legacyInventory);
+    
+    return items.map((item) => {
+      if (item.category === "sim" || item.category === "devices") {
+        const count = (serializedCustody || []).filter((c) => c.itemTypeId === item.id).length;
+        return {
+          ...item,
+          boxes: 0,
+          units: count,
+        };
+      }
+      return item;
+    });
+  }, [itemTypes, inventory, dynamicMovingEntries, serializedCustody]);
+
+  const totalDevices = useMemo(() => {
+    return displayItems
+      .filter(item => item.category === 'devices')
+      .reduce((sum, item) => sum + item.boxes + item.units, 0);
+  }, [displayItems]);
+
+  const totalSims = useMemo(() => {
+    return displayItems
+      .filter(item => item.category === 'sim')
+      .reduce((sum, item) => sum + item.boxes + item.units, 0);
+  }, [displayItems]);
+
+  const totalAccessories = useMemo(() => {
+    return displayItems
+      .filter(item => item.category !== 'devices' && item.category !== 'sim')
+      .reduce((sum, item) => sum + item.boxes + item.units, 0);
+  }, [displayItems]);
 
   const acceptMutation = useMutation({
     mutationFn: async (transferId: string) => {
@@ -534,7 +565,7 @@ export default function MyMovingInventory() {
                   <h3 className="text-sm font-medium text-gray-300">الأجهزة</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-devices">
-                  {(inventory.n950Boxes || 0) + (inventory.n950Units || 0) + (inventory.i9000sBoxes || 0) + (inventory.i9000sUnits || 0) + (inventory.i9100Boxes || 0) + (inventory.i9100Units || 0)}
+                  {totalDevices}
                 </p>
               </div>
             </motion.div>
@@ -554,7 +585,7 @@ export default function MyMovingInventory() {
                   <h3 className="text-sm font-medium text-gray-300">الملحقات</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-accessories">
-                  {(inventory.rollPaperBoxes || 0) + (inventory.rollPaperUnits || 0) + (inventory.stickersBoxes || 0) + (inventory.stickersUnits || 0) + (inventory.newBatteriesBoxes || 0) + (inventory.newBatteriesUnits || 0)}
+                  {totalAccessories}
                 </p>
               </div>
             </motion.div>
@@ -574,7 +605,7 @@ export default function MyMovingInventory() {
                   <h3 className="text-sm font-medium text-gray-300">الشرائح</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-sims">
-                  {(inventory.mobilySimBoxes || 0) + (inventory.mobilySimUnits || 0) + (inventory.stcSimBoxes || 0) + (inventory.stcSimUnits || 0) + (inventory.zainSimBoxes || 0) + (inventory.zainSimUnits || 0) + (inventory.lebaraBoxes || 0) + (inventory.lebaraUnits || 0)}
+                  {totalSims}
                 </p>
               </div>
             </motion.div>
