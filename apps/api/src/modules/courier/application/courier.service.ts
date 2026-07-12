@@ -55,6 +55,38 @@ export interface ListFilters {
 }
 
 export class CourierService {
+  /**
+   * Keep only columns that may be written from the portal/Flutter execution form.
+   * Strips id/requestId/enteredAt/updatedAt/version and any unknown keys.
+   */
+  static sanitizeExecutionPayload(data: Record<string, any> = {}): Record<string, any> {
+    const allowed = [
+      "requestPriorityLevel",
+      "pushBack",
+      "installationStatus",
+      "paperRoll",
+      "time",
+      "deliveryDate",
+      "responseDate",
+      "sn",
+      "simSerial",
+      "simType",
+      "customerNotes",
+      "extraField1",
+      "extraField2",
+      "responseReasonCode",
+      "salesTechnician",
+      "technicianCode",
+      "extractionConfidence",
+    ] as const;
+
+    const out: Record<string, any> = {};
+    for (const key of allowed) {
+      if (data[key] !== undefined) out[key] = data[key];
+    }
+    return out;
+  }
+
   async listRequests(filters: ListFilters): Promise<{ rows: any[]; total: number }> {
     return drizzleCourierRepository.listRequests(filters);
   }
@@ -656,44 +688,55 @@ export class CourierService {
       throw new Error("الطلب غير موجود");
     }
 
+    // Whitelist writable columns only — client payloads often include enteredAt/updatedAt
+    // as ISO strings which crash drizzle timestamp mapping (value.toISOString).
+    const version = data?.version;
+    const sanitized = CourierService.sanitizeExecutionPayload(data);
+
     // ─── Guard Validation Layer ───────────────────────────────────────────────
-    // All validation happens here before any DB write.
-    // If guards throw GuardValidationError, no execution data is written.
     const techUser = await CompletionGuard.run({
       requestId,
       enteredBy,
-      executionData: data,
+      executionData: { ...sanitized },
       request,
       existingExecution: existing ?? null,
     });
     // ─────────────────────────────────────────────────────────────────────────
 
-    const isCompleted = isCompletedStatus(data.installationStatus);
+    const isCompleted = isCompletedStatus(sanitized.installationStatus);
 
-    // Authoritative technician = serial custody owner (never assignment tecName)
     if (techUser && isCompleted) {
-      data.technicianCode = techUser.username;
-      data.salesTechnician = techUser.fullName;
+      sanitized.technicianCode = techUser.username;
+      sanitized.salesTechnician = techUser.fullName;
     }
 
     let result: any;
     await db.transaction(async (tx) => {
       if (existing) {
-        const { version, ...updateFields } = data;
-        result = await drizzleCourierRepository.updateExecution(requestId, {
-          ...updateFields,
-          enteredBy
-        }, version, tx);
+        result = await drizzleCourierRepository.updateExecution(
+          requestId,
+          { ...sanitized, enteredBy },
+          version,
+          tx
+        );
 
         if (!result) {
-          throw new OptimisticLockException("courier_executions", existing.id, version, existing.version);
+          throw new OptimisticLockException(
+            "courier_executions",
+            existing.id,
+            version,
+            existing.version
+          );
         }
       } else {
-        result = await drizzleCourierRepository.insertExecution({
-          ...data,
-          requestId,
-          enteredBy
-        }, tx);
+        result = await drizzleCourierRepository.insertExecution(
+          {
+            ...sanitized,
+            requestId,
+            enteredBy,
+          },
+          tx
+        );
       }
 
       // Log audit

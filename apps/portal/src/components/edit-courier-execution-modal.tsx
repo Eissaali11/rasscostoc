@@ -243,8 +243,19 @@ export function EditCourierExecutionModal({
       }
     }
 
+    // Send only writable fields — echoing enteredAt/updatedAt as strings crashes the API.
     mutation.mutate({
-      ...currentForm,
+      installationStatus: currentForm.installationStatus,
+      paperRoll: currentForm.paperRoll,
+      time: currentForm.time,
+      deliveryDate: currentForm.deliveryDate,
+      responseDate: currentForm.responseDate,
+      sn: currentForm.sn,
+      simSerial: currentForm.simSerial,
+      simType: currentForm.simType,
+      customerNotes: currentForm.customerNotes,
+      responseReasonCode: currentForm.responseReasonCode,
+      version: currentForm.version,
       technicianCode: deviceLookup?.technician
         ? (deviceLookup.technician.technicianCode ?? deviceLookup.technician.username)
         : currentForm.technicianCode,
