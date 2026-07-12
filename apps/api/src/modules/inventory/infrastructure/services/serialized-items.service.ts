@@ -2,6 +2,7 @@ import { db } from "@core/config/db";
 import { AppError } from "@core/errors/AppError";
 import { items, inventoryTransactions, itemHistoryLogs, itemTypes, users, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
+import { SerialRecognitionService } from "./serial-recognition.service";
 
 export class SerializedItemsService {
   private async syncMovingInventory(tx: any, technicianId: string, itemTypeId: string, delta: number) {
@@ -105,12 +106,17 @@ export class SerializedItemsService {
     simPackageType?: string
   ) {
     return await db.transaction(async (tx: any) => {
-      await this.validateSerialFormat(tx, serialNumber, itemTypeId);
+      // التعرف على السيريال والتحقق من صحته
+      const recognition = await SerialRecognitionService.recognize(serialNumber, itemTypeId, tx);
+      const cleanSerial = recognition.normalizedSerial;
+      const actualItemTypeId = recognition.itemTypeId;
+      const actualCarrierName = carrierName || recognition.carrierName;
+
       // Check if item already exists
       const [existingItem] = await tx
         .select()
         .from(items)
-        .where(eq(items.serialNumber, serialNumber))
+        .where(eq(items.serialNumber, cleanSerial))
         .limit(1);
 
       if (existingItem) {
@@ -125,13 +131,13 @@ export class SerializedItemsService {
       const [newItem] = await tx
         .insert(items)
         .values({
-          itemTypeId,
-          serialNumber,
-          barcode: serialNumber, // default barcode to serialNumber
+          itemTypeId: actualItemTypeId,
+          serialNumber: cleanSerial,
+          barcode: cleanSerial, // default barcode to cleanSerial
           status: "IN_TRANSIT_CUSTODY",
           currentOwnerId: technicianId,
           warehouseId: null,
-          carrierName: carrierName || null,
+          carrierName: actualCarrierName,
           simPackageType: simPackageType || null,
         })
         .returning();
@@ -169,7 +175,7 @@ export class SerializedItemsService {
         notes: "استلام عهدة بالمسح الميداني",
       });
 
-      await this.syncMovingInventory(tx, technicianId, itemTypeId, 1);
+      await this.syncMovingInventory(tx, technicianId, actualItemTypeId, 1);
 
       return item;
     });
@@ -187,11 +193,11 @@ export class SerializedItemsService {
       simPackageType?: string;
     }>
   ) {
-    // Validate uniqueness of serial numbers in the batch
-    const serialsList = scannedItems.map(s => s.serialNumber.trim());
-    const uniqueSerials = new Set(serialsList);
+    // Validate uniqueness of serial numbers in the batch after normalization
+    const cleanSerialsList = scannedItems.map(s => SerialRecognitionService.normalizeRawBarcode(s.serialNumber));
+    const uniqueSerials = new Set(cleanSerialsList);
     if (uniqueSerials.size !== scannedItems.length) {
-      throw new AppError("توجد أرقام تسلسلية مكررة في الدفعة المرسلة", 400);
+      throw new AppError("توجد أرقام تسلسلية مكررة في الدفعة المرسلة بعد التنظيف", 400);
     }
 
     return await db.transaction(async (tx: any) => {
@@ -200,20 +206,24 @@ export class SerializedItemsService {
       for (const scanned of scannedItems) {
         const { serialNumber, itemTypeId, carrierName, simPackageType } = scanned;
 
-        await this.validateSerialFormat(tx, serialNumber, itemTypeId);
+        // التعرف على السيريال والتحقق من صحته
+        const recognition = await SerialRecognitionService.recognize(serialNumber, itemTypeId, tx);
+        const cleanSerial = recognition.normalizedSerial;
+        const actualItemTypeId = recognition.itemTypeId;
+        const actualCarrierName = carrierName || recognition.carrierName;
 
         // Check if item already exists
         const [existingItem] = await tx
           .select()
           .from(items)
-          .where(eq(items.serialNumber, serialNumber))
+          .where(eq(items.serialNumber, cleanSerial))
           .limit(1);
 
         if (existingItem) {
           if (existingItem.status === "DELIVERED") {
-            throw new AppError(`المنتج موجود وحالته مغلق (${serialNumber})`, 400);
+            throw new AppError(`المنتج موجود وحالته مغلق (${cleanSerial})`, 400);
           } else {
-            throw new AppError(`المنتج موجود مسبقاً وحالته نشط (${serialNumber})`, 400);
+            throw new AppError(`المنتج موجود مسبقاً وحالته نشط (${cleanSerial})`, 400);
           }
         }
 
@@ -221,19 +231,19 @@ export class SerializedItemsService {
         const [newItem] = await tx
           .insert(items)
           .values({
-            itemTypeId,
-            serialNumber,
-            barcode: serialNumber,
+            itemTypeId: actualItemTypeId,
+            serialNumber: cleanSerial,
+            barcode: cleanSerial,
             status: "RECEIVED_BY_TECHNICIAN",
             currentOwnerId: technicianId,
             warehouseId: null,
-            carrierName: carrierName || null,
+            carrierName: actualCarrierName,
             simPackageType: simPackageType || null,
           })
           .returning();
 
         if (!newItem) {
-          throw new Error(`فشل إنشاء سجل للمادة المسلسلة: ${serialNumber}`);
+          throw new Error(`فشل إنشاء سجل للمادة المسلسلة: ${cleanSerial}`);
         }
         const item = newItem;
         const previousStatus = "NONE";
@@ -266,7 +276,7 @@ export class SerializedItemsService {
           notes: "استلام عهدة بالمسح الميداني (دفعة واحدة)",
         });
 
-        await this.syncMovingInventory(tx, technicianId, itemTypeId, 1);
+        await this.syncMovingInventory(tx, technicianId, actualItemTypeId, 1);
 
         results.push(item);
       }

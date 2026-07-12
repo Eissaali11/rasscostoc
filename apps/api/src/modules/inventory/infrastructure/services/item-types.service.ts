@@ -384,7 +384,7 @@ export class ItemTypesService {
         requiresSerial: true,
         serialPrefix: 'NCC,NCD',
         serialLength: 9,
-        serialRegex: '^(NCC|NCD)[0-9]{6}$'
+        serialRegex: '^(NCC|NCD)[0-9]{9}$'
       },
       {
         id: 'i9000s',
@@ -400,7 +400,7 @@ export class ItemTypesService {
         requiresSerial: true,
         serialPrefix: 'SAS',
         serialLength: 11,
-        serialRegex: '^SAS[A-Z0-9]{8}$'
+        serialRegex: '^SAS[A-Z0-9]{11}$'
       },
       {
         id: 'i9100',
@@ -416,7 +416,7 @@ export class ItemTypesService {
         requiresSerial: true,
         serialPrefix: 'SAW',
         serialLength: 11,
-        serialRegex: '^SAW[A-Z0-9]{8}$'
+        serialRegex: '^SAW[A-Z0-9]{11}$'
       },
       {
         id: 'rollPaper',

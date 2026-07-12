@@ -9,6 +9,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { DrizzleInventoryUnitOfWork } from "@modules/inventory/infrastructure/database/DrizzleInventoryUnitOfWork";
 import { processWarehouseTransferBatch } from "@modules/inventory/application/inventory/use-cases/warehouse-transfer-batch.processor";
 import { CustodyEngine } from "../../domain/custody-engine";
+import { SerialRecognitionService } from "../../infrastructure/services/serial-recognition.service";
 
 /**
  * Warehouse Transfer Operations - العمليات الأساسية للمناقلات (< 100 lines)
@@ -203,22 +204,27 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
         return res.status(400).json({ message: "يجب قبول الطلب أولاً قبل بدء المسح" });
       }
 
-      // 2. التحقق من أن الرقم التسلسلي ليس في عهدة فني آخر (active)
+      // 2. التعرف على السيريال والتحقق من صحته
+      const recognition = await SerialRecognitionService.recognize(sn, transfer.itemType, db);
+      const cleanSerial = recognition.normalizedSerial;
+      const actualItemTypeId = recognition.itemTypeId;
+
+      // 3. التحقق من أن الرقم التسلسلي ليس في عهدة فني آخر (active)
       const [existingItem] = await db
         .select()
         .from(items)
-        .where(eq(items.serialNumber, sn))
+        .where(eq(items.serialNumber, cleanSerial))
         .limit(1);
 
       if (existingItem) {
         if (existingItem.status === "DELIVERED") {
-          return res.status(400).json({ message: "المنتج موجود وحالته مغلق" });
+          return res.status(400).json({ message: `المنتج (${cleanSerial}) موجود وحالته مغلق` });
         } else {
-          return res.status(400).json({ message: "المنتج موجود مسبقاً وحالته نشط" });
+          return res.status(400).json({ message: `المنتج (${cleanSerial}) موجود مسبقاً وحالته نشط` });
         }
       }
 
-      // 3. تحديد الـ carrier name للشرائح
+      // 4. تحديد الـ carrier name للشرائح
       const simCarrierMap: Record<string, string> = {
         mobilySim: 'Mobily',
         stcSim: 'STC',
@@ -226,16 +232,15 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
         lebara: 'Lebara',
         lebaraSim: 'Lebara',
       };
-      const carrierName = simCarrierMap[transfer.itemType] ?? null;
+      const carrierName = recognition.carrierName || (simCarrierMap[transfer.itemType] ?? null);
 
-      // 4. إنشاء أو تحديث السيريال (first-scan-creates model)
-      // 4. إنشاء السيريال (first-scan-creates model)
+      // 5. إنشاء السيريال (first-scan-creates model)
       const [newItem] = await db
         .insert(items)
         .values({
-          itemTypeId: transfer.itemType,
-          serialNumber: sn,
-          barcode: sn,
+          itemTypeId: actualItemTypeId,
+          serialNumber: cleanSerial,
+          barcode: cleanSerial,
           status: 'RECEIVED_BY_TECHNICIAN',
           currentOwnerId: user.id,
           warehouseId: null,
@@ -246,7 +251,7 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
       const item = newItem;
       const prevStatus = 'NONE';
 
-      // 5. تسجيل سجل المعاملة والتاريخ
+      // 6. تسجيل سجل المعاملة والتاريخ
       await db.insert(inventoryTransactions).values({
         itemId: item.id,
         transactionType: 'INTAKE',
@@ -264,9 +269,9 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
 
       return res.status(200).json({
         success: true,
-        serialNumber: sn,
+        serialNumber: cleanSerial,
         itemId: item.id,
-        message: `✓ تم استلام ${sn} بنجاح`,
+        message: `✓ تم استلام ${cleanSerial} بنجاح`,
       });
 
     } catch (error) {
