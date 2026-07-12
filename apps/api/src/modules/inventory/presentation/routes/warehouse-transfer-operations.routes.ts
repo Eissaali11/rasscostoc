@@ -433,6 +433,10 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
     try {
       const { serialNumber } = req.params;
 
+      // Resolve the raw scanned value to the normalized stored serial form(s)
+      // so admin verification finds items saved under their clean serial.
+      const serialCandidates = await SerialRecognitionService.resolveSerialCandidates(serialNumber);
+
       const [result] = await db
         .select({
           id: items.id,
@@ -449,7 +453,7 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
         })
         .from(items)
         .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
-        .where(eq(items.serialNumber, serialNumber))
+        .where(inArray(items.serialNumber, serialCandidates))
         .limit(1);
 
       if (!result) {

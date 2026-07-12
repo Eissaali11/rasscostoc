@@ -152,4 +152,47 @@ export class SerialRecognitionService {
       carrierName
     };
   }
+
+  /**
+   * Resolve the possible stored-serial forms for a raw scanned barcode.
+   *
+   * Intake paths (scan-serial / scan-in / batch-scan-in) store the *normalized*
+   * serial (e.g. "NCD100253066" is stored as "100253066"). Read paths (lookup,
+   * verification, scan-out) therefore cannot use the raw scanned value directly.
+   * This helper returns an ordered, de-duplicated list of candidate serials so a
+   * single raw scan reliably resolves to the item, regardless of whether the
+   * caller scanned the full labeled barcode or typed the clean number, and while
+   * still matching any legacy rows stored in their pre-normalization form.
+   */
+  static async resolveSerialCandidates(
+    rawBarcode: string,
+    hintItemTypeId?: string,
+    txClient: any = db
+  ): Promise<string[]> {
+    const candidates: string[] = [];
+    const pushUnique = (value?: string | null) => {
+      if (value && !candidates.includes(value)) {
+        candidates.push(value);
+      }
+    };
+
+    const raw = (rawBarcode ?? "").trim();
+
+    // 1. Fully recognized normalized serial — the canonical stored form.
+    try {
+      const recognition = await this.recognize(raw, hintItemTypeId, txClient);
+      pushUnique(recognition.normalizedSerial);
+    } catch {
+      // Unknown/legacy formats may not be recognizable; fall back to raw forms.
+    }
+
+    // 2. Cleaned barcode (labels + separators removed, device prefix kept).
+    pushUnique(this.normalizeRawBarcode(raw));
+
+    // 3. Raw value as scanned/typed (uppercased, then exact) — legacy rows.
+    pushUnique(raw.toUpperCase());
+    pushUnique(raw);
+
+    return candidates;
+  }
 }
