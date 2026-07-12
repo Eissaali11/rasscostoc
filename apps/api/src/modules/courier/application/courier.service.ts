@@ -27,6 +27,7 @@ import { devicesContainer } from "@server/composition/devices.container";
 import { extractFromPdf } from "./ocr.helper";
 import { parseRawDataWorkbook, buildExportWorkbook } from "./excel.helper";
 import { CompletionGuard, isCompletedStatus } from "./guards/CompletionGuard";
+import { normalizeSerialList } from "./guards/guard.types";
 import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
@@ -692,18 +693,32 @@ export class CourierService {
     // as ISO strings which crash drizzle timestamp mapping (value.toISOString).
     const version = data?.version;
     const sanitized = CourierService.sanitizeExecutionPayload(data);
+    const isCompleted = isCompletedStatus(sanitized.installationStatus);
+
+    // Multi-serial close: arrays from portal; fall back to scalar sn / simSerial.
+    // Incomplete statuses never require serials and never deduct — omit serial fields from write.
+    let deviceSerials = normalizeSerialList(data?.deviceSerials, data?.sn, sanitized.sn);
+    let simSerials = normalizeSerialList(data?.simSerials, data?.simSerial, sanitized.simSerial);
+
+    if (!isCompleted) {
+      delete sanitized.sn;
+      delete sanitized.simSerial;
+      deviceSerials = [];
+      simSerials = [];
+    } else {
+      sanitized.sn = deviceSerials[0] ?? null;
+      sanitized.simSerial = simSerials[0] ?? null;
+    }
 
     // ─── Guard Validation Layer ───────────────────────────────────────────────
     const techUser = await CompletionGuard.run({
       requestId,
       enteredBy,
-      executionData: { ...sanitized },
+      executionData: { ...sanitized, deviceSerials, simSerials },
       request,
       existingExecution: existing ?? null,
     });
     // ─────────────────────────────────────────────────────────────────────────
-
-    const isCompleted = isCompletedStatus(sanitized.installationStatus);
 
     if (techUser && isCompleted) {
       sanitized.technicianCode = techUser.username;

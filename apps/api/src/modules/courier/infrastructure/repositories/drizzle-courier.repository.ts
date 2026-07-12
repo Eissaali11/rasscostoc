@@ -45,10 +45,12 @@ export class DrizzleCourierRepository implements ICourierRepository {
       .limit(1);
 
     if (!row) return null;
+    const items = await this.findRequestItems(id, client);
     return {
       ...row.request,
       created_by_name: row.createdByName,
-      execution: row.execution
+      execution: row.execution,
+      items,
     };
   }
 

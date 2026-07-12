@@ -26,7 +26,11 @@ export class TechnicianGuard {
       return null;
     }
 
-    const rawSn = executionData.sn?.trim();
+    const rawSn =
+      executionData.sn?.trim() ||
+      (Array.isArray(executionData.deviceSerials)
+        ? executionData.deviceSerials.find((s) => String(s || "").trim())?.trim()
+        : undefined);
     if (rawSn) {
       const candidates = await SerialRecognitionService.buildStoredSerialCandidates(rawSn);
       if (candidates.length > 0) {

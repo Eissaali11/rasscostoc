@@ -23,6 +23,9 @@ import {
   ShieldAlert,
   BadgeCheck,
   Lock,
+  Plus,
+  Trash2,
+  Info,
 } from "lucide-react";
 
 interface Lookups {
@@ -48,8 +51,7 @@ interface Execution {
   requestPriorityLevel: string | null;
   pushBack: string | null;
   responseDate: string | null;
-  extraField1: string | null;
-  extraField2: string | null;
+  version?: number;
 }
 
 interface RequestDetail {
@@ -126,6 +128,9 @@ export default function CourierRequestDetailPage() {
   const [simLookup, setSimLookup] = useState<SerialLookupResult | null>(null);
   const [snLookupLoading, setSnLookupLoading] = useState(false);
   const [simLookupLoading, setSimLookupLoading] = useState(false);
+
+  const [extraDevices, setExtraDevices] = useState<string[]>([]);
+  const [extraSims, setExtraSims] = useState<string[]>([]);
 
   const ownershipMismatch =
     deviceLookup?.found &&
@@ -221,6 +226,9 @@ export default function CourierRequestDetailPage() {
 
   const exec = request?.execution;
   const currentForm = { ...exec, ...form };
+  const completingStatus =
+    currentForm.installationStatus === "Installation Completed" ||
+    currentForm.installationStatus === "Installation Completed - NL";
 
   const handleChange = (field: keyof Execution, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -248,11 +256,11 @@ export default function CourierRequestDetailPage() {
       toast({ title: "خطأ في العهدة", description: "الجهاز والشريحة ينتميان لفنيين مختلفين. لا يمكن إغلاق الطلب.", variant: "destructive" });
       return;
     }
-    const completing =
-      currentForm.installationStatus === "Installation Completed" ||
-      currentForm.installationStatus === "Installation Completed - NL";
-    if (completing) {
-      if (!currentForm.sn?.trim()) {
+
+    if (completingStatus) {
+      const deviceSerials = [currentForm.sn, ...extraDevices].map((s) => (s || "").trim()).filter(Boolean);
+      const simSerials = [currentForm.simSerial, ...extraSims].map((s) => (s || "").trim()).filter(Boolean);
+      if (deviceSerials.length === 0) {
         toast({ title: "تنبيه", description: "أدخل الرقم التسلسلي للجهاز قبل الإكمال.", variant: "destructive" });
         return;
       }
@@ -272,25 +280,44 @@ export default function CourierRequestDetailPage() {
         });
         return;
       }
+      mutation.mutate({
+        installationStatus: currentForm.installationStatus,
+        paperRoll: currentForm.paperRoll,
+        time: currentForm.time,
+        deliveryDate: currentForm.deliveryDate,
+        responseDate: currentForm.responseDate,
+        sn: deviceSerials[0],
+        simSerial: simSerials[0] || null,
+        deviceSerials,
+        simSerials,
+        simType: currentForm.simType,
+        customerNotes: currentForm.customerNotes,
+        responseReasonCode: currentForm.responseReasonCode,
+        version: currentForm.version,
+        technicianCode: deviceLookup.technician.technicianCode ?? deviceLookup.technician.username,
+        salesTechnician: deviceLookup.technician.fullName,
+      } as any);
+      return;
     }
-    // Send only writable fields — echoing enteredAt/updatedAt as strings crashes the API.
+
+    if (currentForm.installationStatus === "Not Completed" && !currentForm.responseReasonCode) {
+      toast({ title: "تنبيه", description: "اختر سبب الفشل قبل الحفظ.", variant: "destructive" });
+      return;
+    }
+
+    // Incomplete: no serials required, no custody deduct
     mutation.mutate({
       installationStatus: currentForm.installationStatus,
       paperRoll: currentForm.paperRoll,
       time: currentForm.time,
       deliveryDate: currentForm.deliveryDate,
       responseDate: currentForm.responseDate,
-      sn: currentForm.sn,
-      simSerial: currentForm.simSerial,
       simType: currentForm.simType,
       customerNotes: currentForm.customerNotes,
       responseReasonCode: currentForm.responseReasonCode,
+      pushBack: currentForm.pushBack,
       version: currentForm.version,
-      technicianCode: deviceLookup?.technician
-        ? (deviceLookup.technician.technicianCode ?? deviceLookup.technician.username)
-        : currentForm.technicianCode,
-      salesTechnician: deviceLookup?.technician?.fullName ?? currentForm.salesTechnician,
-    });
+    } as any);
   };
 
   if (isLoading) {
@@ -371,7 +398,7 @@ export default function CourierRequestDetailPage() {
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              حفظ وإكمال
+              {completingStatus ? "حفظ وإكمال وخصم العهدة" : "حفظ فقط (بدون خصم)"}
             </button>
           </div>
         )}
@@ -505,9 +532,21 @@ export default function CourierRequestDetailPage() {
                 </div>
               </div>
             ) : (
-              /* PHASE 2 FORM FIELDS — Serial-Driven */
+              /* PHASE 2 FORM FIELDS — Serial-Driven when completed */
               <div className="space-y-4">
 
+                {!completingStatus ? (
+                  <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2.5">
+                    <Info className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-300">طلب غير مكتمل — بدون سيريالات وبدون خصم</p>
+                      <p className="text-xs text-amber-200/70 mt-0.5">
+                        لا يُطلب إدخال أجهزة أو شرائح، ولن يُخصم شيء من عهدة الفني عند الحفظ.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* Ownership Mismatch Alert */}
                 {ownershipMismatch && (
                   <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5">
@@ -523,7 +562,16 @@ export default function CourierRequestDetailPage() {
 
                 {/* Device SN — with lookup */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">الرقم التسلسلي للجهاز (SN) *</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs text-slate-400 font-medium">الرقم التسلسلي للجهاز (SN) *</label>
+                    <button
+                      type="button"
+                      onClick={() => { setExtraDevices((p) => [...p, ""]); setIsDirty(true); }}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> إضافة جهاز
+                    </button>
+                  </div>
                   <div className="flex gap-2">
                     <input
                       value={currentForm.sn || ""}
@@ -561,11 +609,42 @@ export default function CourierRequestDetailPage() {
                         : (deviceLookup.message ?? "الرقم التسلسلي غير موجود")}
                     </div>
                   )}
+                  {extraDevices.map((sn, idx) => (
+                    <div key={`dev-extra-${idx}`} className="flex gap-2 mt-2">
+                      <input
+                        value={sn}
+                        onChange={(e) => {
+                          const next = [...extraDevices];
+                          next[idx] = e.target.value;
+                          setExtraDevices(next);
+                          setIsDirty(true);
+                        }}
+                        placeholder={`جهاز إضافي ${idx + 2}`}
+                        className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono outline-none focus:border-emerald-500/60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setExtraDevices((p) => p.filter((_, i) => i !== idx)); setIsDirty(true); }}
+                        className="bg-red-900/30 border border-red-800/40 text-red-300 px-3 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
                 {/* SIM Serial — with lookup */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs text-slate-400 font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
+                    <button
+                      type="button"
+                      onClick={() => { setExtraSims((p) => [...p, ""]); setIsDirty(true); }}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> إضافة شريحة
+                    </button>
+                  </div>
                   <div className="flex gap-2">
                     <input
                       value={currentForm.simSerial || ""}
@@ -603,6 +682,28 @@ export default function CourierRequestDetailPage() {
                         : (simLookup.message ?? "الرقم التسلسلي غير موجود")}
                     </div>
                   )}
+                  {extraSims.map((sn, idx) => (
+                    <div key={`sim-extra-${idx}`} className="flex gap-2 mt-2">
+                      <input
+                        value={sn}
+                        onChange={(e) => {
+                          const next = [...extraSims];
+                          next[idx] = e.target.value;
+                          setExtraSims(next);
+                          setIsDirty(true);
+                        }}
+                        placeholder={`شريحة إضافية ${idx + 2}`}
+                        className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono outline-none focus:border-emerald-500/60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setExtraSims((p) => p.filter((_, i) => i !== idx)); setIsDirty(true); }}
+                        className="bg-red-900/30 border border-red-800/40 text-red-300 px-3 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
                 {/* SIM Type — auto from lookup, still editable */}
@@ -659,6 +760,8 @@ export default function CourierRequestDetailPage() {
                     </p>
                   )}
                 </div>
+                  </>
+                )}
 
                 {/* Delivery Date & Time */}
                 <div className="grid grid-cols-2 gap-3">
@@ -753,7 +856,7 @@ export default function CourierRequestDetailPage() {
                   ) : (
                     <Save className="w-3.5 h-3.5" />
                   )}
-                  حفظ وإكمال
+                  {completingStatus ? "حفظ وإكمال وخصم العهدة" : "حفظ فقط (بدون خصم)"}
                 </button>
               </>
             )}
@@ -762,17 +865,27 @@ export default function CourierRequestDetailPage() {
       </div>
 
       {/* Auto-deduction Info Banner */}
-      {currentForm.installationStatus?.includes("Completed") && (
+      {completingStatus ? (
         <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-4">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-emerald-400">خصم تلقائي من المخزون والعهدة المسلسلة</p>
             <p className="text-xs text-emerald-400/70 mt-0.5">
-              عند الحفظ بحالة "مكتمل"، سيتم خصم الأجهزة المُدخلة تلقائياً من عهدة الفني في منظومة المخزون العام وخصم الأرقام التسلسلية (SN/SIM) من عهدته المسلسلة النشطة (Scan-Out).
+              عند الحفظ بحالة "مكتمل"، سيتم خصم كل الأجهزة والشرائح المُدخلة تلقائياً من عهدة الفني (Scan-Out).
             </p>
           </div>
         </div>
-      )}
+      ) : currentForm.installationStatus ? (
+        <div className="flex items-start gap-3 bg-slate-800/40 border border-slate-700/40 rounded-xl p-4">
+          <Info className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-slate-300">بدون خصم من العهدة</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              الحالة غير مكتملة — الحفظ يحدّث الطلب فقط دون طلب سيريالات ودون خصم مخزون.
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

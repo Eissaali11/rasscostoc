@@ -19,6 +19,9 @@ import {
   BadgeCheck,
   XCircle,
   Lock,
+  Plus,
+  Trash2,
+  Info,
 } from "lucide-react";
 
 interface Lookups {
@@ -44,6 +47,15 @@ interface Execution {
   requestPriorityLevel: string | null;
   pushBack: string | null;
   responseDate: string | null;
+  version?: number;
+}
+
+interface RequestItem {
+  id: number;
+  itemType: string;
+  serialNumber: string | null;
+  simSerial: string | null;
+  status: string;
 }
 
 interface RequestDetail {
@@ -69,6 +81,7 @@ interface RequestDetail {
   trsm: string | null;
   simSn: string | null;
   execution: Execution | null;
+  items?: RequestItem[];
 }
 
 interface SerialLookupResult {
@@ -81,6 +94,21 @@ interface SerialLookupResult {
   message?: string;
 }
 
+type SerialRow = {
+  id: string;
+  value: string;
+  lookup: SerialLookupResult | null;
+  loading: boolean;
+};
+
+function newRow(value = ""): SerialRow {
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, value, lookup: null, loading: false };
+}
+
+function isCompletedStatus(status?: string | null) {
+  return status === "Installation Completed" || status === "Installation Completed - NL";
+}
+
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
@@ -91,11 +119,30 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+function LookupBadge({ lookup }: { lookup: SerialLookupResult | null }) {
+  if (!lookup) return null;
+  const ok = lookup.found && lookup.inActiveCustody;
+  return (
+    <div
+      className={`mt-1 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${
+        ok ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+      }`}
+    >
+      {ok ? <BadgeCheck className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+      {lookup.found
+        ? `${lookup.itemType?.nameAr ?? "عنصر"} · ${lookup.custodyStatus ?? ""}${
+            lookup.technician ? ` · ${lookup.technician.fullName}` : ""
+          }${lookup.itemType?.carrierName ? ` · ${lookup.itemType.carrierName}` : ""}`
+        : lookup.message ?? "الرقم غير موجود"}
+    </div>
+  );
+}
+
 export function EditCourierExecutionModal({
   open,
   onOpenChange,
   requestId,
-  onSuccess
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -107,70 +154,69 @@ export function EditCourierExecutionModal({
 
   const [phase, setPhase] = useState<1 | 2>(1);
   const [form, setForm] = useState<Partial<Execution>>({});
-  const [isDirty, setIsDirty] = useState(false);
-  const [deviceLookup, setDeviceLookup] = useState<SerialLookupResult | null>(null);
-  const [simLookup, setSimLookup] = useState<SerialLookupResult | null>(null);
-  const [snLookupLoading, setSnLookupLoading] = useState(false);
-  const [simLookupLoading, setSimLookupLoading] = useState(false);
+  const [deviceRows, setDeviceRows] = useState<SerialRow[]>([newRow()]);
+  const [simRows, setSimRows] = useState<SerialRow[]>([newRow()]);
   const [loadedSerials, setLoadedSerials] = useState(false);
 
   const { data: lookups } = useQuery<Lookups>({
     queryKey: ["/api/courier/lookups"],
     queryFn: () => apiRequest("GET", "/api/courier/lookups").then((r) => r.json()),
-    enabled: open
+    enabled: open,
   });
 
   const { data: request, isLoading: requestLoading } = useQuery<RequestDetail>({
     queryKey: ["/api/courier/requests/detail-modal", requestId],
     queryFn: () => apiRequest("GET", `/api/courier/requests/${requestId}`).then((r) => r.json()),
-    enabled: open && requestId !== null
+    enabled: open && requestId !== null,
   });
 
   const exec = request?.execution;
   const currentForm = { ...exec, ...form };
+  const completing = isCompletedStatus(currentForm.installationStatus);
+  const primaryDeviceLookup = deviceRows.find((r) => r.lookup?.technician)?.lookup ?? deviceRows[0]?.lookup ?? null;
 
-  const doSerialLookup = useCallback(async (sn: string, role: "device" | "sim") => {
-    if (!sn.trim()) return;
-    if (role === "device") setSnLookupLoading(true);
-    else setSimLookupLoading(true);
-    try {
-      const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn: sn.trim() });
-      const data: SerialLookupResult = await res.json();
-      if (role === "device") {
-        setDeviceLookup(data);
-        if (data.found && data.technician) {
+  const doSerialLookup = useCallback(
+    async (rowId: string, sn: string, role: "device" | "sim") => {
+      if (!sn.trim()) return;
+      const setRows = role === "device" ? setDeviceRows : setSimRows;
+      setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, loading: true } : r)));
+      try {
+        const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn: sn.trim() });
+        const data: SerialLookupResult = await res.json();
+        setRows((prev) =>
+          prev.map((r) => {
+            if (r.id !== rowId) return r;
+            const nextValue =
+              role === "sim" && data.normalized && data.normalized !== r.value.trim()
+                ? data.normalized
+                : r.value;
+            return { ...r, value: nextValue, lookup: data, loading: false };
+          })
+        );
+        if (role === "device" && data.found && data.technician) {
           setForm((prev) => ({
             ...prev,
             technicianCode: data.technician!.technicianCode ?? data.technician!.username,
             salesTechnician: data.technician!.fullName,
           }));
         }
-      } else {
-        setSimLookup(data);
-        if (data.found) {
-          if (data.normalized && data.normalized !== sn.trim()) {
-            setForm((prev) => ({ ...prev, simSerial: data.normalized }));
-          }
-          if (data.itemType?.carrierName) {
-            setForm((prev) => ({ ...prev, simType: data.itemType!.carrierName! }));
-          }
+        if (role === "sim" && data.found && data.itemType?.carrierName) {
+          setForm((prev) => ({ ...prev, simType: data.itemType!.carrierName! }));
         }
+      } catch {
+        setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, loading: false } : r)));
+        toast({ title: "تعذّر البحث", description: `فشل البحث عن الرقم: ${sn}`, variant: "destructive" });
       }
-    } catch {
-      toast({ title: "تعذّر البحث", description: `فشل البحث عن الرقم: ${sn}`, variant: "destructive" });
-    } finally {
-      if (role === "device") setSnLookupLoading(false);
-      else setSimLookupLoading(false);
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   useEffect(() => {
     if (open) {
       setPhase(1);
       setForm({});
-      setIsDirty(false);
-      setDeviceLookup(null);
-      setSimLookup(null);
+      setDeviceRows([newRow()]);
+      setSimRows([newRow()]);
       setLoadedSerials(false);
     }
   }, [open, requestId]);
@@ -178,36 +224,79 @@ export function EditCourierExecutionModal({
   useEffect(() => {
     if (!open || !request || loadedSerials) return;
     setLoadedSerials(true);
-    // Clear assignment pollution from prior saves
-    if (request.execution?.salesTechnician && request.tecName &&
-        request.execution.salesTechnician === request.tecName) {
+
+    if (
+      request.execution?.salesTechnician &&
+      request.tecName &&
+      request.execution.salesTechnician === request.tecName
+    ) {
       setForm((prev) => ({ ...prev, salesTechnician: undefined, technicianCode: undefined }));
     }
-    const sn = request.execution?.sn;
-    const simSerial = request.execution?.simSerial || request.simSn;
-    if (sn) doSerialLookup(sn, "device");
-    if (simSerial) doSerialLookup(simSerial, "sim");
+
+    const items = request.items ?? [];
+    const deviceSerials = items
+      .filter((i) => i.itemType === "POS" && i.serialNumber)
+      .map((i) => i.serialNumber!)
+      .filter(Boolean);
+    const simSerials = items
+      .filter((i) => i.itemType === "SIM" && (i.simSerial || i.serialNumber))
+      .map((i) => (i.simSerial || i.serialNumber)!)
+      .filter(Boolean);
+
+    if (request.execution?.sn && !deviceSerials.includes(request.execution.sn)) {
+      deviceSerials.unshift(request.execution.sn);
+    }
+    if (!deviceSerials.length && request.execution?.sn) deviceSerials.push(request.execution.sn);
+
+    const primarySim = request.execution?.simSerial || request.simSn;
+    if (primarySim && !simSerials.includes(primarySim)) simSerials.unshift(primarySim);
+
+    const nextDevices = (deviceSerials.length ? deviceSerials : [""]).map((v) => newRow(v));
+    const nextSims = (simSerials.length ? simSerials : [""]).map((v) => newRow(v));
+    setDeviceRows(nextDevices);
+    setSimRows(nextSims);
+
+    nextDevices.forEach((row) => {
+      if (row.value.trim()) doSerialLookup(row.id, row.value.trim(), "device");
+    });
+    nextSims.forEach((row) => {
+      if (row.value.trim()) doSerialLookup(row.id, row.value.trim(), "sim");
+    });
   }, [request, open, loadedSerials, doSerialLookup]);
 
   const mutation = useMutation({
-    mutationFn: (data: Partial<Execution>) =>
+    mutationFn: (data: Record<string, unknown>) =>
       apiRequest("POST", `/api/courier/executions/${requestId}`, data).then((r) => r.json()),
     onSuccess: () => {
-      toast({ title: "تم الحفظ بنجاح", description: "تم حفظ بيانات التحقق والتنفيذ وتحديث العهدة والمخزون." });
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: completing
+          ? "تم إكمال الطلب وخصم الأجهزة/الشرائح من عهدة الفني."
+          : "تم حفظ الطلب بدون خصم من العهدة (حالة غير مكتملة).",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/dashboard/stats"] });
-      setIsDirty(false);
       onOpenChange(false);
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
-      toast({ title: "خطأ", description: error.message || "فشل حفظ البيانات، يرجى المحاولة مجدداً.", variant: "destructive" });
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل حفظ البيانات، يرجى المحاولة مجدداً.",
+        variant: "destructive",
+      });
     },
   });
 
   const handleChange = (field: keyof Execution, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setIsDirty(true);
+  };
+
+  const updateRowValue = (role: "device" | "sim", rowId: string, value: string) => {
+    const setRows = role === "device" ? setDeviceRows : setSimRows;
+    setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, value, lookup: null } : r)));
+    const minLen = role === "device" ? 9 : 18;
+    if (value.trim().length >= minLen) doSerialLookup(rowId, value.trim(), role);
   };
 
   const handleNextPhase = () => {
@@ -224,16 +313,15 @@ export function EditCourierExecutionModal({
       return;
     }
 
-    const completing =
-      currentForm.installationStatus === "Installation Completed" ||
-      currentForm.installationStatus === "Installation Completed - NL";
-
     if (completing) {
-      if (!currentForm.sn?.trim()) {
-        toast({ title: "تنبيه", description: "أدخل الرقم التسلسلي للجهاز قبل الإكمال.", variant: "destructive" });
+      const deviceSerials = deviceRows.map((r) => r.value.trim()).filter(Boolean);
+      const simSerials = simRows.map((r) => r.value.trim()).filter(Boolean);
+      if (deviceSerials.length === 0) {
+        toast({ title: "تنبيه", description: "أدخل رقم جهاز واحد على الأقل قبل الإكمال.", variant: "destructive" });
         return;
       }
-      if (!deviceLookup?.found || !deviceLookup?.technician) {
+      const primary = deviceRows.find((r) => r.value.trim());
+      if (!primary?.lookup?.found || !primary.lookup.technician) {
         toast({
           title: "لم يتم التعرف على الفني من العهدة",
           description: "أدخل رقم جهاز موجود في مخزون الفني ليظهر اسمه تلقائياً. لا يُعتمد اسم التعيين.",
@@ -241,36 +329,113 @@ export function EditCourierExecutionModal({
         });
         return;
       }
-    } else if (currentForm.installationStatus === "Not Completed" && !currentForm.responseReasonCode) {
+
+      mutation.mutate({
+        installationStatus: currentForm.installationStatus,
+        paperRoll: currentForm.paperRoll,
+        time: currentForm.time,
+        deliveryDate: currentForm.deliveryDate,
+        responseDate: currentForm.responseDate,
+        sn: deviceSerials[0],
+        simSerial: simSerials[0] || null,
+        deviceSerials,
+        simSerials,
+        simType: currentForm.simType,
+        customerNotes: currentForm.customerNotes,
+        responseReasonCode: currentForm.responseReasonCode,
+        version: currentForm.version,
+        technicianCode:
+          primary.lookup.technician.technicianCode ?? primary.lookup.technician.username,
+        salesTechnician: primary.lookup.technician.fullName,
+      });
+      return;
+    }
+
+    if (currentForm.installationStatus === "Not Completed" && !currentForm.responseReasonCode) {
       toast({ title: "تنبيه", description: "اختر سبب الفشل قبل الحفظ.", variant: "destructive" });
       return;
     }
 
-    // Send only writable fields — echoing enteredAt/updatedAt as strings crashes the API.
+    // Incomplete: no serials required, no custody deduct
     mutation.mutate({
       installationStatus: currentForm.installationStatus,
       paperRoll: currentForm.paperRoll,
       time: currentForm.time,
       deliveryDate: currentForm.deliveryDate,
       responseDate: currentForm.responseDate,
-      sn: currentForm.sn,
-      simSerial: currentForm.simSerial,
       simType: currentForm.simType,
       customerNotes: currentForm.customerNotes,
       responseReasonCode: currentForm.responseReasonCode,
       version: currentForm.version,
-      technicianCode: deviceLookup?.technician
-        ? (deviceLookup.technician.technicianCode ?? deviceLookup.technician.username)
-        : currentForm.technicianCode,
-      salesTechnician: deviceLookup?.technician?.fullName ?? currentForm.salesTechnician,
     });
   };
 
-  const isCompleted = currentForm.installationStatus?.includes("Completed")
+  const statusBorder = completing
     ? "border-emerald-500/40"
     : currentForm.installationStatus === "Not Completed"
-    ? "border-red-500/40"
-    : "border-slate-700/50";
+      ? "border-red-500/40"
+      : "border-slate-700/50";
+
+  const renderSerialList = (role: "device" | "sim") => {
+    const rows = role === "device" ? deviceRows : simRows;
+    const setRows = role === "device" ? setDeviceRows : setSimRows;
+    const label = role === "device" ? "الرقم التسلسلي للجهاز (SN)" : "الرقم التسلسلي للشريحة (ICCID)";
+    const placeholder = role === "device" ? "أدخل أو امسح الرقم التسلسلي..." : "89...";
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="block text-[10px] text-slate-450 font-medium">
+            {label}
+            {role === "device" ? " *" : ""}
+          </label>
+          <button
+            type="button"
+            onClick={() => setRows((prev) => [...prev, newRow()])}
+            className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" />
+            إضافة {role === "device" ? "جهاز" : "شريحة"}
+          </button>
+        </div>
+        {rows.map((row, idx) => (
+          <div key={row.id} className="space-y-1">
+            <div className="flex gap-1.5">
+              <input
+                value={row.value}
+                onChange={(e) => updateRowValue(role, row.id, e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim()) doSerialLookup(row.id, e.target.value.trim(), role);
+                }}
+                placeholder={`${placeholder}${rows.length > 1 ? ` (${idx + 1})` : ""}`}
+                className="flex-1 bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (row.value.trim()) doSerialLookup(row.id, row.value.trim(), role);
+                }}
+                className="bg-emerald-700/40 border border-emerald-700/40 text-emerald-300 px-2 rounded-lg"
+              >
+                {row.loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              </button>
+              {rows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setRows((prev) => prev.filter((r) => r.id !== row.id))}
+                  className="bg-red-900/30 border border-red-800/40 text-red-300 px-2 rounded-lg"
+                  title="حذف"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <LookupBadge lookup={row.lookup} />
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -281,7 +446,7 @@ export function EditCourierExecutionModal({
             {requestId && <span className="text-slate-500 font-mono text-xs">#{requestId}</span>}
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-450">
-            الفني يُجلب تلقائياً من عهدة الجهاز — وليس من اسم التعيين.
+            الفني يُجلب تلقائياً من عهدة الجهاز — وليس من اسم التعيين. يمكن إضافة أكثر من جهاز وشريحة.
           </DialogDescription>
         </DialogHeader>
 
@@ -306,13 +471,33 @@ export function EditCourierExecutionModal({
 
               <div className="bg-[#0b1717] border border-slate-750 rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={`flex items-center gap-1.5 text-[10px] font-semibold ${phase === 1 ? "text-emerald-400" : "text-slate-500"}`}>
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${phase === 1 ? "bg-emerald-600 text-white" : "bg-slate-700"}`}>1</span>
+                  <div
+                    className={`flex items-center gap-1.5 text-[10px] font-semibold ${
+                      phase === 1 ? "text-emerald-400" : "text-slate-500"
+                    }`}
+                  >
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                        phase === 1 ? "bg-emerald-600 text-white" : "bg-slate-700"
+                      }`}
+                    >
+                      1
+                    </span>
                     التحقق
                   </div>
                   <div className="flex-1 h-px bg-slate-700" />
-                  <div className={`flex items-center gap-1.5 text-[10px] font-semibold ${phase === 2 ? "text-emerald-400" : "text-slate-500"}`}>
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${phase === 2 ? "bg-emerald-600 text-white" : "bg-slate-700"}`}>2</span>
+                  <div
+                    className={`flex items-center gap-1.5 text-[10px] font-semibold ${
+                      phase === 2 ? "text-emerald-400" : "text-slate-500"
+                    }`}
+                  >
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                        phase === 2 ? "bg-emerald-600 text-white" : "bg-slate-700"
+                      }`}
+                    >
+                      2
+                    </span>
                     التنفيذ
                   </div>
                 </div>
@@ -325,7 +510,7 @@ export function EditCourierExecutionModal({
                         <select
                           value={currentForm.installationStatus || ""}
                           onChange={(e) => handleChange("installationStatus", e.target.value)}
-                          className={`w-full bg-[#0b1717] border ${isCompleted} rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60`}
+                          className={`w-full bg-[#0b1717] border ${statusBorder} rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60`}
                         >
                           <option value="">اختر الحالة</option>
                           <option value="Installation Completed">مكتمل</option>
@@ -335,7 +520,9 @@ export function EditCourierExecutionModal({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">ملاحظات العميل / المشرف</label>
+                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">
+                          ملاحظات العميل / المشرف
+                        </label>
                         <textarea
                           value={currentForm.customerNotes || ""}
                           onChange={(e) => handleChange("customerNotes", e.target.value)}
@@ -347,122 +534,70 @@ export function EditCourierExecutionModal({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">الرقم التسلسلي للجهاز (SN) *</label>
-                        <div className="flex gap-1.5">
-                          <input
-                            value={currentForm.sn || ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              handleChange("sn", val);
-                              setDeviceLookup(null);
-                              if (val.trim().length >= 9) doSerialLookup(val.trim(), "device");
-                            }}
-                            onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "device"); }}
-                            placeholder="أدخل أو امسح الرقم التسلسلي..."
-                            className="flex-1 bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => { if (currentForm.sn?.trim()) doSerialLookup(currentForm.sn.trim(), "device"); }}
-                            className="bg-emerald-700/40 border border-emerald-700/40 text-emerald-300 px-2 rounded-lg"
-                          >
-                            {snLookupLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                        {deviceLookup && (
-                          <div className={`mt-1 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${
-                            deviceLookup.found && deviceLookup.inActiveCustody
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-red-500/10 text-red-400"
-                          }`}>
-                            {deviceLookup.found && deviceLookup.inActiveCustody
-                              ? <BadgeCheck className="w-3 h-3" />
-                              : <XCircle className="w-3 h-3" />}
-                            {deviceLookup.found
-                              ? `${deviceLookup.itemType?.nameAr ?? "جهاز"} · ${deviceLookup.custodyStatus}${deviceLookup.technician ? ` · ${deviceLookup.technician.fullName}` : ""}`
-                              : (deviceLookup.message ?? "الرقم غير موجود")}
+                      {completing ? (
+                        <>
+                          {renderSerialList("device")}
+                          {renderSerialList("sim")}
+
+                          <div>
+                            <label className="block text-[10px] text-slate-450 mb-1 font-medium">نوع الشريحة</label>
+                            <select
+                              value={currentForm.simType || ""}
+                              onChange={(e) => handleChange("simType", e.target.value)}
+                              className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                            >
+                              <option value="">اختر النوع</option>
+                              {lookups?.simTypes.map((s) => (
+                                <option key={s.id} value={s.name}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                        )}
-                      </div>
 
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
-                        <div className="flex gap-1.5">
-                          <input
-                            value={currentForm.simSerial || ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              handleChange("simSerial", val);
-                              setSimLookup(null);
-                              if (val.trim().length >= 18) doSerialLookup(val.trim(), "sim");
-                            }}
-                            onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "sim"); }}
-                            placeholder="89..."
-                            className="flex-1 bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => { if (currentForm.simSerial?.trim()) doSerialLookup(currentForm.simSerial.trim(), "sim"); }}
-                            className="bg-emerald-700/40 border border-emerald-700/40 text-emerald-300 px-2 rounded-lg"
-                          >
-                            {simLookupLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                        {simLookup && (
-                          <div className={`mt-1 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${
-                            simLookup.found && simLookup.inActiveCustody
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-red-500/10 text-red-400"
-                          }`}>
-                            {simLookup.found && simLookup.inActiveCustody
-                              ? <BadgeCheck className="w-3 h-3" />
-                              : <XCircle className="w-3 h-3" />}
-                            {simLookup.found
-                              ? `${simLookup.itemType?.nameAr ?? "شريحة"} · ${simLookup.itemType?.carrierName ?? ""} · ${simLookup.custodyStatus}`
-                              : (simLookup.message ?? "الرقم غير موجود")}
+                          <div>
+                            <label className="block text-[10px] text-slate-450 mb-1 font-medium flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> الفني المسؤول (من عهدة الجهاز)
+                            </label>
+                            <div
+                              className={`bg-[#0b1717]/40 border rounded-lg px-2.5 py-1.5 text-xs flex items-center gap-1.5 ${
+                                primaryDeviceLookup?.technician
+                                  ? "border-emerald-700/40 text-emerald-300"
+                                  : "border-slate-750 text-slate-500"
+                              }`}
+                            >
+                              {primaryDeviceLookup?.technician ? (
+                                <>
+                                  👤 {primaryDeviceLookup.technician.fullName}
+                                  <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-1 py-0.5 rounded ml-auto">
+                                    {primaryDeviceLookup.technician.technicianCode ??
+                                      primaryDeviceLookup.technician.username}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-[10px]">امسح رقم الجهاز لتحديد الفني من العهدة</span>
+                              )}
+                            </div>
+                            {request.tecName && (
+                              <p className="mt-1 text-[10px] text-slate-500">
+                                تعيين الطلب (مرجعي): {request.tecName}
+                              </p>
+                            )}
                           </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">نوع الشريحة</label>
-                        <select
-                          value={currentForm.simType || ""}
-                          onChange={(e) => handleChange("simType", e.target.value)}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
-                        >
-                          <option value="">اختر النوع</option>
-                          {lookups?.simTypes.map((s) => (
-                            <option key={s.id} value={s.name}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> الفني المسؤول (من عهدة الجهاز)
-                        </label>
-                        <div className={`bg-[#0b1717]/40 border rounded-lg px-2.5 py-1.5 text-xs flex items-center gap-1.5 ${
-                          deviceLookup?.technician ? "border-emerald-700/40 text-emerald-300" : "border-slate-750 text-slate-500"
-                        }`}>
-                          {deviceLookup?.technician ? (
-                            <>
-                              👤 {deviceLookup.technician.fullName}
-                              <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-1 py-0.5 rounded ml-auto">
-                                {deviceLookup.technician.technicianCode ?? deviceLookup.technician.username}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-[10px]">امسح رقم الجهاز لتحديد الفني من العهدة</span>
-                          )}
+                        </>
+                      ) : (
+                        <div className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2.5">
+                          <Info className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[11px] font-semibold text-amber-300">
+                              طلب غير مكتمل — بدون سيريالات وبدون خصم
+                            </p>
+                            <p className="text-[10px] text-amber-200/70 mt-0.5">
+                              لا يُطلب إدخال أجهزة أو شرائح، ولن يُخصم شيء من عهدة الفني عند الحفظ.
+                            </p>
+                          </div>
                         </div>
-                        {request.tecName && (
-                          <p className="mt-1 text-[10px] text-slate-500">
-                            تعيين الطلب (مرجعي): {request.tecName}
-                          </p>
-                        )}
-                      </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
@@ -508,7 +643,9 @@ export function EditCourierExecutionModal({
                           >
                             <option value="">اختر السبب</option>
                             {lookups?.failureReasons.map((r) => (
-                              <option key={r.id} value={r.code}>{r.labelAr}</option>
+                              <option key={r.id} value={r.code}>
+                                {r.labelAr}
+                              </option>
                             ))}
                           </select>
                         </div>
@@ -546,10 +683,12 @@ export function EditCourierExecutionModal({
                         disabled={mutation.isPending}
                         className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
                       >
-                        {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                        {currentForm.installationStatus?.includes("Completed")
-                          ? "حفظ وإكمال وخصم العهدة"
-                          : "حفظ فقط (بدون خصم)"}
+                        {mutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                        {completing ? "حفظ وإكمال وخصم العهدة" : "حفظ فقط (بدون خصم)"}
                       </button>
                     </>
                   )}
@@ -557,17 +696,27 @@ export function EditCourierExecutionModal({
               </div>
             </div>
 
-            {currentForm.installationStatus?.includes("Completed") && (
+            {completing ? (
               <div className="flex items-start gap-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-3.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-450 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-emerald-400">خصم تلقائي نشط</p>
                   <p className="text-[10px] text-emerald-450/70 mt-0.5">
-                    عند الإكمال سيُخصم الجهاز من عهدة الفني الظاهر أعلاه (مالك العهدة).
+                    عند الإكمال سيُخصم كل جهاز وشريحة مدخلة من عهدة الفني الظاهر أعلاه.
                   </p>
                 </div>
               </div>
-            )}
+            ) : currentForm.installationStatus ? (
+              <div className="flex items-start gap-2.5 bg-slate-800/50 border border-slate-700/40 rounded-xl p-3.5">
+                <Info className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-300">بدون خصم من العهدة</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    الحالة غير مكتملة — الحفظ يغلق/يحدّث الطلب فقط دون طلب سيريالات ودون خصم مخزون.
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </DialogContent>

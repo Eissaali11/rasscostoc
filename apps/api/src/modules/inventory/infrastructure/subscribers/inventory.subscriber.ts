@@ -51,12 +51,16 @@ export class InventorySubscriber {
           }
         };
 
+        const looksLikeSerial = (s?: string | null) => {
+          if (!s?.trim()) return false;
+          const t = s.trim();
+          return t.length >= 6 && !t.startsWith("{") && !t.startsWith("[");
+        };
+
         await addSerial(execution.sn);
-        await addSerial(execution.extraField1);
-        await addSerial(execution.extraField2);
-        if (execution.simSerial?.trim()) {
-          await addSerial(execution.simSerial);
-        }
+        if (looksLikeSerial(execution.extraField1)) await addSerial(execution.extraField1);
+        if (looksLikeSerial(execution.extraField2)) await addSerial(execution.extraField2);
+        if (looksLikeSerial(execution.simSerial)) await addSerial(execution.simSerial);
 
         const requestItemsList = await db
           .select()

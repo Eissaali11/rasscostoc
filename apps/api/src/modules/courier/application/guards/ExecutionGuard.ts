@@ -7,19 +7,26 @@
  * Responsibility: data completeness only — not custody or ownership.
  */
 
-import { GuardValidationError, isCompletedStatus, type GuardContext } from "./guard.types";
+import {
+  GuardValidationError,
+  isCompletedStatus,
+  normalizeSerialList,
+  type GuardContext,
+} from "./guard.types";
 
 export class ExecutionGuard {
   /**
    * Validate execution input for structural completeness.
    * Throws GuardValidationError if any required field is missing.
+   * Incomplete / non-completed statuses do NOT require serials.
    */
   static validate(ctx: GuardContext): void {
     const { executionData } = ctx;
 
-    // If marking as completed, SN is mandatory
+    // If marking as completed, at least one device SN is mandatory
     if (isCompletedStatus(executionData.installationStatus)) {
-      if (!executionData.sn || executionData.sn.trim() === "") {
+      const devices = normalizeSerialList(executionData.deviceSerials, executionData.sn);
+      if (devices.length === 0) {
         throw new GuardValidationError(
           "الرقم التسلسلي للجهاز (SN) مطلوب عند تعيين الحالة كمكتمل.",
           "sn"

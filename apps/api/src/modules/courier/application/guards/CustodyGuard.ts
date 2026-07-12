@@ -7,13 +7,21 @@
  *   3. Device and SIM belong to the SAME technician (no ownership mismatch)
  *   4. Device/SIM linked to the courier request (auto-binds when portal closes without Flutter assign)
  *
+ * Supports multiple devices and SIMs via deviceSerials / simSerials.
  * Serials are matched via Central Serial Engine (prefixed or stored forms).
  */
 
 import { db } from "@server/core/config/db";
 import { items, courierAuditLogs, courierRequestItems } from "@shared/schema";
 import { and, eq, inArray, or } from "drizzle-orm";
-import { GuardValidationError, isCompletedStatus, type GuardContext, type TechUser } from "./guard.types";
+import {
+  GuardValidationError,
+  isCompletedStatus,
+  looksLikeInventorySerial,
+  normalizeSerialList,
+  type GuardContext,
+  type TechUser,
+} from "./guard.types";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 /** Active technician custody — keep in sync with inventory custody semantics (no FSM import). */
@@ -29,6 +37,7 @@ interface ResolvedSerial {
   serialNumber: string;
   status: string;
   currentOwnerId: string | null;
+  role: "device" | "sim";
 }
 
 export class CustodyGuard {
@@ -45,13 +54,24 @@ export class CustodyGuard {
       return;
     }
 
-    const serialEntries: Array<{ raw: string; role: "device" | "sim" | "extra" }> = [];
-    if (executionData.sn?.trim()) serialEntries.push({ raw: executionData.sn.trim(), role: "device" });
-    if (executionData.simSerial?.trim()) serialEntries.push({ raw: executionData.simSerial.trim(), role: "sim" });
-    if (executionData.extraField1?.trim()) serialEntries.push({ raw: executionData.extraField1.trim(), role: "extra" });
-    if (executionData.extraField2?.trim()) serialEntries.push({ raw: executionData.extraField2.trim(), role: "extra" });
+    const deviceSerials = normalizeSerialList(executionData.deviceSerials, executionData.sn);
+    const simSerials = normalizeSerialList(executionData.simSerials, executionData.simSerial);
 
-    const resolved: Array<ResolvedSerial & { role: string }> = [];
+    // Legacy extra fields only when they look like serials (not Flutter JSON metadata)
+    const legacyExtras = [executionData.extraField1, executionData.extraField2]
+      .filter((v) => looksLikeInventorySerial(v))
+      .map((v) => String(v).trim());
+
+    const serialEntries: Array<{ raw: string; role: "device" | "sim" }> = [
+      ...deviceSerials.map((raw) => ({ raw, role: "device" as const })),
+      ...simSerials.map((raw) => ({ raw, role: "sim" as const })),
+      // Treat leftover extras as devices for custody validation (legacy single-close path)
+      ...legacyExtras
+        .filter((raw) => !deviceSerials.includes(raw) && !simSerials.includes(raw))
+        .map((raw) => ({ raw, role: "device" as const })),
+    ];
+
+    const resolved: ResolvedSerial[] = [];
 
     for (const entry of serialEntries) {
       const candidates = await SerialRecognitionService.buildStoredSerialCandidates(entry.raw);
@@ -91,21 +111,23 @@ export class CustodyGuard {
       });
     }
 
-    const deviceEntry = resolved.find((r) => r.role === "device");
-    const simEntry = resolved.find((r) => r.role === "sim");
-
-    if (deviceEntry && simEntry) {
-      if (deviceEntry.currentOwnerId !== simEntry.currentOwnerId) {
-        await CustodyGuard.writeAuditFailure(ctx, techUser, `${deviceEntry.raw} / ${simEntry.raw}`);
-        throw new GuardValidationError(
-          `الجهاز (${deviceEntry.raw}) والشريحة (${simEntry.raw}) تنتميان لفنيين مختلفين. يجب أن يكون المالك واحداً لإغلاق الطلب.`,
-          "simSerial"
-        );
-      }
+    const ownerIds = new Set(
+      resolved.map((r) => r.currentOwnerId).filter((id): id is string => !!id)
+    );
+    if (ownerIds.size > 1) {
+      await CustodyGuard.writeAuditFailure(
+        ctx,
+        techUser,
+        resolved.map((r) => r.raw).join(" / ")
+      );
+      throw new GuardValidationError(
+        "الأجهزة والشرائح المدخلة تنتمي لفنيين مختلفين. يجب أن يكون المالك واحداً لإغلاق الطلب.",
+        "simSerial"
+      );
     }
 
     // Auto-bind when portal closes without Flutter pre-assigning request items
-    if (deviceEntry) {
+    for (const entry of resolved.filter((r) => r.role === "device")) {
       const [link] = await db
         .select({ id: courierRequestItems.id })
         .from(courierRequestItems)
@@ -113,8 +135,8 @@ export class CustodyGuard {
           and(
             eq(courierRequestItems.requestId, requestId),
             or(
-              eq(courierRequestItems.serialNumber, deviceEntry.serialNumber),
-              eq(courierRequestItems.simSerial, deviceEntry.serialNumber)
+              eq(courierRequestItems.serialNumber, entry.serialNumber),
+              eq(courierRequestItems.simSerial, entry.serialNumber)
             )
           )
         )
@@ -124,7 +146,7 @@ export class CustodyGuard {
         await db.insert(courierRequestItems).values({
           requestId,
           itemType: "POS",
-          serialNumber: deviceEntry.serialNumber,
+          serialNumber: entry.serialNumber,
           quantity: 1,
           status: "RECEIVED",
           scannedAt: new Date(),
@@ -134,7 +156,7 @@ export class CustodyGuard {
       }
     }
 
-    if (simEntry) {
+    for (const entry of resolved.filter((r) => r.role === "sim")) {
       const [simLink] = await db
         .select({ id: courierRequestItems.id })
         .from(courierRequestItems)
@@ -142,8 +164,8 @@ export class CustodyGuard {
           and(
             eq(courierRequestItems.requestId, requestId),
             or(
-              eq(courierRequestItems.simSerial, simEntry.serialNumber),
-              eq(courierRequestItems.serialNumber, simEntry.serialNumber)
+              eq(courierRequestItems.simSerial, entry.serialNumber),
+              eq(courierRequestItems.serialNumber, entry.serialNumber)
             )
           )
         )
@@ -153,7 +175,7 @@ export class CustodyGuard {
         await db.insert(courierRequestItems).values({
           requestId,
           itemType: "SIM",
-          simSerial: simEntry.serialNumber,
+          simSerial: entry.serialNumber,
           quantity: 1,
           status: "RECEIVED",
           scannedAt: new Date(),

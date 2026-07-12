@@ -23,9 +23,38 @@ export interface ExecutionInput {
   salesTechnician?: string;
   sn?: string;
   simSerial?: string;
+  /** Extra devices beyond primary `sn` (portal multi-serial close). */
+  deviceSerials?: string[];
+  /** Extra SIMs beyond primary `simSerial` (portal multi-serial close). */
+  simSerials?: string[];
   extraField1?: string;
   extraField2?: string;
   [key: string]: any;
+}
+
+/** True when a string looks like an inventory serial (not Flutter JSON metadata). */
+export function looksLikeInventorySerial(value?: string | null): boolean {
+  if (!value) return false;
+  const t = String(value).trim();
+  if (t.length < 6) return false;
+  if (t.startsWith("{") || t.startsWith("[")) return false;
+  return true;
+}
+
+/** Deduplicate and normalize serial lists from arrays and/or scalar fields. */
+export function normalizeSerialList(
+  ...sources: Array<string | string[] | null | undefined>
+): string[] {
+  const out: string[] = [];
+  for (const src of sources) {
+    const list = Array.isArray(src) ? src : src != null && src !== "" ? [src] : [];
+    for (const raw of list) {
+      const t = String(raw || "").trim();
+      if (!looksLikeInventorySerial(t)) continue;
+      if (!out.includes(t)) out.push(t);
+    }
+  }
+  return out;
 }
 
 export interface RequestRecord {
