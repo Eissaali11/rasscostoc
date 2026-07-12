@@ -344,6 +344,18 @@ export default function TechnicianDetailsPage() {
     enabled: !!technicianId,
   });
 
+  const { data: deliveredItems = [], isLoading: isLoadingDeliveredItems } = useQuery<any[]>({
+    queryKey: [`/api/technicians/${technicianId}/delivered-items`],
+    enabled: !!technicianId,
+  });
+
+  const legacyDeliveredDevices = useMemo(
+    () => receivedDevices.filter((d) => d.technicianId === technicianId && d.status === "delivered"),
+    [receivedDevices, technicianId]
+  );
+
+  const deliveryLogCount = deliveredItems.length + legacyDeliveredDevices.length;
+
   const isLoading =
     isLoadingTechniciansInventory ||
     isLoadingFixed ||
@@ -351,7 +363,8 @@ export default function TechnicianDetailsPage() {
     isLoadingProfile ||
     isLoadingFixedEntries ||
     isLoadingMovingEntries ||
-    isLoadingSerializedItems;
+    isLoadingSerializedItems ||
+    isLoadingDeliveredItems;
 
   const selectedTechnician = useMemo(() => {
     if (!technicianId) {
@@ -1135,7 +1148,7 @@ export default function TechnicianDetailsPage() {
                 الأرقام التسلسلية والأجهزة الميدانية
               </h3>
               <p className="text-slate-400 text-xs mt-1">
-                عرض العهدة النشطة حالياً والأجهزة والشرائح المسجلة ميدانياً بنظام v3.0
+                عرض العهدة النشطة حالياً وسجل التسليم (v3) للأجهزة والشرائح المسلَّمة
               </p>
             </div>
             
@@ -1144,7 +1157,7 @@ export default function TechnicianDetailsPage() {
                 العهدة النشطة الحالية ({serializedItems.length})
               </TabsTrigger>
               <TabsTrigger value="history">
-                سجل تسليم الأجهزة ({receivedDevices.filter((d) => d.technicianId === technicianId).length})
+                سجل تسليم الأجهزة ({deliveryLogCount})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1233,80 +1246,102 @@ export default function TechnicianDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {receivedDevices.filter((d) => d.technicianId === technicianId).length === 0 ? (
+                  {deliveryLogCount === 0 ? (
                     <TableRow className="border-slate-800/60">
                       <TableCell colSpan={7} className="text-center py-8 text-slate-400">
-                        لا توجد أجهزة أو شرائح في عهدة هذا المندوب حالياً
+                        لا توجد أجهزة أو شرائح مسلَّمة لهذا المندوب بعد
                       </TableCell>
                     </TableRow>
                   ) : (
-                    receivedDevices
-                      .filter((d) => d.technicianId === technicianId)
-                      .map((device) => {
-                        const matchedType = itemTypes?.find((t) => t.id === device.itemTypeId);
-                        const itemName = matchedType?.nameAr || (device.terminalId ? `جهاز ${device.terminalId}` : "جهاز غير معروف");
-                        
-                        let statusLabel = "معلق";
-                        let statusColor = "bg-orange-500/10 text-orange-400 border-orange-500/20";
-                        if (device.status === "approved") {
-                          statusLabel = "في العهدة (مقبول)";
-                          statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                        } else if (device.status === "rejected") {
-                          statusLabel = "مرفوض";
-                          statusColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-                        } else if (device.status === "delivered") {
-                          statusLabel = "تم التسليم للعميل";
-                          statusColor = "bg-cyan-500/10 text-cyan-400 border-cyan-500/20";
-                        }
+                    <>
+                      {deliveredItems.map((item) => {
+                        let categoryLabel = "أجهزة POS";
+                        if (item.itemTypeCategory === "sim") categoryLabel = "شريحة SIM";
+                        else if (item.itemTypeCategory === "papers") categoryLabel = "مطبوعات / ورق";
+                        else if (item.itemTypeCategory === "accessories") categoryLabel = "ملحقات";
 
                         return (
-                          <TableRow 
-                            key={device.id} 
-                            onClick={() => {
-                              setSelectedDevice(device);
-                              setActiveStepIndex(
-                                device.status === "delivered" 
-                                  ? 3 
-                                  : device.status === "approved" 
-                                  ? 2 
-                                  : device.status === "rejected" 
-                                  ? 1 
-                                  : 0
-                              );
-                              setAdminNotesText("");
-                            }}
-                            className="border-slate-800 hover:bg-cyan-400/5 transition-colors cursor-pointer group"
-                          >
+                          <TableRow key={`v3-${item.movementId || item.id}`} className="border-slate-800 hover:bg-cyan-400/5 transition-colors group">
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                {renderProductImage(matchedType?.category || "other", matchedType?.nameAr || "", matchedType?.nameEn || "", device.simCardType)}
+                                {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
                                 <div>
-                                  <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{itemName}</p>
-                                  <p className="text-xs text-slate-500">{matchedType?.nameEn || "Serialized item"}</p>
+                                  <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{item.itemTypeName || "صنف غير معروف"}</p>
+                                  <p className="text-xs text-slate-500">
+                                    {item.referenceId ? `طلب #${item.referenceId}` : categoryLabel}
+                                  </p>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell className="text-center font-mono text-xs text-slate-300">
-                              <span className="bg-slate-900 px-2.5 py-1 rounded border border-slate-800">{device.serialNumber}</span>
+                              <span className="bg-slate-900 px-2.5 py-1 rounded border border-slate-800">{item.serialNumber}</span>
                             </TableCell>
-                            <TableCell className="text-center text-slate-300 font-mono text-xs">{device.terminalId || "-"}</TableCell>
+                            <TableCell className="text-center text-slate-300 font-mono text-xs">
+                              {item.itemTypeCategory === "sim" ? item.carrierName || "-" : item.barcode || "-"}
+                            </TableCell>
                             <TableCell className="text-center">
-                              <Badge className={`${statusColor} font-black text-xs px-2.5 py-0.5`}>{statusLabel}</Badge>
+                              <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-black text-xs px-2.5 py-0.5">
+                                تم التسليم للعميل
+                              </Badge>
                             </TableCell>
-                            <TableCell className="text-center text-slate-300 text-xs">
-                              {device.inventoryType === "moving" ? "مخزون متحرك (حقيبة)" : "مخزون ثابت"}
-                            </TableCell>
+                            <TableCell className="text-center text-slate-300 text-xs">مخزون متحرك (v3)</TableCell>
                             <TableCell className="text-center text-slate-400 text-xs">
-                              {formatDateTime(device.updatedAt || device.createdAt)}
+                              {formatDateTime(item.deliveredAt || item.createdAt)}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 text-xs font-bold">
-                                عرض التفاصيل الكاملة
-                              </Button>
+                              <Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px]">مسلَّم</Badge>
                             </TableCell>
                           </TableRow>
                         );
-                      })
+                      })}
+                      {legacyDeliveredDevices
+                        .filter((d) => !deliveredItems.some((i) => i.serialNumber === d.serialNumber))
+                        .map((device) => {
+                          const matchedType = itemTypes?.find((t) => t.id === device.itemTypeId);
+                          const itemName = matchedType?.nameAr || (device.terminalId ? `جهاز ${device.terminalId}` : "جهاز غير معروف");
+                          return (
+                            <TableRow
+                              key={`legacy-${device.id}`}
+                              onClick={() => {
+                                setSelectedDevice(device);
+                                setActiveStepIndex(3);
+                                setAdminNotesText("");
+                              }}
+                              className="border-slate-800 hover:bg-cyan-400/5 transition-colors cursor-pointer group"
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  {renderProductImage(matchedType?.category || "other", matchedType?.nameAr || "", matchedType?.nameEn || "", device.simCardType)}
+                                  <div>
+                                    <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{itemName}</p>
+                                    <p className="text-xs text-slate-500">{matchedType?.nameEn || "Legacy"}</p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-xs text-slate-300">
+                                <span className="bg-slate-900 px-2.5 py-1 rounded border border-slate-800">{device.serialNumber}</span>
+                              </TableCell>
+                              <TableCell className="text-center text-slate-300 font-mono text-xs">{device.terminalId || "-"}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-black text-xs px-2.5 py-0.5">
+                                  تم التسليم للعميل
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center text-slate-300 text-xs">
+                                {device.inventoryType === "moving" ? "مخزون متحرك (حقيبة)" : "مخزون ثابت"}
+                              </TableCell>
+                              <TableCell className="text-center text-slate-400 text-xs">
+                                {formatDateTime(device.updatedAt || device.createdAt)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 text-xs font-bold">
+                                  عرض التفاصيل الكاملة
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </>
                   )}
                 </TableBody>
               </Table>

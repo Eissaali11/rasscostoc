@@ -239,7 +239,7 @@ function normalize(value?: string | null): string {
 function statusUi(status: string): { text: string; className: string; delivered: boolean } {
   const normalized = normalize(status);
 
-  if (normalized === "approved" || normalized === "accepted" || normalized === "completed" || normalized === "delivered") {
+  if (normalized === "delivered" || normalized === "installed") {
     return {
       text: "تم التسليم",
       className: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20",
@@ -255,7 +255,15 @@ function statusUi(status: string): { text: string; className: string; delivered:
     };
   }
 
-  if (normalized === "in-stock" || normalized === "available") {
+  if (normalized === "approved" || normalized === "accepted" || normalized === "received_by_technician" || normalized === "in_transit_custody") {
+    return {
+      text: "في المخزون",
+      className: "text-orange-400 bg-orange-500/10 border border-orange-500/20",
+      delivered: false,
+    };
+  }
+
+  if (normalized === "in-stock" || normalized === "available" || normalized === "pending") {
     return {
       text: "في المخزون",
       className: "text-orange-400 bg-orange-500/10 border border-orange-500/20",
@@ -324,7 +332,12 @@ export default function TechnicianItemDetailsPage() {
     enabled: !!technicianId,
   });
 
-  const isLoading = isLoadingItemTypes || isLoadingFixed || isLoadingMoving || isLoadingReceived || isLoadingSerialized;
+  const { data: deliveredSerializedItems = [], isLoading: isLoadingDeliveredSerialized } = useQuery<any[]>({
+    queryKey: [`/api/technicians/${technicianId}/delivered-items?itemTypeId=${itemTypeId}`],
+    enabled: !!technicianId && !!itemTypeId,
+  });
+
+  const isLoading = isLoadingItemTypes || isLoadingFixed || isLoadingMoving || isLoadingReceived || isLoadingSerialized || isLoadingDeliveredSerialized;
 
   const itemType = useMemo(() => {
     return itemTypes.find((item) => item.id === itemTypeId);
@@ -343,35 +356,55 @@ export default function TechnicianItemDetailsPage() {
   const liveOperations = useMemo(() => {
     const productNameAr = itemType?.nameAr || "منتج";
     const productNameEn = itemType?.nameEn || "";
+    const deliveredClass = "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20";
+    const inStockClass = "text-orange-400 bg-orange-500/10 border border-orange-500/20";
 
     const activeSerializedRows: ProductOperationRow[] = (serializedItems || [])
       .filter((item) => item.itemTypeId === itemTypeId)
-      .map((item) => {
-        const inStockClass = "text-orange-400 bg-orange-500/10 border border-orange-500/20";
-        return {
-          id: `active-${item.id}`,
-          productName: item.itemTypeName || productNameAr,
-          serial: item.serialNumber || "-",
-          status: "في المخزون",
-          statusClass: inStockClass,
-          datetime: formatDateTime(item.createdAt),
-          raw: {
-            id: item.id,
-            serialNumber: item.serialNumber,
-            itemTypeId: item.itemTypeId,
-            status: "approved",
-            createdAt: item.createdAt,
-            technicianId,
-            inventoryType: "moving",
-            simCardType: item.carrierName,
-            hasSim: !!item.carrierName,
-            battery: !item.carrierName,
-            chargerCable: !item.carrierName,
-            chargerHead: !item.carrierName,
-          },
-          type: "device",
-        };
-      });
+      .map((item) => ({
+        id: `active-${item.id}`,
+        productName: item.itemTypeName || productNameAr,
+        serial: item.serialNumber || "-",
+        status: "في المخزون",
+        statusClass: inStockClass,
+        datetime: formatDateTime(item.createdAt),
+        raw: {
+          id: item.id,
+          serialNumber: item.serialNumber,
+          itemTypeId: item.itemTypeId,
+          status: item.status || "RECEIVED_BY_TECHNICIAN",
+          createdAt: item.createdAt,
+          technicianId,
+          inventoryType: "moving",
+          simCardType: item.carrierName,
+          hasSim: !!item.carrierName,
+        },
+        type: "device" as const,
+      }));
+
+    const deliveredV3Rows: ProductOperationRow[] = (deliveredSerializedItems || [])
+      .filter((item) => item.itemTypeId === itemTypeId)
+      .map((item) => ({
+        id: `delivered-${item.movementId || item.id}`,
+        productName: item.itemTypeName || productNameAr,
+        serial: item.serialNumber || "-",
+        status: "تم التسليم",
+        statusClass: deliveredClass,
+        datetime: formatDateTime(item.deliveredAt || item.createdAt),
+        raw: {
+          id: item.id,
+          serialNumber: item.serialNumber,
+          itemTypeId: item.itemTypeId,
+          status: "delivered",
+          createdAt: item.deliveredAt || item.createdAt,
+          technicianId,
+          inventoryType: "moving",
+          simCardType: item.carrierName,
+          hasSim: !!item.carrierName,
+          adminNotes: item.notes || (item.referenceId ? `طلب #${item.referenceId}` : null),
+        },
+        type: "device" as const,
+      }));
 
     const receivedRows: ProductOperationRow[] = receivedDevices
       .filter((device) => device.technicianId === technicianId)
@@ -393,7 +426,7 @@ export default function TechnicianItemDetailsPage() {
           statusClass: ui.className,
           datetime: formatDateTime(device.createdAt),
           raw: device,
-          type: "device",
+          type: "device" as const,
         };
       });
 
@@ -413,54 +446,28 @@ export default function TechnicianItemDetailsPage() {
           statusClass: ui.className,
           datetime: formatDateTime(transfer.createdAt),
           raw: transfer,
-          type: "transfer",
+          type: "transfer" as const,
         };
       });
 
-    const rows = [...activeSerializedRows, ...receivedRows, ...transferRows];
-
-    // De-duplicate rows by serial number, preferring activeSerializedRows or receivedRows with serial number
+    // Prefer v3 delivered/active over legacy received rows for same serial
+    const rows = [...deliveredV3Rows, ...activeSerializedRows, ...receivedRows, ...transferRows];
     const seenSerials = new Set<string>();
     const uniqueRows: ProductOperationRow[] = [];
 
     for (const row of rows) {
       if (row.serial && row.serial !== "-") {
-        if (seenSerials.has(row.serial)) {
-          continue;
-        }
+        if (seenSerials.has(row.serial)) continue;
         seenSerials.add(row.serial);
       }
       uniqueRows.push(row);
     }
 
-    if (uniqueRows.length > 0) {
-      return uniqueRows;
-    }
+    return uniqueRows;
+  }, [itemType, itemTypeId, receivedDevices, technicianId, warehouseTransfers, serializedItems, deliveredSerializedItems]);
 
-    if (totalStock > 0) {
-      return [
-        {
-          id: "summary-available",
-          productName: productNameAr,
-          serial: "-",
-          status: "في المخزون",
-          statusClass: "text-orange-400 bg-orange-500/10 border border-orange-500/20",
-          datetime: formatDateTime(new Date().toISOString()),
-        },
-      ];
-    }
-
-    return [];
-  }, [itemType, itemTypeId, movingTotal, receivedDevices, technicianId, totalStock, warehouseTransfers, serializedItems]);
-
-  const hasLiveData = totalStock > 0 || liveOperations.length > 0;
-  const useMockData = !hasLiveData;
-
-  const fallbackItemName = itemType?.nameAr || "راوتر 5G";
-  const productOperations = useMemo(() => {
-    if (hasLiveData) return liveOperations;
-    return createMockOperations(fallbackItemName);
-  }, [fallbackItemName, hasLiveData, liveOperations]);
+  const hasLiveData = true; // never fall back to mock inventory for a real technician item page
+  const productOperations = liveOperations;
 
   const deliveredRows = productOperations.filter((row) => row.status === "تم التسليم");
   const availableRows = productOperations.filter((row) => row.status !== "تم التسليم");
@@ -476,19 +483,23 @@ export default function TechnicianItemDetailsPage() {
     );
   });
 
-  const deliveredCount = deliveredRows.length;
-  const effectiveTotalStock = hasLiveData ? totalStock : 42;
-  const urgentCount = effectiveTotalStock > 0 && effectiveTotalStock < 20 ? effectiveTotalStock : 0;
-  const estimatedValue = effectiveTotalStock * 35;
+  const deliveredCount = Math.max(deliveredRows.length, deliveredSerializedItems.length);
+  const remainingStock = movingTotal + fixedTotal;
+  const scannedTotal = remainingStock + deliveredCount;
+  const effectiveTotalStock = scannedTotal;
+  const remainingDisplay = remainingStock;
+  const urgentCount = remainingStock > 0 && remainingStock < 20 ? remainingStock : 0;
+  const estimatedValue = remainingStock * 35;
 
-  const displayTechnicianName = technician?.fullName || (useMockData ? "مندوب تجريبي" : "-");
-  const displayItemName = itemType?.nameAr || (useMockData ? fallbackItemName : "غير معروف");
+  const displayTechnicianName = technician?.fullName || "-";
+  const displayItemName = itemType?.nameAr || "غير معروف";
 
   const refreshData = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/fixed-inventory-entries`] }),
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/moving-inventory-entries`] }),
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/serialized-items`] }),
+      queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/delivered-items?itemTypeId=${itemTypeId}`] }),
       queryClient.invalidateQueries({ queryKey: ["/api/received-devices"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/item-types/active"] }),
@@ -724,7 +735,7 @@ export default function TechnicianItemDetailsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-slate-900/60 border-cyan-400/10">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">إجمالي مخزون المنتج</p>
+            <p className="text-slate-400 text-sm font-medium mb-2">إجمالي المسح (نشط + مسلم)</p>
             <div className="flex items-end gap-3">
               <h3 className="text-3xl font-black text-slate-100">{arNumber(effectiveTotalStock)}</h3>
               <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 mb-1">+5%</span>
@@ -746,7 +757,7 @@ export default function TechnicianItemDetailsPage() {
           <CardContent className="p-6">
             <p className="text-slate-400 text-sm font-medium mb-2">إجمالي المخزون الباقي</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-3xl font-black text-slate-100">{arNumber(effectiveTotalStock)}</h3>
+              <h3 className="text-3xl font-black text-slate-100">{arNumber(remainingDisplay)}</h3>
               <span className="text-orange-400 text-sm font-bold flex items-center gap-1 mb-1">
                 <AlertTriangle className="h-3 w-3" />
                 {urgentCount > 0 ? "عاجل" : "مستقر"}
@@ -790,14 +801,14 @@ export default function TechnicianItemDetailsPage() {
             className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
           >
             <Warehouse className="h-4 w-4 shrink-0" />
-            المخزون الموجود
+            المخزون الموجود ({availableRows.length})
           </TabsTrigger>
           <TabsTrigger
             value="delivered"
             className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
           >
             <Truck className="h-4 w-4 shrink-0" />
-            المخزون المسلم
+            المخزون المسلم ({deliveredCount})
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -818,7 +829,7 @@ export default function TechnicianItemDetailsPage() {
               {shownRows.length === 0 ? (
                 <tr>
                   <td className="px-6 py-8 text-center text-slate-400" colSpan={5}>
-                    لا توجد بيانات مطابقة
+                    لا توجد بيانات مطابقة — لا يوجد مخزون نشط لهذا الصنف
                   </td>
                 </tr>
               ) : (

@@ -4,8 +4,8 @@ import { requireAuth } from "@core/middlewares/auth.middleware";
 import { inventoryContainer } from "@server/composition/inventory.container";
 import { normalizeCreateWarehouseTransferPayload } from "@modules/inventory/application/inventory/use-cases/WarehouseTransferOperations.use-case";
 import { db } from "@core/config/db";
-import { items, itemTypes, inventoryTransactions, itemHistoryLogs, warehouseTransfers, technicianMovingInventoryEntries } from "@shared/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { items, itemTypes, inventoryTransactions, itemHistoryLogs, warehouseTransfers, technicianMovingInventoryEntries, custodyMovements } from "@shared/schema";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { DrizzleInventoryUnitOfWork } from "@modules/inventory/infrastructure/database/DrizzleInventoryUnitOfWork";
 import { processWarehouseTransferBatch } from "@modules/inventory/application/inventory/use-cases/warehouse-transfer-batch.processor";
 import { CustodyEngine } from "../../domain/custody-engine";
@@ -425,6 +425,59 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Error fetching technician serialized items:", message);
       res.status(500).json({ message: "فشل جلب الأرقام التسلسلية" });
+    }
+  });
+
+  // ─── v3.0: سجل التسليم من عهدة الفني (items + custody_movements) ───
+  app.get("/api/technicians/:technicianId/delivered-items", requireAuth, async (req, res) => {
+    try {
+      const { technicianId } = req.params;
+      const itemTypeId = typeof req.query.itemTypeId === "string" ? req.query.itemTypeId : undefined;
+
+      const conditions = [
+        eq(custodyMovements.fromOwnerId, technicianId),
+        inArray(custodyMovements.reason, ["DELIVERED", "DELIVERY"]),
+      ];
+      if (itemTypeId) {
+        conditions.push(eq(items.itemTypeId, itemTypeId));
+      }
+
+      const delivered = await db
+        .select({
+          id: items.id,
+          serialNumber: items.serialNumber,
+          barcode: items.barcode,
+          status: items.status,
+          itemTypeId: items.itemTypeId,
+          carrierName: items.carrierName,
+          createdAt: items.createdAt,
+          deliveredAt: custodyMovements.performedAt,
+          referenceType: custodyMovements.referenceType,
+          referenceId: custodyMovements.referenceId,
+          notes: custodyMovements.notes,
+          movementId: custodyMovements.id,
+          itemTypeName: itemTypes.nameAr,
+          itemTypeCategory: itemTypes.category,
+        })
+        .from(custodyMovements)
+        .innerJoin(items, eq(custodyMovements.itemId, items.id))
+        .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
+        .where(and(...conditions))
+        .orderBy(desc(custodyMovements.performedAt));
+
+      // One row per item (latest delivery movement wins)
+      const seen = new Set<string>();
+      const unique = delivered.filter((row) => {
+        if (seen.has(row.id)) return false;
+        seen.add(row.id);
+        return true;
+      });
+
+      return res.json(unique);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Error fetching technician delivered items:", message);
+      res.status(500).json({ message: "فشل جلب سجل التسليم" });
     }
   });
 
