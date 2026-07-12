@@ -98,7 +98,7 @@ class PostgresSessionStore implements SessionStore {
     const client = await pool.connect();
     try {
       const result = await client.query(
-        `SELECT "userId", role, username, "regionId", expiry FROM bearer_sessions WHERE token = $1`,
+        `SELECT user_id AS "userId", role, username, region_id AS "regionId", expiry FROM bearer_sessions WHERE token = $1`,
         [token]
       );
       
