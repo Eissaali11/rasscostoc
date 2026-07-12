@@ -1,7 +1,7 @@
 import { db } from "@core/config/db";
 import { AppError } from "@core/errors/AppError";
 import { itemTypes, items } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 
 export interface RecognitionResult {
   itemTypeId: string;
@@ -14,6 +14,21 @@ export interface RecognitionResult {
   error?: string;
 }
 
+export interface StoredSerialResolution {
+  /** Canonical form that should be written to items.serialNumber */
+  normalizedSerial: string;
+  itemTypeId: string;
+  carrierName: string | null;
+  rawBarcode: string;
+  category: string;
+  nameAr: string;
+}
+
+/**
+ * Central Serial Engine — normalize → identify → validate → lookup.
+ * ALL serial I/O (scan, lookup, verification, closing, return, search) must go through this service.
+ * Storage format is unchanged: alphabetic prefixes (NCC/NCD/SAS/SAW) are stripped; numeric SIM prefixes stay.
+ */
 export class SerialRecognitionService {
   /**
    * Normalize a raw barcode input by removing prefixes like "SN:", spaces, dashes, etc.
@@ -23,6 +38,8 @@ export class SerialRecognitionService {
     let cleaned = rawBarcode.trim().toUpperCase();
     // Remove common prefixes like SN:, S/N:, HW:, SERIAL:, BARCODE:
     cleaned = cleaned.replace(/^(SN|S\/N|HW|SERIAL|BARCODE)[:\-\s]*/i, "");
+    // GS1 symbology identifiers sometimes prepended by hardware scanners
+    cleaned = cleaned.replace(/^\]?(C1|c1)/, "");
     // Remove all whitespace, dashes, underscores, and dots
     cleaned = cleaned.replace(/[\s\-_.]/g, "");
     return cleaned;
@@ -49,6 +66,101 @@ export class SerialRecognitionService {
       return "Lebara";
     }
     return null;
+  }
+
+  /**
+   * Build every plausible DB-stored form for a scanned/typed serial.
+   * Used by lookup / scan-out / guards so prefixed and stripped forms both resolve.
+   */
+  static async buildStoredSerialCandidates(
+    rawBarcode: string,
+    hintItemTypeId?: string,
+    txClient: any = db
+  ): Promise<string[]> {
+    const cleaned = this.normalizeRawBarcode(rawBarcode);
+    const candidates = new Set<string>();
+
+    if (!cleaned) return [];
+
+    candidates.add(cleaned);
+    const trimmed = rawBarcode.trim();
+    if (trimmed) candidates.add(trimmed.toUpperCase());
+
+    try {
+      const recognition = await this.recognize(rawBarcode, hintItemTypeId, txClient);
+      candidates.add(recognition.normalizedSerial);
+    } catch {
+      // Soft path: still strip known alphabetic prefixes even if full validation fails
+    }
+
+    const allTypes = await txClient
+      .select()
+      .from(itemTypes)
+      .where(eq(itemTypes.isActive, true));
+
+    const serializedTypes = allTypes.filter(
+      (t: typeof itemTypes.$inferSelect) => t.requiresSerial && t.serialPrefix
+    );
+
+    for (const type of serializedTypes) {
+      const prefixes = String(type.serialPrefix)
+        .split(",")
+        .map((p: string) => p.trim().toUpperCase())
+        .filter(Boolean);
+
+      for (const prefix of prefixes) {
+        const isAlphabetic = /^[A-Z]+$/.test(prefix);
+        if (isAlphabetic && cleaned.startsWith(prefix) && cleaned.length > prefix.length) {
+          candidates.add(cleaned.substring(prefix.length));
+        }
+      }
+    }
+
+    return [...candidates].filter(Boolean);
+  }
+
+  /**
+   * Canonical write-path normalizer. Throws if serial cannot be recognized.
+   */
+  static async normalizeForStorage(
+    rawBarcode: string,
+    hintItemTypeId?: string,
+    txClient: any = db
+  ): Promise<StoredSerialResolution> {
+    const recognition = await this.recognize(rawBarcode, hintItemTypeId, txClient);
+    return {
+      normalizedSerial: recognition.normalizedSerial,
+      itemTypeId: recognition.itemTypeId,
+      carrierName: recognition.carrierName,
+      rawBarcode: recognition.rawBarcode,
+      category: recognition.category,
+      nameAr: recognition.nameAr,
+    };
+  }
+
+  /**
+   * Find an items row by any equivalent serial form (prefixed or stored).
+   */
+  static async findItemBySerial(
+    rawBarcode: string,
+    txClient: any = db,
+    hintItemTypeId?: string
+  ): Promise<typeof items.$inferSelect | null> {
+    const candidates = await this.buildStoredSerialCandidates(rawBarcode, hintItemTypeId, txClient);
+    if (candidates.length === 0) return null;
+
+    const [item] = await txClient
+      .select()
+      .from(items)
+      .where(
+        or(
+          inArray(items.serialNumber, candidates),
+          inArray(items.barcode, candidates)
+        )
+      )
+      .limit(1);
+
+    return item || null;
   }
 
   /**
@@ -98,8 +210,14 @@ export class SerialRecognitionService {
           if (type.serialRegex) {
             try {
               const regex = new RegExp(type.serialRegex);
-              // Test against cleaned raw (already matches length)
-              regexMatches = regex.test(cleaned);
+              // For stripped serials, also accept when prefixed form would match
+              const prefixes = (type.serialPrefix || "")
+                .split(",")
+                .map((p: string) => p.trim().toUpperCase())
+                .filter((p: string) => /^[A-Z]+$/.test(p));
+              regexMatches =
+                regex.test(cleaned) ||
+                prefixes.some((p: string) => regex.test(`${p}${cleaned}`));
             } catch (e) {}
           }
           if (regexMatches) {
@@ -153,7 +271,14 @@ export class SerialRecognitionService {
       try {
         const regex = new RegExp(type.serialRegex);
         // Test regex against the clean serial (or raw cleaned if regex expects prefix)
-        const isMatch = regex.test(cleanSerial) || regex.test(cleaned);
+        const prefixes = (type.serialPrefix || "")
+          .split(",")
+          .map((p: string) => p.trim().toUpperCase())
+          .filter((p: string) => /^[A-Z]+$/.test(p));
+        const isMatch =
+          regex.test(cleanSerial) ||
+          regex.test(cleaned) ||
+          prefixes.some((p: string) => regex.test(`${p}${cleanSerial}`));
         if (!isMatch) {
           throw new AppError(`الرقم التسلسلي ${rawBarcode} لا يطابق الصيغة المعتمدة لـ ${type.nameAr}`, 400);
         }
