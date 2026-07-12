@@ -1,8 +1,41 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../../../core/config/db";
-import { items, inventoryTransactions, itemHistoryLogs, custodyMovements } from "@shared/schema";
+import { items, inventoryTransactions, itemHistoryLogs, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
 
 export class CustodyEngine {
+  private static async syncMovingInventory(tx: any, technicianId: string, itemTypeId: string, delta: number) {
+    if (!technicianId || !itemTypeId || delta === 0) return;
+
+    const [existingEntry] = await tx
+      .select()
+      .from(technicianMovingInventoryEntries)
+      .where(
+        and(
+          eq(technicianMovingInventoryEntries.technicianId, technicianId),
+          eq(technicianMovingInventoryEntries.itemTypeId, itemTypeId)
+        )
+      )
+      .limit(1);
+
+    if (existingEntry) {
+      const newUnits = Math.max(0, existingEntry.units + delta);
+      await tx
+        .update(technicianMovingInventoryEntries)
+        .set({
+          units: newUnits,
+          updatedAt: new Date(),
+        })
+        .where(eq(technicianMovingInventoryEntries.id, existingEntry.id));
+    } else if (delta > 0) {
+      await tx.insert(technicianMovingInventoryEntries).values({
+        technicianId,
+        itemTypeId,
+        units: delta,
+        boxes: 0,
+      });
+    }
+  }
+
   /**
    * 1. استعلام لحظي عن الرقم التسلسلي S/N
    */
@@ -63,6 +96,8 @@ export class CustodyEngine {
       performedById: technicianId,
       notes: "إنشاء وتسجيل عهدة جديدة بالمسح الميداني",
     });
+
+    await this.syncMovingInventory(tx, technicianId, itemTypeId, 1);
 
     return { id: inserted.id, action: "inserted" };
   }
@@ -133,6 +168,10 @@ export class CustodyEngine {
       notes: "تسليم العهدة وتحرير الفني بنجاح",
     });
 
+    if (item.currentOwnerId) {
+      await this.syncMovingInventory(tx, item.currentOwnerId, item.itemTypeId, -1);
+    }
+
     return { success: true };
   }
 
@@ -196,6 +235,10 @@ export class CustodyEngine {
       performedById: adminId,
       notes: "إرجاع الأصل للمستودع وتطهير عهدة الفني",
     });
+
+    if (item.currentOwnerId) {
+      await this.syncMovingInventory(tx, item.currentOwnerId, item.itemTypeId, -1);
+    }
 
     return { success: true };
   }

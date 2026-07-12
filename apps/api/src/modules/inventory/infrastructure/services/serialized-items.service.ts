@@ -1,9 +1,42 @@
 import { db } from "@core/config/db";
 import { AppError } from "@core/errors/AppError";
-import { items, inventoryTransactions, itemHistoryLogs, itemTypes, users, custodyMovements } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { items, inventoryTransactions, itemHistoryLogs, itemTypes, users, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 export class SerializedItemsService {
+  private async syncMovingInventory(tx: any, technicianId: string, itemTypeId: string, delta: number) {
+    if (!technicianId || !itemTypeId || delta === 0) return;
+
+    const [existingEntry] = await tx
+      .select()
+      .from(technicianMovingInventoryEntries)
+      .where(
+        and(
+          eq(technicianMovingInventoryEntries.technicianId, technicianId),
+          eq(technicianMovingInventoryEntries.itemTypeId, itemTypeId)
+        )
+      )
+      .limit(1);
+
+    if (existingEntry) {
+      const newUnits = Math.max(0, existingEntry.units + delta);
+      await tx
+        .update(technicianMovingInventoryEntries)
+        .set({
+          units: newUnits,
+          updatedAt: new Date(),
+        })
+        .where(eq(technicianMovingInventoryEntries.id, existingEntry.id));
+    } else if (delta > 0) {
+      await tx.insert(technicianMovingInventoryEntries).values({
+        technicianId,
+        itemTypeId,
+        units: delta,
+        boxes: 0,
+      });
+    }
+  }
+
   private async validateSerialFormat(tx: any, serialNumber: string, itemTypeId: string) {
     const [itemType] = await tx
       .select()
@@ -136,6 +169,8 @@ export class SerializedItemsService {
         notes: "استلام عهدة بالمسح الميداني",
       });
 
+      await this.syncMovingInventory(tx, technicianId, itemTypeId, 1);
+
       return item;
     });
   }
@@ -231,6 +266,8 @@ export class SerializedItemsService {
           notes: "استلام عهدة بالمسح الميداني (دفعة واحدة)",
         });
 
+        await this.syncMovingInventory(tx, technicianId, itemTypeId, 1);
+
         results.push(item);
       }
 
@@ -316,6 +353,8 @@ export class SerializedItemsService {
         longitude: longitude || null,
         notes: `تسليم العهدة للعميل: ${receiverName}`,
       });
+
+      await this.syncMovingInventory(tx, technicianId, item.itemTypeId, -1);
 
       return updatedItem;
     });

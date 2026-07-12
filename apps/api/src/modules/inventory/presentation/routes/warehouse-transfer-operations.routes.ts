@@ -340,40 +340,38 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
           .set({ status: 'approved', respondedAt: new Date() })
           .where(eq(warehouseTransfers.id, transferId));
 
-        if (!isSerialized) {
-          // تحديث أو إنشاء سجل المخزون المتحرك للفني
-          const [existingEntry] = await tx
-            .select()
-            .from(technicianMovingInventoryEntries)
-            .where(
-              and(
-                eq(technicianMovingInventoryEntries.technicianId, user.id),
-                eq(technicianMovingInventoryEntries.itemTypeId, transfer.itemType),
-              )
+        // تحديث أو إنشاء سجل المخزون المتحرك للفني
+        const [existingEntry] = await tx
+          .select()
+          .from(technicianMovingInventoryEntries)
+          .where(
+            and(
+              eq(technicianMovingInventoryEntries.technicianId, user.id),
+              eq(technicianMovingInventoryEntries.itemTypeId, transfer.itemType),
             )
-            .limit(1);
+          )
+          .limit(1);
 
-          const isBoxes = transfer.packagingType === 'box' || transfer.packagingType === 'boxes';
-          const addUnits = isBoxes ? 0 : transfer.quantity;
-          const addBoxes = isBoxes ? transfer.quantity : 0;
+        const isBoxes = transfer.packagingType === 'box' || transfer.packagingType === 'boxes';
+        const addUnits = isBoxes ? 0 : transfer.quantity;
+        const addBoxes = isBoxes ? transfer.quantity : 0;
 
-          if (existingEntry) {
-            await tx
-              .update(technicianMovingInventoryEntries)
-              .set({
-                units: sql`${technicianMovingInventoryEntries.units} + ${addUnits}`,
-                boxes: sql`${technicianMovingInventoryEntries.boxes} + ${addBoxes}`,
-                updatedAt: new Date(),
-              })
-              .where(eq(technicianMovingInventoryEntries.id, existingEntry.id));
-          } else {
-            await tx.insert(technicianMovingInventoryEntries).values({
-              technicianId: user.id,
-              itemTypeId: transfer.itemType,
-              units: addUnits,
-              boxes: addBoxes,
-            });
-          }
+        if (existingEntry) {
+          await tx
+            .update(technicianMovingInventoryEntries)
+            .set({
+              units: sql`${technicianMovingInventoryEntries.units} + ${addUnits}`,
+              boxes: sql`${technicianMovingInventoryEntries.boxes} + ${addBoxes}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(technicianMovingInventoryEntries.id, existingEntry.id));
+        } else {
+          await tx.insert(technicianMovingInventoryEntries).values({
+            technicianId: user.id,
+            itemTypeId: transfer.itemType,
+            units: addUnits,
+            boxes: addBoxes,
+          });
         }
       });
 
