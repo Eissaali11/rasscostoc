@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,14 +12,13 @@ import {
 import {
   Loader2,
   Save,
-  Calendar,
-  User,
-  Cpu,
   CheckCircle2,
-  Clock,
   ChevronLeft,
   ChevronRight,
-  Package
+  Search,
+  BadgeCheck,
+  XCircle,
+  Lock,
 } from "lucide-react";
 
 interface Lookups {
@@ -72,6 +71,16 @@ interface RequestDetail {
   execution: Execution | null;
 }
 
+interface SerialLookupResult {
+  found: boolean;
+  normalized?: string;
+  itemType?: { id: string; nameAr: string; category: string; carrierName: string | null } | null;
+  technician?: { id: string; fullName: string; username: string; technicianCode: string | null } | null;
+  custodyStatus?: string | null;
+  inActiveCustody?: boolean;
+  message?: string;
+}
+
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
@@ -99,15 +108,18 @@ export function EditCourierExecutionModal({
   const [phase, setPhase] = useState<1 | 2>(1);
   const [form, setForm] = useState<Partial<Execution>>({});
   const [isDirty, setIsDirty] = useState(false);
+  const [deviceLookup, setDeviceLookup] = useState<SerialLookupResult | null>(null);
+  const [simLookup, setSimLookup] = useState<SerialLookupResult | null>(null);
+  const [snLookupLoading, setSnLookupLoading] = useState(false);
+  const [simLookupLoading, setSimLookupLoading] = useState(false);
+  const [loadedSerials, setLoadedSerials] = useState(false);
 
-  // Fetch lookups
   const { data: lookups } = useQuery<Lookups>({
     queryKey: ["/api/courier/lookups"],
     queryFn: () => apiRequest("GET", "/api/courier/lookups").then((r) => r.json()),
     enabled: open
   });
 
-  // Fetch request details
   const { data: request, isLoading: requestLoading } = useQuery<RequestDetail>({
     queryKey: ["/api/courier/requests/detail-modal", requestId],
     queryFn: () => apiRequest("GET", `/api/courier/requests/${requestId}`).then((r) => r.json()),
@@ -117,53 +129,71 @@ export function EditCourierExecutionModal({
   const exec = request?.execution;
   const currentForm = { ...exec, ...form };
 
-  // Reset phase and form when modal state changes
+  const doSerialLookup = useCallback(async (sn: string, role: "device" | "sim") => {
+    if (!sn.trim()) return;
+    if (role === "device") setSnLookupLoading(true);
+    else setSimLookupLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn: sn.trim() });
+      const data: SerialLookupResult = await res.json();
+      if (role === "device") {
+        setDeviceLookup(data);
+        if (data.found && data.technician) {
+          setForm((prev) => ({
+            ...prev,
+            technicianCode: data.technician!.technicianCode ?? data.technician!.username,
+            salesTechnician: data.technician!.fullName,
+          }));
+        }
+      } else {
+        setSimLookup(data);
+        if (data.found) {
+          if (data.normalized && data.normalized !== sn.trim()) {
+            setForm((prev) => ({ ...prev, simSerial: data.normalized }));
+          }
+          if (data.itemType?.carrierName) {
+            setForm((prev) => ({ ...prev, simType: data.itemType!.carrierName! }));
+          }
+        }
+      }
+    } catch {
+      toast({ title: "تعذّر البحث", description: `فشل البحث عن الرقم: ${sn}`, variant: "destructive" });
+    } finally {
+      if (role === "device") setSnLookupLoading(false);
+      else setSimLookupLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (open) {
       setPhase(1);
       setForm({});
       setIsDirty(false);
+      setDeviceLookup(null);
+      setSimLookup(null);
+      setLoadedSerials(false);
     }
-  }, [open]);
+  }, [open, requestId]);
 
-  // Handle auto-matching technician from lookups
   useEffect(() => {
-    const tecName = request?.tecName;
-    if (request && lookups && !request.execution && !form.technicianCode && tecName) {
-      const matchingTech = lookups.technicians.find(
-        (t) => t.name.trim().toLowerCase() === tecName.trim().toLowerCase()
-      );
-      if (matchingTech) {
-        setForm((prev) => ({
-          ...prev,
-          technicianCode: matchingTech.code,
-          salesTechnician: matchingTech.name,
-        }));
-      } else {
-        const partialTech = lookups.technicians.find(
-          (t) => t.name.includes(tecName) || tecName.includes(t.name)
-        );
-        if (partialTech) {
-          setForm((prev) => ({
-            ...prev,
-            technicianCode: partialTech.code,
-            salesTechnician: partialTech.name,
-          }));
-        } else {
-          setForm((prev) => ({
-            ...prev,
-            salesTechnician: tecName,
-          }));
-        }
-      }
+    if (!open || !request || loadedSerials) return;
+    setLoadedSerials(true);
+    // Clear assignment pollution from prior saves
+    if (request.execution?.salesTechnician && request.tecName &&
+        request.execution.salesTechnician === request.tecName) {
+      setForm((prev) => ({ ...prev, salesTechnician: undefined, technicianCode: undefined }));
     }
-  }, [request, lookups, open]);
+    const sn = request.execution?.sn;
+    const simSerial = request.execution?.simSerial || request.simSn;
+    if (sn) doSerialLookup(sn, "device");
+    if (simSerial) doSerialLookup(simSerial, "sim");
+  }, [request, open, loadedSerials, doSerialLookup]);
 
   const mutation = useMutation({
     mutationFn: (data: Partial<Execution>) =>
       apiRequest("POST", `/api/courier/executions/${requestId}`, data).then((r) => r.json()),
     onSuccess: () => {
-      toast({ title: "تم الحفظ بنجاح", description: "تم حفظ بيانات التحقق والتنفيذ بنجاح وتحديث العهدة والمخزون." });
+      toast({ title: "تم الحفظ بنجاح", description: "تم حفظ بيانات التحقق والتنفيذ وتحديث العهدة والمخزون." });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/dashboard/stats"] });
       setIsDirty(false);
@@ -182,11 +212,7 @@ export function EditCourierExecutionModal({
 
   const handleNextPhase = () => {
     if (!currentForm.installationStatus) {
-      toast({
-        title: "تنبيه",
-        description: "يرجى تحديد حالة التركيب أولاً.",
-        variant: "destructive",
-      });
+      toast({ title: "تنبيه", description: "يرجى تحديد حالة التركيب أولاً.", variant: "destructive" });
       return;
     }
     setPhase(2);
@@ -194,143 +220,98 @@ export function EditCourierExecutionModal({
 
   const handleSave = () => {
     if (!currentForm.installationStatus) {
-      toast({
-        title: "تنبيه",
-        description: "يرجى تحديد حالة التركيب أولاً.",
-        variant: "destructive",
-      });
+      toast({ title: "تنبيه", description: "يرجى تحديد حالة التركيب أولاً.", variant: "destructive" });
       return;
     }
 
-    const finalForm = { ...currentForm };
-    const tecName = request?.tecName;
-    if (!finalForm.salesTechnician && tecName) {
-      finalForm.salesTechnician = tecName;
-      const tech = lookups?.technicians.find(
-        (t) => t.name.trim().toLowerCase() === tecName.trim().toLowerCase()
-      );
-      if (tech) {
-        finalForm.technicianCode = tech.code;
+    const completing =
+      currentForm.installationStatus === "Installation Completed" ||
+      currentForm.installationStatus === "Installation Completed - NL";
+
+    if (completing) {
+      if (!currentForm.sn?.trim()) {
+        toast({ title: "تنبيه", description: "أدخل الرقم التسلسلي للجهاز قبل الإكمال.", variant: "destructive" });
+        return;
+      }
+      if (!deviceLookup?.found || !deviceLookup?.technician) {
+        toast({
+          title: "لم يتم التعرف على الفني من العهدة",
+          description: "أدخل رقم جهاز موجود في مخزون الفني ليظهر اسمه تلقائياً. لا يُعتمد اسم التعيين.",
+          variant: "destructive",
+        });
+        return;
       }
     }
 
-    mutation.mutate(finalForm);
+    mutation.mutate({
+      ...currentForm,
+      technicianCode: deviceLookup?.technician
+        ? (deviceLookup.technician.technicianCode ?? deviceLookup.technician.username)
+        : currentForm.technicianCode,
+      salesTechnician: deviceLookup?.technician?.fullName ?? currentForm.salesTechnician,
+    });
   };
+
+  const isCompleted = currentForm.installationStatus?.includes("Completed")
+    ? "border-emerald-500/40"
+    : currentForm.installationStatus === "Not Completed"
+    ? "border-red-500/40"
+    : "border-slate-700/50";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-[#142d2d] border border-slate-700/60 text-slate-100 p-0 shadow-2xl rounded-2xl">
-        <DialogHeader className="p-6 pb-4 border-b border-slate-700/40 relative">
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-            📦 إدخال وتعديل بيانات التحقق والتنفيذ #{requestId}
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[#0f1c1c] border-slate-700/60 text-slate-100 p-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-750">
+          <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+            بيانات التنفيذ الميداني
+            {requestId && <span className="text-slate-500 font-mono text-xs">#{requestId}</span>}
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-400 mt-1.5">
-            قم بالتحقق من حالة الطلب وإدخال معلومات المندوب والربط الميداني للعهدة.
+          <DialogDescription className="text-xs text-slate-450">
+            الفني يُجلب تلقائياً من عهدة الجهاز — وليس من اسم التعيين.
           </DialogDescription>
         </DialogHeader>
 
         {requestLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
-            <Loader2 className="animate-spin w-8 h-8 text-emerald-450" />
-            <span className="text-sm">جاري تحميل بيانات الطلب...</span>
+          <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
+            <Loader2 className="animate-spin w-5 h-5" />
+            <span className="text-sm">جاري التحميل...</span>
           </div>
         ) : !request ? (
-          <div className="p-10 text-center text-slate-500">
-            الطلب غير موجود.
-          </div>
+          <div className="text-center py-16 text-slate-500 text-sm">الطلب غير موجود</div>
         ) : (
-          <div className="p-6 space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              
-              {/* Left Side: Request Original Info */}
-              <div className="bg-[#102222]/60 border border-slate-700/35 rounded-xl p-5 space-y-2.5">
-                <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wide border-b border-slate-700/40 pb-2 mb-3">
-                  بيانات الطلب الأصلية
-                </h4>
-                <DetailRow label="التاريخ" value={request.date} />
-                <DetailRow label="TID" value={request.tid} />
-                <DetailRow label="Terminal ID" value={request.terminalId} />
-                <DetailRow label="اسم العميل" value={request.customerName} />
-                <DetailRow label="اسم التاجر" value={request.retailerName} />
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-[#0b1717] border border-slate-750 rounded-xl p-3 space-y-1.5">
+                <p className="text-[10px] font-bold text-slate-500 mb-2">بيانات الطلب</p>
+                <DetailRow label="العميل" value={request.customerName} />
                 <DetailRow label="المدينة" value={request.city} />
-                <DetailRow label="المدينة (TEC)" value={request.cityTec} />
-                <DetailRow label="العنوان" value={request.addressAr} />
-                <DetailRow label="الجوال" value={request.mobile} />
-                <DetailRow label="اسم الفني" value={request.tecName} />
-                <DetailRow label="نوع التركيب" value={request.installationType} />
-                <DetailRow label="نوع الجهاز" value={request.vendorType} />
-                <DetailRow label="SIM" value={request.sim} />
-                <DetailRow label="رقم الحادثة" value={request.incidentNumber} />
-                <DetailRow label="TRSM" value={request.trsm} />
+                <DetailRow label="تعيين الطلب" value={request.tecName} />
+                <DetailRow label="TID" value={request.tid} />
+                <DetailRow label="Terminal" value={request.terminalId} />
               </div>
 
-              {/* Right Side: Wizard Forms */}
-              <div className="bg-[#102222]/40 border border-slate-700/30 rounded-xl p-5 space-y-4 flex flex-col justify-between min-h-[420px]">
-                <div>
-                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wide border-b border-slate-700/40 pb-2 mb-4">
-                    {phase === 1 ? "شاشة التحقق والاعتماد (مرحلة 1)" : "بيانات التنفيذ الميداني (مرحلة 2)"}
-                  </h4>
-
-                  {/* Step Indicator */}
-                  <div className="flex items-center justify-between mb-5 bg-[#0b1717] p-2.5 rounded-lg border border-slate-750/50">
-                    <button
-                      type="button"
-                      onClick={() => setPhase(1)}
-                      className="flex items-center gap-1.5 cursor-pointer text-right"
-                    >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${phase === 1 ? 'bg-emerald-500 text-slate-900 shadow shadow-emerald-500/50' : 'bg-emerald-500/20 text-emerald-450'}`}>1</span>
-                      <span className={`text-[10px] font-semibold transition-all ${phase === 1 ? 'text-slate-100' : 'text-slate-450'}`}>شاشة التحقق</span>
-                    </button>
-                    <div className="flex-1 mx-3 h-0.5 bg-slate-700/30"></div>
-                    <button
-                      type="button"
-                      disabled={!currentForm.installationStatus}
-                      onClick={() => setPhase(2)}
-                      className="flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${phase === 2 ? 'bg-emerald-500 text-slate-900 shadow shadow-emerald-500/50' : 'bg-slate-700/50 text-slate-450'}`}>2</span>
-                      <span className={`text-[10px] font-semibold transition-all ${phase === 2 ? 'text-slate-100' : 'text-slate-450'}`}>بيانات التنفيذ</span>
-                    </button>
+              <div className="bg-[#0b1717] border border-slate-750 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`flex items-center gap-1.5 text-[10px] font-semibold ${phase === 1 ? "text-emerald-400" : "text-slate-500"}`}>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${phase === 1 ? "bg-emerald-600 text-white" : "bg-slate-700"}`}>1</span>
+                    التحقق
                   </div>
+                  <div className="flex-1 h-px bg-slate-700" />
+                  <div className={`flex items-center gap-1.5 text-[10px] font-semibold ${phase === 2 ? "text-emerald-400" : "text-slate-500"}`}>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${phase === 2 ? "bg-emerald-600 text-white" : "bg-slate-700"}`}>2</span>
+                    التنفيذ
+                  </div>
+                </div>
 
+                <div className="space-y-3">
                   {phase === 1 ? (
-                    /* PHASE 1 FORM FIELDS */
                     <div className="space-y-3">
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">مستوى أولوية الطلب</label>
-                        <select
-                          value={currentForm.requestPriorityLevel || ""}
-                          onChange={(e) => handleChange("requestPriorityLevel", e.target.value)}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
-                        >
-                          <option value="">اختر الأولوية</option>
-                          <option value="Low">منخفض</option>
-                          <option value="Medium">متوسط</option>
-                          <option value="High">مرتفع</option>
-                          <option value="Urgent">عاجل</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">إجراء الطلب</label>
-                        <select
-                          value={currentForm.pushBack || ""}
-                          onChange={(e) => handleChange("pushBack", e.target.value)}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
-                        >
-                          <option value="">بدون إجراء</option>
-                          <option value="Return to Tech">إعادة للفني</option>
-                          <option value="Return to Supervisor">إعادة للمشرف</option>
-                          <option value="Return to Admin">إعادة للإدارة</option>
-                        </select>
-                      </div>
-
                       <div>
                         <label className="block text-[10px] text-slate-450 mb-1 font-medium">حالة التركيب *</label>
                         <select
                           value={currentForm.installationStatus || ""}
                           onChange={(e) => handleChange("installationStatus", e.target.value)}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                          className={`w-full bg-[#0b1717] border ${isCompleted} rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60`}
                         >
                           <option value="">اختر الحالة</option>
                           <option value="Installation Completed">مكتمل</option>
@@ -339,49 +320,95 @@ export function EditCourierExecutionModal({
                           <option value="In Progress">تحت الإجراء</option>
                         </select>
                       </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">تاريخ الرد (تاريخ المراجعة)</label>
-                        <input
-                          type="date"
-                          value={currentForm.responseDate || ""}
-                          onChange={(e) => handleChange("responseDate", e.target.value)}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
-                        />
-                      </div>
-
                       <div>
                         <label className="block text-[10px] text-slate-450 mb-1 font-medium">ملاحظات العميل / المشرف</label>
                         <textarea
                           value={currentForm.customerNotes || ""}
                           onChange={(e) => handleChange("customerNotes", e.target.value)}
                           rows={3}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 resize-none font-sans"
+                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 resize-none"
                           placeholder="ملاحظات التركيب..."
                         />
                       </div>
                     </div>
                   ) : (
-                    /* PHASE 2 FORM FIELDS */
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">الرقم التسلسلي للجهاز (SN)</label>
-                        <input
-                          value={currentForm.sn || ""}
-                          onChange={(e) => handleChange("sn", e.target.value)}
-                          placeholder="أدخل الرقم التسلسلي للجهاز"
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
-                        />
+                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">الرقم التسلسلي للجهاز (SN) *</label>
+                        <div className="flex gap-1.5">
+                          <input
+                            value={currentForm.sn || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleChange("sn", val);
+                              setDeviceLookup(null);
+                              if (val.trim().length >= 9) doSerialLookup(val.trim(), "device");
+                            }}
+                            onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "device"); }}
+                            placeholder="أدخل أو امسح الرقم التسلسلي..."
+                            className="flex-1 bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { if (currentForm.sn?.trim()) doSerialLookup(currentForm.sn.trim(), "device"); }}
+                            className="bg-emerald-700/40 border border-emerald-700/40 text-emerald-300 px-2 rounded-lg"
+                          >
+                            {snLookupLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        {deviceLookup && (
+                          <div className={`mt-1 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${
+                            deviceLookup.found && deviceLookup.inActiveCustody
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-red-500/10 text-red-400"
+                          }`}>
+                            {deviceLookup.found && deviceLookup.inActiveCustody
+                              ? <BadgeCheck className="w-3 h-3" />
+                              : <XCircle className="w-3 h-3" />}
+                            {deviceLookup.found
+                              ? `${deviceLookup.itemType?.nameAr ?? "جهاز"} · ${deviceLookup.custodyStatus}${deviceLookup.technician ? ` · ${deviceLookup.technician.fullName}` : ""}`
+                              : (deviceLookup.message ?? "الرقم غير موجود")}
+                          </div>
+                        )}
                       </div>
 
                       <div>
                         <label className="block text-[10px] text-slate-450 mb-1 font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
-                        <input
-                          value={currentForm.simSerial || ""}
-                          onChange={(e) => handleChange("simSerial", e.target.value)}
-                          placeholder="89..."
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
-                        />
+                        <div className="flex gap-1.5">
+                          <input
+                            value={currentForm.simSerial || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleChange("simSerial", val);
+                              setSimLookup(null);
+                              if (val.trim().length >= 18) doSerialLookup(val.trim(), "sim");
+                            }}
+                            onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "sim"); }}
+                            placeholder="89..."
+                            className="flex-1 bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { if (currentForm.simSerial?.trim()) doSerialLookup(currentForm.simSerial.trim(), "sim"); }}
+                            className="bg-emerald-700/40 border border-emerald-700/40 text-emerald-300 px-2 rounded-lg"
+                          >
+                            {simLookupLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        {simLookup && (
+                          <div className={`mt-1 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${
+                            simLookup.found && simLookup.inActiveCustody
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-red-500/10 text-red-400"
+                          }`}>
+                            {simLookup.found && simLookup.inActiveCustody
+                              ? <BadgeCheck className="w-3 h-3" />
+                              : <XCircle className="w-3 h-3" />}
+                            {simLookup.found
+                              ? `${simLookup.itemType?.nameAr ?? "شريحة"} · ${simLookup.itemType?.carrierName ?? ""} · ${simLookup.custodyStatus}`
+                              : (simLookup.message ?? "الرقم غير موجود")}
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -393,23 +420,34 @@ export function EditCourierExecutionModal({
                         >
                           <option value="">اختر النوع</option>
                           {lookups?.simTypes.map((s) => (
-                            <option key={s.id} value={s.name}>
-                              {s.name}
-                            </option>
+                            <option key={s.id} value={s.name}>{s.name}</option>
                           ))}
                         </select>
                       </div>
 
                       <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">الفني المسؤول (من التعيين)</label>
-                        <div className="bg-[#0b1717]/40 border border-slate-750 rounded-lg px-2.5 py-1.5 text-xs text-slate-350 flex items-center gap-1.5">
-                          👤 {currentForm.salesTechnician || request?.tecName || "غير محدد"}
-                          {currentForm.technicianCode && (
-                            <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-1 py-0.5 rounded">
-                              {currentForm.technicianCode}
-                            </span>
+                        <label className="block text-[10px] text-slate-450 mb-1 font-medium flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> الفني المسؤول (من عهدة الجهاز)
+                        </label>
+                        <div className={`bg-[#0b1717]/40 border rounded-lg px-2.5 py-1.5 text-xs flex items-center gap-1.5 ${
+                          deviceLookup?.technician ? "border-emerald-700/40 text-emerald-300" : "border-slate-750 text-slate-500"
+                        }`}>
+                          {deviceLookup?.technician ? (
+                            <>
+                              👤 {deviceLookup.technician.fullName}
+                              <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-1 py-0.5 rounded ml-auto">
+                                {deviceLookup.technician.technicianCode ?? deviceLookup.technician.username}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[10px]">امسح رقم الجهاز لتحديد الفني من العهدة</span>
                           )}
                         </div>
+                        {request.tecName && (
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            تعيين الطلب (مرجعي): {request.tecName}
+                          </p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -456,9 +494,7 @@ export function EditCourierExecutionModal({
                           >
                             <option value="">اختر السبب</option>
                             {lookups?.failureReasons.map((r) => (
-                              <option key={r.id} value={r.code}>
-                                {r.labelAr}
-                              </option>
+                              <option key={r.id} value={r.code}>{r.labelAr}</option>
                             ))}
                           </select>
                         </div>
@@ -467,7 +503,6 @@ export function EditCourierExecutionModal({
                   )}
                 </div>
 
-                {/* Navigation Buttons for Wizard inside Modal */}
                 <div className="flex items-center justify-between border-t border-slate-750 pt-3 mt-4">
                   {phase === 1 ? (
                     <>
@@ -475,7 +510,7 @@ export function EditCourierExecutionModal({
                       <button
                         type="button"
                         onClick={handleNextPhase}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
                       >
                         التالي (التنفيذ الميداني)
                         <ChevronLeft className="w-3.5 h-3.5" />
@@ -486,7 +521,7 @@ export function EditCourierExecutionModal({
                       <button
                         type="button"
                         onClick={() => setPhase(1)}
-                        className="bg-slate-750 hover:bg-slate-700 text-white text-[10px] font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        className="bg-slate-750 hover:bg-slate-700 text-white text-[10px] font-semibold px-3 py-2 rounded-lg flex items-center gap-1"
                       >
                         <ChevronRight className="w-3.5 h-3.5" />
                         السابق (التحقق)
@@ -494,31 +529,25 @@ export function EditCourierExecutionModal({
                       <button
                         type="button"
                         onClick={handleSave}
-                        disabled={!isDirty || mutation.isPending}
-                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        disabled={mutation.isPending}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
                       >
-                        {mutation.isPending ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Save className="w-3.5 h-3.5" />
-                        )}
+                        {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         حفظ وإكمال
                       </button>
                     </>
                   )}
                 </div>
               </div>
-
             </div>
 
-            {/* Auto-deduction banner */}
             {currentForm.installationStatus?.includes("Completed") && (
               <div className="flex items-start gap-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-3.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-450 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-emerald-400">خصم تلقائي نشط</p>
                   <p className="text-[10px] text-emerald-450/70 mt-0.5">
-                    عند اختيار حالة "مكتمل"، سيتم خصم هذا الجهاز تلقائياً من عهدة الفني ومخزونه وتحديث العهدة المسلسلة.
+                    عند الإكمال سيُخصم الجهاز من عهدة الفني الظاهر أعلاه (مالك العهدة).
                   </p>
                 </div>
               </div>

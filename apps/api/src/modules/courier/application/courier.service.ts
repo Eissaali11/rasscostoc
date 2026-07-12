@@ -11,6 +11,7 @@ import {
   courierAuditLogs,
   users,
   items,
+  itemTypes,
   courierRequestItems,
   inventoryTransactions,
   itemHistoryLogs,
@@ -32,6 +33,11 @@ import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/event
 import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
+const ACTIVE_CUSTODY_STATUSES = [
+  "IN_TRANSIT_CUSTODY",
+  "RECEIVED_BY_TECHNICIAN",
+  "IN_TRANSIT",
+] as const;
 
 export interface ListFilters {
   q?: string;
@@ -736,6 +742,139 @@ export class CourierService {
     // ─────────────────────────────────────────────────────────────────────────
 
     return this.getRequestById(requestId);
+  }
+
+  /**
+   * Serial Lookup — Central Serial Engine entry for close-order UI.
+   * Returns item + custody owner technician for auto-fill (read-only in portal).
+   */
+  async serialLookup(rawSerial: string): Promise<any> {
+    let recognition: any = null;
+    try {
+      recognition = await SerialRecognitionService.recognize(rawSerial);
+    } catch {
+      // Still try DB lookup
+    }
+
+    const item = await SerialRecognitionService.findItemBySerial(rawSerial);
+
+    if (!item) {
+      return {
+        found: false,
+        serial: rawSerial,
+        normalized: recognition?.normalizedSerial ?? rawSerial,
+        itemType: recognition
+          ? {
+              id: recognition.itemTypeId,
+              nameAr: recognition.nameAr,
+              category: recognition.category,
+              carrierName: recognition.carrierName,
+            }
+          : null,
+        technician: null,
+        custodyStatus: null,
+        linkedRequest: null,
+        ownershipValid: false,
+        message: "الرقم التسلسلي غير موجود في المخزون — قد يكون غير مسجل بعد",
+      };
+    }
+
+    const [itemTypeRow] = await db
+      .select({
+        id: itemTypes.id,
+        nameAr: itemTypes.nameAr,
+        nameEn: itemTypes.nameEn,
+        category: itemTypes.category,
+      })
+      .from(itemTypes)
+      .where(eq(itemTypes.id, item.itemTypeId))
+      .limit(1);
+
+    const carrierName = itemTypeRow
+      ? SerialRecognitionService.resolveCarrierName(
+          itemTypeRow.id,
+          itemTypeRow.nameEn,
+          itemTypeRow.nameAr
+        )
+      : null;
+
+    let technician: {
+      id: string;
+      fullName: string;
+      username: string;
+      technicianCode: string | null;
+    } | null = null;
+    if (item.currentOwnerId) {
+      const [tech] = await db
+        .select({
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username,
+          technicianCode: users.technicianCode,
+        })
+        .from(users)
+        .where(eq(users.id, item.currentOwnerId))
+        .limit(1);
+      if (tech) technician = tech;
+    }
+
+    const [linkedRequestItem] = await db
+      .select({
+        requestId: courierRequestItems.requestId,
+        itemId: courierRequestItems.id,
+        itemType: courierRequestItems.itemType,
+        status: courierRequestItems.status,
+      })
+      .from(courierRequestItems)
+      .where(
+        or(
+          eq(courierRequestItems.serialNumber, item.serialNumber),
+          eq(courierRequestItems.simSerial, item.serialNumber)
+        )
+      )
+      .limit(1);
+
+    let linkedRequest: any = null;
+    if (linkedRequestItem?.requestId) {
+      const req = await drizzleCourierRepository.findRequestById(linkedRequestItem.requestId);
+      if (req) {
+        linkedRequest = {
+          requestId: req.id,
+          tid: req.tid,
+          terminalId: req.terminalId,
+          customerName: req.customerName,
+          installationType: req.installationType,
+          itemStatus: linkedRequestItem.status,
+        };
+      }
+    }
+
+    const isInActiveCustody = (ACTIVE_CUSTODY_STATUSES as readonly string[]).includes(item.status);
+
+    return {
+      found: true,
+      serial: rawSerial,
+      normalized: item.serialNumber,
+      item: {
+        id: item.id,
+        serialNumber: item.serialNumber,
+        status: item.status,
+        barcode: item.barcode,
+      },
+      itemType: itemTypeRow
+        ? {
+            id: itemTypeRow.id,
+            nameAr: itemTypeRow.nameAr,
+            category: itemTypeRow.category,
+            carrierName,
+          }
+        : null,
+      technician,
+      custodyStatus: item.status,
+      inActiveCustody: isInActiveCustody,
+      linkedRequest,
+      ownershipValid: !!technician && isInActiveCustody,
+    };
   }
 
   async getLookups(): Promise<any> {

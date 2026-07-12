@@ -286,4 +286,11 @@ export class CourierController {
     const result = await this.service.createExecutionAttempt(requestId, user.id, req.body);
     res.status(201).json(result);
   });
+
+  serialLookup = asyncHandler(async (req: Request, res: Response) => {
+    const { sn } = req.body;
+    if (!sn || String(sn).trim() === "") throw new ValidationError("sn is required");
+    const result = await this.service.serialLookup(String(sn).trim());
+    res.json(result);
+  });
 }
