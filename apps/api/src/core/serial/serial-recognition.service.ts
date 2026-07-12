@@ -46,6 +46,19 @@ export class SerialRecognitionService {
   }
 
   /**
+   * Common Saudi ICCID OCR / keypad typo: 99966… → 89966…
+   * (ITU-T E.118 country/issuer blocks for KSA SIMs start with 89.)
+   */
+  static expandSaudiIccidTypoCandidates(cleaned: string): string[] {
+    if (!cleaned) return [];
+    const out: string[] = [];
+    if (/^99966\d{13,14}$/.test(cleaned)) {
+      out.push(`89966${cleaned.slice(5)}`);
+    }
+    return out;
+  }
+
+  /**
    * Resolve carrier name based on itemType ID/names
    */
   static resolveCarrierName(itemTypeId: string, nameEn: string, nameAr: string): string | null {
@@ -62,7 +75,12 @@ export class SerialRecognitionService {
     if (idLower.includes("zain") || nameEnLower.includes("zain") || nameArLower.includes("زين")) {
       return "Zain";
     }
-    if (idLower.includes("lebara") || nameEnLower.includes("lebara") || nameArLower.includes("ليبارا")) {
+    if (
+      idLower.includes("lebara") ||
+      nameEnLower.includes("lebara") ||
+      nameEnLower.includes("libar") ||
+      nameArLower.includes("ليبارا")
+    ) {
       return "Lebara";
     }
     return null;
@@ -86,11 +104,24 @@ export class SerialRecognitionService {
     const trimmed = rawBarcode.trim();
     if (trimmed) candidates.add(trimmed.toUpperCase());
 
+    for (const typoFix of this.expandSaudiIccidTypoCandidates(cleaned)) {
+      candidates.add(typoFix);
+    }
+
     try {
       const recognition = await this.recognize(rawBarcode, hintItemTypeId, txClient);
       candidates.add(recognition.normalizedSerial);
     } catch {
       // Soft path: still strip known alphabetic prefixes even if full validation fails
+      // Retry recognize with OCR-corrected ICCID when raw was 99966…
+      for (const typoFix of this.expandSaudiIccidTypoCandidates(cleaned)) {
+        try {
+          const recognition = await this.recognize(typoFix, hintItemTypeId, txClient);
+          candidates.add(recognition.normalizedSerial);
+        } catch {
+          // ignore
+        }
+      }
     }
 
     const allTypes = await txClient
@@ -232,6 +263,9 @@ export class SerialRecognitionService {
     }
 
     if (candidates.length === 0) {
+      for (const fixed of this.expandSaudiIccidTypoCandidates(cleaned)) {
+        return this.recognize(fixed, hintItemTypeId, txClient);
+      }
       throw new AppError(`لم يتم التعرف على نوع المنتج للباركود: ${rawBarcode}`, 400);
     }
 

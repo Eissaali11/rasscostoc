@@ -78,5 +78,33 @@ describe("SerialRecognitionService — Central Serial Engine", () => {
       expect(candidates).toContain(iccid);
       expect(candidates.every((c) => c.startsWith("89966") || c === iccid)).toBe(true);
     });
+
+    it("expands OCR typo 99966… to 89966… for Saudi ICCID lookup", async () => {
+      const typo = "9996606099020521896";
+      const fixed = "8996606099020521896";
+      expect(SerialRecognitionService.expandSaudiIccidTypoCandidates(typo)).toEqual([fixed]);
+
+      const tx = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([
+          {
+            id: "lebaraSim",
+            nameAr: "شرائح ليبارا",
+            nameEn: "libar1",
+            category: "sim",
+            isActive: true,
+            requiresSerial: true,
+            serialPrefix: "89966",
+            serialLength: 19,
+            serialRegex: "^89966[0-9]{14}$",
+          },
+        ]),
+      };
+
+      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(typo, undefined, tx);
+      expect(candidates).toContain(fixed);
+      expect(candidates).toContain(typo);
+    });
   });
 });

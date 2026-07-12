@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -19,6 +19,10 @@ import {
   Save,
   ChevronLeft,
   ChevronRight,
+  Search,
+  ShieldAlert,
+  BadgeCheck,
+  Lock,
 } from "lucide-react";
 
 interface Lookups {
@@ -106,6 +110,86 @@ export default function CourierRequestDetailPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [phase, setPhase] = useState<1 | 2>(1);
 
+  // ── Serial Lookup State ───────────────────────────────────────────────────
+  interface SerialLookupResult {
+    found: boolean;
+    normalized?: string;
+    itemType?: { id: string; nameAr: string; category: string; carrierName: string | null } | null;
+    technician?: { id: string; fullName: string; username: string; technicianCode: string | null } | null;
+    custodyStatus?: string | null;
+    inActiveCustody?: boolean;
+    linkedRequest?: { requestId: number; terminalId?: string } | null;
+    ownershipValid?: boolean;
+    message?: string;
+  }
+  const [deviceLookup, setDeviceLookup] = useState<SerialLookupResult | null>(null);
+  const [simLookup, setSimLookup] = useState<SerialLookupResult | null>(null);
+  const [snLookupLoading, setSnLookupLoading] = useState(false);
+  const [simLookupLoading, setSimLookupLoading] = useState(false);
+
+  const ownershipMismatch =
+    deviceLookup?.found &&
+    simLookup?.found &&
+    deviceLookup?.technician?.id &&
+    simLookup?.technician?.id &&
+    deviceLookup.technician.id !== simLookup.technician.id;
+
+  const doSerialLookup = useCallback(async (sn: string, role: "device" | "sim") => {
+    if (!sn.trim()) return;
+    if (role === "device") setSnLookupLoading(true);
+    else setSimLookupLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn: sn.trim() });
+      const data: SerialLookupResult = await res.json();
+      if (role === "device") {
+        setDeviceLookup(data);
+        if (data.found && data.technician) {
+          // Auto-fill technician from lookup (READ-ONLY source of truth)
+          setForm((prev) => ({
+            ...prev,
+            technicianCode: data.technician!.technicianCode ?? data.technician!.username,
+            salesTechnician: data.technician!.fullName,
+          }));
+          if (data.itemType?.carrierName) {
+            setForm((prev) => ({ ...prev, simType: data.itemType!.carrierName! }));
+          }
+        }
+      } else {
+        setSimLookup(data);
+        if (data.found) {
+          // Prefer corrected ICCID from engine (e.g. 99966 → 89966 OCR typo)
+          if (data.normalized && data.normalized !== sn.trim()) {
+            setForm((prev) => ({ ...prev, simSerial: data.normalized }));
+          }
+          if (data.itemType?.carrierName) {
+            setForm((prev) => ({ ...prev, simType: data.itemType!.carrierName! }));
+          }
+        }
+      }
+    } catch {
+      toast({ title: "تعذّر البحث", description: `فشل البحث عن الرقم: ${sn}`, variant: "destructive" });
+    } finally {
+      if (role === "device") setSnLookupLoading(false);
+      else setSimLookupLoading(false);
+    }
+  }, [toast]);
+
+  const [loadedSerials, setLoadedSerials] = useState(false);
+
+  useEffect(() => {
+    if (request && !loadedSerials) {
+      setLoadedSerials(true);
+      const sn = request.execution?.sn;
+      const simSerial = request.execution?.simSerial || request.simSn;
+      if (sn) {
+        doSerialLookup(sn, "device");
+      }
+      if (simSerial) {
+        doSerialLookup(simSerial, "sim");
+      }
+    }
+  }, [request, loadedSerials, doSerialLookup]);
+
   const mutation = useMutation({
     mutationFn: (data: Partial<Execution>) =>
       apiRequest("POST", `/api/courier/executions/${requestId}`, data).then((r) => r.json()),
@@ -114,49 +198,17 @@ export default function CourierRequestDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests", requestId] });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/dashboard/stats"] });
       setIsDirty(false);
-      setPhase(1); // Reset back to phase 1 after saving successfully
+      setPhase(1);
       setLocation("/courier/requests");
     },
-    onError: () => {
-      toast({ title: "خطأ", description: "فشل حفظ البيانات، يرجى المحاولة مجدداً.", variant: "destructive" });
+    onError: (err: any) => {
+      const msg = err?.message || "فشل حفظ البيانات، يرجى المحاولة مجدداً.";
+      toast({ title: "خطأ في الحفظ", description: msg, variant: "destructive" });
     },
   });
 
   const exec = request?.execution;
   const currentForm = { ...exec, ...form };
-
-  // Automatically lookup and assign technician based on the request's tecName
-  useEffect(() => {
-    const tecName = request?.tecName;
-    if (request && lookups && !request.execution && !form.technicianCode && tecName) {
-      const matchingTech = lookups.technicians.find(
-        (t) => t.name.trim().toLowerCase() === tecName.trim().toLowerCase()
-      );
-      if (matchingTech) {
-        setForm((prev) => ({
-          ...prev,
-          technicianCode: matchingTech.code,
-          salesTechnician: matchingTech.name,
-        }));
-      } else {
-        const partialTech = lookups.technicians.find(
-          (t) => t.name.includes(tecName) || tecName.includes(t.name)
-        );
-        if (partialTech) {
-          setForm((prev) => ({
-            ...prev,
-            technicianCode: partialTech.code,
-            salesTechnician: partialTech.name,
-          }));
-        } else {
-          setForm((prev) => ({
-            ...prev,
-            salesTechnician: tecName,
-          }));
-        }
-      }
-    }
-  }, [request, lookups, form.technicianCode]);
 
   const handleChange = (field: keyof Execution, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -177,27 +229,14 @@ export default function CourierRequestDetailPage() {
 
   const handleSave = () => {
     if (!currentForm.installationStatus) {
-      toast({
-        title: "تنبيه",
-        description: "يرجى تحديد حالة التركيب أولاً.",
-        variant: "destructive",
-      });
+      toast({ title: "تنبيه", description: "يرجى تحديد حالة التركيب أولاً.", variant: "destructive" });
       return;
     }
-
-    const finalForm = { ...currentForm };
-    const tecName = request?.tecName;
-    if (!finalForm.salesTechnician && tecName) {
-      finalForm.salesTechnician = tecName;
-      const tech = lookups?.technicians.find(
-        (t) => t.name.trim().toLowerCase() === tecName.trim().toLowerCase()
-      );
-      if (tech) {
-        finalForm.technicianCode = tech.code;
-      }
+    if (ownershipMismatch) {
+      toast({ title: "خطأ في العهدة", description: "الجهاز والشريحة ينتميان لفنيين مختلفين. لا يمكن إغلاق الطلب.", variant: "destructive" });
+      return;
     }
-
-    mutation.mutate(finalForm);
+    mutation.mutate({ ...currentForm });
   };
 
   if (isLoading) {
@@ -412,31 +451,107 @@ export default function CourierRequestDetailPage() {
                 </div>
               </div>
             ) : (
-              /* PHASE 2 FORM FIELDS */
+              /* PHASE 2 FORM FIELDS — Serial-Driven */
               <div className="space-y-4">
-                {/* Device SN */}
+
+                {/* Ownership Mismatch Alert */}
+                {ownershipMismatch && (
+                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5">
+                    <ShieldAlert className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-red-400">تعارض في العهدة — لا يمكن الإغلاق</p>
+                      <p className="text-xs text-red-400/70 mt-0.5">
+                        الجهاز ({deviceLookup?.technician?.fullName}) والشريحة ({simLookup?.technician?.fullName}) ينتميان لفنيين مختلفين.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Device SN — with lookup */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">الرقم التسلسلي للجهاز (SN)</label>
-                  <input
-                    value={currentForm.sn || ""}
-                    onChange={(e) => handleChange("sn", e.target.value)}
-                    placeholder="أدخل الرقم التسلسلي للجهاز"
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 font-mono"
-                  />
+                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">الرقم التسلسلي للجهاز (SN) *</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={currentForm.sn || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleChange("sn", val);
+                        setDeviceLookup(null);
+                        if (val.trim().length >= 9) {
+                          doSerialLookup(val.trim(), "device");
+                        }
+                      }}
+                      onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "device"); }}
+                      placeholder="أدخل أو امسح الرقم التسلسلي..."
+                      className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (currentForm.sn?.trim()) doSerialLookup(currentForm.sn.trim(), "device"); }}
+                      className="bg-emerald-700/40 hover:bg-emerald-700/60 border border-emerald-700/40 text-emerald-300 px-3 rounded-lg transition-colors"
+                    >
+                      {snLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {deviceLookup && (
+                    <div className={`mt-1.5 flex items-center gap-2 text-xs px-2 py-1 rounded-md ${
+                      deviceLookup.found && deviceLookup.inActiveCustody
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-red-500/10 text-red-400"
+                    }`}>
+                      {deviceLookup.found && deviceLookup.inActiveCustody
+                        ? <BadgeCheck className="w-3.5 h-3.5" />
+                        : <XCircle className="w-3.5 h-3.5" />}
+                      {deviceLookup.found
+                        ? `${deviceLookup.itemType?.nameAr ?? "جهاز"} · ${deviceLookup.custodyStatus}${deviceLookup.technician ? ` · ${deviceLookup.technician.fullName}` : ""}`
+                        : (deviceLookup.message ?? "الرقم التسلسلي غير موجود")}
+                    </div>
+                  )}
                 </div>
 
-                {/* SIM Serial */}
+                {/* SIM Serial — with lookup */}
                 <div>
                   <label className="block text-xs text-slate-400 mb-1.5 font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
-                  <input
-                    value={currentForm.simSerial || ""}
-                    onChange={(e) => handleChange("simSerial", e.target.value)}
-                    placeholder="89..."
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 font-mono"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={currentForm.simSerial || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleChange("simSerial", val);
+                        setSimLookup(null);
+                        if (val.trim().length >= 18) {
+                          doSerialLookup(val.trim(), "sim");
+                        }
+                      }}
+                      onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "sim"); }}
+                      placeholder="89..."
+                      className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (currentForm.simSerial?.trim()) doSerialLookup(currentForm.simSerial.trim(), "sim"); }}
+                      className="bg-emerald-700/40 hover:bg-emerald-700/60 border border-emerald-700/40 text-emerald-300 px-3 rounded-lg transition-colors"
+                    >
+                      {simLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {simLookup && (
+                    <div className={`mt-1.5 flex items-center gap-2 text-xs px-2 py-1 rounded-md ${
+                      simLookup.found && simLookup.inActiveCustody
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-red-500/10 text-red-400"
+                    }`}>
+                      {simLookup.found && simLookup.inActiveCustody
+                        ? <BadgeCheck className="w-3.5 h-3.5" />
+                        : <XCircle className="w-3.5 h-3.5" />}
+                      {simLookup.found
+                        ? `${simLookup.itemType?.nameAr ?? "شريحة"} · ${simLookup.itemType?.carrierName ?? ""} · ${simLookup.custodyStatus}`
+                        : (simLookup.message ?? "الرقم التسلسلي غير موجود")}
+                    </div>
+                  )}
                 </div>
 
-                {/* SIM Type */}
+                {/* SIM Type — auto from lookup, still editable */}
                 <div>
                   <label className="block text-xs text-slate-400 mb-1.5 font-medium">نوع الشريحة</label>
                   <select
@@ -446,25 +561,44 @@ export default function CourierRequestDetailPage() {
                   >
                     <option value="">اختر النوع</option>
                     {lookups?.simTypes.map((s) => (
-                      <option key={s.id} value={s.name}>
-                        {s.name}
-                      </option>
+                      <option key={s.id} value={s.name}>{s.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Technician (Read-only) */}
+                {/* Technician — READ-ONLY from serial custody; warn if assignment differs */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">الفني المسؤول (من بيانات الطلب الأصلية)</label>
-                  <div className="bg-[#102222]/50 border border-slate-700/30 rounded-lg px-3 py-2 text-sm text-slate-300 font-medium flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    👤 {currentForm.salesTechnician || request?.tecName || "غير محدد"} 
-                    {currentForm.technicianCode && (
-                      <span className="text-xs text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded">
-                        {currentForm.technicianCode}
-                      </span>
-                    )}
+                  <label className="block text-xs text-slate-400 mb-1.5 font-medium flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> الفني المسؤول (من عهدة الجهاز)
+                  </label>
+                  <div className={`bg-[#102222]/50 border rounded-lg px-3 py-2 text-sm font-medium flex items-center gap-2 ${
+                    deviceLookup?.technician ? "border-emerald-700/40 text-emerald-300" : "border-slate-700/30 text-slate-400"
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      deviceLookup?.technician ? "bg-emerald-500 animate-pulse" : "bg-slate-600"
+                    }`} />
+                    {deviceLookup?.technician
+                      ? <>
+                          👤 {deviceLookup.technician.fullName}
+                          <span className="text-xs text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded ml-auto">
+                            {deviceLookup.technician.technicianCode ?? deviceLookup.technician.username}
+                          </span>
+                        </>
+                      : <span className="text-slate-500 text-xs">امسح رقم الجهاز لتحديد الفني تلقائياً من العهدة</span>
+                    }
                   </div>
+                  {request.tecName && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      التعيين على الطلب: <span className="text-slate-300">{request.tecName}</span>
+                      {deviceLookup?.technician &&
+                        request.tecName.replace(/_/g, " ").toLowerCase() !==
+                          (deviceLookup.technician.fullName || "").toLowerCase() && (
+                          <span className="text-amber-400 block mt-0.5">
+                            ⚠ اسم التعيين لا يطابق مالك العهدة الحالي — الخصم سيتم من عهدة المالك الظاهر أعلاه.
+                          </span>
+                        )}
+                    </p>
+                  )}
                 </div>
 
                 {/* Delivery Date & Time */}
