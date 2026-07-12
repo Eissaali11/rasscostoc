@@ -173,6 +173,10 @@ export class InventoryEngine {
 
         if (deducted) {
           result.custodyItemsDeducted.push(serial);
+        } else {
+          result.errors.push(
+            `[InventoryEngine] ScanOut skipped for "${serial}" — not found in technician active custody.`
+          );
         }
       } catch (err: any) {
         result.errors.push(`[InventoryEngine] ScanOut failed for "${serial}": ${err.message}`);
