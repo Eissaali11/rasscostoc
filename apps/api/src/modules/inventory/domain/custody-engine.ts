@@ -1,6 +1,7 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../../../core/config/db";
 import { items, inventoryTransactions, itemHistoryLogs, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 export class CustodyEngine {
   private static async syncMovingInventory(tx: any, technicianId: string, itemTypeId: string, delta: number) {
@@ -37,15 +38,10 @@ export class CustodyEngine {
   }
 
   /**
-   * 1. استعلام لحظي عن الرقم التسلسلي S/N
+   * 1. استعلام لحظي عن الرقم التسلسلي S/N (يقبل الشكل الخام أو المخزَّن)
    */
   static async lookupItem(serialNumber: string, tx: any = db) {
-    const [item] = await tx
-      .select()
-      .from(items)
-      .where(eq(items.serialNumber, serialNumber))
-      .limit(1);
-    return item || null;
+    return SerialRecognitionService.findItemBySerial(serialNumber, tx);
   }
 
   /**
@@ -57,7 +53,11 @@ export class CustodyEngine {
     technicianId: string,
     tx: any = db
   ) {
-    const existing = await this.lookupItem(serialNumber, tx);
+    const stored = await SerialRecognitionService.normalizeForStorage(serialNumber, itemTypeId, tx);
+    const cleanSerial = stored.normalizedSerial;
+    const actualTypeId = stored.itemTypeId;
+
+    const existing = await this.lookupItem(cleanSerial, tx);
 
     if (existing) {
       if (existing.status === "DELIVERED") {
@@ -67,15 +67,16 @@ export class CustodyEngine {
       }
     }
 
-    // توليد باركود تلقائي مطابق للسيريال في حال عدم توفره
+    // توليد باركود تلقائي مطابق للسيريال المخزَّن
     const [inserted] = await tx
       .insert(items)
       .values({
-        itemTypeId,
-        serialNumber,
-        barcode: serialNumber,
+        itemTypeId: actualTypeId,
+        serialNumber: cleanSerial,
+        barcode: cleanSerial,
         status: "RECEIVED_BY_TECHNICIAN",
         currentOwnerId: technicianId,
+        carrierName: stored.carrierName,
       })
       .returning({ id: items.id });
 
@@ -97,7 +98,7 @@ export class CustodyEngine {
       notes: "إنشاء وتسجيل عهدة جديدة بالمسح الميداني",
     });
 
-    await this.syncMovingInventory(tx, technicianId, itemTypeId, 1);
+    await this.syncMovingInventory(tx, technicianId, actualTypeId, 1);
 
     return { id: inserted.id, action: "inserted" };
   }

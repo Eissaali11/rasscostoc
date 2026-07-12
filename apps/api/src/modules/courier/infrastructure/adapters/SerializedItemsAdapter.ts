@@ -3,12 +3,14 @@
  *
  * Implements ISerializedInventoryRepository by wrapping serializedItemsService.
  * This is the only file that knows about serializedItemsService in the Inventory layer.
+ * Serials are resolved via Central Serial Engine before custody checks.
  */
 
 import { db } from "@server/core/config/db";
 import { items } from "@shared/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import type { ISerializedInventoryRepository } from "../../application/inventory/ISerializedInventoryRepository";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 export class SerializedItemsAdapter implements ISerializedInventoryRepository {
   async scanOut(
@@ -17,13 +19,14 @@ export class SerializedItemsAdapter implements ISerializedInventoryRepository {
     customerName: string,
     referenceNumber: string
   ): Promise<boolean> {
-    // Confirm custody before delegating to service
+    const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serialNumber);
+
     const [item] = await db
-      .select({ id: items.id })
+      .select({ id: items.id, serialNumber: items.serialNumber })
       .from(items)
       .where(
         and(
-          eq(items.serialNumber, serialNumber),
+          inArray(items.serialNumber, candidates),
           eq(items.currentOwnerId, technicianId),
           inArray(items.status, ["IN_TRANSIT_CUSTODY", "RECEIVED_BY_TECHNICIAN"])
         )
@@ -38,7 +41,7 @@ export class SerializedItemsAdapter implements ISerializedInventoryRepository {
 
     await serializedItemsService.scanOut(
       technicianId,
-      serialNumber,
+      item.serialNumber,
       customerName,
       referenceNumber,
       undefined,

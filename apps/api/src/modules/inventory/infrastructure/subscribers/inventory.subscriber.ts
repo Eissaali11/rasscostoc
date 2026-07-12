@@ -13,6 +13,7 @@ import { tracer } from "@core/telemetry/tracer";
 import { db } from "@core/config/db";
 import { courierRequestItems } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 export class InventorySubscriber {
   /**
@@ -47,25 +48,31 @@ export class InventorySubscriber {
           event.id,
           "InventorySubscriber",
           async () => {
-            // Build serial list (exactly matching the former logic)
             const devices: { serialNumber: string; model?: string }[] = [];
             const serialsForCustody: string[] = [];
 
-            const addSerial = (sn?: string | null) => {
+            const addSerial = async (sn?: string | null) => {
               if (!sn?.trim()) return;
-              const serial = sn.trim();
-              devices.push({ serialNumber: serial, model: request.vendorType ?? undefined });
-              serialsForCustody.push(serial);
+              const candidates = await SerialRecognitionService.buildStoredSerialCandidates(sn);
+              // Prefer the shortest candidate (usually the stored stripped form for devices)
+              const serial =
+                [...candidates].sort((a, b) => a.length - b.length)[0] || sn.trim();
+              if (!devices.some((d) => d.serialNumber === serial)) {
+                devices.push({ serialNumber: serial, model: request.vendorType ?? undefined });
+              }
+              if (!serialsForCustody.includes(serial)) {
+                serialsForCustody.push(serial);
+              }
+              for (const c of candidates) {
+                if (!serialsForCustody.includes(c)) serialsForCustody.push(c);
+              }
             };
 
-            addSerial(execution.sn);
-            addSerial(execution.extraField1);
-            addSerial(execution.extraField2);
+            await addSerial(execution.sn);
+            await addSerial(execution.extraField1);
+            await addSerial(execution.extraField2);
             if (execution.simSerial?.trim()) {
-              const simSerialTrimmed = execution.simSerial.trim();
-              if (!serialsForCustody.includes(simSerialTrimmed)) {
-                serialsForCustody.push(simSerialTrimmed);
-              }
+              await addSerial(execution.simSerial);
             }
 
             // Fetch scanned serial numbers bound to the courier request items (V14 flow)
@@ -77,12 +84,9 @@ export class InventorySubscriber {
             for (const item of requestItemsList) {
               if (item.status === "RECEIVED" || item.status === "DELIVERED") {
                 if (item.itemType === "POS" && item.serialNumber) {
-                  addSerial(item.serialNumber);
+                  await addSerial(item.serialNumber);
                 } else if (item.itemType === "SIM" && item.simSerial) {
-                  const serialTrimmed = item.simSerial.trim();
-                  if (!serialsForCustody.includes(serialTrimmed)) {
-                    serialsForCustody.push(serialTrimmed);
-                  }
+                  await addSerial(item.simSerial);
                 }
               }
             }

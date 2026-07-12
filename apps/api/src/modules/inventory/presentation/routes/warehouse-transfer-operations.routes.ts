@@ -9,7 +9,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { DrizzleInventoryUnitOfWork } from "@modules/inventory/infrastructure/database/DrizzleInventoryUnitOfWork";
 import { processWarehouseTransferBatch } from "@modules/inventory/application/inventory/use-cases/warehouse-transfer-batch.processor";
 import { CustodyEngine } from "../../domain/custody-engine";
-import { SerialRecognitionService } from "../../infrastructure/services/serial-recognition.service";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 /**
  * Warehouse Transfer Operations - العمليات الأساسية للمناقلات (< 100 lines)
@@ -428,10 +428,15 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
     }
   });
 
-  // ─── v3.0: بحث الأدمن بالسيريال (لصفحة التحقق) ───
+  // ─── v3.0: بحث الأدمن بالسيريال (لصفحة التحقق) — عبر Central Serial Engine ───
   app.get("/api/items/lookup/:serialNumber", requireAuth, async (req, res) => {
     try {
       const { serialNumber } = req.params;
+      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serialNumber);
+
+      if (candidates.length === 0) {
+        return res.status(400).json({ message: "الرقم التسلسلي فارغ بعد التنظيف" });
+      }
 
       const [result] = await db
         .select({
@@ -449,7 +454,7 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
         })
         .from(items)
         .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
-        .where(eq(items.serialNumber, serialNumber))
+        .where(inArray(items.serialNumber, candidates))
         .limit(1);
 
       if (!result) {

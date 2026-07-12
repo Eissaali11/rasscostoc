@@ -30,6 +30,7 @@ import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
 import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 
 export interface ListFilters {
@@ -256,14 +257,27 @@ export class CourierService {
     serial: string,
     actorId: string
   ): Promise<{ success: boolean; message: string; item?: CourierRequestItem }> {
+    const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serial);
+    if (candidates.length === 0) {
+      return { success: false, message: "الرقم التسلسلي فارغ بعد التنظيف" };
+    }
+    const matchesSerial = (item: CourierRequestItem) => {
+      const sn = (item.serialNumber || "").toUpperCase();
+      const sim = (item.simSerial || "").toUpperCase();
+      return (
+        candidates.includes(sn) ||
+        candidates.includes(sim) ||
+        item.serialNumber === serial ||
+        item.simSerial === serial
+      );
+    };
+
     // 1. Search inside request items for PENDING_RECEIPT item
     const requestItems = await drizzleCourierRepository.findRequestItems(requestId);
     
-    // Find matching item (by serialNumber or simSerial)
+    // Find matching item (by serialNumber or simSerial — any equivalent form)
     const matchingItem = requestItems.find(
-      item =>
-        item.status === "PENDING_RECEIPT" &&
-        (item.serialNumber === serial || item.simSerial === serial)
+      item => item.status === "PENDING_RECEIPT" && matchesSerial(item)
     );
 
     if (matchingItem) {
@@ -294,9 +308,7 @@ export class CourierService {
 
     // 2. Check if already scanned in this request
     const alreadyScanned = requestItems.find(
-      item =>
-        item.status === "RECEIVED" &&
-        (item.serialNumber === serial || item.simSerial === serial)
+      item => item.status === "RECEIVED" && matchesSerial(item)
     );
     if (alreadyScanned) {
       return {
@@ -313,8 +325,8 @@ export class CourierService {
       .where(
         and(
           or(
-            eq(courierRequestItems.serialNumber, serial),
-            eq(courierRequestItems.simSerial, serial)
+            inArray(courierRequestItems.serialNumber, candidates),
+            inArray(courierRequestItems.simSerial, candidates)
           ),
           eq(courierRequestItems.status, "PENDING_RECEIPT")
         )
@@ -445,12 +457,8 @@ export class CourierService {
         if (item.status === "RECEIVED") {
           const serial = item.serialNumber || item.simSerial;
           if (serial) {
-            // Find item in inventory master table `items`
-            const [invItem] = await tx
-              .select()
-              .from(items)
-              .where(eq(items.serialNumber, serial))
-              .limit(1);
+            // Central Serial Engine: resolve existing row by any equivalent serial form
+            const invItem = await SerialRecognitionService.findItemBySerial(serial, tx);
 
             if (invItem) {
               const oldStatus = invItem.status;
@@ -483,40 +491,50 @@ export class CourierService {
                 notes: `تحويل عهدة للفني بالمسح الضوئي - طلب رقم ${requestId}`,
               });
             } else {
-              // MINTING: Serial number scanned for the first time in quantity-only flow (V14)
-              let itemTypeId = "n950"; // default fallback
-              let carrierName: string | null = null;
-
+              // MINTING: first scan in quantity-only flow — normalize before storage
+              let hintItemTypeId = "n950";
               if (item.itemType === "POS") {
                 const typeStr = String(reqData?.installationType || "").toLowerCase();
-                if (typeStr.includes("9000")) itemTypeId = "i9000s";
-                else if (typeStr.includes("9100")) itemTypeId = "i9100";
-                else itemTypeId = "n950";
+                if (typeStr.includes("9000")) hintItemTypeId = "i9000s";
+                else if (typeStr.includes("9100")) hintItemTypeId = "i9100";
+                else hintItemTypeId = "n950";
               } else if (item.itemType === "SIM") {
                 const simStr = String(reqData?.sim || "").toLowerCase();
-                if (simStr.includes("mobily")) {
-                  itemTypeId = "mobilySim";
-                  carrierName = "Mobily";
-                } else if (simStr.includes("zain")) {
-                  itemTypeId = "zainSim";
-                  carrierName = "Zain";
-                } else {
-                  itemTypeId = "stcSim";
-                  carrierName = "STC";
-                }
+                if (simStr.includes("mobily")) hintItemTypeId = "mobilySim";
+                else if (simStr.includes("zain")) hintItemTypeId = "zainSim";
+                else if (simStr.includes("lebara")) hintItemTypeId = "lebaraSim";
+                else hintItemTypeId = "stcSim";
               }
 
-              // Create new serialized item
+              const stored = await SerialRecognitionService.normalizeForStorage(
+                serial,
+                hintItemTypeId,
+                tx
+              );
+
+              // Persist normalized form on request item for downstream deduction/guards
+              if (item.serialNumber) {
+                await tx
+                  .update(courierRequestItems)
+                  .set({ serialNumber: stored.normalizedSerial })
+                  .where(eq(courierRequestItems.id, item.id));
+              } else if (item.simSerial) {
+                await tx
+                  .update(courierRequestItems)
+                  .set({ simSerial: stored.normalizedSerial })
+                  .where(eq(courierRequestItems.id, item.id));
+              }
+
               const [newItem] = await tx
                 .insert(items)
                 .values({
-                  itemTypeId,
-                  serialNumber: serial,
-                  barcode: serial,
+                  itemTypeId: stored.itemTypeId,
+                  serialNumber: stored.normalizedSerial,
+                  barcode: stored.normalizedSerial,
                   status: "RECEIVED_BY_TECHNICIAN",
                   currentOwnerId: actorId,
                   warehouseId: null,
-                  carrierName,
+                  carrierName: stored.carrierName,
                   createdAt: new Date(),
                   updatedAt: new Date(),
                 })
@@ -580,11 +598,7 @@ export class CourierService {
         if (item.status === "RECEIVED") {
           const serial = item.serialNumber || item.simSerial;
           if (serial) {
-            const [invItem] = await tx
-              .select()
-              .from(items)
-              .where(eq(items.serialNumber, serial))
-              .limit(1);
+            const invItem = await SerialRecognitionService.findItemBySerial(serial, tx);
 
             if (invItem && invItem.status === "RECEIVED_BY_TECHNICIAN") {
               await tx

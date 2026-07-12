@@ -5,14 +5,16 @@
  *   1. Currently owned by the resolved technician (currentOwnerId === techUser.id)
  *   2. In the IN_TRANSIT_CUSTODY state
  *
+ * Serials are matched via Central Serial Engine (prefixed or stored forms).
  * Responsibility: custody ownership validation only.
  * On failure: logs to audit and throws GuardValidationError (no data written).
  */
 
 import { db } from "@server/core/config/db";
 import { items, courierAuditLogs } from "@shared/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { GuardValidationError, isCompletedStatus, type GuardContext, type TechUser } from "./guard.types";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 export class CustodyGuard {
   /**
@@ -37,12 +39,14 @@ export class CustodyGuard {
     if (executionData.extraField2?.trim()) serialsToCheck.push(executionData.extraField2.trim());
 
     for (const serial of serialsToCheck) {
+      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serial);
+
       const [item] = await db
         .select({ id: items.id, serialNumber: items.serialNumber })
         .from(items)
         .where(
           and(
-            eq(items.serialNumber, serial),
+            inArray(items.serialNumber, candidates),
             eq(items.currentOwnerId, techUser.id),
             eq(items.status, "IN_TRANSIT_CUSTODY")
           )
@@ -50,7 +54,6 @@ export class CustodyGuard {
         .limit(1);
 
       if (!item) {
-        // Log the rejection to audit — no other data is written
         await db.insert(courierAuditLogs).values({
           tableName: "executions",
           recordId: requestId,
