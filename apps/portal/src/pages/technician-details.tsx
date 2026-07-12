@@ -837,29 +837,36 @@ export default function TechnicianDetailsPage() {
     { title: "التسليم", desc: "العميل النهائي", icon: Truck },
   ];
 
+  const technicianInitials = useMemo(() => {
+    const parts = (technicianName || "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "؟";
+    if (parts.length === 1) return parts[0].slice(0, 2);
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`;
+  }, [technicianName]);
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-16 w-full rounded-2xl" />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <Skeleton className="h-40 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
+      <div className="space-y-6" dir="rtl">
+        <Skeleton className="h-28 w-full rounded-2xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
         </div>
-        <Skeleton className="h-[460px] w-full rounded-2xl" />
+        <Skeleton className="h-[420px] w-full rounded-2xl" />
       </div>
     );
   }
 
   if (!hasAnyData) {
     return (
-      <div className="rounded-2xl border border-red-500/30 bg-white/5 p-12 text-center">
-        <XCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+      <div className="rounded-2xl border border-red-500/30 bg-[#122222] p-12 text-center" dir="rtl">
+        <XCircle className="h-14 w-14 text-red-400 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-white mb-2">لم يتم العثور على البيانات</h2>
         <p className="text-slate-400 mb-6">لا توجد بيانات متاحة لهذا المندوب</p>
         <Link href="/home">
-          <Button className="bg-cyan-500 hover:bg-cyan-600 text-slate-950">
+          <Button className="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold">
             <ArrowLeft className="ml-2 h-4 w-4" />
             العودة للوحة التحكم
           </Button>
@@ -869,152 +876,170 @@ export default function TechnicianDetailsPage() {
   }
 
   return (
-    <div className="space-y-8" dir="rtl">
-      <header className="rounded-2xl border border-slate-700/60 bg-slate-900/35 backdrop-blur-xl p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">لوحة إدارة المخزون</h1>
-          <p className="text-slate-400 mt-1">
-            ملف المندوب: <span className="text-cyan-300 font-semibold">{technicianName}</span> · {city}
-          </p>
-        </div>
+    <div className="space-y-6 pb-4" dir="rtl">
+      {/* Hero identity */}
+      <header className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1a3636] p-6 shadow-lg">
+        <div className="pointer-events-none absolute -left-16 -top-20 size-56 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-10 bottom-0 size-40 rounded-full bg-emerald-400/5 blur-3xl" />
 
-        <div className="flex flex-wrap items-center gap-3">
-          {canTransferToWarehouse ? (
-            <Link href="/operations">
-              <Button className="bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold px-6">
-                <Truck className="ml-2 h-4 w-4" />
-                تحويل للمستودع
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-lg font-black tracking-wide text-cyan-200 shadow-inner">
+              {technicianInitials}
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-400/80">
+                StockPro · عهدة المندوب
+              </p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                {technicianName}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-950/40 px-2.5 py-1">
+                  <MapPin className="h-3.5 w-3.5 text-cyan-400" />
+                  {city || "بدون مدينة"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
+                  <Smartphone className="h-3.5 w-3.5" />
+                  عهدة نشطة: {arNumber(serializedItems.length)}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-cyan-300">
+                  <Truck className="h-3.5 w-3.5" />
+                  مسلَّم: {arNumber(deliveryLogCount)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {canTransferToWarehouse ? (
+              <Link href="/operations">
+                <Button className="bg-cyan-400 px-5 font-bold text-slate-950 hover:bg-cyan-300">
+                  <Truck className="ml-2 h-4 w-4" />
+                  تحويل للمستودع
+                </Button>
+              </Link>
+            ) : null}
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="border-slate-600/80 bg-slate-950/30 text-cyan-300 hover:bg-cyan-400/10"
+              data-testid="button-export"
+            >
+              <Download className="ml-2 h-4 w-4" />
+              تصدير Excel
+            </Button>
+            <Link href="/home">
+              <Button variant="outline" className="border-slate-600 text-slate-200 hover:bg-slate-800">
+                <ArrowLeft className="ml-2 h-4 w-4" />
+                رجوع
               </Button>
             </Link>
-          ) : null}
-
-          <Button
-            onClick={handleExport}
-            className="bg-slate-900/50 border border-slate-600/80 text-cyan-300 hover:bg-cyan-400/10"
-            data-testid="button-export"
-          >
-            <Download className="ml-2 h-4 w-4" />
-            تصدير
-          </Button>
-
-          <Link href="/home">
-            <Button variant="outline" className="border-slate-600 text-slate-200 hover:bg-slate-800">
-              <ArrowLeft className="ml-2 h-4 w-4" />
-              رجوع
-            </Button>
-          </Link>
-
-          <Button variant="outline" className="border-slate-700 text-slate-400 hover:bg-slate-800/60" disabled>
-            <Bell className="h-4 w-4" />
-          </Button>
+          </div>
         </div>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <div className="rounded-2xl border border-cyan-400/20 bg-slate-900/35 p-6 backdrop-blur-xl">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-slate-400 text-sm mb-1">إجمالي المخزون</p>
-              <h3 className="text-3xl font-bold text-slate-100">{arNumber(grandTotal)}</h3>
+      {/* KPI strip */}
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: "إجمالي المخزون",
+            value: grandTotal,
+            hint: `تغطية الأصناف ${arNumber(Number(inventoryAccuracy.toFixed(1)))}%`,
+            icon: Boxes,
+            accent: "cyan",
+            width: inventoryAccuracy,
+            trendUp: true,
+          },
+          {
+            label: "مخزون التسليم (كراتين)",
+            value: totalBoxes,
+            hint: `المتحرك ${arNumber(Number(movingBoxesShare.toFixed(1)))}%`,
+            icon: Handshake,
+            accent: "emerald",
+            width: movingBoxesShare,
+            trendUp: true,
+          },
+          {
+            label: "مخزون ثابت متبقي",
+            value: totalFixed,
+            hint: `يمثل ${arNumber(Number(fixedShare.toFixed(1)))}% من الإجمالي`,
+            icon: MapPin,
+            accent: "sky",
+            width: fixedShare,
+            trendUp: true,
+          },
+          {
+            label: "مخزون متنقل متبقي",
+            value: totalMoving,
+            hint: `يمثل ${arNumber(Number(movingShare.toFixed(1)))}% من الإجمالي`,
+            icon: Truck,
+            accent: "amber",
+            width: movingShare,
+            trendUp: false,
+          },
+        ].map((card) => {
+          const Icon = card.icon;
+          const accentMap: Record<string, { bar: string; iconBg: string; icon: string; border: string }> = {
+            cyan: { bar: "bg-cyan-400", iconBg: "bg-cyan-400/10", icon: "text-cyan-300", border: "hover:border-cyan-400/40" },
+            emerald: { bar: "bg-emerald-400", iconBg: "bg-emerald-400/10", icon: "text-emerald-300", border: "hover:border-emerald-400/40" },
+            sky: { bar: "bg-sky-400", iconBg: "bg-sky-400/10", icon: "text-sky-300", border: "hover:border-sky-400/40" },
+            amber: { bar: "bg-amber-400", iconBg: "bg-amber-400/10", icon: "text-amber-300", border: "hover:border-amber-400/40" },
+          };
+          const a = accentMap[card.accent];
+          return (
+            <div
+              key={card.label}
+              className={`relative overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/45 p-5 backdrop-blur-xl transition-all duration-300 ${a.border} hover:shadow-lg`}
+            >
+              <div className={`absolute inset-x-0 top-0 h-1 ${a.bar} opacity-80`} />
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <p className="mb-1 text-sm text-slate-400">{card.label}</p>
+                  <h3 className="text-3xl font-black tracking-tight text-slate-50">{arNumber(card.value)}</h3>
+                </div>
+                <div className={`flex size-11 items-center justify-center rounded-xl ${a.iconBg} ${a.icon}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+                <div className={`h-full ${a.bar}`} style={{ width: `${clampPercent(card.width)}%` }} />
+              </div>
+              <div className={`mt-3 flex items-center gap-1 text-xs ${a.icon}`}>
+                {card.trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {card.hint}
+              </div>
             </div>
-            <div className="size-11 rounded-full bg-cyan-400/10 flex items-center justify-center text-cyan-300">
-              <Boxes className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-700/70 overflow-hidden">
-            <div className="h-full bg-cyan-400" style={{ width: `${clampPercent(inventoryAccuracy)}%` }} />
-          </div>
-          <div className="mt-3 text-xs text-emerald-300 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            تغطية الأصناف {arNumber(Number(inventoryAccuracy.toFixed(1)))}%
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-emerald-400/20 bg-slate-900/35 p-6 backdrop-blur-xl">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-slate-400 text-sm mb-1">مخزون التسليم</p>
-              <h3 className="text-3xl font-bold text-slate-100">{arNumber(totalBoxes)}</h3>
-            </div>
-            <div className="size-11 rounded-full bg-emerald-400/10 flex items-center justify-center text-emerald-300">
-              <Handshake className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-700/70 overflow-hidden">
-            <div className="h-full bg-emerald-400" style={{ width: `${clampPercent(movingBoxesShare)}%` }} />
-          </div>
-          <div className="mt-3 text-xs text-emerald-300 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            المخزون المتحرك {arNumber(Number(movingBoxesShare.toFixed(1)))}%
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-blue-400/20 bg-slate-900/35 p-6 backdrop-blur-xl">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-slate-400 text-sm mb-1">مخزون ثابت متبقي</p>
-              <h3 className="text-3xl font-bold text-slate-100">{arNumber(totalFixed)}</h3>
-            </div>
-            <div className="size-11 rounded-full bg-blue-400/10 flex items-center justify-center text-blue-300">
-              <MapPin className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-700/70 overflow-hidden">
-            <div className="h-full bg-blue-400" style={{ width: `${clampPercent(fixedShare)}%` }} />
-          </div>
-          <div className="mt-3 text-xs text-blue-300 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            يمثل {arNumber(Number(fixedShare.toFixed(1)))}% من الإجمالي
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-purple-400/20 bg-slate-900/35 p-6 backdrop-blur-xl">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-slate-400 text-sm mb-1">مخزون متنقل متبقي</p>
-              <h3 className="text-3xl font-bold text-slate-100">{arNumber(totalMoving)}</h3>
-            </div>
-            <div className="size-11 rounded-full bg-purple-400/10 flex items-center justify-center text-purple-300">
-              <Truck className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-700/70 overflow-hidden">
-            <div className="h-full bg-purple-400" style={{ width: `${clampPercent(movingShare)}%` }} />
-          </div>
-          <div className="mt-3 text-xs text-purple-300 flex items-center gap-1">
-            <TrendingDown className="h-3 w-3" />
-            يمثل {arNumber(Number(movingShare.toFixed(1)))}% من الإجمالي
-          </div>
-        </div>
+          );
+        })}
       </section>
 
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-900/35 backdrop-blur-xl overflow-hidden">
+      <section className="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/40 shadow-sm backdrop-blur-xl">
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as InventoryTab)}
           className="w-full"
         >
-          <div className="px-6 py-4 border-b border-slate-700/60 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-            <TabsList className="bg-slate-800/70 border border-slate-700/70">
-              <TabsTrigger value="all">الكل</TabsTrigger>
-              <TabsTrigger value="fixed">ثابت</TabsTrigger>
-              <TabsTrigger value="moving">متحرك</TabsTrigger>
-            </TabsList>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="flex flex-col gap-4 border-b border-slate-700/60 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-100">توزيع الأصناف</h2>
+              <p className="text-xs text-slate-400">مخزون ثابت ومتحرك حسب نوع الصنف</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <TabsList className="w-full justify-start rounded-xl border border-slate-700/60 bg-slate-950/50 p-1 sm:w-auto">
+                <TabsTrigger value="all" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">الكل</TabsTrigger>
+                <TabsTrigger value="fixed" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">ثابت</TabsTrigger>
+                <TabsTrigger value="moving" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">متحرك</TabsTrigger>
+              </TabsList>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="بحث في المنتجات..."
-                  className="pr-10 bg-slate-900/60 border-slate-700 text-slate-200"
+                  className="border-slate-700 bg-slate-950/50 pr-10 text-slate-200"
                 />
               </div>
-              <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-                <Filter className="ml-2 h-4 w-4" />
-                تصفية
-              </Button>
             </div>
           </div>
 
@@ -1027,19 +1052,19 @@ export default function TechnicianDetailsPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-800/60 border-slate-700/70 hover:bg-slate-800/60">
-                        <TableHead className="text-right text-slate-300">اسم المنتج</TableHead>
-                        <TableHead className="text-center text-slate-300">الكراتين</TableHead>
-                        <TableHead className="text-center text-slate-300">الوحدات</TableHead>
-                        <TableHead className="text-center text-slate-300">الإجمالي</TableHead>
-                        <TableHead className="text-center text-slate-300">الحالة</TableHead>
-                        <TableHead className="text-center text-slate-300">الإجراءات</TableHead>
+                      <TableRow className="border-slate-800 bg-slate-950/50 hover:bg-slate-950/50">
+                        <TableHead className="text-right text-slate-400">اسم المنتج</TableHead>
+                        <TableHead className="text-center text-slate-400">الكراتين</TableHead>
+                        <TableHead className="text-center text-slate-400">الوحدات</TableHead>
+                        <TableHead className="text-center text-slate-400">الإجمالي</TableHead>
+                        <TableHead className="text-center text-slate-400">الحالة</TableHead>
+                        <TableHead className="text-center text-slate-400">الإجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {rows.length === 0 ? (
-                        <TableRow className="border-slate-700/60">
-                          <TableCell colSpan={6} className="text-center py-10 text-slate-400">
+                        <TableRow className="border-slate-800">
+                          <TableCell colSpan={6} className="py-12 text-center text-slate-500">
                             لا توجد نتائج مطابقة
                           </TableCell>
                         </TableRow>
@@ -1047,29 +1072,35 @@ export default function TechnicianDetailsPage() {
                         rows.map((row) => {
                           const ItemIcon = row.icon;
                           const status = getStockStatus(row.total);
-
                           const imageUrl = getProductImage(row);
+                          const isHot = row.total > 0;
 
                           return (
-                            <TableRow key={row.id} className="border-slate-700/50 hover:bg-cyan-400/5">
+                            <TableRow
+                              key={row.id}
+                              className={`border-slate-800/70 transition-colors ${isHot ? "hover:bg-cyan-400/[0.04]" : "opacity-80 hover:bg-slate-800/30"}`}
+                            >
                               <TableCell>
                                 <div className="flex items-center gap-3">
-                                  <div className="size-8 rounded bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0" style={{ color: row.color }}>
+                                  <div
+                                    className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900"
+                                    style={{ color: row.color }}
+                                  >
                                     {imageUrl ? (
-                                      <img src={imageUrl} alt={row.nameAr} className="w-full h-full object-contain" />
+                                      <img src={imageUrl} alt={row.nameAr} className="h-full w-full object-contain p-0.5" />
                                     ) : (
                                       <ItemIcon className="h-4 w-4" />
                                     )}
                                   </div>
                                   <div>
                                     <p className="font-semibold text-slate-100">{row.nameAr}</p>
-                                    <p className="text-xs text-slate-400">{row.nameEn}</p>
+                                    <p className="text-[11px] text-slate-500">{row.nameEn}</p>
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-center text-slate-200">{arNumber(row.boxes)}</TableCell>
-                              <TableCell className="text-center text-slate-200">{arNumber(row.units)}</TableCell>
-                              <TableCell className="text-center font-bold text-slate-100">{arNumber(row.total)}</TableCell>
+                              <TableCell className="text-center tabular-nums text-slate-300">{arNumber(row.boxes)}</TableCell>
+                              <TableCell className="text-center tabular-nums text-slate-300">{arNumber(row.units)}</TableCell>
+                              <TableCell className="text-center text-base font-bold tabular-nums text-slate-50">{arNumber(row.total)}</TableCell>
                               <TableCell className="text-center">
                                 <Badge className={status.className}>{status.label}</Badge>
                               </TableCell>
@@ -1078,7 +1109,7 @@ export default function TechnicianDetailsPage() {
                                   asChild
                                   variant="outline"
                                   size="sm"
-                                  className="border-slate-700 text-slate-300 hover:text-cyan-300 hover:bg-cyan-400/10"
+                                  className="border-slate-700 text-slate-300 hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300"
                                 >
                                   <Link href={`/technician-details/${technicianId}/item/${row.id}`}>
                                     <span className="ml-1">التفاصيل</span>
@@ -1099,94 +1130,111 @@ export default function TechnicianDetailsPage() {
         </Tabs>
 
         {expandedRow ? (
-          <div className="border-t border-slate-700/60 bg-cyan-400/5 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-4">
-              <h4 className="text-cyan-300 font-bold text-sm">تفاصيل التوزيع</h4>
-              <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg border border-slate-700/60">
-                <span className="text-slate-400 text-sm">المخزون الثابت:</span>
-                <span className="font-bold text-slate-100">{arNumber(expandedRow.fixedTotal)} وحدة</span>
+          <div className="grid grid-cols-1 gap-5 border-t border-slate-800 bg-slate-950/30 p-5 md:grid-cols-3">
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-cyan-300">تفاصيل التوزيع</h4>
+              <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-3">
+                <span className="text-sm text-slate-400">المخزون الثابت</span>
+                <span className="font-bold text-slate-100">{arNumber(expandedRow.fixedTotal)}</span>
               </div>
-              <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg border border-slate-700/60">
-                <span className="text-slate-400 text-sm">المخزون المتحرك:</span>
-                <span className="font-bold text-slate-100">{arNumber(expandedRow.movingTotal)} وحدة</span>
+              <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-3">
+                <span className="text-sm text-slate-400">المخزون المتحرك</span>
+                <span className="font-bold text-slate-100">{arNumber(expandedRow.movingTotal)}</span>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-cyan-300 font-bold text-sm">حركة الصنف (آخر 7 أيام)</h4>
-              <div className="h-32 flex items-end gap-2 px-2 pb-2">
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-cyan-300">حركة الصنف (آخر 7 أيام)</h4>
+              <div className="flex h-28 items-end gap-2 px-1 pb-1">
                 {movementBars.map((value, index) => (
                   <div
                     key={`${expandedRow.id}-bar-${index}`}
-                    className={`w-full rounded-t-sm ${index === 2 || index === 5 ? "bg-cyan-300" : "bg-cyan-400/35"}`}
+                    className={`w-full rounded-t-md transition-all ${index === 2 || index === 5 ? "bg-cyan-300" : "bg-cyan-400/30"}`}
                     style={{ height: `${clampPercent(value)}%` }}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-cyan-300 font-bold text-sm">إجراءات سريعة</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="text-xs border-slate-700 text-slate-200 hover:bg-cyan-500/10">طلب توريد</Button>
-                <Button variant="outline" className="text-xs border-slate-700 text-slate-200 hover:bg-cyan-500/10">جرد يدوي</Button>
-                <Button variant="outline" className="text-xs border-slate-700 text-slate-200 hover:bg-cyan-500/10">تعديل التنبيهات</Button>
-                <Button variant="outline" className="text-xs border-slate-700 text-slate-200 hover:bg-cyan-500/10">عرض السجل</Button>
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-cyan-300">ملخص سريع</h4>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
+                الصنف المحدد يعرض توزيعه الحالي بين المخزون الثابت والمتحرك. استخدم «التفاصيل» لعرض الأرقام التسلسلية والمسلَّمة.
               </div>
             </div>
           </div>
         ) : null}
       </section>
 
-      {/* Received/Scanned Devices Section */}
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-900/35 backdrop-blur-xl p-6">
+      {/* v3 serial custody */}
+      <section className="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/40 p-5 shadow-sm backdrop-blur-xl sm:p-6">
         <Tabs value={activeSerialTab} onValueChange={(val) => setActiveSerialTab(val as "active" | "history")} className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 border-b border-slate-800 pb-4">
+          <div className="mb-5 flex flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-cyan-400" />
+              <h3 className="flex items-center gap-2 text-xl font-bold text-slate-100">
+                <span className="flex size-9 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10">
+                  <Smartphone className="h-4 w-4 text-cyan-400" />
+                </span>
                 الأرقام التسلسلية والأجهزة الميدانية
               </h3>
-              <p className="text-slate-400 text-xs mt-1">
-                عرض العهدة النشطة حالياً وسجل التسليم (v3) للأجهزة والشرائح المسلَّمة
+              <p className="mt-1.5 text-xs text-slate-400">
+                نظام v3 — العهدة النشطة وسجل تسليم الأجهزة والشرائح المكتملة
               </p>
             </div>
-            
-            <TabsList className="bg-slate-800/70 border border-slate-700/70">
-              <TabsTrigger value="active">
-                العهدة النشطة الحالية ({serializedItems.length})
+
+            <TabsList className="h-auto w-full justify-start rounded-xl border border-slate-700/70 bg-slate-950/50 p-1 md:w-auto">
+              <TabsTrigger
+                value="active"
+                className="gap-2 rounded-lg px-4 py-2 data-[state=active]:border data-[state=active]:border-emerald-400/30 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300"
+              >
+                العهدة النشطة
+                <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
+                  {arNumber(serializedItems.length)}
+                </span>
               </TabsTrigger>
-              <TabsTrigger value="history">
-                سجل تسليم الأجهزة ({deliveryLogCount})
+              <TabsTrigger
+                value="history"
+                className="gap-2 rounded-lg px-4 py-2 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/15 data-[state=active]:text-cyan-300"
+              >
+                سجل التسليم
+                <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
+                  {arNumber(deliveryLogCount)}
+                </span>
               </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="active" className="m-0">
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/30">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-900/50 border-slate-800 hover:bg-slate-900/50">
-                    <TableHead className="text-right text-slate-300">اسم وصورة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-300">الرقم التسلسلي S/N</TableHead>
-                    <TableHead className="text-center text-slate-300">الباركود / الشريحة</TableHead>
-                    <TableHead className="text-center text-slate-300">حالة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-300">التصنيف</TableHead>
-                    <TableHead className="text-center text-slate-300">تاريخ الاستلام</TableHead>
+                  <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
+                    <TableHead className="text-right text-slate-400">اسم وصورة المنتج</TableHead>
+                    <TableHead className="text-center text-slate-400">الرقم التسلسلي S/N</TableHead>
+                    <TableHead className="text-center text-slate-400">الباركود / الشريحة</TableHead>
+                    <TableHead className="text-center text-slate-400">حالة المنتج</TableHead>
+                    <TableHead className="text-center text-slate-400">التصنيف</TableHead>
+                    <TableHead className="text-center text-slate-400">تاريخ الاستلام</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {serializedItems.length === 0 ? (
                     <TableRow className="border-slate-800/60">
-                      <TableCell colSpan={6} className="text-center py-8 text-slate-400">
-                        لا توجد عهد نشطة حالياً في ملف هذا المندوب
+                      <TableCell colSpan={6} className="py-14 text-center">
+                        <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                          <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-500">
+                            <Boxes className="h-5 w-5" />
+                          </div>
+                          <p className="font-semibold text-slate-300">لا توجد عهدة نشطة حالياً</p>
+                          <p className="text-xs text-slate-500">الأجهزة والشرائح المسلَّمة تظهر في تبويب سجل التسليم</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     serializedItems.map((item) => {
                       let statusLabel = "في العهدة الميدانية";
                       let statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                      
+
                       let categoryLabel = "أجهزة POS";
                       if (item.itemTypeCategory === "sim") {
                         categoryLabel = "شريحة SIM";
@@ -1197,31 +1245,27 @@ export default function TechnicianDetailsPage() {
                       }
 
                       return (
-                        <TableRow key={item.id} className="border-slate-800 hover:bg-cyan-400/5 transition-colors group">
+                        <TableRow key={item.id} className="group border-slate-800 transition-colors hover:bg-cyan-400/[0.04]">
                           <TableCell>
                             <div className="flex items-center gap-3">
                               {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
                               <div>
-                                <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{item.itemTypeName || "صنف غير معروف"}</p>
+                                <p className="text-sm font-bold text-slate-200 transition-colors group-hover:text-cyan-300">{item.itemTypeName || "صنف غير معروف"}</p>
                                 <p className="text-xs text-slate-500">{item.itemTypeCategory || "Serialized Item"}</p>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-center font-mono text-xs text-slate-300">
-                            <span className="bg-slate-900 px-2.5 py-1 rounded border border-slate-800">{item.serialNumber}</span>
+                            <span className="rounded-md border border-slate-800 bg-slate-900 px-2.5 py-1">{item.serialNumber}</span>
                           </TableCell>
-                          <TableCell className="text-center text-slate-300 font-mono text-xs">
+                          <TableCell className="text-center font-mono text-xs text-slate-300">
                             {item.itemTypeCategory === "sim" ? item.carrierName || "شريحة" : item.barcode || "-"}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge className={`${statusColor} font-black text-xs px-2.5 py-0.5`}>{statusLabel}</Badge>
+                            <Badge className={`${statusColor} px-2.5 py-0.5 text-xs font-bold`}>{statusLabel}</Badge>
                           </TableCell>
-                          <TableCell className="text-center text-slate-300 text-xs">
-                            {categoryLabel}
-                          </TableCell>
-                          <TableCell className="text-center text-slate-400 text-xs">
-                            {formatDateTime(item.createdAt)}
-                          </TableCell>
+                          <TableCell className="text-center text-xs text-slate-300">{categoryLabel}</TableCell>
+                          <TableCell className="text-center text-xs text-slate-400">{formatDateTime(item.createdAt)}</TableCell>
                         </TableRow>
                       );
                     })
@@ -1232,24 +1276,30 @@ export default function TechnicianDetailsPage() {
           </TabsContent>
 
           <TabsContent value="history" className="m-0">
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/30">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-900/50 border-slate-800 hover:bg-slate-900/50">
-                    <TableHead className="text-right text-slate-300">اسم وصورة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-300">الرقم التسلسلي S/N</TableHead>
-                    <TableHead className="text-center text-slate-300">رقم الجهاز TID</TableHead>
-                    <TableHead className="text-center text-slate-300">حالة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-300">نوع المستودع</TableHead>
-                    <TableHead className="text-center text-slate-300">تاريخ العمليات</TableHead>
-                    <TableHead className="text-center text-slate-300">الإجراءات</TableHead>
+                  <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
+                    <TableHead className="text-right text-slate-400">اسم وصورة المنتج</TableHead>
+                    <TableHead className="text-center text-slate-400">الرقم التسلسلي S/N</TableHead>
+                    <TableHead className="text-center text-slate-400">رقم الجهاز TID</TableHead>
+                    <TableHead className="text-center text-slate-400">حالة المنتج</TableHead>
+                    <TableHead className="text-center text-slate-400">نوع المستودع</TableHead>
+                    <TableHead className="text-center text-slate-400">تاريخ العمليات</TableHead>
+                    <TableHead className="text-center text-slate-400">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {deliveryLogCount === 0 ? (
                     <TableRow className="border-slate-800/60">
-                      <TableCell colSpan={7} className="text-center py-8 text-slate-400">
-                        لا توجد أجهزة أو شرائح مسلَّمة لهذا المندوب بعد
+                      <TableCell colSpan={7} className="py-14 text-center">
+                        <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                          <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-500">
+                            <Truck className="h-5 w-5" />
+                          </div>
+                          <p className="font-semibold text-slate-300">لا توجد تسليمات بعد</p>
+                          <p className="text-xs text-slate-500">عند إكمال الطلبات ستظهر الأجهزة والشرائح المسلَّمة هنا</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1350,23 +1400,23 @@ export default function TechnicianDetailsPage() {
         </Tabs>
       </section>
 
-      <footer className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
-        <div className="rounded-2xl border border-emerald-400/20 bg-slate-900/35 p-6 backdrop-blur-xl flex items-center justify-between">
+      <footer className="grid grid-cols-1 gap-4 pb-2 md:grid-cols-2">
+        <div className="flex items-center justify-between rounded-2xl border border-emerald-400/20 bg-slate-900/45 p-5 backdrop-blur-xl">
           <div>
-            <h5 className="text-slate-400 text-sm mb-1">دقة المخزون الفعلي</h5>
-            <p className="text-2xl font-bold text-slate-100">{arNumber(Number(inventoryAccuracy.toFixed(1)))}%</p>
+            <h5 className="mb-1 text-sm text-slate-400">دقة المخزون الفعلي</h5>
+            <p className="text-2xl font-black text-slate-100">{arNumber(Number(inventoryAccuracy.toFixed(1)))}%</p>
           </div>
-          <div className="size-16 rounded-full border-4 border-emerald-400 border-t-transparent flex items-center justify-center text-emerald-300 text-xs font-bold">
+          <div className="flex size-14 items-center justify-center rounded-2xl border-2 border-emerald-400/60 text-xs font-bold text-emerald-300">
             {inventoryAccuracy >= 85 ? "عالية" : inventoryAccuracy >= 60 ? "جيدة" : "متوسطة"}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-red-400/20 bg-slate-900/35 p-6 backdrop-blur-xl flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-2xl border border-amber-400/20 bg-slate-900/45 p-5 backdrop-blur-xl">
           <div>
-            <h5 className="text-slate-400 text-sm mb-1">تنبيهات انخفاض المخزون</h5>
-            <p className="text-2xl font-bold text-red-300">{arNumber(lowStockAlertsCount)} أصناف</p>
+            <h5 className="mb-1 text-sm text-slate-400">تنبيهات انخفاض المخزون</h5>
+            <p className="text-2xl font-black text-amber-300">{arNumber(lowStockAlertsCount)} أصناف</p>
           </div>
-          <Button variant="outline" className="border-red-400/30 text-red-300 hover:bg-red-500/10">
+          <Button variant="outline" className="border-amber-400/30 text-amber-200 hover:bg-amber-500/10">
             مراجعة الآن
           </Button>
         </div>
