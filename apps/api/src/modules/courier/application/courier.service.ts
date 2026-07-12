@@ -653,7 +653,7 @@ export class CourierService {
     // ─── Guard Validation Layer ───────────────────────────────────────────────
     // All validation happens here before any DB write.
     // If guards throw GuardValidationError, no execution data is written.
-    await CompletionGuard.run({
+    const techUser = await CompletionGuard.run({
       requestId,
       enteredBy,
       executionData: data,
@@ -663,6 +663,12 @@ export class CourierService {
     // ─────────────────────────────────────────────────────────────────────────
 
     const isCompleted = isCompletedStatus(data.installationStatus);
+
+    // Authoritative technician = serial custody owner (never assignment tecName)
+    if (techUser && isCompleted) {
+      data.technicianCode = techUser.username;
+      data.salesTechnician = techUser.fullName;
+    }
 
     let result: any;
     await db.transaction(async (tx) => {

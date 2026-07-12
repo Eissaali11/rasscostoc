@@ -179,6 +179,18 @@ export default function CourierRequestDetailPage() {
   useEffect(() => {
     if (request && !loadedSerials) {
       setLoadedSerials(true);
+      // Strip polluted assignment name from prior saves — custody lookup is source of truth
+      if (
+        request.execution?.salesTechnician &&
+        request.tecName &&
+        request.execution.salesTechnician === request.tecName
+      ) {
+        setForm((prev) => ({
+          ...prev,
+          salesTechnician: undefined,
+          technicianCode: undefined,
+        }));
+      }
       const sn = request.execution?.sn;
       const simSerial = request.execution?.simSerial || request.simSn;
       if (sn) {
@@ -236,7 +248,39 @@ export default function CourierRequestDetailPage() {
       toast({ title: "خطأ في العهدة", description: "الجهاز والشريحة ينتميان لفنيين مختلفين. لا يمكن إغلاق الطلب.", variant: "destructive" });
       return;
     }
-    mutation.mutate({ ...currentForm });
+    const completing =
+      currentForm.installationStatus === "Installation Completed" ||
+      currentForm.installationStatus === "Installation Completed - NL";
+    if (completing) {
+      if (!currentForm.sn?.trim()) {
+        toast({ title: "تنبيه", description: "أدخل الرقم التسلسلي للجهاز قبل الإكمال.", variant: "destructive" });
+        return;
+      }
+      if (!deviceLookup?.found || !deviceLookup?.technician) {
+        toast({
+          title: "لم يتم التعرف على الفني من العهدة",
+          description: "امسح/أدخل رقم الجهاز المرتبط بمخزون الفني حتى يظهر اسمه تلقائياً. لا يُعتمد اسم التعيين للإكمال.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!deviceLookup.inActiveCustody) {
+        toast({
+          title: "الجهاز ليس في عهدة نشطة",
+          description: `الحالة الحالية: ${deviceLookup.custodyStatus ?? "غير معروفة"}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    mutation.mutate({
+      ...currentForm,
+      // Always stamp custody owner — never leave assignment name as salesTechnician
+      technicianCode: deviceLookup?.technician
+        ? (deviceLookup.technician.technicianCode ?? deviceLookup.technician.username)
+        : currentForm.technicianCode,
+      salesTechnician: deviceLookup?.technician?.fullName ?? currentForm.salesTechnician,
+    });
   };
 
   if (isLoading) {
@@ -339,7 +383,7 @@ export default function CourierRequestDetailPage() {
           <DetailRow label="العنوان" value={request.addressAr} />
           <DetailRow label="الجوال" value={request.mobile} />
           <DetailRow label="الجوال 2" value={request.mobile2} />
-          <DetailRow label="اسم الفني" value={request.tecName} />
+          <DetailRow label="اسم الفني (تعيين الطلب)" value={request.tecName} />
           <DetailRow label="نوع التركيب" value={request.installationType} />
           <DetailRow label="نوع الجهاز" value={request.vendorType} />
           <DetailRow label="SIM" value={request.sim} />
@@ -589,14 +633,19 @@ export default function CourierRequestDetailPage() {
                   </div>
                   {request.tecName && (
                     <p className="mt-1 text-[11px] text-slate-500">
-                      التعيين على الطلب: <span className="text-slate-300">{request.tecName}</span>
-                      {deviceLookup?.technician &&
+                      تعيين الطلب (مرجعي فقط): <span className="text-slate-400">{request.tecName}</span>
+                      {deviceLookup?.technician ? (
                         request.tecName.replace(/_/g, " ").toLowerCase() !==
                           (deviceLookup.technician.fullName || "").toLowerCase() && (
                           <span className="text-amber-400 block mt-0.5">
-                            ⚠ اسم التعيين لا يطابق مالك العهدة الحالي — الخصم سيتم من عهدة المالك الظاهر أعلاه.
+                            ⚠ الخصم من عهدة: {deviceLookup.technician.fullName} — وليس من اسم التعيين.
                           </span>
-                        )}
+                        )
+                      ) : (
+                        <span className="text-red-400/80 block mt-0.5">
+                          أدخل رقم جهاز موجود في مخزون الفني ليظهر اسمه هنا تلقائياً.
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>

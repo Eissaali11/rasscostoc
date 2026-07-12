@@ -13,11 +13,12 @@
  */
 
 import { db } from "@server/core/config/db";
-import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { users, items } from "@shared/schema";
+import { eq, or, inArray } from "drizzle-orm";
 import type { IGeneralInventoryRepository } from "./IGeneralInventoryRepository";
 import type { ISerializedInventoryRepository } from "./ISerializedInventoryRepository";
 import type { DeductionContext, DeductionResult } from "./inventory.engine.types";
+import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 export class InventoryEngine {
   constructor(
@@ -27,12 +28,6 @@ export class InventoryEngine {
 
   /**
    * Execute a full inventory deduction for a completed courier execution.
-   *
-   * Performs two independent operations:
-   *  1. General inventory deduction (device units from technician's general stock).
-   *  2. Serialized custody ScanOut (individual items in IN_TRANSIT_CUSTODY).
-   *
-   * @returns DeductionResult with per-operation outcomes and errors.
    */
   async deduct(ctx: DeductionContext): Promise<DeductionResult> {
     const result: DeductionResult = {
@@ -42,13 +37,61 @@ export class InventoryEngine {
       errors: [],
     };
 
+    // Prefer serial owner as technician identity (assignment names are unreliable)
+    const resolved = await InventoryEngine.resolveTechnician(ctx);
+    if (resolved) {
+      ctx.technicianCode = resolved.username;
+      (ctx as any).technicianId = resolved.id;
+    }
+
     await this.deductGeneralInventory(ctx, result);
     await this.deductSerializedCustody(ctx, result);
 
     return result;
   }
 
-  // ─── Private Handlers ──────────────────────────────────────────────────────
+  /**
+   * Resolve technician: 1) owner of first serial in custody list, 2) username/fullName/code match.
+   */
+  static async resolveTechnician(
+    ctx: DeductionContext
+  ): Promise<{ id: string; username: string; fullName: string } | null> {
+    for (const serial of ctx.serialsForCustody) {
+      if (!serial?.trim()) continue;
+      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serial);
+      if (candidates.length === 0) continue;
+      const [item] = await db
+        .select({ currentOwnerId: items.currentOwnerId })
+        .from(items)
+        .where(inArray(items.serialNumber, candidates))
+        .limit(1);
+      if (item?.currentOwnerId) {
+        const [tech] = await db
+          .select({ id: users.id, username: users.username, fullName: users.fullName })
+          .from(users)
+          .where(eq(users.id, item.currentOwnerId))
+          .limit(1);
+        if (tech) return tech;
+      }
+    }
+
+    const code = ctx.technicianCode?.trim();
+    if (!code) return null;
+
+    const [techUser] = await db
+      .select({ id: users.id, username: users.username, fullName: users.fullName })
+      .from(users)
+      .where(
+        or(
+          eq(users.username, code),
+          eq(users.fullName, code),
+          eq(users.technicianCode, code)
+        )
+      )
+      .limit(1);
+
+    return techUser ?? null;
+  }
 
   private async deductGeneralInventory(
     ctx: DeductionContext,
@@ -87,14 +130,16 @@ export class InventoryEngine {
   ): Promise<void> {
     if (ctx.serialsForCustody.length === 0) return;
 
-    // Resolve technician ID for custody operations
-    const [techUser] = await db
-      .select({ id: users.id, username: users.username })
-      .from(users)
-      .where(eq(users.username, ctx.technicianCode))
-      .limit(1);
+    const techId = (ctx as any).technicianId as string | undefined;
+    let techUserId = techId;
 
-    if (!techUser) {
+    if (!techUserId) {
+      const resolved = await InventoryEngine.resolveTechnician(ctx);
+      techUserId = resolved?.id;
+      if (resolved) ctx.technicianCode = resolved.username;
+    }
+
+    if (!techUserId) {
       result.errors.push(
         `[InventoryEngine] Technician "${ctx.technicianCode}" not found for custody ScanOut.`
       );
@@ -104,7 +149,7 @@ export class InventoryEngine {
     for (const serial of ctx.serialsForCustody) {
       try {
         const deducted = await this.serializedInventory.scanOut(
-          techUser.id,
+          techUserId,
           serial,
           ctx.customerName,
           ctx.referenceNumber
@@ -119,12 +164,6 @@ export class InventoryEngine {
     }
   }
 
-  // ─── Static Factory ────────────────────────────────────────────────────────
-
-  /**
-   * Create the default InventoryEngine wired with production adapters.
-   * Call this from CourierWorkflow or any other consumer.
-   */
   static createDefault(): InventoryEngine {
     const { DevicesServiceAdapter } = require("../../infrastructure/adapters/DevicesServiceAdapter");
     const { SerializedItemsAdapter } = require("../../infrastructure/adapters/SerializedItemsAdapter");

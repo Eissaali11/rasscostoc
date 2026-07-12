@@ -31,15 +31,51 @@ export class InventorySubscriber {
           `[InventorySubscriber] Received ExecutionCompletedEvent for request ID: ${requestId}`
         );
 
-        const technicianCode =
-          execution.technicianCode || execution.salesTechnician || request.tecName;
+        // Build serial list first so deduction can resolve technician from custody owner
+        const devices: { serialNumber: string; model?: string }[] = [];
+        const serialsForCustody: string[] = [];
 
-        if (!technicianCode) {
-          console.error(
-            `[InventorySubscriber] Deduction aborted: No technician code found for request ${requestId}`
-          );
-          return;
+        const addSerial = async (sn?: string | null) => {
+          if (!sn?.trim()) return;
+          const candidates = await SerialRecognitionService.buildStoredSerialCandidates(sn);
+          const serial =
+            [...candidates].sort((a, b) => a.length - b.length)[0] || sn.trim();
+          if (!devices.some((d) => d.serialNumber === serial)) {
+            devices.push({ serialNumber: serial, model: request.vendorType ?? undefined });
+          }
+          if (!serialsForCustody.includes(serial)) {
+            serialsForCustody.push(serial);
+          }
+          for (const c of candidates) {
+            if (!serialsForCustody.includes(c)) serialsForCustody.push(c);
+          }
+        };
+
+        await addSerial(execution.sn);
+        await addSerial(execution.extraField1);
+        await addSerial(execution.extraField2);
+        if (execution.simSerial?.trim()) {
+          await addSerial(execution.simSerial);
         }
+
+        const requestItemsList = await db
+          .select()
+          .from(courierRequestItems)
+          .where(eq(courierRequestItems.requestId, requestId));
+
+        for (const item of requestItemsList) {
+          if (item.status === "RECEIVED" || item.status === "DELIVERED" || item.status === "INSTALLED") {
+            if (item.itemType === "POS" && item.serialNumber) {
+              await addSerial(item.serialNumber);
+            } else if (item.itemType === "SIM" && item.simSerial) {
+              await addSerial(item.simSerial);
+            }
+          }
+        }
+
+        // Prefer username stamped from custody owner; fall back to assignment only if needed
+        let technicianCode =
+          execution.technicianCode || execution.salesTechnician || request.tecName || "unknown";
 
         const idempotencyKey = `${event.name}:REQ-${requestId}:InventorySubscriber:v${event.version}`;
 
@@ -48,49 +84,6 @@ export class InventorySubscriber {
           event.id,
           "InventorySubscriber",
           async () => {
-            const devices: { serialNumber: string; model?: string }[] = [];
-            const serialsForCustody: string[] = [];
-
-            const addSerial = async (sn?: string | null) => {
-              if (!sn?.trim()) return;
-              const candidates = await SerialRecognitionService.buildStoredSerialCandidates(sn);
-              // Prefer the shortest candidate (usually the stored stripped form for devices)
-              const serial =
-                [...candidates].sort((a, b) => a.length - b.length)[0] || sn.trim();
-              if (!devices.some((d) => d.serialNumber === serial)) {
-                devices.push({ serialNumber: serial, model: request.vendorType ?? undefined });
-              }
-              if (!serialsForCustody.includes(serial)) {
-                serialsForCustody.push(serial);
-              }
-              for (const c of candidates) {
-                if (!serialsForCustody.includes(c)) serialsForCustody.push(c);
-              }
-            };
-
-            await addSerial(execution.sn);
-            await addSerial(execution.extraField1);
-            await addSerial(execution.extraField2);
-            if (execution.simSerial?.trim()) {
-              await addSerial(execution.simSerial);
-            }
-
-            // Fetch scanned serial numbers bound to the courier request items (V14 flow)
-            const requestItemsList = await db
-              .select()
-              .from(courierRequestItems)
-              .where(eq(courierRequestItems.requestId, requestId));
-
-            for (const item of requestItemsList) {
-              if (item.status === "RECEIVED" || item.status === "DELIVERED") {
-                if (item.itemType === "POS" && item.serialNumber) {
-                  await addSerial(item.serialNumber);
-                } else if (item.itemType === "SIM" && item.simSerial) {
-                  await addSerial(item.simSerial);
-                }
-              }
-            }
-
             const span = tracer.startSpan("InventoryDeduction", { requestId, actorId, technicianCode });
 
             try {
