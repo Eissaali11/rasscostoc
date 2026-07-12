@@ -241,6 +241,9 @@ export function EditCourierExecutionModal({
         });
         return;
       }
+    } else if (currentForm.installationStatus === "Not Completed" && !currentForm.responseReasonCode) {
+      toast({ title: "تنبيه", description: "اختر سبب الفشل قبل الحفظ.", variant: "destructive" });
+      return;
     }
 
     // Send only writable fields — echoing enteredAt/updatedAt as strings crashes the API.
@@ -544,7 +547,9 @@ export function EditCourierExecutionModal({
                         className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
                       >
                         {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                        حفظ وإكمال
+                        {currentForm.installationStatus?.includes("Completed")
+                          ? "حفظ وإكمال وخصم العهدة"
+                          : "حفظ فقط (بدون خصم)"}
                       </button>
                     </>
                   )}

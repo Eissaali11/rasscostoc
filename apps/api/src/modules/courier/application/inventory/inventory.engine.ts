@@ -44,8 +44,24 @@ export class InventoryEngine {
       (ctx as any).technicianId = resolved.id;
     }
 
-    await this.deductGeneralInventory(ctx, result);
+    // v3 custody (items + moving sync via scanOut) is authoritative.
+    // Run it first so serials leave active custody and counters drop once.
     await this.deductSerializedCustody(ctx, result);
+
+    // Legacy general pool only for device SNs that were NOT deducted via custody scan-out
+    // (avoids double-decrement of technician_moving_inventory_entries).
+    const deducted = new Set(
+      result.custodyItemsDeducted.map((s) => s.trim().toLowerCase())
+    );
+    const remainingDevices = ctx.devices.filter(
+      (d) => !deducted.has(d.serialNumber.trim().toLowerCase())
+    );
+    if (remainingDevices.length > 0) {
+      await this.deductGeneralInventory(
+        { ...ctx, devices: remainingDevices },
+        result
+      );
+    }
 
     return result;
   }
