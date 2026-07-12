@@ -13,7 +13,7 @@ const { Client } = pkg;
     const itemTypes = itemTypesRes.rows;
     
     // Helper to check if item type is serialized
-    const isSerialized = (itemType: any) => {
+    const isSerialized = (itemType) => {
       return itemType.requires_serial === true || itemType.category === 'sim' || itemType.category === 'devices';
     };
 
@@ -32,7 +32,7 @@ const { Client } = pkg;
     console.log(`Found ${activeItemsGroups.length} active custody groups in items table.`);
 
     // Map to quickly look up actual counts: key is "technicianId:itemTypeId"
-    const actualCounts = new Map<string, number>();
+    const actualCounts = new Map();
     for (const group of activeItemsGroups) {
       if (serializedItemTypeIds.has(group.item_type_id)) {
         actualCounts.set(`${group.current_owner_id}:${group.item_type_id}`, group.count);
@@ -45,7 +45,7 @@ const { Client } = pkg;
     console.log(`Found ${existingEntries.length} existing technician moving inventory entries.`);
 
     // Map of existing entries: key is "technicianId:itemTypeId"
-    const existingEntriesMap = new Map<string, any>();
+    const existingEntriesMap = new Map();
     for (const entry of existingEntries) {
       existingEntriesMap.set(`${entry.technician_id}:${entry.item_type_id}`, entry);
     }
