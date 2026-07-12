@@ -10,6 +10,8 @@ const PROJECT_PATH = '/home/stoc/htdocs/stoc.fun';
 
 const COMMANDS = [
   `cd ${PROJECT_PATH}`,
+  'git reset --hard',
+  'git clean -f -d',
   'git pull origin main',
   'npm run build',
   'pm2 restart nulip-inventory',

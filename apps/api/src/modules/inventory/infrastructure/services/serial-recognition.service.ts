@@ -90,6 +90,29 @@ export class SerialRecognitionService {
       }
     }
 
+    // Fallback: If it did not match any prefix, check if it is already clean (matches length and regex directly)
+    for (const type of serializedTypes) {
+      if (type.serialLength !== null && type.serialLength !== undefined) {
+        if (cleaned.length === type.serialLength) {
+          let regexMatches = true;
+          if (type.serialRegex) {
+            try {
+              const regex = new RegExp(type.serialRegex);
+              // Test against cleaned raw (already matches length)
+              regexMatches = regex.test(cleaned);
+            } catch (e) {}
+          }
+          if (regexMatches) {
+            candidates.push({
+              type,
+              matchedPrefix: "",
+              cleanSerial: cleaned
+            });
+          }
+        }
+      }
+    }
+
     if (candidates.length === 0) {
       throw new AppError(`لم يتم التعرف على نوع المنتج للباركود: ${rawBarcode}`, 400);
     }
