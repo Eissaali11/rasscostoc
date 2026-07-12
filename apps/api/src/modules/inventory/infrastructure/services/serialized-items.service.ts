@@ -38,63 +38,6 @@ export class SerializedItemsService {
     }
   }
 
-  private async validateSerialFormat(tx: any, serialNumber: string, itemTypeId: string) {
-    const [itemType] = await tx
-      .select()
-      .from(itemTypes)
-      .where(eq(itemTypes.id, itemTypeId))
-      .limit(1);
-
-    if (!itemType) {
-      throw new AppError(`نوع المنتج غير موجود بالرقم: ${itemTypeId}`, 404);
-    }
-
-    const serial = serialNumber.trim();
-
-    if (itemType.requiresSerial) {
-      // 1. Prefix Validation
-      if (itemType.serialPrefix) {
-        const prefixes = itemType.serialPrefix.split(',').map((p: string) => p.trim());
-        const hasValidPrefix = prefixes.some((prefix: string) => serial.startsWith(prefix));
-        if (!hasValidPrefix) {
-          throw new AppError(
-            `الرقم التسلسلي ${serial} غير صحيح. يجب أن يبدأ بـ: ${prefixes.join(' أو ')}`,
-            400
-          );
-        }
-      }
-
-      // 2. Length Validation
-      if (itemType.serialLength !== null && itemType.serialLength !== undefined) {
-        if (serial.length !== itemType.serialLength) {
-          let digitsAfterPrefix = itemType.serialLength;
-          if (itemType.serialPrefix) {
-            const prefixes = itemType.serialPrefix.split(',').map((p: string) => p.trim());
-            const matchedPrefix = prefixes.find((p: string) => serial.startsWith(p));
-            if (matchedPrefix) {
-              digitsAfterPrefix = itemType.serialLength - matchedPrefix.length;
-            }
-          }
-          throw new AppError(
-            `طول الرقم التسلسلي ${serial} غير صحيح. المطلوب: ${digitsAfterPrefix} أرقام بعد البادئة.`,
-            400
-          );
-        }
-      }
-
-      // 3. Regex Validation
-      if (itemType.serialRegex) {
-        const regex = new RegExp(itemType.serialRegex);
-        if (!regex.test(serial)) {
-          throw new AppError(
-            `الرقم التسلسلي ${serial} لا يطابق الصيغة المعتمدة لـ ${itemType.nameAr}.`,
-            400
-          );
-        }
-      }
-    }
-  }
-
   /**
    * Scan-in (Add Custody)
    */
@@ -297,13 +240,21 @@ export class SerializedItemsService {
     longitude?: number
   ) {
     return await db.transaction(async (tx: any) => {
+      // Resolve the raw scan to the normalized stored serial form(s) so a scan
+      // of the full labeled barcode matches the clean serial saved on intake.
+      const serialCandidates = await SerialRecognitionService.resolveSerialCandidates(
+        serialNumber,
+        undefined,
+        tx
+      );
+
       // Find the item in technician's custody
       const [item] = await tx
         .select()
         .from(items)
         .where(
           and(
-            eq(items.serialNumber, serialNumber),
+            inArray(items.serialNumber, serialCandidates),
             eq(items.currentOwnerId, technicianId),
             inArray(items.status, ["IN_TRANSIT_CUSTODY", "RECEIVED_BY_TECHNICIAN"])
           )
@@ -374,6 +325,9 @@ export class SerializedItemsService {
    * Lookup serial number status and history
    */
   async lookup(serialNumber: string) {
+    // Resolve the raw scanned/typed value to the normalized stored serial form(s).
+    const serialCandidates = await SerialRecognitionService.resolveSerialCandidates(serialNumber);
+
     const [item] = await db
       .select({
         id: items.id,
@@ -392,7 +346,7 @@ export class SerializedItemsService {
       .from(items)
       .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
       .leftJoin(users, eq(items.currentOwnerId, users.id))
-      .where(eq(items.serialNumber, serialNumber))
+      .where(inArray(items.serialNumber, serialCandidates))
       .limit(1);
 
     if (!item) {
