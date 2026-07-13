@@ -376,7 +376,7 @@ export default function OperationDetailsPage() {
 
     const container = document.createElement("div");
     container.style.cssText =
-      "position:absolute;left:-9999px;top:0;width:794px;background:#0A0D14;color:#e2e8f0;font-family:"Noto Kufi Arabic",Arial,sans-serif;direction:rtl;";
+      "position:absolute;left:-9999px;top:0;width:794px;background:#0A0D14;color:#e2e8f0;font-family:'Noto Kufi Arabic',Arial,sans-serif;direction:rtl;";
 
     container.innerHTML = `
       <div style="padding:0;min-height:1123px;background:#0A0D14;position:relative;overflow:hidden;">
