@@ -1,10 +1,16 @@
 ﻿import { useTranslation } from "@/lib/language";
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
+import { offsetLatLng, resolveSaudiLatLng } from "@/lib/saudi-geo";
+import type { SpreadMapPoint } from "@/components/dashboard/saudi-spread-map";
 import { motion, AnimatePresence } from "framer-motion";
+
+const SaudiSpreadMap = lazy(() =>
+  import("@/components/dashboard/saudi-spread-map").then((module) => ({ default: module.SaudiSpreadMap })),
+);
 import {
   Bell,
   Boxes,
@@ -201,58 +207,6 @@ function percentage(value: number, max: number): number {
 }
 
 type MovementView = "circles" | "bars" | "lines" | "map";
-
-const SAUDI_CITY_COORDS: Record<string, { x: number; y: number }> = {
-  الرياض: { x: 54, y: 48 },
-  riyadh: { x: 54, y: 48 },
-  جدة: { x: 28, y: 52 },
-  jeddah: { x: 28, y: 52 },
-  الدمام: { x: 70, y: 42 },
-  dammam: { x: 70, y: 42 },
-  الخبر: { x: 71, y: 44 },
-  khobar: { x: 71, y: 44 },
-  مكة: { x: 30, y: 56 },
-  "مكة المكرمة": { x: 30, y: 56 },
-  makkah: { x: 30, y: 56 },
-  mecca: { x: 30, y: 56 },
-  المدينة: { x: 32, y: 40 },
-  "المدينة المنورة": { x: 32, y: 40 },
-  madinah: { x: 32, y: 40 },
-  medina: { x: 32, y: 40 },
-  تبوك: { x: 26, y: 22 },
-  tabuk: { x: 26, y: 22 },
-  حائل: { x: 42, y: 30 },
-  hail: { x: 42, y: 30 },
-  أبها: { x: 34, y: 72 },
-  ابها: { x: 34, y: 72 },
-  abha: { x: 34, y: 72 },
-  جازان: { x: 32, y: 82 },
-  jazan: { x: 32, y: 82 },
-  نجران: { x: 44, y: 80 },
-  najran: { x: 44, y: 80 },
-  القصيم: { x: 48, y: 36 },
-  بريدة: { x: 48, y: 36 },
-  qassim: { x: 48, y: 36 },
-  الجبيل: { x: 68, y: 38 },
-  jubail: { x: 68, y: 38 },
-  الطائف: { x: 33, y: 58 },
-  taif: { x: 33, y: 58 },
-  ينبع: { x: 27, y: 42 },
-  yanbu: { x: 27, y: 42 },
-  الأحساء: { x: 66, y: 50 },
-  الهفوف: { x: 66, y: 50 },
-  ahsa: { x: 66, y: 50 },
-};
-
-function resolveCityCoords(raw: string | null | undefined): { x: number; y: number } | null {
-  if (!raw) return null;
-  const key = raw.trim().toLowerCase();
-  if (SAUDI_CITY_COORDS[key]) return SAUDI_CITY_COORDS[key];
-  const arabicKey = raw.trim();
-  if (SAUDI_CITY_COORDS[arabicKey]) return SAUDI_CITY_COORDS[arabicKey];
-  const matched = Object.entries(SAUDI_CITY_COORDS).find(([name]) => key.includes(name.toLowerCase()) || name.includes(arabicKey));
-  return matched?.[1] ?? null;
-}
 
 function ChartTooltipStyle() {
   return {
@@ -660,15 +614,51 @@ export default function Dashboard() {
 
   const geoSpreadPoints = useMemo(() => {
     return cityMovementData
-      .map((city, index) => {
-        const coords = resolveCityCoords(city.name) || {
-          x: 24 + ((index * 9) % 55),
-          y: 22 + ((index * 11) % 58),
-        };
+      .map((city) => {
+        const coords = resolveSaudiLatLng(city.name);
+        if (!coords) return null;
         return { ...city, ...coords };
       })
+      .filter((point): point is NonNullable<typeof point> => !!point)
       .filter((point) => point.units > 0 || point.technicians > 0 || point.warehouses > 0);
   }, [cityMovementData]);
+
+  const mapPoints = useMemo<SpreadMapPoint[]>(() => {
+    const points: SpreadMapPoint[] = [];
+
+    warehousesData.forEach((warehouse) => {
+      const locationText = warehouse.location || warehouse.name;
+      const base = resolveSaudiLatLng(locationText) || resolveSaudiLatLng(warehouse.name);
+      if (!base) return;
+      const coords = offsetLatLng(base, warehouse.id, "warehouse");
+      points.push({
+        id: `wh-${warehouse.id}`,
+        name: warehouse.name,
+        kind: "warehouse",
+        lat: coords.lat,
+        lng: coords.lng,
+        units: Number(warehouse.totalItems || 0),
+        subtitle: warehouse.location,
+      });
+    });
+
+    (techniciansData?.technicians || []).forEach((tech) => {
+      const base = resolveSaudiLatLng(tech.city);
+      if (!base) return;
+      const coords = offsetLatLng(base, tech.technicianId, "technician");
+      points.push({
+        id: `tech-${tech.technicianId}`,
+        name: tech.technicianName,
+        kind: "technician",
+        lat: coords.lat,
+        lng: coords.lng,
+        units: sumInventoryValue(tech.fixedInventory) + sumInventoryValue(tech.movingInventory),
+        subtitle: tech.city,
+      });
+    });
+
+    return points;
+  }, [warehousesData, techniciansData?.technicians]);
 
   // ── Courier queries (admin/supervisor only) ──
   const { data: courierStats } = useQuery<CourierDashboardStats>({
@@ -1075,49 +1065,40 @@ export default function Dashboard() {
 
                   {movementView === "map" && (
                     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-                      <div className="xl:col-span-3 relative h-[340px] rounded-2xl overflow-hidden border border-[rgba(24,178,176,0.16)] bg-gradient-to-br from-[#eefbfb] via-[#f8fafb] to-[#e7ecef]">
-                        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
-                          <defs>
-                            <linearGradient id="saudiFill" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0%" stopColor="#18B2B0" stopOpacity="0.16" />
-                              <stop offset="100%" stopColor="#5F6368" stopOpacity="0.08" />
-                            </linearGradient>
-                          </defs>
-                          <path
-                            d="M18 24 C26 14, 40 12, 52 16 C64 20, 74 18, 82 24 C88 30, 90 40, 86 50 C84 60, 80 68, 74 76 C66 86, 54 90, 42 88 C32 86, 24 78, 20 68 C14 56, 12 38, 18 24 Z"
-                            fill="url(#saudiFill)"
-                            stroke="#18B2B0"
-                            strokeWidth="1.2"
-                            opacity="0.95"
+                      <div className="xl:col-span-3 relative h-[420px] rounded-2xl overflow-hidden border border-[rgba(24,178,176,0.16)] bg-[#F8FAFB]">
+                        <Suspense
+                          fallback={
+                            <div className="h-full flex items-center justify-center text-sm text-[#6B7280]">
+                              {t('dashboard.movement_map_loading')}
+                            </div>
+                          }
+                        >
+                          <SaudiSpreadMap
+                            points={mapPoints}
+                            emptyLabel={t('dashboard.movement_no_geo')}
+                            techniciansLabel={t('dashboard.movement_technicians_count')}
+                            warehousesLabel={t('dashboard.movement_warehouses_count')}
+                            unitsLabel={t('dashboard.movement_units_count')}
+                            formatNumber={formatNumber}
                           />
-                          <path
-                            d="M22 30 C30 22, 42 20, 54 24 C66 28, 76 26, 82 32"
-                            fill="none"
-                            stroke="#18B2B0"
-                            strokeOpacity="0.25"
-                            strokeWidth="0.6"
-                          />
-                          {geoSpreadPoints.map((point) => {
-                            const radius = Math.max(1.8, Math.min(5.5, 1.6 + Math.sqrt(Math.max(point.units, 1)) / 18));
-                            return (
-                              <g key={point.name}>
-                                <circle cx={point.x} cy={point.y} r={radius + 1.8} fill="#18B2B0" opacity="0.15" />
-                                <circle cx={point.x} cy={point.y} r={radius} fill="#18B2B0" stroke="#ffffff" strokeWidth="0.6" />
-                                <text x={point.x} y={point.y - radius - 1.5} textAnchor="middle" fontSize="2.8" fill="#2D3135" fontWeight="700">
-                                  {point.name}
-                                </text>
-                              </g>
-                            );
-                          })}
-                        </svg>
-                        {geoSpreadPoints.length === 0 && (
-                          <div className="absolute inset-0 flex items-center justify-center text-sm text-[#6B7280]">
-                            {t('dashboard.movement_no_geo')}
-                          </div>
-                        )}
+                        </Suspense>
+                        <div className="absolute top-3 right-3 z-[500] flex items-center gap-2 rounded-xl border border-[rgba(24,178,176,0.2)] bg-white/95 px-3 py-2 text-[11px] shadow-sm">
+                          <span className="inline-flex items-center gap-1.5 text-[#2D3135]">
+                            <span className="size-2.5 rounded-full bg-[#18B2B0]" />
+                            {t('dashboard.movement_warehouses_count')}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 text-[#2D3135]">
+                            <span className="size-2.5 rounded-full bg-[#5F6368]" />
+                            {t('dashboard.movement_technicians_count')}
+                          </span>
+                        </div>
                       </div>
-                      <div className="xl:col-span-2 space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                      <div className="xl:col-span-2 space-y-3 max-h-[420px] overflow-y-auto pr-1">
                         <p className="text-xs text-[#6B7280]">{t('dashboard.movement_map_hint')}</p>
+                        <div className="rounded-xl border border-[rgba(24,178,176,0.16)] bg-white/80 p-3 text-xs text-[#6B7280] flex items-center justify-between">
+                          <span>{t('dashboard.movement_map_points')}</span>
+                          <strong className="text-[#18B2B0]">{formatNumber(mapPoints.length)}</strong>
+                        </div>
                         {geoSpreadPoints.map((point) => (
                           <div key={`list-${point.name}`} className="rounded-xl border border-[rgba(24,178,176,0.16)] bg-white/80 p-3">
                             <div className="flex items-center justify-between gap-2 mb-2">

@@ -225,6 +225,8 @@
   "movement_activity": "Operations Status",
   "movement_cities": "Top Active Cities",
   "movement_map_hint": "Technicians and warehouses spread across Saudi Arabia",
+  "movement_map_loading": "Loading live map...",
+  "movement_map_points": "Map points",
   "movement_technicians_count": "Technicians",
   "movement_warehouses_count": "Warehouses",
   "movement_units_count": "Units",

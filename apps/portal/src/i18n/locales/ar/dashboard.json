@@ -222,6 +222,8 @@
   "movement_activity": "حالة العمليات",
   "movement_cities": "أعلى المدن نشاطاً",
   "movement_map_hint": "انتشار المندوبين والمستودعات داخل السعودية",
+  "movement_map_loading": "جاري تحميل الخريطة الحقيقية...",
+  "movement_map_points": "نقاط على الخريطة",
   "movement_technicians_count": "مندوبون",
   "movement_warehouses_count": "مستودعات",
   "movement_units_count": "وحدات",
