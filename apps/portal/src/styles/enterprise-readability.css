@@ -254,3 +254,25 @@
   font-size: 0.9375rem !important;
   font-weight: 600 !important;
 }
+
+/* Keep white text on active Home tabs and solid status chips */
+.rassco-light-surface .dashboard-tab-trigger[data-state="active"],
+.rassco-light-surface .dashboard-tab-trigger[data-state="active"] :where(span, svg) {
+  color: #ffffff !important;
+}
+
+.rassco-light-surface .bg-rassco-danger,
+.rassco-light-surface .bg-rassco,
+.rassco-light-surface .bg-rassco-warning,
+.rassco-light-surface .bg-rassco-gray,
+.rassco-light-surface .bg-primary,
+.rassco-light-surface .bg-destructive {
+  color: #ffffff;
+}
+
+.rassco-light-surface .bg-rassco-danger :where(.text-white, span, svg),
+.rassco-light-surface .bg-rassco :where(.text-white, span, svg),
+.rassco-light-surface .bg-primary :where(.text-white, span, svg),
+.rassco-light-surface .bg-destructive :where(.text-white, span, svg) {
+  color: #ffffff !important;
+}

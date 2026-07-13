@@ -231,9 +231,9 @@ interface CourierAiStats {
 }
 
 const COURIER_COLORS = {
-  completed: "#10b981",
-  notCompleted: "#ef4444",
-  inProgress: "#f59e0b",
+  completed: "#18B2B0",
+  notCompleted: "#E05252",
+  inProgress: "#F4B740",
 };
 
 function CourierStatCard({
@@ -252,16 +252,16 @@ function CourierStatCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-[#1a3636] border border-slate-700/50 rounded-xl p-5 flex items-center gap-4 shadow transition-all duration-300 ${
-        onClick ? "cursor-pointer hover:border-emerald-500/50 hover:bg-[#1f3d3d] hover:-translate-y-0.5" : ""
+      className={`bg-white border border-rassco-border rounded-xl p-5 flex items-center gap-4 shadow transition-all duration-300 ${
+        onClick ? "cursor-pointer hover:border-rassco/50 hover:bg-rassco-bg hover:-translate-y-0.5" : ""
       }`}
     >
       <div className={`p-3 rounded-lg ${color} shadow-inner`}>
         <Icon className="w-5 h-5 text-white" />
       </div>
       <div>
-        <p className="text-xs text-slate-400 mb-1">{label}</p>
-        <p className="text-2xl font-bold text-slate-100">{value}</p>
+        <p className="text-xs text-rassco-muted mb-1">{label}</p>
+        <p className="text-2xl font-bold text-rassco-text">{value}</p>
       </div>
     </div>
   );
@@ -417,9 +417,9 @@ export default function Dashboard() {
   // Category chart distribution data
   const categoryData = useMemo(() => {
     return [
-      { name: t('dashboard.devices_payment'), value: Math.round(totals.total * 0.45), color: "#22d3ee" },
-      { name: t('dashboard.sims'), value: Math.round(totals.total * 0.30), color: "#fb923c" },
-      { name: t('dashboard.paper_stickers'), value: Math.round(totals.total * 0.25), color: "#c084fc" },
+      { name: t('dashboard.devices_payment'), value: Math.round(totals.total * 0.45), color: "#18B2B0" },
+      { name: t('dashboard.sims'), value: Math.round(totals.total * 0.30), color: "#5F6368" },
+      { name: t('dashboard.paper_stickers'), value: Math.round(totals.total * 0.25), color: "#F4B740" },
     ];
   }, [totals.total]);
 
@@ -470,20 +470,20 @@ export default function Dashboard() {
   // Render Admin/Supervisor Dashboard
   if (canSeeGlobalData) {
     return (
-      <div dir={dir} className="space-y-8 text-slate-100">
+      <div dir={dir} className="space-y-8 text-rassco-text">
         {/* Welcome Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#1a3636] border border-slate-700/60 p-6 rounded-2xl relative overflow-hidden shadow-lg">
-          <div className="absolute -left-20 -top-20 size-60 bg-cyan-400/10 blur-3xl rounded-full" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-rassco-border p-6 rounded-2xl relative overflow-hidden shadow-lg">
+          <div className="absolute -left-20 -top-20 size-60 bg-rassco/10 blur-3xl rounded-full" />
           <div className="relative z-10 space-y-1">
-            <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">
+            <h2 className="text-3xl font-extrabold tracking-tight text-rassco-text">
               {t('dashboard.admin_panel')}
             </h2>
-            <p className="text-slate-400 font-medium">
+            <p className="text-rassco-muted font-medium">
               {t('dashboard.welcome_back_overview', { name: user?.fullName || t('dashboard.supervisor') })}
             </p>
           </div>
           <div className="relative z-10 flex items-center gap-3">
-            <div className="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-semibold text-cyan-300 flex items-center gap-2">
+            <div className="px-4 py-2 bg-rassco-bg border border-rassco-border rounded-xl text-sm font-semibold text-rassco flex items-center gap-2">
               <CalendarIcon className="size-4" />
               {new Date().toLocaleDateString(dateLocale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </div>
@@ -493,45 +493,45 @@ export default function Dashboard() {
         {/* Top level metrics (Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1: Total Inventory */}
-          <Card className="bg-slate-900/40 border-slate-700/80 hover:border-cyan-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-cyan-400/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-cyan-400 opacity-80" />
+          <Card className="bg-white border-rassco-border hover:border-rassco/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-full h-1 bg-rassco opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">{t('dashboard.total_units_inventory')}</span>
-              <Boxes className="h-5 w-5 text-cyan-400" />
+              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.total_units_inventory')}</span>
+              <Boxes className="h-5 w-5 text-rassco" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-white mb-2">{formatNumber(totals.total)}</div>
-              <div className="flex flex-col gap-1 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
+              <div className="text-4xl font-extrabold tracking-tight text-rassco-text mb-2">{formatNumber(totals.total)}</div>
+              <div className="flex flex-col gap-1 text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
                 <div className="flex justify-between">
                   <span>{t('dashboard.warehouses_1')}</span>
-                  <span className="font-semibold text-purple-300">{formatNumber(totals.central)}</span>
+                  <span className="font-semibold text-rassco-gray">{formatNumber(totals.central)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('dashboard.couriers')}</span>
-                  <span className="font-semibold text-cyan-300">{formatNumber(totals.fixed)}</span>
+                  <span className="font-semibold text-rassco">{formatNumber(totals.fixed)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('dashboard.couriers_1')}</span>
-                  <span className="font-semibold text-orange-300">{formatNumber(totals.moving)}</span>
+                  <span className="font-semibold text-rassco-warning">{formatNumber(totals.moving)}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Card 2: Today Transactions */}
-          <Card className="bg-slate-900/40 border-slate-700/80 hover:border-orange-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-orange-400/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-orange-400 opacity-80" />
+          <Card className="bg-white border-rassco-border hover:border-rassco-warning/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco-warning/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-full h-1 bg-rassco-warning opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">{t('dashboard.day')}</span>
-              <Activity className="h-5 w-5 text-orange-400" />
+              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.day')}</span>
+              <Activity className="h-5 w-5 text-rassco-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-white mb-2">
+              <div className="text-4xl font-extrabold tracking-tight text-rassco-text mb-2">
                 {formatNumber(dashboardStats?.todayTransactions ?? 0)}
               </div>
-              <div className="flex justify-between items-center text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-between items-center text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
                 <span>{t('dashboard.update')}</span>
-                <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                <span className="flex items-center gap-1 text-rassco font-semibold">
                   <TrendingUp className="size-3.5" />
                   {t('dashboard.phrase_a75ee9f0')}
                 </span>
@@ -540,19 +540,19 @@ export default function Dashboard() {
           </Card>
 
           {/* Card 3: Active Staff */}
-          <Card className="bg-slate-900/40 border-slate-700/80 hover:border-purple-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-400/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-purple-400 opacity-80" />
+          <Card className="bg-white border-rassco-border hover:border-rassco/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-full h-1 bg-rassco-gray opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">{t('dashboard.item_28760')}</span>
-              <Users className="h-5 w-5 text-purple-400" />
+              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.item_28760')}</span>
+              <Users className="h-5 w-5 text-rassco" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-white mb-2">
+              <div className="text-4xl font-extrabold tracking-tight text-rassco-text mb-2">
                 {formatNumber(adminStats?.activeUsers ?? dashboardStats?.totalUsers ?? 0)}
               </div>
-              <div className="flex justify-between items-center text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-between items-center text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
                 <span>{t('dashboard.total_users_system')}</span>
-                <span className="font-semibold text-purple-300">
+                <span className="font-semibold text-rassco-gray">
                   {t('dashboard.count', { count: formatNumber(adminStats?.totalUsers ?? dashboardStats?.totalUsers ?? 0) })}
                 </span>
               </div>
@@ -560,26 +560,26 @@ export default function Dashboard() {
           </Card>
 
           {/* Card 4: Pending actions */}
-          <Card className="bg-slate-900/40 border-slate-700/80 hover:border-rose-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rose-400/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-rose-400 opacity-80" />
+          <Card className="bg-white border-rassco-border hover:border-rassco-danger/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco-danger/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-full h-1 bg-rassco-danger opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">{t('dashboard.item_27049')}</span>
-              <AlertTriangle className="h-5 w-5 text-rose-400 animate-pulse" />
+              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.item_27049')}</span>
+              <AlertTriangle className="h-5 w-5 text-rassco-danger animate-pulse" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-rose-400 mb-2">
+              <div className="text-4xl font-extrabold tracking-tight text-rassco-danger mb-2">
                 {formatNumber(totalPendingActions)}
               </div>
-              <div className="flex flex-col gap-1 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
+              <div className="flex flex-col gap-1 text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
                 <div className="flex justify-between">
                   <span>{t('dashboard.requests')}</span>
-                  <span className={`font-semibold ${pendingRequestsCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}`}>
+                  <span className={`font-semibold ${pendingRequestsCount > 0 ? "text-rassco-danger font-bold" : "text-rassco-muted"}`}>
                     {t('dashboard.requests_2', { count: pendingRequestsCount })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('dashboard.transfers_warehouses')}</span>
-                  <span className={`font-semibold ${pendingTransfersCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}`}>
+                  <span className={`font-semibold ${pendingTransfersCount > 0 ? "text-rassco-danger font-bold" : "text-rassco-muted"}`}>
                     {t('dashboard.transfers_2', { count: pendingTransfersCount })}
                   </span>
                 </div>
@@ -633,7 +633,7 @@ export default function Dashboard() {
               <Clock className="relative z-10 size-5 shrink-0" />
               <span className="relative z-10">{t('dashboard.operations')}</span>
               {totalPendingActions > 0 && (
-                <span className="relative z-10 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[11px] font-extrabold shadow-sm">
+                <span className="relative z-10 px-2 py-0.5 rounded-full bg-rassco-danger text-white text-[11px] font-extrabold shadow-sm">
                   {totalPendingActions}
                 </span>
               )}
@@ -669,7 +669,7 @@ export default function Dashboard() {
                 <span className={`relative z-10 px-2 py-0.5 rounded-full text-[11px] font-extrabold border ${
                   dashboardTab === "courier"
                     ? "bg-white/25 text-white border-white/30"
-                    : "bg-emerald-500/15 text-emerald-700 border-emerald-500/25"
+                    : "bg-rassco/15 text-rassco border-rassco/25"
                 }`}>
                   {courierStats?.totalRequests}
                 </span>
@@ -689,20 +689,20 @@ export default function Dashboard() {
           <TabsContent value="overview" className="space-y-6 outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Trend Chart (Left & Center) */}
-              <div className="lg:col-span-2 rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
+              <div className="lg:col-span-2 rounded-2xl bg-white border border-rassco-border p-6 flex flex-col shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-white">{t('dashboard.inventory_1')}</h3>
-                    <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.inventory_2')}</p>
+                    <h3 className="text-lg font-bold text-rassco-text">{t('dashboard.inventory_1')}</h3>
+                    <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.inventory_2')}</p>
                   </div>
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-1 flex items-center gap-1 shrink-0">
+                  <div className="bg-rassco-bg border border-rassco-border rounded-xl p-1 flex items-center gap-1 shrink-0">
                     {trendPeriodOptions.map((option) => (
                       <button
                         key={option.value}
                         className={
                           trendPeriod === option.value
-                            ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 shadow-sm"
-                            : "px-3 py-1.5 text-xs rounded-lg text-slate-400 hover:bg-slate-800 transition-colors"
+                            ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-rassco/20 text-rassco border border-rassco/30 shadow-sm"
+                            : "px-3 py-1.5 text-xs rounded-lg text-rassco-muted hover:bg-rassco-bg transition-colors"
                         }
                         onClick={() => setTrendPeriod(option.value)}
                         type="button"
@@ -718,42 +718,42 @@ export default function Dashboard() {
                     <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorFixed" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#18B2B0" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#18B2B0" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorMoving" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#fb923c" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#fb923c" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#5F6368" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#5F6368" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorCentral" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#c084fc" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#c084fc" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#F4B740" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#F4B740" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
-                      <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.2} />
+                      <XAxis dataKey="name" stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#1e293b", borderColor: "#475569", borderRadius: "12px", color: "#f8fafc", direction: "rtl" }}
-                        itemStyle={{ color: "#f8fafc" }}
+                        contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "12px", color: "#2D3135", direction: "rtl" }}
+                        itemStyle={{ color: "#2D3135" }}
                       />
                       <Legend verticalAlign="top" height={36} iconType="circle" />
-                      <Area type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#22d3ee" strokeWidth={2} fillOpacity={1} fill="url(#colorFixed)" />
-                      <Area type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#fb923c" strokeWidth={2} fillOpacity={1} fill="url(#colorMoving)" />
-                      <Area type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#c084fc" strokeWidth={2} fillOpacity={1} fill="url(#colorCentral)" />
+                      <Area type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#18B2B0" strokeWidth={2} fillOpacity={1} fill="url(#colorFixed)" />
+                      <Area type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#5F6368" strokeWidth={2} fillOpacity={1} fill="url(#colorMoving)" />
+                      <Area type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#F4B740" strokeWidth={2} fillOpacity={1} fill="url(#colorCentral)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Side Card: Category proportion breakdown */}
-              <div className="rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col justify-between shadow-sm">
+              <div className="rounded-2xl bg-white border border-rassco-border p-6 flex flex-col justify-between shadow-sm">
                 <div>
-                  <h3 className="text-lg font-bold text-white flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-rassco-text flex items-center justify-between">
                     {t('dashboard.category_items_inventory')}
-                    <Shapes className="h-4 w-4 text-slate-400" />
+                    <Shapes className="h-4 w-4 text-rassco-muted" />
                   </h3>
-                  <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.item_49426')}</p>
+                  <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.item_49426')}</p>
                 </div>
 
                 <div className="flex-1 flex items-center justify-center min-h-[200px]">
@@ -773,21 +773,21 @@ export default function Dashboard() {
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#1e293b", borderColor: "#475569", borderRadius: "12px", color: "#f8fafc", direction: "rtl" }}
+                        contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "12px", color: "#2D3135", direction: "rtl" }}
                         formatter={(value: any) => [t('dashboard.unit_2', { var_0: formatNumber(Number(value)) }), t('dashboard.quantity')]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="space-y-3 pt-4 border-t border-rassco-border">
                   {categoryData.map((cat) => (
                     <div key={cat.name} className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-2">
                         <span className="size-2.5 rounded-sm" style={{ backgroundColor: cat.color }} />
-                        <span className="text-slate-300">{cat.name}</span>
+                        <span className="text-rassco-gray">{cat.name}</span>
                       </span>
-                      <span className="font-semibold text-white">
+                      <span className="font-semibold text-rassco-text">
                         {percentage(cat.value, Math.max(totals.total, 1)).toFixed(1)}%
                       </span>
                     </div>
@@ -798,32 +798,32 @@ export default function Dashboard() {
 
             {/* Recent activity & transactions */}
             {user?.role === "admin" && adminStats && (
-              <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm">
+              <Card className="bg-white border-rassco-border shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                      <History className="size-5 text-cyan-400" />
+                    <CardTitle className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                      <History className="size-5 text-rassco" />
                       {t('dashboard.log_operations')}
                     </CardTitle>
-                    <CardDescription className="text-slate-400 text-xs mt-0.5">
+                    <CardDescription className="text-rassco-muted text-xs mt-0.5">
                       {t('dashboard.phrase_1cb4bbe4')}
                     </CardDescription>
                   </div>
-                  <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs px-4" asChild>
+                  <Button variant="outline" className="border-rassco-border text-rassco-gray hover:bg-rassco-bg text-xs px-4" asChild>
                     <Link href="/operations">{t('dashboard.log_operations_1')}</Link>
                   </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-slate-950/40 border-slate-800">
+                      <TableHeader className="bg-rassco-bg/40 border-rassco-border">
                         <TableRow>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.received_technician')}</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.type_operation')}</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.item_7975')}</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.quantity')}</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.reason_notes')}</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.date')}</TableHead>
+                          <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.received_technician')}</TableHead>
+                          <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.type_operation')}</TableHead>
+                          <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.item_7975')}</TableHead>
+                          <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.quantity')}</TableHead>
+                          <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.reason_notes')}</TableHead>
+                          <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.date')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -840,14 +840,14 @@ export default function Dashboard() {
                             const isTransfer = tx.type === "TRANSFER";
 
                             return (
-                              <TableRow key={tx.id} className="border-slate-800/60 hover:bg-slate-800/20 transition-colors">
+                              <TableRow key={tx.id} className="border-rassco-border/60 hover:bg-rassco-bg/20 transition-colors">
                                 <TableCell className="py-3">
                                   <div className="flex items-center gap-2">
-                                    <div className="size-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300 text-xs">
+                                    <div className="size-7 rounded-full bg-rassco-bg flex items-center justify-center font-bold text-rassco-gray text-xs">
                                       {(tx.userName || t('dashboard.item_1605')).substring(0, 1)}
                                     </div>
                                     <div>
-                                      <div className="font-semibold text-xs text-white">{tx.userName || t('dashboard.item_20777')}</div>
+                                      <div className="font-semibold text-xs text-rassco-text">{tx.userName || t('dashboard.item_20777')}</div>
                                       <div className="text-[10px] text-slate-500">{tx.userRole === "admin" ? t('dashboard.manager') : tx.userRole === "supervisor" ? t('dashboard.supervisor_1') : t('dashboard.item_4817')}</div>
                                     </div>
                                   </div>
@@ -856,22 +856,22 @@ export default function Dashboard() {
                                   <Badge
                                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-0 ${
                                       isIntake
-                                        ? "bg-emerald-500/10 text-emerald-400"
+                                        ? "bg-emerald-500/10 text-rassco"
                                         : isWithdraw
-                                          ? "bg-rose-500/10 text-rose-400"
-                                          : "bg-cyan-500/10 text-cyan-400"
+                                          ? "bg-rassco-danger/10 text-rassco-danger"
+                                          : "bg-cyan-500/10 text-rassco"
                                     }`}
                                   >
                                     {isTransfer ? t('dashboard.transfer') : isIntake ? t('dashboard.add') : t('dashboard.withdraw_disbursement')}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="py-3 font-semibold text-xs text-slate-300">
+                                <TableCell className="py-3 font-semibold text-xs text-rassco-gray">
                                   {tx.itemName || t('dashboard.item_17641')}
                                 </TableCell>
-                                <TableCell className="py-3 font-bold text-xs text-white">
+                                <TableCell className="py-3 font-bold text-xs text-rassco-text">
                                   {t('dashboard.units_1', { count: tx.quantity })}
                                 </TableCell>
-                                <TableCell className="py-3 text-slate-400 text-xs max-w-[200px] truncate" title={tx.reason}>
+                                <TableCell className="py-3 text-rassco-muted text-xs max-w-[200px] truncate" title={tx.reason}>
                                   {tx.reason || "-"}
                                 </TableCell>
                                 <TableCell className="py-3 text-slate-500 text-xs">
@@ -893,47 +893,47 @@ export default function Dashboard() {
           <TabsContent value="analytics" className="space-y-6 outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Low stock Card */}
-              <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm flex flex-col justify-between">
+              <Card className="bg-white border-rassco-border shadow-sm flex flex-col justify-between">
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                    <ShieldAlert className="size-5 text-rose-400" />
+                  <CardTitle className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                    <ShieldAlert className="size-5 text-rassco-danger" />
                     {t('dashboard.item_36622')}
                   </CardTitle>
-                  <CardDescription className="text-slate-400 text-xs mt-0.5">
+                  <CardDescription className="text-rassco-muted text-xs mt-0.5">
                     {t('dashboard.units')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 text-center">
-                      <div className="text-3xl font-extrabold text-rose-400">{dashboardStats?.lowStockItems ?? 0}</div>
-                      <div className="text-slate-400 text-xs mt-1">{t('dashboard.inventory')}</div>
+                    <div className="p-4 rounded-xl bg-rassco-danger/5 border border-rassco-danger/20 text-center">
+                      <div className="text-3xl font-extrabold text-rassco-danger">{dashboardStats?.lowStockItems ?? 0}</div>
+                      <div className="text-rassco-muted text-xs mt-1">{t('dashboard.inventory')}</div>
                     </div>
-                    <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-center">
-                      <div className="text-3xl font-extrabold text-slate-200">{dashboardStats?.outOfStockItems ?? 0}</div>
-                      <div className="text-slate-400 text-xs mt-1">{t('dashboard.item_27138')}</div>
+                    <div className="p-4 rounded-xl bg-rassco-bg/60 border border-rassco-border text-center">
+                      <div className="text-3xl font-extrabold text-rassco-text">{dashboardStats?.outOfStockItems ?? 0}</div>
+                      <div className="text-rassco-muted text-xs mt-1">{t('dashboard.item_27138')}</div>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between text-xs text-slate-300">
+                  <div className="pt-4 border-t border-rassco-border space-y-3">
+                    <div className="flex items-center justify-between text-xs text-rassco-gray">
                       <span>{t('dashboard.level_inventory')}</span>
-                      <span className="text-rose-400 font-semibold">{t('dashboard.status')}</span>
+                      <span className="text-rassco-danger font-semibold">{t('dashboard.status')}</span>
                     </div>
-                    <Progress value={85} className="h-2 bg-slate-800 [&>div]:bg-rose-500" />
+                    <Progress value={85} className="h-2 bg-rassco-bg [&>div]:bg-rassco-danger" />
                     <p className="text-[10px] text-slate-500">{t('dashboard.technicians_1')}</p>
                   </div>
                 </CardContent>
               </Card>
 
               {/* General stock distribution */}
-              <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm flex flex-col justify-between">
+              <Card className="bg-white border-rassco-border shadow-sm flex flex-col justify-between">
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                    <Settings className="size-5 text-cyan-400" />
+                  <CardTitle className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                    <Settings className="size-5 text-rassco" />
                     {t('dashboard.details_branches_system')}
                   </CardTitle>
-                  <CardDescription className="text-slate-400 text-xs mt-0.5">
+                  <CardDescription className="text-rassco-muted text-xs mt-0.5">
                     {t('dashboard.inventory_couriers')}
                   </CardDescription>
                 </CardHeader>
@@ -941,26 +941,26 @@ export default function Dashboard() {
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">{t('dashboard.warehouses_2')}</span>
-                        <span className="font-semibold text-purple-300">{formatNumber(totals.central)} ({percentage(totals.central, totals.total).toFixed(0)}%)</span>
+                        <span className="text-rassco-muted">{t('dashboard.warehouses_2')}</span>
+                        <span className="font-semibold text-rassco-gray">{formatNumber(totals.central)} ({percentage(totals.central, totals.total).toFixed(0)}%)</span>
                       </div>
-                      <Progress value={percentage(totals.central, totals.total)} className="h-2 bg-slate-800 [&>div]:bg-purple-400" />
+                      <Progress value={percentage(totals.central, totals.total)} className="h-2 bg-rassco-bg [&>div]:bg-rassco-gray" />
                     </div>
 
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">{t('dashboard.couriers_2')}</span>
-                        <span className="font-semibold text-cyan-300">{formatNumber(totals.fixed)} ({percentage(totals.fixed, totals.total).toFixed(0)}%)</span>
+                        <span className="text-rassco-muted">{t('dashboard.couriers_2')}</span>
+                        <span className="font-semibold text-rassco">{formatNumber(totals.fixed)} ({percentage(totals.fixed, totals.total).toFixed(0)}%)</span>
                       </div>
-                      <Progress value={percentage(totals.fixed, totals.total)} className="h-2 bg-slate-800 [&>div]:bg-cyan-400" />
+                      <Progress value={percentage(totals.fixed, totals.total)} className="h-2 bg-rassco-bg [&>div]:bg-rassco" />
                     </div>
 
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">{t('dashboard.couriers_sales')}</span>
-                        <span className="font-semibold text-orange-300">{formatNumber(totals.moving)} ({percentage(totals.moving, totals.total).toFixed(0)}%)</span>
+                        <span className="text-rassco-muted">{t('dashboard.couriers_sales')}</span>
+                        <span className="font-semibold text-rassco-warning">{formatNumber(totals.moving)} ({percentage(totals.moving, totals.total).toFixed(0)}%)</span>
                       </div>
-                      <Progress value={percentage(totals.moving, totals.total)} className="h-2 bg-slate-800 [&>div]:bg-orange-400" />
+                      <Progress value={percentage(totals.moving, totals.total)} className="h-2 bg-rassco-bg [&>div]:bg-rassco-warning" />
                     </div>
                   </div>
                 </CardContent>
@@ -972,26 +972,26 @@ export default function Dashboard() {
           <TabsContent value="pending" className="space-y-6 outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Technician custody requests */}
-              <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm flex flex-col">
+              <Card className="bg-white border-rassco-border shadow-sm flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div>
-                    <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                      <Inbox className="size-5 text-cyan-300" />
+                    <CardTitle className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                      <Inbox className="size-5 text-rassco" />
                       {t('dashboard.requests_couriers')}
                     </CardTitle>
-                    <CardDescription className="text-slate-400 text-xs mt-0.5">
+                    <CardDescription className="text-rassco-muted text-xs mt-0.5">
                       {t('dashboard.requests_inventory_management')}
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="text-[10px] text-cyan-300 border-cyan-400/30 bg-cyan-500/5">
+                  <Badge variant="outline" className="text-[10px] text-rassco border-rassco/30 bg-cyan-500/5">
                     {t('dashboard.item_9062', { count: pendingRequestsCount })}
                   </Badge>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto max-h-[400px]">
                   {allRequests.filter((r) => r.status === "pending").length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <CheckCircle2 className="size-10 text-emerald-400 mb-2" />
-                      <span className="text-sm font-semibold text-slate-300">{t('dashboard.no_requests')}</span>
+                      <CheckCircle2 className="size-10 text-rassco mb-2" />
+                      <span className="text-sm font-semibold text-rassco-gray">{t('dashboard.no_requests')}</span>
                       <span className="text-xs text-slate-500 mt-1">{t('dashboard.requests_technicians_successfu')}</span>
                     </div>
                   ) : (
@@ -999,22 +999,22 @@ export default function Dashboard() {
                       {allRequests
                         .filter((r) => r.status === "pending")
                         .map((req) => (
-                          <div key={req.id} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors space-y-2">
+                          <div key={req.id} className="p-4 rounded-xl bg-rassco-bg/40 border border-rassco-border hover:border-rassco-border transition-colors space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-white">{req.technicianName || t('dashboard.item_17662')}</span>
+                              <span className="font-semibold text-xs text-rassco-text">{req.technicianName || t('dashboard.item_17662')}</span>
                               <span className="text-[10px] text-slate-500">
                                 {new Date(req.createdAt).toLocaleDateString(dateLocale)}
                               </span>
                             </div>
-                            <div className="text-xs text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                              <span className="font-medium text-cyan-300">{t('dashboard.quantity_1')}</span>{" "}
+                            <div className="text-xs text-rassco-gray bg-rassco-bg p-2 rounded-lg border border-rassco-border">
+                              <span className="font-medium text-rassco">{t('dashboard.quantity_1')}</span>{" "}
                               {t('dashboard.count_1', { count: t('dashboard.units_2', { count: sumRequestItems(req) }) })}
                             </div>
                             {req.notes && (
-                              <p className="text-[11px] text-slate-400 italic">{t('dashboard.technician_3')}{req.notes}"</p>
+                              <p className="text-[11px] text-rassco-muted italic">{t('dashboard.technician_3')}{req.notes}"</p>
                             )}
                             <div className="flex justify-end gap-2 pt-2">
-                              <Button size="sm" className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 text-[10px] h-7 px-3" asChild>
+                              <Button size="sm" className="bg-cyan-500/10 text-rassco border border-cyan-500/20 hover:bg-rassco/20 text-[10px] h-7 px-3" asChild>
                                 <Link href="/notifications">{t('dashboard.review_request')}</Link>
                               </Button>
                             </div>
@@ -1026,26 +1026,26 @@ export default function Dashboard() {
               </Card>
 
               {/* Warehouse transfers status */}
-              <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm flex flex-col">
+              <Card className="bg-white border-rassco-border shadow-sm flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div>
-                    <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                      <RefreshCcw className="size-5 text-orange-300 animate-spin-slow" />
+                    <CardTitle className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                      <RefreshCcw className="size-5 text-rassco-warning animate-spin-slow" />
                       {t('dashboard.transfers_warehouses_1')}
                     </CardTitle>
-                    <CardDescription className="text-slate-400 text-xs mt-0.5">
+                    <CardDescription className="text-rassco-muted text-xs mt-0.5">
                       {t('dashboard.transfers_receive_confirm_tech')}
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="text-[10px] text-orange-300 border-orange-400/30 bg-orange-500/5">
+                  <Badge variant="outline" className="text-[10px] text-rassco-warning border-rassco-warning/30 bg-rassco-warning/5">
                     {t('dashboard.confirm', { count: pendingTransfersCount })}
                   </Badge>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto max-h-[400px]">
                   {allTransfers.filter((t) => t.status === "pending").length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <CheckCircle2 className="size-10 text-emerald-400 mb-2" />
-                      <span className="text-sm font-semibold text-slate-300">{t('dashboard.no_transfers')}</span>
+                      <CheckCircle2 className="size-10 text-rassco mb-2" />
+                      <span className="text-sm font-semibold text-rassco-gray">{t('dashboard.no_transfers')}</span>
                       <span className="text-xs text-slate-500 mt-1">{t('dashboard.inventory_status')}</span>
                     </div>
                   ) : (
@@ -1053,29 +1053,29 @@ export default function Dashboard() {
                       {allTransfers
                         .filter((t) => t.status === "pending")
                         .map((transfer) => (
-                          <div key={transfer.id} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors space-y-2">
+                          <div key={transfer.id} className="p-4 rounded-xl bg-rassco-bg/40 border border-rassco-border hover:border-rassco-border transition-colors space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-white">{t('dashboard.technician_4')}{transfer.technicianName || t('dashboard.item_17662')}</span>
+                              <span className="font-semibold text-xs text-rassco-text">{t('dashboard.technician_4')}{transfer.technicianName || t('dashboard.item_17662')}</span>
                               <span className="text-[10px] text-slate-500">
                                 {new Date(transfer.createdAt).toLocaleDateString(dateLocale)}
                               </span>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
-                              <div className="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div className="grid grid-cols-2 gap-2 text-xs text-rassco-gray">
+                              <div className="bg-rassco-bg p-2 rounded border border-rassco-border">
                                 <div className="text-[10px] text-slate-500">{t('dashboard.warehouse_source')}</div>
-                                <div className="font-medium text-slate-300">{transfer.warehouseName || t('dashboard.warehouse_primary')}</div>
+                                <div className="font-medium text-rassco-gray">{transfer.warehouseName || t('dashboard.warehouse_primary')}</div>
                               </div>
-                              <div className="bg-slate-900/60 p-2 rounded border border-slate-800">
+                              <div className="bg-rassco-bg p-2 rounded border border-rassco-border">
                                 <div className="text-[10px] text-slate-500">{t('dashboard.quantity_2')}</div>
-                                <div className="font-bold text-orange-300">{transfer.quantity}{t('dashboard.unit_3')}{transfer.itemNameAr || transfer.itemType})</div>
+                                <div className="font-bold text-rassco-warning">{transfer.quantity}{t('dashboard.unit_3')}{transfer.itemNameAr || transfer.itemType})</div>
                               </div>
                             </div>
                             {transfer.notes && (
-                              <p className="text-[11px] text-slate-400 italic">{t('dashboard.item_9658')}{transfer.notes}"</p>
+                              <p className="text-[11px] text-rassco-muted italic">{t('dashboard.item_9658')}{transfer.notes}"</p>
                             )}
                             <div className="flex justify-between items-center pt-2">
                               <Badge className="bg-amber-500/10 text-amber-400 border-0 text-[10px]">{t('dashboard.scan_technician')}</Badge>
-                              <Button size="sm" className="bg-orange-500/10 text-orange-300 border border-orange-500/20 hover:bg-orange-500/20 text-[10px] h-7 px-3" asChild>
+                              <Button size="sm" className="bg-rassco-warning/10 text-rassco-warning border border-rassco-warning/20 hover:bg-rassco-warning/20 text-[10px] h-7 px-3" asChild>
                                 <Link href="/operations">{t('dashboard.review')}</Link>
                               </Button>
                             </div>
@@ -1092,22 +1092,22 @@ export default function Dashboard() {
           <TabsContent value="team" className="space-y-6 outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Technicians Leaderboard (Left & Center) */}
-              <div className="lg:col-span-2 rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <UserCheck className="size-5 text-cyan-400" />
+              <div className="lg:col-span-2 rounded-2xl bg-white border border-rassco-border p-6 flex flex-col shadow-sm">
+                <h3 className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                  <UserCheck className="size-5 text-rassco" />
                   {t('dashboard.item_41535')}
                 </h3>
-                <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.item_63853')}</p>
+                <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.item_63853')}</p>
 
                 <div className="mt-6 overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-slate-950/40 border-slate-800">
+                    <TableHeader className="bg-rassco-bg/40 border-rassco-border">
                       <TableRow>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.name_technician')}</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.city')}</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.item_20635')}</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.item_22279')}</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.total')}</TableHead>
+                        <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.name_technician')}</TableHead>
+                        <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.city')}</TableHead>
+                        <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.item_20635')}</TableHead>
+                        <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.item_22279')}</TableHead>
+                        <TableHead className="text-right text-rassco-muted text-xs font-semibold">{t('dashboard.total')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1119,20 +1119,20 @@ export default function Dashboard() {
                         </TableRow>
                       ) : (
                         topTechniciansList.map((tech) => (
-                          <TableRow key={tech.id} className="border-slate-800/60 hover:bg-slate-800/20 transition-colors">
+                          <TableRow key={tech.id} className="border-rassco-border/60 hover:bg-rassco-bg/20 transition-colors">
                             <TableCell className="py-3">
-                              <div className="font-semibold text-xs text-white">{tech.name}</div>
+                              <div className="font-semibold text-xs text-rassco-text">{tech.name}</div>
                             </TableCell>
-                            <TableCell className="py-3 text-slate-400 text-xs">
+                            <TableCell className="py-3 text-rassco-muted text-xs">
                               {tech.city}
                             </TableCell>
-                            <TableCell className="py-3 font-semibold text-xs text-cyan-300">
+                            <TableCell className="py-3 font-semibold text-xs text-rassco">
                               {t('dashboard.unit_1', { count: formatNumber(tech.fixed) })}
                             </TableCell>
-                            <TableCell className="py-3 font-semibold text-xs text-orange-300">
+                            <TableCell className="py-3 font-semibold text-xs text-rassco-warning">
                               {t('dashboard.unit_1', { count: formatNumber(tech.moving) })}
                             </TableCell>
-                            <TableCell className="py-3 font-bold text-xs text-white">
+                            <TableCell className="py-3 font-bold text-xs text-rassco-text">
                               {t('dashboard.unit_1', { count: formatNumber(tech.total) })}
                             </TableCell>
                           </TableRow>
@@ -1144,28 +1144,28 @@ export default function Dashboard() {
               </div>
 
               {/* Warehouse stats card */}
-              <div className="rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Warehouse className="size-5 text-purple-400" />
+              <div className="rounded-2xl bg-white border border-rassco-border p-6 flex flex-col shadow-sm">
+                <h3 className="text-lg font-bold text-rassco-text flex items-center gap-2">
+                  <Warehouse className="size-5 text-rassco" />
                   {t('dashboard.warehouses_inventory_active')}
                 </h3>
-                <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.warehouses_primary')}</p>
+                <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.warehouses_primary')}</p>
 
                 <div className="mt-6 space-y-4 flex-1 overflow-y-auto max-h-[350px]">
                   {warehousesData.length === 0 ? (
                     <div className="text-center text-slate-500 py-12 text-sm">{t('dashboard.no_warehouses_system')}</div>
                   ) : (
                     warehousesData.map((wh) => (
-                      <div key={wh.id} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors">
+                      <div key={wh.id} className="p-4 rounded-xl bg-rassco-bg/40 border border-rassco-border hover:border-rassco-border transition-colors">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <span className="font-bold text-xs text-white">{wh.name}</span>
+                            <span className="font-bold text-xs text-rassco-text">{wh.name}</span>
                             <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
                               <MapPin className="size-3" />
                               {wh.location || t('dashboard.signed')}
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-[10px] text-purple-300 border-purple-400/30 bg-purple-500/5 shrink-0">
+                          <Badge variant="outline" className="text-[10px] text-rassco-gray border-rassco/30 bg-rassco/5 shrink-0">
                             {t('dashboard.unit_1', { count: formatNumber(wh.totalItems) })}
                           </Badge>
                         </div>
@@ -1180,16 +1180,16 @@ export default function Dashboard() {
           {/* TAB 5: COURIER & INSTALLATION */}
           <TabsContent value="courier" className="space-y-6 outline-none">
             {/* Quick Access Shortcuts */}
-            <div className="bg-[#1a3636]/60 border border-slate-700/40 rounded-2xl p-4 shadow-lg space-y-3">
-              <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+            <div className="bg-white border border-rassco-border rounded-2xl p-4 shadow-lg space-y-3">
+              <h2 className="text-xs font-bold text-rassco uppercase tracking-wide flex items-center gap-1.5">
                 {t('dashboard.unit_delivery')}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {[
                   { label: t('dashboard.data'), path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30" },
                   { label: t('dashboard.verification'), path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30" },
-                  { label: t('dashboard.item_9785'), path: "/courier/pdf", icon: FileText, color: "hover:bg-purple-500/10 hover:border-purple-500/30" },
-                  { label: t('dashboard.reports'), path: "/courier/reports", icon: BarChart3, color: "hover:bg-indigo-500/10 hover:border-indigo-500/30" },
+                  { label: t('dashboard.item_9785'), path: "/courier/pdf", icon: FileText, color: "hover:bg-rassco/10 hover:border-rassco/30" },
+                  { label: t('dashboard.reports'), path: "/courier/reports", icon: BarChart3, color: "hover:bg-rassco/10 hover:border-rassco/30" },
                   { label: t('dashboard.export'), path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30" },
                 ].map((btn) => {
                   const BtnIcon = btn.icon;
@@ -1197,9 +1197,9 @@ export default function Dashboard() {
                     <button
                       key={btn.label}
                       onClick={() => setLocation(btn.path)}
-                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold bg-[#102222]/85 border border-slate-700/70 text-slate-200 transition-all duration-300 hover:-translate-y-0.5 shadow-sm ${btn.color}`}
+                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold bg-rassco-bg border border-rassco-border text-rassco-text transition-all duration-300 hover:-translate-y-0.5 shadow-sm ${btn.color}`}
                     >
-                      <BtnIcon className="w-4 h-4 text-slate-400" />
+                      <BtnIcon className="w-4 h-4 text-rassco-muted" />
                       <span>{btn.label}</span>
                     </button>
                   );
@@ -1211,21 +1211,21 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <CourierStatCard label={t('dashboard.total_requests_1')} value={courierStats?.totalRequests ?? "—"} icon={BarChart2} color="bg-blue-600" onClick={() => setLocation("/courier/requests")} />
               <CourierStatCard label={t('dashboard.successfully')} value={courierCompleted} icon={PackageCheck} color="bg-emerald-600" onClick={() => setLocation("/courier/requests?status=Installation Completed")} />
-              <CourierStatCard label={t('dashboard.item_14393')} value={courierNotCompleted} icon={XCircle} color="bg-red-600" onClick={() => setLocation("/courier/requests?status=Not Completed")} />
+              <CourierStatCard label={t('dashboard.item_14393')} value={courierNotCompleted} icon={XCircle} color="bg-rassco-danger" onClick={() => setLocation("/courier/requests?status=Not Completed")} />
               <CourierStatCard label={t('dashboard.pending')} value={courierInProgress} icon={Timer} color="bg-amber-600" onClick={() => setLocation("/courier/requests?status=pending")} />
-              <CourierStatCard label={t('dashboard.item_19351')} value={courierAiStats?.totalProcessed ?? "—"} icon={FileText} color="bg-purple-600" />
+              <CourierStatCard label={t('dashboard.item_19351')} value={courierAiStats?.totalProcessed ?? "—"} icon={FileText} color="bg-rassco-gray" />
               <CourierStatCard label={t('dashboard.item_22364')} value={courierAiStats?.totalApplied ?? "—"} icon={PackageCheck} color="bg-cyan-600" />
-              <CourierStatCard label={t('dashboard.item_27036')} value={courierAiStats?.averageConfidence ? `${courierAiStats.averageConfidence}%` : "—"} icon={TrendingUp} color="bg-indigo-600" />
+              <CourierStatCard label={t('dashboard.item_27036')} value={courierAiStats?.averageConfidence ? `${courierAiStats.averageConfidence}%` : "—"} icon={TrendingUp} color="bg-rassco" />
               <CourierStatCard label={t('dashboard.rate')} value={`${courierCompletionRate}%`} icon={TrendingUp} color="bg-teal-600" />
             </div>
 
             {/* Charts Row */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Donut Chart: Completion Status */}
-              <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+              <div className="bg-white border border-rassco-border rounded-2xl p-6 shadow-xl flex flex-col justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-slate-100">{t('dashboard.requests_1')}</h2>
-                  <p className="text-xs text-slate-400 mt-1">{t('dashboard.item_60609')}</p>
+                  <h2 className="text-base font-bold text-rassco-text">{t('dashboard.requests_1')}</h2>
+                  <p className="text-xs text-rassco-muted mt-1">{t('dashboard.item_60609')}</p>
                 </div>
 
                 <div className="h-64 mt-4 flex items-center justify-center relative">
@@ -1247,39 +1247,39 @@ export default function Dashboard() {
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right", direction: "rtl" }}
-                        itemStyle={{ color: "#e2e8f0" }}
+                        contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "10px", color: "#2D3135", textAlign: "right", direction: "rtl" }}
+                        itemStyle={{ color: "#2D3135" }}
                         formatter={(value: any, name: any) => [t('dashboard.request', { var_0: value }), name]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
 
                   <div className="absolute text-center pointer-events-none">
-                    <span className="text-[10px] text-slate-400 block font-semibold">{t('dashboard.total_requests')}</span>
-                    <span className="text-2xl font-black text-white block mt-0.5">{courierStats?.totalRequests || 0}</span>
+                    <span className="text-[10px] text-rassco-muted block font-semibold">{t('dashboard.total_requests')}</span>
+                    <span className="text-2xl font-black text-rassco-text block mt-0.5">{courierStats?.totalRequests || 0}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-700/40">
+                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-rassco-border">
                   {courierDonutData.map((d) => (
                     <button
                       key={d.name}
                       onClick={() => setLocation(`/courier/requests?status=${encodeURIComponent(d.statusKey)}`)}
-                      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-[#102222]/40 border border-slate-800 hover:border-slate-600 transition-colors text-center cursor-pointer"
+                      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-rassco-bg border border-rassco-border hover:border-rassco-border transition-colors text-center cursor-pointer"
                     >
                       <span className="w-2.5 h-2.5 rounded-full block" style={{ backgroundColor: d.color }} />
-                      <span className="text-[10px] text-slate-400 font-bold">{d.name}</span>
-                      <span className="text-xs font-black text-slate-100">{d.value}</span>
+                      <span className="text-[10px] text-rassco-muted font-bold">{d.name}</span>
+                      <span className="text-xs font-black text-rassco-text">{d.value}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Bar Chart: Failure Reasons */}
-              <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+              <div className="bg-white border border-rassco-border rounded-2xl p-6 shadow-xl flex flex-col justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-slate-100">{t('dashboard.fail')}</h2>
-                  <p className="text-xs text-slate-400 mt-1">{t('dashboard.item_62238')}</p>
+                  <h2 className="text-base font-bold text-rassco-text">{t('dashboard.fail')}</h2>
+                  <p className="text-xs text-rassco-muted mt-1">{t('dashboard.item_62238')}</p>
                 </div>
 
                 <div className="h-64 mt-4">
@@ -1300,11 +1300,11 @@ export default function Dashboard() {
                           }
                         }}
                       >
-                        <XAxis type="number" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                        <XAxis type="number" stroke="#7C838B" fontSize={10} tickLine={false} />
                         <YAxis
                           dataKey="name"
                           type="category"
-                          stroke="#94a3b8"
+                          stroke="#7C838B"
                           fontSize={9}
                           tickLine={false}
                           width={100}
@@ -1312,13 +1312,13 @@ export default function Dashboard() {
                           tickFormatter={(val: string) => val.length > 15 ? `${val.substring(0, 15)}...` : val}
                         />
                         <Tooltip
-                          contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right", direction: "rtl" }}
-                          itemStyle={{ color: "#e2e8f0" }}
+                          contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "10px", color: "#2D3135", textAlign: "right", direction: "rtl" }}
+                          itemStyle={{ color: "#2D3135" }}
                           formatter={(value: any) => [t('dashboard.duplicate', { var_0: value }), t('dashboard.item_15883')]}
                         />
                         <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer">
                           {courierBarData.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#ef4444" : "#f87171"} />
+                            <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#E05252" : "#E05252"} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -1326,9 +1326,9 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-700/40 text-xs text-slate-400 flex items-center justify-between">
+                <div className="mt-4 pt-4 border-t border-rassco-border text-xs text-rassco-muted flex items-center justify-between">
                   <span>{t('dashboard.total_fail')}</span>
-                  <span className="text-slate-200 font-bold">
+                  <span className="text-rassco-text font-bold">
                     {t('dashboard.count_status', { count: Object.values(courierStats?.failures || {}).reduce((s, v) => s + v, 0) })}
                   </span>
                 </div>
@@ -1344,20 +1344,20 @@ export default function Dashboard() {
 
   // Render Technician-Specific Dashboard
   return (
-    <div dir={dir} className="space-y-8 text-slate-100">
+    <div dir={dir} className="space-y-8 text-rassco-text">
       {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#1a3636] border border-slate-700/60 p-6 rounded-2xl relative overflow-hidden shadow-lg">
-        <div className="absolute -left-20 -top-20 size-60 bg-cyan-400/10 blur-3xl rounded-full" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-rassco-border p-6 rounded-2xl relative overflow-hidden shadow-lg">
+        <div className="absolute -left-20 -top-20 size-60 bg-rassco/10 blur-3xl rounded-full" />
         <div className="relative z-10 space-y-1">
-          <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-extrabold tracking-tight text-rassco-text">
             {t('dashboard.item_27106')}
           </h2>
-          <p className="text-slate-400 font-medium">
+          <p className="text-rassco-muted font-medium">
             {t('dashboard.welcome_tech_custody', { name: user?.fullName || t('dashboard.technician') })}
           </p>
         </div>
         <div className="relative z-10 flex items-center gap-3">
-          <div className="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-semibold text-cyan-300 flex items-center gap-2">
+          <div className="px-4 py-2 bg-rassco-bg border border-rassco-border rounded-xl text-sm font-semibold text-rassco flex items-center gap-2">
             <CalendarIcon className="size-4" />
             {new Date().toLocaleDateString(dateLocale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </div>
@@ -1366,48 +1366,48 @@ export default function Dashboard() {
 
       {/* Technician cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-slate-900/40 border-slate-700/80 hover:border-cyan-400/40 transition-all duration-300">
+        <Card className="bg-white border-rassco-border hover:border-rassco/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">{t('dashboard.devices')}</span>
-            <Boxes className="h-5 w-5 text-cyan-300" />
+            <span className="text-sm font-medium text-rassco-muted">{t('dashboard.devices')}</span>
+            <Boxes className="h-5 w-5 text-rassco" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-extrabold text-white mb-1">{formatNumber(totals.fixed)}</div>
+            <div className="text-4xl font-extrabold text-rassco-text mb-1">{formatNumber(totals.fixed)}</div>
             <p className="text-xs text-slate-500 mt-2">{t('dashboard.devices_active')}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/40 border-slate-700/80 hover:border-orange-400/40 transition-all duration-300">
+        <Card className="bg-white border-rassco-border hover:border-rassco-warning/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">{t('dashboard.sales_sims')}</span>
-            <Activity className="h-5 w-5 text-orange-300" />
+            <span className="text-sm font-medium text-rassco-muted">{t('dashboard.sales_sims')}</span>
+            <Activity className="h-5 w-5 text-rassco-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-extrabold text-white mb-1">{formatNumber(totals.moving)}</div>
+            <div className="text-4xl font-extrabold text-rassco-text mb-1">{formatNumber(totals.moving)}</div>
             <p className="text-xs text-slate-500 mt-2">{t('dashboard.item_63814')}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/40 border-slate-700/80 hover:border-purple-400/40 transition-all duration-300">
+        <Card className="bg-white border-rassco-border hover:border-rassco/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">{t('dashboard.item_33432')}</span>
-            <Clock className="h-5 w-5 text-purple-300" />
+            <span className="text-sm font-medium text-rassco-muted">{t('dashboard.item_33432')}</span>
+            <Clock className="h-5 w-5 text-rassco-gray" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-extrabold text-white mb-1">
+            <div className="text-4xl font-extrabold text-rassco-text mb-1">
               {formatNumber(allRequests.filter((r) => r.status === "pending").length)}
             </div>
             <p className="text-xs text-slate-500 mt-2">{t('dashboard.requests_disbursement')}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/40 border-slate-700/80 hover:border-rose-400/40 transition-all duration-300">
+        <Card className="bg-white border-rassco-border hover:border-rassco-danger/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">{t('dashboard.transfers_1')}</span>
-            <AlertTriangle className="h-5 w-5 text-rose-300 animate-pulse" />
+            <span className="text-sm font-medium text-rassco-muted">{t('dashboard.transfers_1')}</span>
+            <AlertTriangle className="h-5 w-5 text-rassco-danger animate-pulse" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-extrabold text-rose-400 mb-1">
+            <div className="text-4xl font-extrabold text-rassco-danger mb-1">
               {formatNumber(allTransfers.filter((t) => t.status === "pending").length)}
             </div>
             <p className="text-xs text-slate-500 mt-2">{t('dashboard.serial')}</p>
@@ -1419,21 +1419,21 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick action controls (Left) */}
         <div className="space-y-6">
-          <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm">
+          <Card className="bg-white border-rassco-border shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
+              <CardTitle className="text-base font-bold text-rassco-text flex items-center gap-2">
                 <Zap className="size-5 text-yellow-400" />
                 {t('dashboard.item_19019')}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <Button className="w-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/30 flex items-center justify-center gap-2" asChild>
+              <Button className="w-full bg-rassco/20 text-rassco border border-rassco/30 hover:bg-cyan-500/30 flex items-center justify-center gap-2" asChild>
                 <Link href="/my-fixed-inventory">
                   <Boxes className="size-4" />
                   {t('dashboard.details')}
                 </Link>
               </Button>
-              <Button className="w-full bg-orange-500/20 text-orange-300 border border-orange-400/30 hover:bg-orange-500/30 flex items-center justify-center gap-2" asChild>
+              <Button className="w-full bg-rassco-warning/20 text-rassco-warning border border-rassco-warning/30 hover:bg-rassco-warning/30 flex items-center justify-center gap-2" asChild>
                 <Link href="/my-moving-inventory">
                   <Activity className="size-4" />
                   {t('dashboard.details_1')}
@@ -1443,10 +1443,10 @@ export default function Dashboard() {
           </Card>
 
           {/* Pending transfers to accept */}
-          <Card className="bg-slate-900/40 border-slate-700/80 shadow-sm">
+          <Card className="bg-white border-rassco-border shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                <Clock className="size-5 text-rose-400" />
+              <CardTitle className="text-base font-bold text-rassco-text flex items-center gap-2">
+                <Clock className="size-5 text-rassco-danger" />
                 {t('dashboard.transfers')}
               </CardTitle>
             </CardHeader>
@@ -1457,13 +1457,13 @@ export default function Dashboard() {
                 allTransfers
                   .filter((transfer) => transfer.status === "pending")
                   .map((transfer) => (
-                    <div key={transfer.id} className="p-3 rounded-lg bg-slate-950/40 border border-slate-800 flex flex-col gap-1">
+                    <div key={transfer.id} className="p-3 rounded-lg bg-rassco-bg/40 border border-rassco-border flex flex-col gap-1">
                       <div className="flex justify-between text-xs">
-                        <span className="font-semibold text-white">{transfer.itemNameAr || transfer.itemType}</span>
-                        <span className="font-bold text-orange-300">{transfer.quantity}{t('dashboard.unit_4')}</span>
+                        <span className="font-semibold text-rassco-text">{transfer.itemNameAr || transfer.itemType}</span>
+                        <span className="font-bold text-rassco-warning">{transfer.quantity}{t('dashboard.unit_4')}</span>
                       </div>
                       <span className="text-[10px] text-slate-500">{t('dashboard.warehouse_1')}{transfer.warehouseName || t('dashboard.warehouse_primary')}</span>
-                      <Button size="sm" className="w-full bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 text-[10px] h-7 mt-2" asChild>
+                      <Button size="sm" className="w-full bg-cyan-500/10 text-rassco hover:bg-rassco/20 text-[10px] h-7 mt-2" asChild>
                         <Link href="/my-moving-inventory">{t('dashboard.scan_number_serial')}</Link>
                       </Button>
                     </div>
@@ -1474,26 +1474,26 @@ export default function Dashboard() {
         </div>
 
         {/* Technician specific inventory distribution chart (Right & Center) */}
-        <div className="lg:col-span-2 rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
-          <h3 className="text-lg font-bold text-white">{t('dashboard.item_27136')}</h3>
-          <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.item_47924')}</p>
+        <div className="lg:col-span-2 rounded-2xl bg-white border border-rassco-border p-6 flex flex-col shadow-sm">
+          <h3 className="text-lg font-bold text-rassco-text">{t('dashboard.item_27136')}</h3>
+          <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.item_47924')}</p>
 
           <div className="flex-1 min-h-[250px] mt-6">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={[
-                { name: t('dashboard.item_20635'), quantity: totals.fixed, fill: "#22d3ee" },
-                { name: t('dashboard.item_22279'), quantity: totals.moving, fill: "#fb923c" }
+                { name: t('dashboard.item_20635'), quantity: totals.fixed, fill: "#18B2B0" },
+                { name: t('dashboard.item_22279'), quantity: totals.moving, fill: "#5F6368" }
               ]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.2} />
+                <XAxis dataKey="name" stroke="#7C838B" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#7C838B" fontSize={12} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#1e293b", borderColor: "#475569", borderRadius: "12px", color: "#f8fafc", direction: "rtl" }}
+                  contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "12px", color: "#2D3135", direction: "rtl" }}
                   cursor={{ fill: "rgba(255,255,255,0.05)" }}
                 />
                 <Bar dataKey="quantity" radius={[8, 8, 0, 0]}>
-                  <Cell fill="#22d3ee" />
-                  <Cell fill="#fb923c" />
+                  <Cell fill="#18B2B0" />
+                  <Cell fill="#5F6368" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
