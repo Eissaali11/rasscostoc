@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { loginSchema, type LoginRequest } from "@shared/schema";
 import { AlertCircle, ArrowLeft, Loader2, Lock, User } from "lucide-react";
 import { useLocation } from "wouter";
-import stockLogo from "@/assets/rassco-logo.png";
+import stockLogo from "@/assets/rassco-logo-horizontal.png";
 
 export default function Login() {
   const { t, dir } = useTranslation();

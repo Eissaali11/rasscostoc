@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import rasscoLogo from "@/assets/rassco-logo.png";
+import rasscoLogo from "@/assets/rassco-logo-mark.png";
 
 export function SplashScreen() {
   const [isVisible, setIsVisible] = useState(true);

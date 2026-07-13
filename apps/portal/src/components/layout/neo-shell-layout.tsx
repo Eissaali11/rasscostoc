@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { getRoleLabel } from "@shared/roles";
 import { getAuthorizedNavigation } from "@/lib/navigation";
 import { useTranslation } from "@/lib/language";
-import logo from "@/assets/rassco-logo.png";
+import logoHorizontal from "@/assets/rassco-logo-horizontal.png";
+import logoIcon from "@/assets/rassco-logo-icon.png";
 import {
   Bell,
   CircleHelp,
@@ -195,16 +196,32 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
       <aside
         className={`fixed top-0 bottom-0 z-50 w-72 ${sidebarSideClass} border-white/10 bg-[#5F6368] flex flex-col h-screen transition-transform duration-300 ease-in-out shadow-2xl ${sidebarHiddenClass}`}
       >
-        <div className="p-6 flex items-center justify-between gap-3 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="h-16 w-16 rounded-2xl bg-[rgba(24,178,176,0.18)] text-[#18B2B0] flex items-center justify-center overflow-hidden shrink-0">
-              <img src={logo} alt={t("app.name")} className="h-14 w-14 object-contain" />
+        <div className="p-5 flex items-center justify-between gap-3 border-b border-white/10">
+          <Link
+            href="/home"
+            onClick={() => setIsSidebarOpen(false)}
+            className="flex items-center gap-3 min-w-0 group"
+            aria-label="RASSCO"
+          >
+            <div className="h-12 w-12 rounded-2xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.25)] flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-white/50 p-1.5">
+              <img
+                src={logoIcon}
+                alt=""
+                className="h-full w-full object-contain"
+              />
             </div>
-            <h1 className="text-lg font-bold tracking-tight text-white">{t("app.name")}</h1>
-          </div>
+            <div className="min-w-0 flex flex-col leading-tight">
+              <span className="text-[17px] font-extrabold tracking-[0.12em] text-white group-hover:text-[#18B2B0] transition-colors">
+                RASSCO
+              </span>
+              <span className="text-[11px] text-white/65 truncate mt-0.5">
+                {t("app.name")}
+              </span>
+            </div>
+          </Link>
           <button
             onClick={() => setIsSidebarOpen(false)}
-            className="p-1.5 rounded-2xl text-white/70 hover:text-white hover:bg-[rgba(24,178,176,0.12)] transition-colors"
+            className="p-1.5 rounded-2xl text-white/70 hover:text-white hover:bg-[rgba(24,178,176,0.12)] transition-colors shrink-0"
             aria-label={t("close_sidebar")}
           >
             <X className="h-5 w-5" />
@@ -320,18 +337,43 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
-        <header className="h-20 border-b border-rassco-border bg-white/95 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 shrink-0 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+        <header className="h-20 border-b border-rassco-border bg-white/95 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2 rounded-2xl text-rassco-gray hover:bg-[rgba(24,178,176,0.12)] hover:text-[#18B2B0] transition-colors"
+              className="p-2 rounded-2xl text-rassco-gray hover:bg-[rgba(24,178,176,0.12)] hover:text-[#18B2B0] transition-colors shrink-0"
               aria-label={t("open_sidebar")}
             >
               <Menu className="h-6 w-6" />
             </button>
-            <h2 className="text-xl lg:text-2xl font-bold text-rassco-text">{title}</h2>
+            <Link
+              href="/home"
+              className="hidden sm:flex items-center shrink-0 pe-3 border-e border-rassco-border/80"
+              aria-label="RASSCO Home"
+            >
+              <img
+                src={logoHorizontal}
+                alt="RASSCO"
+                className="h-10 w-auto max-w-[168px] object-contain object-left"
+              />
+            </Link>
+            <div className="min-w-0 flex flex-col">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-rassco-text truncate">
+                {title}
+              </h2>
+              <span className="sm:hidden text-[11px] font-semibold tracking-[0.14em] text-rassco-gray uppercase">
+                RASSCO
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link
+              href="/home"
+              className="sm:hidden h-10 w-10 rounded-xl bg-[#F3F4F6] ring-1 ring-rassco-border/70 flex items-center justify-center overflow-hidden shadow-sm"
+              aria-label="RASSCO Home"
+            >
+              <img src={logoIcon} alt="RASSCO" className="h-8 w-8 object-contain" />
+            </Link>
             <button
               type="button"
               onClick={() => changeLanguage(language === "ar" ? "en" : "ar")}
