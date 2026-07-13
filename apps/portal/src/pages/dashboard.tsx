@@ -41,12 +41,17 @@ import {
   Download,
   AlertCircle,
   Truck,
+  PieChart as PieChartIcon,
+  LineChart as LineChartIcon,
+  Map as MapIcon,
 } from "lucide-react";
 import {
   AreaChart,
   Area,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -193,6 +198,71 @@ function sumInventoryValue(inventory: any): number {
 function percentage(value: number, max: number): number {
   if (!max || max <= 0) return 0;
   return Math.min(100, Math.max(0, (value / max) * 100));
+}
+
+type MovementView = "circles" | "bars" | "lines" | "map";
+
+const SAUDI_CITY_COORDS: Record<string, { x: number; y: number }> = {
+  الرياض: { x: 54, y: 48 },
+  riyadh: { x: 54, y: 48 },
+  جدة: { x: 28, y: 52 },
+  jeddah: { x: 28, y: 52 },
+  الدمام: { x: 70, y: 42 },
+  dammam: { x: 70, y: 42 },
+  الخبر: { x: 71, y: 44 },
+  khobar: { x: 71, y: 44 },
+  مكة: { x: 30, y: 56 },
+  "مكة المكرمة": { x: 30, y: 56 },
+  makkah: { x: 30, y: 56 },
+  mecca: { x: 30, y: 56 },
+  المدينة: { x: 32, y: 40 },
+  "المدينة المنورة": { x: 32, y: 40 },
+  madinah: { x: 32, y: 40 },
+  medina: { x: 32, y: 40 },
+  تبوك: { x: 26, y: 22 },
+  tabuk: { x: 26, y: 22 },
+  حائل: { x: 42, y: 30 },
+  hail: { x: 42, y: 30 },
+  أبها: { x: 34, y: 72 },
+  ابها: { x: 34, y: 72 },
+  abha: { x: 34, y: 72 },
+  جازان: { x: 32, y: 82 },
+  jazan: { x: 32, y: 82 },
+  نجران: { x: 44, y: 80 },
+  najran: { x: 44, y: 80 },
+  القصيم: { x: 48, y: 36 },
+  بريدة: { x: 48, y: 36 },
+  qassim: { x: 48, y: 36 },
+  الجبيل: { x: 68, y: 38 },
+  jubail: { x: 68, y: 38 },
+  الطائف: { x: 33, y: 58 },
+  taif: { x: 33, y: 58 },
+  ينبع: { x: 27, y: 42 },
+  yanbu: { x: 27, y: 42 },
+  الأحساء: { x: 66, y: 50 },
+  الهفوف: { x: 66, y: 50 },
+  ahsa: { x: 66, y: 50 },
+};
+
+function resolveCityCoords(raw: string | null | undefined): { x: number; y: number } | null {
+  if (!raw) return null;
+  const key = raw.trim().toLowerCase();
+  if (SAUDI_CITY_COORDS[key]) return SAUDI_CITY_COORDS[key];
+  const arabicKey = raw.trim();
+  if (SAUDI_CITY_COORDS[arabicKey]) return SAUDI_CITY_COORDS[arabicKey];
+  const matched = Object.entries(SAUDI_CITY_COORDS).find(([name]) => key.includes(name.toLowerCase()) || name.includes(arabicKey));
+  return matched?.[1] ?? null;
+}
+
+function ChartTooltipStyle() {
+  return {
+    backgroundColor: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(24,178,176,0.28)",
+    borderRadius: "14px",
+    color: "#2D3135",
+    direction: "rtl" as const,
+    boxShadow: "0 16px 40px rgba(0,0,0,0.08)",
+  };
 }
 
 function sumRequestItems(req: InventoryRequest): number {
@@ -391,6 +461,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("monthly");
   const [dashboardTab, setDashboardTab] = useState("overview");
+  const [movementView, setMovementView] = useState<MovementView>("circles");
   const dateLocale = language === "ar" ? "ar-SA" : "en-US";
 
   const trendPeriodOptions: Array<{ value: TrendPeriod; label: string }> = [
@@ -538,7 +609,7 @@ export default function Dashboard() {
       { name: t('dashboard.sims'), value: Math.round(totals.total * 0.30), color: "#5F6368" },
       { name: t('dashboard.paper_stickers'), value: Math.round(totals.total * 0.25), color: "#F4B740" },
     ];
-  }, [totals.total]);
+  }, [totals.total, t]);
 
   // Pending items count
   const pendingRequestsCount = useMemo(() => {
@@ -550,6 +621,54 @@ export default function Dashboard() {
   }, [allTransfers]);
 
   const totalPendingActions = pendingRequestsCount + pendingTransfersCount;
+
+  const inventoryMixData = useMemo(() => ([
+    { name: t('dashboard.fixed_inventory'), value: totals.fixed, color: "#18B2B0" },
+    { name: t('dashboard.moving_inventory'), value: totals.moving, color: "#5F6368" },
+    { name: t('dashboard.item_16008'), value: totals.central, color: "#F4B740" },
+  ].filter((item) => item.value > 0)), [totals.fixed, totals.moving, totals.central, t]);
+
+  const operationsStatusData = useMemo(() => ([
+    { name: t('dashboard.movement_pending_ops'), value: totalPendingActions, color: "#E05252" },
+    { name: t('dashboard.day'), value: dashboardStats?.todayTransactions ?? 0, color: "#F4B740" },
+    { name: t('dashboard.movement_completed_ops'), value: Math.max((adminStats?.totalTransactions ?? 0) - totalPendingActions, 0), color: "#18B2B0" },
+  ].filter((item) => item.value > 0)), [totalPendingActions, dashboardStats?.todayTransactions, adminStats?.totalTransactions, t]);
+
+  const cityMovementData = useMemo(() => {
+    const buckets = new Map<string, { name: string; technicians: number; warehouses: number; units: number }>();
+
+    (techniciansData?.technicians || []).forEach((tech) => {
+      const name = (tech.city || t('dashboard.item_11173')).trim() || t('dashboard.item_11173');
+      const current = buckets.get(name) || { name, technicians: 0, warehouses: 0, units: 0 };
+      current.technicians += 1;
+      current.units += sumInventoryValue(tech.fixedInventory) + sumInventoryValue(tech.movingInventory);
+      buckets.set(name, current);
+    });
+
+    warehousesData.forEach((warehouse) => {
+      const name = (warehouse.location || warehouse.name || t('dashboard.item_11173')).trim() || t('dashboard.item_11173');
+      const current = buckets.get(name) || { name, technicians: 0, warehouses: 0, units: 0 };
+      current.warehouses += 1;
+      current.units += Number(warehouse.totalItems || 0);
+      buckets.set(name, current);
+    });
+
+    return Array.from(buckets.values())
+      .sort((a, b) => b.units - a.units || b.technicians - a.technicians)
+      .slice(0, 8);
+  }, [techniciansData?.technicians, warehousesData, t]);
+
+  const geoSpreadPoints = useMemo(() => {
+    return cityMovementData
+      .map((city, index) => {
+        const coords = resolveCityCoords(city.name) || {
+          x: 24 + ((index * 9) % 55),
+          y: 22 + ((index * 11) % 58),
+        };
+        return { ...city, ...coords };
+      })
+      .filter((point) => point.units > 0 || point.technicians > 0 || point.warehouses > 0);
+  }, [cityMovementData]);
 
   // ── Courier queries (admin/supervisor only) ──
   const { data: courierStats } = useQuery<CourierDashboardStats>({
@@ -793,129 +912,236 @@ export default function Dashboard() {
             >
           {/* TAB 1: OVERVIEW */}
           <TabsContent value="overview" className="space-y-6 outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Trend Chart (Left & Center) */}
-              <div className="lg:col-span-2 rassco-glass rassco-glass-static p-6 flex flex-col border-2 !border-[rgba(24,178,176,0.28)]">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-[#2D3135]">{t('dashboard.inventory_1')}</h3>
-                    <p className="text-[#6B7280] text-xs mt-0.5">{t('dashboard.inventory_2')}</p>
-                  </div>
-                  <div className="bg-[#F8FAFB] border-2 border-[rgba(24,178,176,0.22)] rounded-xl p-1 flex items-center gap-1 shrink-0">
-                    {trendPeriodOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        className={
-                          trendPeriod === option.value
-                            ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#18B2B0] text-white shadow-sm"
-                            : "px-3 py-1.5 text-xs rounded-lg text-[#6B7280] hover:bg-white transition-colors"
-                        }
-                        onClick={() => setTrendPeriod(option.value)}
-                        type="button"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex-1 min-h-[300px] rounded-2xl border border-[rgba(24,178,176,0.16)] bg-[rgba(248,250,251,0.65)] p-3">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorFixed" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#18B2B0" stopOpacity={0.38} />
-                          <stop offset="95%" stopColor="#18B2B0" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorMoving" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#5F6368" stopOpacity={0.28} />
-                          <stop offset="95%" stopColor="#5F6368" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorCentral" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#F4B740" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#F4B740" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.45} vertical={false} />
-                      <XAxis dataKey="name" stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "rgba(255,255,255,0.96)",
-                          border: "1px solid rgba(24,178,176,0.28)",
-                          borderRadius: "14px",
-                          color: "#2D3135",
-                          direction: "rtl",
-                          boxShadow: "0 16px 40px rgba(0,0,0,0.08)",
-                        }}
-                        itemStyle={{ color: "#2D3135" }}
-                      />
-                      <Legend verticalAlign="top" height={36} iconType="circle" />
-                      <Area type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#18B2B0" strokeWidth={2.5} fillOpacity={1} fill="url(#colorFixed)" />
-                      <Area type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#5F6368" strokeWidth={2.5} fillOpacity={1} fill="url(#colorMoving)" />
-                      <Area type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#F4B740" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCentral)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Side Card: Category proportion breakdown */}
-              <div className="rassco-glass rassco-glass-static p-6 flex flex-col justify-between border-2 !border-[rgba(24,178,176,0.28)]">
+            <div className="rassco-glass rassco-glass-static p-6 border-2 !border-[rgba(24,178,176,0.28)]">
+              <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4 mb-5">
                 <div>
-                  <h3 className="text-lg font-bold text-[#2D3135] flex items-center justify-between">
-                    {t('dashboard.category_items_inventory')}
-                    <Shapes className="h-4 w-4 text-[#6B7280]" />
-                  </h3>
-                  <p className="text-[#6B7280] text-xs mt-0.5">{t('dashboard.item_49426')}</p>
+                  <h3 className="text-lg font-bold text-[#2D3135]">{t('dashboard.system_movement')}</h3>
+                  <p className="text-[#6B7280] text-xs mt-0.5">{t('dashboard.system_movement_desc')}</p>
                 </div>
-
-                <div className="flex-1 flex items-center justify-center min-h-[200px] my-3 rounded-2xl border border-[rgba(24,178,176,0.16)] bg-[rgba(248,250,251,0.65)]">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={58}
-                        outerRadius={78}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="#fff"
-                        strokeWidth={3}
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "rgba(255,255,255,0.96)",
-                          border: "1px solid rgba(24,178,176,0.28)",
-                          borderRadius: "14px",
-                          color: "#2D3135",
-                          direction: "rtl",
-                          boxShadow: "0 16px 40px rgba(0,0,0,0.08)",
-                        }}
-                        formatter={(value: any) => [t('dashboard.unit_2', { var_0: formatNumber(Number(value)) }), t('dashboard.quantity')]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-[rgba(24,178,176,0.16)]">
-                  {categoryData.map((cat) => (
-                    <div key={cat.name} className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-2">
-                        <span className="size-2.5 rounded-sm" style={{ backgroundColor: cat.color }} />
-                        <span className="text-[#6B7280]">{cat.name}</span>
-                      </span>
-                      <span className="font-semibold text-[#2D3135]">
-                        {percentage(cat.value, Math.max(totals.total, 1)).toFixed(1)}%
-                      </span>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="bg-[#F8FAFB] border-2 border-[rgba(24,178,176,0.22)] rounded-xl p-1 flex items-center gap-1 shrink-0 overflow-x-auto">
+                    {([
+                      { key: "circles" as const, label: t('dashboard.movement_circles'), icon: PieChartIcon },
+                      { key: "bars" as const, label: t('dashboard.movement_bars'), icon: BarChart3 },
+                      { key: "lines" as const, label: t('dashboard.movement_lines'), icon: LineChartIcon },
+                      { key: "map" as const, label: t('dashboard.movement_map'), icon: MapIcon },
+                    ]).map((tab) => {
+                      const Icon = tab.icon;
+                      const active = movementView === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setMovementView(tab.key)}
+                          className={
+                            active
+                              ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#18B2B0] text-white shadow-sm inline-flex items-center gap-1.5 whitespace-nowrap"
+                              : "px-3 py-1.5 text-xs rounded-lg text-[#6B7280] hover:bg-white transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
+                          }
+                        >
+                          <Icon className="size-3.5" />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {movementView === "lines" || movementView === "bars" ? (
+                    <div className="bg-[#F8FAFB] border-2 border-[rgba(24,178,176,0.22)] rounded-xl p-1 flex items-center gap-1 shrink-0">
+                      {trendPeriodOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          className={
+                            trendPeriod === option.value
+                              ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#18B2B0] text-white shadow-sm"
+                              : "px-3 py-1.5 text-xs rounded-lg text-[#6B7280] hover:bg-white transition-colors"
+                          }
+                          onClick={() => setTrendPeriod(option.value)}
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={movementView}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                  className="rounded-2xl border border-[rgba(24,178,176,0.16)] bg-[rgba(248,250,251,0.65)] p-4 min-h-[360px]"
+                >
+                  {movementView === "circles" && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {[
+                        { title: t('dashboard.movement_mix'), data: inventoryMixData },
+                        { title: t('dashboard.category_items_inventory'), data: categoryData },
+                        { title: t('dashboard.movement_activity'), data: operationsStatusData },
+                      ].map((block) => (
+                        <div key={block.title} className="rounded-2xl border border-[rgba(24,178,176,0.14)] bg-white/70 p-4">
+                          <h4 className="text-sm font-bold text-[#2D3135] mb-2">{block.title}</h4>
+                          <div className="h-[210px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={block.data}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={52}
+                                  outerRadius={74}
+                                  paddingAngle={4}
+                                  dataKey="value"
+                                  stroke="#fff"
+                                  strokeWidth={3}
+                                >
+                                  {block.data.map((entry, index) => (
+                                    <Cell key={`${block.title}-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Tooltip
+                                  contentStyle={ChartTooltipStyle()}
+                                  formatter={(value: any) => [formatNumber(Number(value)), t('dashboard.quantity')]}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="space-y-2 pt-2 border-t border-[rgba(24,178,176,0.12)]">
+                            {block.data.map((item) => (
+                              <div key={item.name} className="flex items-center justify-between text-xs">
+                                <span className="flex items-center gap-2 text-[#6B7280]">
+                                  <span className="size-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
+                                  {item.name}
+                                </span>
+                                <span className="font-semibold text-[#2D3135]">{formatNumber(item.value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {movementView === "bars" && (
+                    <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                      <div className="xl:col-span-3 h-[320px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={trendChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.45} vertical={false} />
+                            <XAxis dataKey="name" stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
+                            <Tooltip contentStyle={ChartTooltipStyle()} />
+                            <Legend verticalAlign="top" height={36} iconType="circle" />
+                            <Bar name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" fill="#18B2B0" radius={[6, 6, 0, 0]} />
+                            <Bar name={t('dashboard.moving_inventory_chart')} dataKey="moving" fill="#5F6368" radius={[6, 6, 0, 0]} />
+                            <Bar name={t('dashboard.item_16008')} dataKey="central" fill="#F4B740" radius={[6, 6, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="xl:col-span-2 h-[320px]">
+                        <h4 className="text-sm font-bold text-[#2D3135] mb-2">{t('dashboard.movement_cities')}</h4>
+                        <ResponsiveContainer width="100%" height="90%">
+                          <BarChart data={cityMovementData} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.35} horizontal={false} />
+                            <XAxis type="number" stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
+                            <YAxis type="category" dataKey="name" width={70} stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={ChartTooltipStyle()} />
+                            <Bar dataKey="units" name={t('dashboard.movement_units_count')} fill="#18B2B0" radius={[0, 6, 6, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+
+                  {movementView === "lines" && (
+                    <div className="h-[320px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={trendChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.45} vertical={false} />
+                          <XAxis dataKey="name" stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
+                          <Tooltip contentStyle={ChartTooltipStyle()} />
+                          <Legend verticalAlign="top" height={36} iconType="circle" />
+                          <Line type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#18B2B0" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                          <Line type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#5F6368" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                          <Line type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#F4B740" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  {movementView === "map" && (
+                    <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                      <div className="xl:col-span-3 relative h-[340px] rounded-2xl overflow-hidden border border-[rgba(24,178,176,0.16)] bg-gradient-to-br from-[#eefbfb] via-[#f8fafb] to-[#e7ecef]">
+                        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
+                          <defs>
+                            <linearGradient id="saudiFill" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#18B2B0" stopOpacity="0.16" />
+                              <stop offset="100%" stopColor="#5F6368" stopOpacity="0.08" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M18 24 C26 14, 40 12, 52 16 C64 20, 74 18, 82 24 C88 30, 90 40, 86 50 C84 60, 80 68, 74 76 C66 86, 54 90, 42 88 C32 86, 24 78, 20 68 C14 56, 12 38, 18 24 Z"
+                            fill="url(#saudiFill)"
+                            stroke="#18B2B0"
+                            strokeWidth="1.2"
+                            opacity="0.95"
+                          />
+                          <path
+                            d="M22 30 C30 22, 42 20, 54 24 C66 28, 76 26, 82 32"
+                            fill="none"
+                            stroke="#18B2B0"
+                            strokeOpacity="0.25"
+                            strokeWidth="0.6"
+                          />
+                          {geoSpreadPoints.map((point) => {
+                            const radius = Math.max(1.8, Math.min(5.5, 1.6 + Math.sqrt(Math.max(point.units, 1)) / 18));
+                            return (
+                              <g key={point.name}>
+                                <circle cx={point.x} cy={point.y} r={radius + 1.8} fill="#18B2B0" opacity="0.15" />
+                                <circle cx={point.x} cy={point.y} r={radius} fill="#18B2B0" stroke="#ffffff" strokeWidth="0.6" />
+                                <text x={point.x} y={point.y - radius - 1.5} textAnchor="middle" fontSize="2.8" fill="#2D3135" fontWeight="700">
+                                  {point.name}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                        {geoSpreadPoints.length === 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center text-sm text-[#6B7280]">
+                            {t('dashboard.movement_no_geo')}
+                          </div>
+                        )}
+                      </div>
+                      <div className="xl:col-span-2 space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                        <p className="text-xs text-[#6B7280]">{t('dashboard.movement_map_hint')}</p>
+                        {geoSpreadPoints.map((point) => (
+                          <div key={`list-${point.name}`} className="rounded-xl border border-[rgba(24,178,176,0.16)] bg-white/80 p-3">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="font-bold text-sm text-[#2D3135] flex items-center gap-1.5">
+                                <MapPin className="size-3.5 text-[#18B2B0]" />
+                                {point.name}
+                              </span>
+                              <span className="text-xs font-semibold text-[#18B2B0]">{formatNumber(point.units)}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[11px] text-[#6B7280]">
+                              <div className="rounded-lg bg-[#F8FAFB] px-2 py-1.5 border border-[rgba(24,178,176,0.1)]">
+                                {t('dashboard.movement_technicians_count')}: <strong className="text-[#2D3135]">{formatNumber(point.technicians)}</strong>
+                              </div>
+                              <div className="rounded-lg bg-[#F8FAFB] px-2 py-1.5 border border-[rgba(24,178,176,0.1)]">
+                                {t('dashboard.movement_warehouses_count')}: <strong className="text-[#2D3135]">{formatNumber(point.warehouses)}</strong>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Recent activity & transactions */}

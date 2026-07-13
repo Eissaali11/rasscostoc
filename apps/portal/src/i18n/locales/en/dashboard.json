@@ -214,5 +214,21 @@
   "welcome_tech_custody": "Welcome, {{name}}. Track your fixed and moving custody and submit new inventory requests.",
   "item_1081": "{{count}}",
   "item_1081_1": "{{count}}",
-  "item_228317": "{{count}}"
+  "item_228317": "{{count}}",
+  "system_movement": "Complete System Movement",
+  "system_movement_desc": "Full view of inventory mix, operations, and spread locations across Saudi Arabia",
+  "movement_circles": "Data Circles",
+  "movement_bars": "Bars",
+  "movement_lines": "Lines",
+  "movement_map": "Spread Map",
+  "movement_mix": "Inventory Mix",
+  "movement_activity": "Operations Status",
+  "movement_cities": "Top Active Cities",
+  "movement_map_hint": "Technicians and warehouses spread across Saudi Arabia",
+  "movement_technicians_count": "Technicians",
+  "movement_warehouses_count": "Warehouses",
+  "movement_units_count": "Units",
+  "movement_pending_ops": "Pending",
+  "movement_completed_ops": "Completed",
+  "movement_no_geo": "Not enough location data to display yet"
 }

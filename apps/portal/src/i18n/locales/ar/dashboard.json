@@ -211,5 +211,21 @@
   "count_1": "{{count}} (انقر للتفاصيل)",
   "count_status": "{{count}} حالة",
   "welcome_back_overview": "مرحباً بك مجدداً، {{name}}. إليك نظرة شاملة على عمليات المخزون ومؤشرات الأداء.",
-  "welcome_tech_custody": "أهلاً بك، {{name}}. تابع عهدتك الثابتة والمتحركة وقدم طلبات المخزون الجديدة."
+  "welcome_tech_custody": "أهلاً بك، {{name}}. تابع عهدتك الثابتة والمتحركة وقدم طلبات المخزون الجديدة.",
+  "system_movement": "حركة النظام الكاملة",
+  "system_movement_desc": "عرض شامل لتوزيع المخزون والعمليات ومواقع الانتشار عبر المملكة",
+  "movement_circles": "دوائر البيانات",
+  "movement_bars": "الأعمدة",
+  "movement_lines": "الخطوط",
+  "movement_map": "مواقع الانتشار",
+  "movement_mix": "مزيج المخزون",
+  "movement_activity": "حالة العمليات",
+  "movement_cities": "أعلى المدن نشاطاً",
+  "movement_map_hint": "انتشار المندوبين والمستودعات داخل السعودية",
+  "movement_technicians_count": "مندوبون",
+  "movement_warehouses_count": "مستودعات",
+  "movement_units_count": "وحدات",
+  "movement_pending_ops": "معلقة",
+  "movement_completed_ops": "مكتملة",
+  "movement_no_geo": "لا توجد بيانات مواقع كافية للعرض حالياً"
 }
