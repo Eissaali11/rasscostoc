@@ -1,7 +1,6 @@
-import { useTranslation } from "@/lib/language";
-import {motion}from "framer-motion";
+﻿import { motion } from "framer-motion";
 import { type ReactNode } from "react";
-import {cn}from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type MotionCardProps = {
   children: ReactNode;
@@ -22,11 +21,12 @@ export function MotionCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "em-card enterprise-glass-card rounded-[22px] bg-white border-2 border-[#18B2B0] shadow-card text-rassco-text",
+        "em-card enterprise-glass-card rounded-[22px] bg-white border border-border shadow-md text-foreground",
         float && "em-float",
         className
       )}
     >
-      {children}</motion.div>
+      {children}
+    </motion.div>
   );
 }

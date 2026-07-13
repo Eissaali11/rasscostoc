@@ -1,4 +1,4 @@
-import { useTranslation } from "@/lib/language";
+﻿import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -590,15 +590,15 @@ export default function Dashboard() {
 
         {/* Tabbed content sections */}
         <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-6">
-          <TabsList className="dashboard-tabs-rail !h-auto !min-h-[4.25rem] !w-full md:!w-max !inline-flex !items-center !justify-start !gap-2 !overflow-x-auto !rounded-full !border-2 !border-[#18B2B0]/40 !bg-[#cfd6dc] !p-2.5 !shadow-[0_10px_28px_rgba(15,23,42,0.12)] !text-[#3d4650]">
+          <TabsList className="dashboard-tabs-rail !h-auto !min-h-[4.25rem] !w-full md:!w-max !inline-flex !items-center !justify-start !gap-2 !overflow-x-auto !rounded-full !border-2 !border-primary/40 !bg-[#cfd6dc] !p-2.5 !shadow-[0_10px_28px_rgba(15,23,42,0.12)] !text-[#3d4650]">
             <TabsTrigger
               value="overview"
-              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0066CC] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
             >
               {dashboardTab === "overview" && (
                 <motion.span
                   layoutId="dashboard-tab-pill"
-                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#0066CC] to-[#0052A3] shadow-[0_10px_24px_rgba(0, 102, 204,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
                 />
               )}
@@ -607,12 +607,12 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0066CC] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
             >
               {dashboardTab === "analytics" && (
                 <motion.span
                   layoutId="dashboard-tab-pill"
-                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#0066CC] to-[#0052A3] shadow-[0_10px_24px_rgba(0, 102, 204,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
                 />
               )}
@@ -621,12 +621,12 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger
               value="pending"
-              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0066CC] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
             >
               {dashboardTab === "pending" && (
                 <motion.span
                   layoutId="dashboard-tab-pill"
-                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#0066CC] to-[#0052A3] shadow-[0_10px_24px_rgba(0, 102, 204,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
                 />
               )}
@@ -640,12 +640,12 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger
               value="team"
-              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0066CC] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
             >
               {dashboardTab === "team" && (
                 <motion.span
                   layoutId="dashboard-tab-pill"
-                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#0066CC] to-[#0052A3] shadow-[0_10px_24px_rgba(0, 102, 204,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
                 />
               )}
@@ -654,12 +654,12 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger
               value="courier"
-              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0066CC] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
             >
               {dashboardTab === "courier" && (
                 <motion.span
                   layoutId="dashboard-tab-pill"
-                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#0066CC] to-[#0052A3] shadow-[0_10px_24px_rgba(0, 102, 204,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
                 />
               )}

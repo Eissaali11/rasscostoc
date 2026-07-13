@@ -1,10 +1,91 @@
-@import "./styles/rassco-tokens.css";
+﻿@import "./styles/rassco-tokens.css";
 @import "./styles/enterprise-motion.css";
-@import "./styles/enterprise-atmosphere.css";
-@import "./styles/enterprise-readability.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --background: hsl(210, 40%, 98%);
+  --foreground: hsl(222.2, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222.2, 84%, 4.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222.2, 84%, 4.9%);
+  --primary: hsl(210, 100%, 40%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(187, 100%, 27%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
+  --accent: hsl(210, 40%, 94%);
+  --accent-foreground: hsl(222.2, 84%, 4.9%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(214.3, 31.8%, 91.4%);
+  --input: hsl(214.3, 31.8%, 91.4%);
+  --ring: hsl(210, 100%, 40%);
+  --chart-1: hsl(210, 100%, 40%);
+  --chart-2: hsl(187, 100%, 27%);
+  --chart-3: hsl(38, 92%, 50%);
+  --chart-4: hsl(122, 39%, 49%);
+  --chart-5: hsl(0, 84.2%, 60.2%);
+  --sidebar: hsl(210, 40%, 96%);
+  --sidebar-foreground: hsl(222.2, 84%, 4.9%);
+  --sidebar-primary: hsl(210, 100%, 40%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(210, 40%, 94%);
+  --sidebar-accent-foreground: hsl(222.2, 84%, 4.9%);
+  --sidebar-border: hsl(214.3, 31.8%, 91.4%);
+  --sidebar-ring: hsl(210, 100%, 40%);
+  --font-sans: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Kufi Arabic", Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.5rem;
+  --success: hsl(122, 39%, 49%);
+  --warning: hsl(38, 92%, 50%);
+  --shadow-2xs: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00), 0px 1px 2px -1px hsl(210, 100%, 40% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00), 0px 1px 2px -1px hsl(210, 100%, 40% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00), 0px 2px 4px -1px hsl(210, 100%, 40% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00), 0px 4px 6px -1px hsl(210, 100%, 40% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00), 0px 8px 10px -1px hsl(210, 100%, 40% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(210, 100%, 40% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: hsl(222.2, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222.2, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222.2, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(210, 100%, 40%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(187, 100%, 27%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217.2, 32.6%, 17.5%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --accent: hsl(217.2, 32.6%, 17.5%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217.2, 32.6%, 17.5%);
+  --input: hsl(217.2, 32.6%, 17.5%);
+  --ring: hsl(210, 100%, 40%);
+  --sidebar: hsl(217.2, 32.6%, 17.5%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(210, 100%, 40%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(217.2, 32.6%, 17.5%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(217.2, 32.6%, 17.5%);
+  --sidebar-ring: hsl(210, 100%, 40%);
+  --success: hsl(122, 39%, 49%);
+  --warning: hsl(38, 92%, 50%);
+}
 
 @layer base {
   * {
@@ -13,77 +94,64 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
-    font-weight: 500;
-    font-size: 16px;
-    color: #1a1d21;
+    direction: rtl;
   }
 
   html {
-    font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    color: #1a1d21;
-    font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
-    font-weight: 800;
-  }
-
-  button, input, select, textarea {
-    font-family: inherit;
+    direction: rtl;
   }
 }
 
 @layer components {
   .success {
-    color: var(--success);
+    color: hsl(var(--success));
   }
-
+  
   .warning {
-    color: var(--warning);
+    color: hsl(var(--warning));
   }
-
+  
   .bg-success {
-    background-color: var(--success);
+    background-color: hsl(var(--success));
   }
-
+  
   .bg-warning {
-    background-color: var(--warning);
+    background-color: hsl(var(--warning));
   }
-
+  
   .text-success {
-    color: var(--success);
+    color: hsl(var(--success));
   }
-
+  
   .text-warning {
-    color: var(--warning);
+    color: hsl(var(--warning));
   }
-
+  
   .bg-success\/10 {
-    background-color: color-mix(in srgb, var(--success) 10%, transparent);
+    background-color: hsl(var(--success) / 0.1);
   }
-
+  
   .bg-warning\/10 {
-    background-color: color-mix(in srgb, var(--warning) 10%, transparent);
+    background-color: hsl(var(--warning) / 0.1);
   }
-
+  
   .border-success\/20 {
-    border-color: color-mix(in srgb, var(--success) 20%, transparent);
+    border-color: hsl(var(--success) / 0.2);
   }
-
+  
   .border-warning\/20 {
-    border-color: color-mix(in srgb, var(--warning) 20%, transparent);
+    border-color: hsl(var(--warning) / 0.2);
   }
 
-  /* Soft brand glass (replaces purple neon leftovers) */
+  /* Design helper classes for backup page */
   .glass {
-    background: rgba(24, 178, 176, 0.06);
+    background: rgba(140, 37, 244, 0.05);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(24, 178, 176, 0.12);
+    border: 1px solid rgba(140, 37, 244, 0.1);
   }
 
   .neon-glow {
-    box-shadow: 0 0 15px rgba(24, 178, 176, 0.25);
+    box-shadow: 0 0 15px rgba(140, 37, 244, 0.4);
   }
 
   .neon-pulse {
@@ -91,26 +159,26 @@
   }
 
   .neon-pulse::after {
-    content: "";
+    content: '';
     position: absolute;
     width: 8px;
     height: 8px;
-    background: #18b2b0;
+    background: #0bda73;
     border-radius: 50%;
     left: -12px;
     top: 50%;
     transform: translateY(-50%);
-    box-shadow: 0 0 10px #18b2b0;
+    box-shadow: 0 0 10px #0bda73;
   }
 
   .dotted-neon {
-    border: 2px dashed rgba(24, 178, 176, 0.45);
+    border: 2px dashed rgba(140, 37, 244, 0.5);
     transition: all 0.3s ease;
   }
 
   .dotted-neon:hover {
-    border-color: #18b2b0;
-    box-shadow: inset 0 0 15px rgba(24, 178, 176, 0.1);
+    border-color: #00f2ff;
+    box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.1);
   }
 }
 
@@ -123,7 +191,7 @@
       transform: translateX(-50%);
     }
   }
-
+  
   @keyframes scroll-ltr {
     0% {
       transform: translateX(-50%);
@@ -134,8 +202,7 @@
   }
 
   @keyframes zoom-slow {
-    0%,
-    100% {
+    0%, 100% {
       transform: scale(1);
     }
     50% {
@@ -144,8 +211,7 @@
   }
 
   @keyframes gradient-shift {
-    0%,
-    100% {
+    0%, 100% {
       opacity: 0.4;
       transform: translateX(0);
     }
@@ -165,8 +231,7 @@
   }
 
   @keyframes float {
-    0%,
-    100% {
+    0%, 100% {
       transform: translateY(0) translateX(0);
       opacity: 0.3;
     }
@@ -194,14 +259,18 @@
       transform: translateY(0);
     }
   }
+}
 
+/* Custom Scrollbar Styles */
+@layer utilities {
+  /* Webkit scrollbar (Chrome, Safari, Edge) */
   .scrollbar-thin::-webkit-scrollbar {
     height: 8px;
     width: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: rgba(95, 99, 104, 0.08);
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
   }
 
@@ -215,10 +284,21 @@
     background: rgba(24, 178, 176, 0.7);
   }
 
+  /* Smooth scrolling */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgba(24, 178, 176, 0.5) rgba(95, 99, 104, 0.08);
+    scrollbar-color: rgba(24, 178, 176, 0.5) rgba(255, 255, 255, 0.05);
     scroll-behavior: smooth;
+  }
+
+  /* Shimmer Animation */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
   }
 
   .animate-shimmer {

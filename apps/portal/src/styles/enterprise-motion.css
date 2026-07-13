@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RASSCO Enterprise Motion System
  * GPU-friendly: transform + opacity only. Target 60fps.
  */
@@ -9,7 +9,7 @@
   --motion-slow: 420ms;
   --motion-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --rassco-glow: rgba(24, 178, 176, 0.35);
+  --rassco-glow: hsl(210 100% 40% / 0.35);
 }
 
 /* ── Shimmer skeleton ─────────────────────────────────────────── */
@@ -89,10 +89,10 @@
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(24, 178, 176, 0.55),
+    rgba(0, 102, 204, 0.55),
     transparent 40%,
     rgba(95, 99, 104, 0.25),
-    rgba(24, 178, 176, 0.4)
+    rgba(0, 102, 204, 0.4)
   );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -112,7 +112,7 @@
 .em-kpi:hover {
   transform: translateY(-6px);
   box-shadow:
-    0 16px 40px rgba(24, 178, 176, 0.12),
+    0 16px 40px rgba(0, 102, 204, 0.12),
     0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
@@ -165,12 +165,12 @@
 
 .em-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(24, 178, 176, 0.22);
+  box-shadow: 0 6px 18px rgba(0, 102, 204, 0.22);
 }
 
 .em-btn:active:not(:disabled) {
   transform: translateY(1px) scale(0.98);
-  box-shadow: 0 2px 8px rgba(24, 178, 176, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.15);
 }
 
 .em-btn:disabled {
@@ -181,8 +181,8 @@
 
 .em-btn-glow:hover:not(:disabled) {
   box-shadow:
-    0 0 0 3px rgba(24, 178, 176, 0.15),
-    0 8px 22px rgba(24, 178, 176, 0.28);
+    0 0 0 3px rgba(0, 102, 204, 0.15),
+    0 8px 22px rgba(0, 102, 204, 0.28);
 }
 
 /* ── Motion card ──────────────────────────────────────────────── */
@@ -196,8 +196,8 @@
 
 .em-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--enterprise-card-shadow-hover, 0 18px 48px rgba(24, 178, 176, 0.12));
-  border-color: rgba(24, 178, 176, 0.45);
+  box-shadow: var(--enterprise-card-shadow-hover, 0 18px 48px hsl(210 100% 40% / 0.12));
+  border-color: rgba(0, 102, 204, 0.45);
 }
 
 /* ── Table rows ───────────────────────────────────────────────── */
@@ -218,7 +218,7 @@
 }
 
 .em-table-row:hover {
-  background-color: rgba(24, 178, 176, 0.06) !important;
+  background-color: rgba(0, 102, 204, 0.06) !important;
 }
 
 /* ── Sidebar nav ──────────────────────────────────────────────── */
@@ -242,8 +242,8 @@
   bottom: 20%;
   width: 3px;
   border-radius: 999px;
-  background: #18b2b0;
-  box-shadow: 0 0 10px rgba(24, 178, 176, 0.6);
+  background: #0066CC;
+  box-shadow: 0 0 10px rgba(0, 102, 204, 0.6);
   animation: em-indicator-in 0.28s var(--motion-spring);
 }
 
@@ -315,7 +315,7 @@
   right: 0;
   height: 3px;
   transform-origin: right center;
-  background: linear-gradient(90deg, #18b2b0, #149d9b);
+  background: linear-gradient(90deg, #0066CC, #0052A3);
   animation: em-toast-progress linear forwards;
 }
 
@@ -334,10 +334,10 @@
 /* ── AI breathing glow ────────────────────────────────────────── */
 @keyframes em-breathe {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(24, 178, 176, 0.2), 0 8px 30px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 0 0 rgba(0, 102, 204, 0.2), 0 8px 30px rgba(0, 0, 0, 0.05);
   }
   50% {
-    box-shadow: 0 0 24px 4px rgba(24, 178, 176, 0.28), 0 12px 36px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 24px 4px rgba(0, 102, 204, 0.28), 0 12px 36px rgba(0, 0, 0, 0.06);
   }
 }
 
@@ -354,7 +354,7 @@
   background: linear-gradient(
     110deg,
     transparent 30%,
-    rgba(24, 178, 176, 0.08) 45%,
+    rgba(0, 102, 204, 0.08) 45%,
     transparent 60%
   );
   background-size: 200% 100%;
@@ -366,8 +366,8 @@
 .em-input-focus:focus-within,
 input.em-input-focus:focus,
 textarea.em-input-focus:focus {
-  border-color: #18b2b0 !important;
-  box-shadow: 0 0 0 3px rgba(24, 178, 176, 0.18);
+  border-color: #0066CC !important;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.18);
   transition: box-shadow var(--motion-fast) ease, border-color var(--motion-fast) ease;
 }
 
@@ -407,7 +407,7 @@ textarea.em-input-focus:focus {
 /* Dashboard home tab rail — forced styles so shadcn defaults cannot win */
 .dashboard-tabs-rail {
   background: #cfd6dc !important;
-  border: 2px solid rgba(24, 178, 176, 0.4) !important;
+  border: 2px solid rgba(0, 102, 204, 0.4) !important;
   border-radius: 9999px !important;
   min-height: 4.25rem !important;
   height: auto !important;
@@ -415,7 +415,7 @@ textarea.em-input-focus:focus {
   gap: 0.5rem !important;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12) !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(24, 178, 176, 0.45) transparent;
+  scrollbar-color: rgba(0, 102, 204, 0.45) transparent;
 }
 
 .dashboard-tabs-rail::-webkit-scrollbar {
@@ -423,7 +423,7 @@ textarea.em-input-focus:focus {
 }
 
 .dashboard-tabs-rail::-webkit-scrollbar-thumb {
-  background: rgba(24, 178, 176, 0.45);
+  background: rgba(0, 102, 204, 0.45);
   border-radius: 999px;
 }
 
