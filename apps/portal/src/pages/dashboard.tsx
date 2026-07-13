@@ -266,6 +266,123 @@ function CourierStatCard({
     </div>
   );
 }
+
+function buildSparkSeries(base: number, seed = 1): Array<{ v: number }> {
+  const safe = Math.max(Number(base) || 0, 1);
+  const waves = [0.72, 0.84, 0.78, 0.93, 0.88, 1.0, 0.95];
+  return waves.map((factor, index) => ({
+    v: Math.max(0, Math.round(safe * factor * (1 + ((index + seed) % 3) * 0.02))),
+  }));
+}
+
+function KpiSparkline({
+  data,
+  color,
+  gradientId,
+  variant = "area",
+}: {
+  data: Array<{ v: number }>;
+  color: string;
+  gradientId: string;
+  variant?: "area" | "bar";
+}) {
+  if (variant === "bar") {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+          <Bar dataKey="v" fill={color} radius={[3, 3, 0, 0]} opacity={0.85} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <Area
+          type="monotone"
+          dataKey="v"
+          stroke={color}
+          strokeWidth={2.25}
+          fill={`url(#${gradientId})`}
+          dot={false}
+          activeDot={false}
+          isAnimationActive
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function HomeKpiCard({
+  title,
+  value,
+  icon: Icon,
+  accent,
+  sparkData,
+  sparkVariant = "area",
+  footer,
+  valueClassName,
+}: {
+  title: string;
+  value: string;
+  icon: React.ElementType;
+  accent: string;
+  sparkData: Array<{ v: number }>;
+  sparkVariant?: "area" | "bar";
+  footer: React.ReactNode;
+  valueClassName?: string;
+}) {
+  const gradientId = `kpi-spark-${accent.replace("#", "")}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="rassco-glass relative overflow-hidden p-5 border-2 !border-[rgba(24,178,176,0.28)] hover:!border-[#18B2B0]"
+    >
+      <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: accent }} />
+      <div
+        className="pointer-events-none absolute -left-8 -bottom-10 size-28 rounded-full opacity-20 blur-2xl"
+        style={{ backgroundColor: accent }}
+      />
+
+      <div className="relative z-10 flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#6B7280] truncate">{title}</p>
+          <p className={`mt-2 text-3xl md:text-4xl font-extrabold tracking-tight text-[#2D3135] ${valueClassName || ""}`}>
+            {value}
+          </p>
+        </div>
+        <div
+          className="size-11 rounded-2xl flex items-center justify-center shrink-0 border"
+          style={{
+            backgroundColor: `${accent}18`,
+            color: accent,
+            borderColor: `${accent}33`,
+          }}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+
+      <div className="relative z-10 h-[72px] mb-3 rounded-xl border border-[rgba(24,178,176,0.14)] bg-[rgba(248,250,251,0.72)] px-1 pt-1">
+        <KpiSparkline data={sparkData} color={accent} gradientId={gradientId} variant={sparkVariant} />
+      </div>
+
+      <div className="relative z-10 pt-3 border-t border-[rgba(24,178,176,0.16)] text-xs text-[#6B7280]">
+        {footer}
+      </div>
+    </motion.div>
+  );
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -472,18 +589,18 @@ export default function Dashboard() {
     return (
       <div dir={dir} className="space-y-8 text-rassco-text">
         {/* Welcome Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-rassco-border p-6 rounded-2xl relative overflow-hidden shadow-lg">
-          <div className="absolute -left-20 -top-20 size-60 bg-rassco/10 blur-3xl rounded-full" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rassco-glass rassco-glass-static p-6 relative overflow-hidden border-2 !border-[rgba(24,178,176,0.28)]">
+          <div className="absolute -left-20 -top-20 size-60 bg-[#18B2B0]/10 blur-3xl rounded-full" />
           <div className="relative z-10 space-y-1">
-            <h2 className="text-3xl font-extrabold tracking-tight text-rassco-text">
+            <h2 className="text-3xl font-extrabold tracking-tight text-[#2D3135]">
               {t('dashboard.admin_panel')}
             </h2>
-            <p className="text-rassco-muted font-medium">
+            <p className="text-[#6B7280] font-medium">
               {t('dashboard.welcome_back_overview', { name: user?.fullName || t('dashboard.supervisor') })}
             </p>
           </div>
           <div className="relative z-10 flex items-center gap-3">
-            <div className="px-4 py-2 bg-rassco-bg border border-rassco-border rounded-xl text-sm font-semibold text-rassco flex items-center gap-2">
+            <div className="px-4 py-2 bg-[#F8FAFB] border-2 border-[rgba(24,178,176,0.22)] rounded-xl text-sm font-semibold text-[#18B2B0] flex items-center gap-2">
               <CalendarIcon className="size-4" />
               {new Date().toLocaleDateString(dateLocale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </div>
@@ -492,100 +609,89 @@ export default function Dashboard() {
 
         {/* Top level metrics (Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Card 1: Total Inventory */}
-          <Card className="bg-white border-rassco-border hover:border-rassco/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-rassco opacity-80" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.total_units_inventory')}</span>
-              <Boxes className="h-5 w-5 text-rassco" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-rassco-text mb-2">{formatNumber(totals.total)}</div>
-              <div className="flex flex-col gap-1 text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
+          <HomeKpiCard
+            title={t('dashboard.total_units_inventory')}
+            value={formatNumber(totals.total)}
+            icon={Boxes}
+            accent="#18B2B0"
+            sparkData={trendChartData.map((point) => ({ v: point.fixed + point.moving + point.central }))}
+            footer={(
+              <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between">
                   <span>{t('dashboard.warehouses_1')}</span>
-                  <span className="font-semibold text-rassco-gray">{formatNumber(totals.central)}</span>
+                  <span className="font-semibold text-[#2D3135]">{formatNumber(totals.central)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('dashboard.couriers')}</span>
-                  <span className="font-semibold text-rassco">{formatNumber(totals.fixed)}</span>
+                  <span className="font-semibold text-[#18B2B0]">{formatNumber(totals.fixed)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('dashboard.couriers_1')}</span>
-                  <span className="font-semibold text-rassco-warning">{formatNumber(totals.moving)}</span>
+                  <span className="font-semibold text-[#F4B740]">{formatNumber(totals.moving)}</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          />
 
-          {/* Card 2: Today Transactions */}
-          <Card className="bg-white border-rassco-border hover:border-rassco-warning/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco-warning/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-rassco-warning opacity-80" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.day')}</span>
-              <Activity className="h-5 w-5 text-rassco-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-rassco-text mb-2">
-                {formatNumber(dashboardStats?.todayTransactions ?? 0)}
-              </div>
-              <div className="flex justify-between items-center text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
+          <HomeKpiCard
+            title={t('dashboard.day')}
+            value={formatNumber(dashboardStats?.todayTransactions ?? 0)}
+            icon={Activity}
+            accent="#F4B740"
+            sparkVariant="bar"
+            sparkData={buildSparkSeries(dashboardStats?.todayTransactions ?? 0, 2)}
+            footer={(
+              <div className="flex justify-between items-center">
                 <span>{t('dashboard.update')}</span>
-                <span className="flex items-center gap-1 text-rassco font-semibold">
+                <span className="flex items-center gap-1 text-[#18B2B0] font-semibold">
                   <TrendingUp className="size-3.5" />
                   {t('dashboard.phrase_a75ee9f0')}
                 </span>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          />
 
-          {/* Card 3: Active Staff */}
-          <Card className="bg-white border-rassco-border hover:border-rassco/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-rassco-gray opacity-80" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.item_28760')}</span>
-              <Users className="h-5 w-5 text-rassco" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-rassco-text mb-2">
-                {formatNumber(adminStats?.activeUsers ?? dashboardStats?.totalUsers ?? 0)}
-              </div>
-              <div className="flex justify-between items-center text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
+          <HomeKpiCard
+            title={t('dashboard.item_28760')}
+            value={formatNumber(adminStats?.activeUsers ?? dashboardStats?.totalUsers ?? 0)}
+            icon={Users}
+            accent="#5F6368"
+            sparkData={buildSparkSeries(adminStats?.activeUsers ?? dashboardStats?.totalUsers ?? 0, 3)}
+            footer={(
+              <div className="flex justify-between items-center">
                 <span>{t('dashboard.total_users_system')}</span>
-                <span className="font-semibold text-rassco-gray">
+                <span className="font-semibold text-[#2D3135]">
                   {t('dashboard.count', { count: formatNumber(adminStats?.totalUsers ?? dashboardStats?.totalUsers ?? 0) })}
                 </span>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          />
 
-          {/* Card 4: Pending actions */}
-          <Card className="bg-white border-rassco-border hover:border-rassco-danger/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rassco-danger/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1 bg-rassco-danger opacity-80" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-rassco-muted">{t('dashboard.item_27049')}</span>
-              <AlertTriangle className="h-5 w-5 text-rassco-danger animate-pulse" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-extrabold tracking-tight text-rassco-danger mb-2">
-                {formatNumber(totalPendingActions)}
-              </div>
-              <div className="flex flex-col gap-1 text-xs text-rassco-muted mt-3 pt-3 border-t border-rassco-border">
+          <HomeKpiCard
+            title={t('dashboard.item_27049')}
+            value={formatNumber(totalPendingActions)}
+            icon={AlertTriangle}
+            accent="#E05252"
+            sparkVariant="bar"
+            sparkData={buildSparkSeries(Math.max(totalPendingActions, 1), 4)}
+            valueClassName="text-[#E05252]"
+            footer={(
+              <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between">
                   <span>{t('dashboard.requests')}</span>
-                  <span className={`font-semibold ${pendingRequestsCount > 0 ? "text-rassco-danger font-bold" : "text-rassco-muted"}`}>
+                  <span className={`font-semibold ${pendingRequestsCount > 0 ? "text-[#E05252]" : "text-[#6B7280]"}`}>
                     {t('dashboard.requests_2', { count: pendingRequestsCount })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('dashboard.transfers_warehouses')}</span>
-                  <span className={`font-semibold ${pendingTransfersCount > 0 ? "text-rassco-danger font-bold" : "text-rassco-muted"}`}>
+                  <span className={`font-semibold ${pendingTransfersCount > 0 ? "text-[#E05252]" : "text-[#6B7280]"}`}>
                     {t('dashboard.transfers_2', { count: pendingTransfersCount })}
                   </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          />
         </div>
 
         {/* Tabbed content sections */}
@@ -689,20 +795,20 @@ export default function Dashboard() {
           <TabsContent value="overview" className="space-y-6 outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Trend Chart (Left & Center) */}
-              <div className="lg:col-span-2 rounded-2xl bg-white border border-rassco-border p-6 flex flex-col shadow-sm">
+              <div className="lg:col-span-2 rassco-glass rassco-glass-static p-6 flex flex-col border-2 !border-[rgba(24,178,176,0.28)]">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-rassco-text">{t('dashboard.inventory_1')}</h3>
-                    <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.inventory_2')}</p>
+                    <h3 className="text-lg font-bold text-[#2D3135]">{t('dashboard.inventory_1')}</h3>
+                    <p className="text-[#6B7280] text-xs mt-0.5">{t('dashboard.inventory_2')}</p>
                   </div>
-                  <div className="bg-rassco-bg border border-rassco-border rounded-xl p-1 flex items-center gap-1 shrink-0">
+                  <div className="bg-[#F8FAFB] border-2 border-[rgba(24,178,176,0.22)] rounded-xl p-1 flex items-center gap-1 shrink-0">
                     {trendPeriodOptions.map((option) => (
                       <button
                         key={option.value}
                         className={
                           trendPeriod === option.value
-                            ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-rassco/20 text-rassco border border-rassco/30 shadow-sm"
-                            : "px-3 py-1.5 text-xs rounded-lg text-rassco-muted hover:bg-rassco-bg transition-colors"
+                            ? "px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#18B2B0] text-white shadow-sm"
+                            : "px-3 py-1.5 text-xs rounded-lg text-[#6B7280] hover:bg-white transition-colors"
                         }
                         onClick={() => setTrendPeriod(option.value)}
                         type="button"
@@ -713,81 +819,97 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="flex-1 min-h-[300px]">
+                <div className="flex-1 min-h-[300px] rounded-2xl border border-[rgba(24,178,176,0.16)] bg-[rgba(248,250,251,0.65)] p-3">
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorFixed" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#18B2B0" stopOpacity={0.3} />
+                          <stop offset="5%" stopColor="#18B2B0" stopOpacity={0.38} />
                           <stop offset="95%" stopColor="#18B2B0" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorMoving" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#5F6368" stopOpacity={0.3} />
+                          <stop offset="5%" stopColor="#5F6368" stopOpacity={0.28} />
                           <stop offset="95%" stopColor="#5F6368" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorCentral" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#F4B740" stopOpacity={0.3} />
+                          <stop offset="5%" stopColor="#F4B740" stopOpacity={0.35} />
                           <stop offset="95%" stopColor="#F4B740" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.2} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#DADDE1" opacity={0.45} vertical={false} />
                       <XAxis dataKey="name" stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} />
                       <YAxis stroke="#7C838B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={formatNumber} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "12px", color: "#2D3135", direction: "rtl" }}
+                        contentStyle={{
+                          backgroundColor: "rgba(255,255,255,0.96)",
+                          border: "1px solid rgba(24,178,176,0.28)",
+                          borderRadius: "14px",
+                          color: "#2D3135",
+                          direction: "rtl",
+                          boxShadow: "0 16px 40px rgba(0,0,0,0.08)",
+                        }}
                         itemStyle={{ color: "#2D3135" }}
                       />
                       <Legend verticalAlign="top" height={36} iconType="circle" />
-                      <Area type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#18B2B0" strokeWidth={2} fillOpacity={1} fill="url(#colorFixed)" />
-                      <Area type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#5F6368" strokeWidth={2} fillOpacity={1} fill="url(#colorMoving)" />
-                      <Area type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#F4B740" strokeWidth={2} fillOpacity={1} fill="url(#colorCentral)" />
+                      <Area type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#18B2B0" strokeWidth={2.5} fillOpacity={1} fill="url(#colorFixed)" />
+                      <Area type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#5F6368" strokeWidth={2.5} fillOpacity={1} fill="url(#colorMoving)" />
+                      <Area type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#F4B740" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCentral)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Side Card: Category proportion breakdown */}
-              <div className="rounded-2xl bg-white border border-rassco-border p-6 flex flex-col justify-between shadow-sm">
+              <div className="rassco-glass rassco-glass-static p-6 flex flex-col justify-between border-2 !border-[rgba(24,178,176,0.28)]">
                 <div>
-                  <h3 className="text-lg font-bold text-rassco-text flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-[#2D3135] flex items-center justify-between">
                     {t('dashboard.category_items_inventory')}
-                    <Shapes className="h-4 w-4 text-rassco-muted" />
+                    <Shapes className="h-4 w-4 text-[#6B7280]" />
                   </h3>
-                  <p className="text-rassco-muted text-xs mt-0.5">{t('dashboard.item_49426')}</p>
+                  <p className="text-[#6B7280] text-xs mt-0.5">{t('dashboard.item_49426')}</p>
                 </div>
 
-                <div className="flex-1 flex items-center justify-center min-h-[200px]">
+                <div className="flex-1 flex items-center justify-center min-h-[200px] my-3 rounded-2xl border border-[rgba(24,178,176,0.16)] bg-[rgba(248,250,251,0.65)]">
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
                         data={categoryData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={55}
-                        outerRadius={75}
-                        paddingAngle={4}
+                        innerRadius={58}
+                        outerRadius={78}
+                        paddingAngle={5}
                         dataKey="value"
+                        stroke="#fff"
+                        strokeWidth={3}
                       >
                         {categoryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#FFFFFF", borderColor: "#E6E8EC", borderRadius: "12px", color: "#2D3135", direction: "rtl" }}
+                        contentStyle={{
+                          backgroundColor: "rgba(255,255,255,0.96)",
+                          border: "1px solid rgba(24,178,176,0.28)",
+                          borderRadius: "14px",
+                          color: "#2D3135",
+                          direction: "rtl",
+                          boxShadow: "0 16px 40px rgba(0,0,0,0.08)",
+                        }}
                         formatter={(value: any) => [t('dashboard.unit_2', { var_0: formatNumber(Number(value)) }), t('dashboard.quantity')]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-rassco-border">
+                <div className="space-y-3 pt-4 border-t border-[rgba(24,178,176,0.16)]">
                   {categoryData.map((cat) => (
                     <div key={cat.name} className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-2">
                         <span className="size-2.5 rounded-sm" style={{ backgroundColor: cat.color }} />
-                        <span className="text-rassco-gray">{cat.name}</span>
+                        <span className="text-[#6B7280]">{cat.name}</span>
                       </span>
-                      <span className="font-semibold text-rassco-text">
+                      <span className="font-semibold text-[#2D3135]">
                         {percentage(cat.value, Math.max(totals.total, 1)).toFixed(1)}%
                       </span>
                     </div>
@@ -798,7 +920,7 @@ export default function Dashboard() {
 
             {/* Recent activity & transactions */}
             {user?.role === "admin" && adminStats && (
-              <Card className="bg-white border-rassco-border shadow-sm">
+              <Card className="rassco-glass rassco-glass-static border-2 !border-[rgba(24,178,176,0.28)] bg-transparent shadow-none">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-lg font-bold text-rassco-text flex items-center gap-2">
