@@ -21,7 +21,7 @@ export function MotionCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "em-card enterprise-glass-card rounded-[22px] bg-white border border-border shadow-md text-foreground",
+        "em-card enterprise-glass-card rounded-2xl bg-white border border-rassco-border shadow-card text-rassco-text",
         float && "em-float",
         className
       )}

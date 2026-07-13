@@ -12,28 +12,28 @@ const accentMap: Record<
   { bar: string; iconBg: string; iconText: string; spark: string }
 > = {
   primary: {
-    bar: "bg-primary",
-    iconBg: "bg-primary/10",
-    iconText: "text-primary",
-    spark: "#0066CC",
+    bar: "bg-rassco",
+    iconBg: "bg-rassco/10",
+    iconText: "text-rassco",
+    spark: "#18B2B0",
   },
   warning: {
-    bar: "bg-warning",
-    iconBg: "bg-warning/15",
-    iconText: "text-warning",
-    spark: "#F59E0B",
+    bar: "bg-rassco-warning",
+    iconBg: "bg-rassco-warning/15",
+    iconText: "text-rassco-warning",
+    spark: "#F4B740",
   },
   danger: {
-    bar: "bg-destructive",
-    iconBg: "bg-destructive/10",
-    iconText: "text-destructive",
-    spark: "#EF4444",
+    bar: "bg-rassco-danger",
+    iconBg: "bg-rassco-danger/10",
+    iconText: "text-rassco-danger",
+    spark: "#E05252",
   },
   gray: {
-    bar: "bg-secondary",
-    iconBg: "bg-secondary/10",
-    iconText: "text-secondary",
-    spark: "#64748B",
+    bar: "bg-rassco-gray",
+    iconBg: "bg-rassco-gray/10",
+    iconText: "text-rassco-gray",
+    spark: "#5F6368",
   },
 };
 
@@ -80,7 +80,7 @@ export function EnterpriseKpiCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "em-kpi em-ripple em-float enterprise-glass-card rounded-[22px] bg-white border-2 border-primary/30 shadow-md relative overflow-hidden text-foreground",
+        "em-kpi em-ripple em-float enterprise-glass-card rounded-2xl bg-white border border-rassco-border shadow-card relative overflow-hidden text-rassco-text",
         delay > 0.15 && "em-float-delay-1",
         delay > 0.3 && "em-float-delay-2",
         onClick && "cursor-pointer"
@@ -110,7 +110,7 @@ export function EnterpriseKpiCard({
 
       <div className="relative z-[1] p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <span className="text-base font-semibold text-muted-foreground leading-snug">
+          <span className="text-base font-semibold text-rassco-muted leading-snug">
             {title}
           </span>
           <div
@@ -128,7 +128,7 @@ export function EnterpriseKpiCard({
             value={value}
             format={format}
             className={cn(
-              "text-4xl md:text-[2.75rem] font-bold tracking-tight text-foreground leading-none",
+              "text-4xl md:text-[2.75rem] font-bold tracking-tight text-rassco-text leading-none",
               valueClassName
             )}
           />
@@ -136,7 +136,7 @@ export function EnterpriseKpiCard({
         </div>
 
         {footer && (
-          <div className="pt-3 border-t border-border text-sm text-muted-foreground">
+          <div className="pt-3 border-t border-rassco-border text-sm text-rassco-muted">
             {footer}
           </div>
         )}

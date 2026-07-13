@@ -1,5 +1,7 @@
 /**
- * Local brand fonts only — theme colors live in index.css (original StockPro identity).
+ * RASSCO Design Tokens — StockPro Enterprise
+ * Source of truth for brand colors, radius, shadows, typography.
+ * UI-only; do not import from business logic modules.
  */
 
 @font-face {
@@ -73,3 +75,243 @@
   font-style: normal;
   font-display: swap;
 }
+
+:root {
+  /* Brand */
+  --rassco-primary: #18b2b0;
+  --rassco-primary-hover: #149d9b;
+  --rassco-gray: #5f6368;
+  --rassco-bg: #f7f8fa;
+  --rassco-card: #ffffff;
+  --rassco-border: #e6e8ec;
+  --rassco-text: #2d3135;
+  --rassco-text-secondary: #7c838b;
+  --rassco-success: #18b2b0;
+  --rassco-warning: #f4b740;
+  --rassco-danger: #e05252;
+  --rassco-table-header: #f3f4f6;
+  --rassco-input-border: #d7dce2;
+  --rassco-chart-muted: #dadde1;
+
+  /* Semantic (shadcn bridge) */
+  --background: #f7f8fa;
+  --foreground: #2d3135;
+  --card: #ffffff;
+  --card-foreground: #2d3135;
+  --popover: #ffffff;
+  --popover-foreground: #2d3135;
+  --primary: #18b2b0;
+  --primary-foreground: #ffffff;
+  --secondary: #5f6368;
+  --secondary-foreground: #ffffff;
+  --muted: #f3f4f6;
+  --muted-foreground: #7c838b;
+  --accent: rgba(24, 178, 176, 0.12);
+  --accent-foreground: #2d3135;
+  --destructive: #e05252;
+  --destructive-foreground: #ffffff;
+  --border: #e6e8ec;
+  --input: #d7dce2;
+  --ring: #18b2b0;
+  --chart-1: #18b2b0;
+  --chart-2: #5f6368;
+  --chart-3: #f4b740;
+  --chart-4: #dadde1;
+  --chart-5: #e05252;
+  --sidebar: #5f6368;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #18b2b0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(24, 178, 176, 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #18b2b0;
+  --success: #18b2b0;
+  --warning: #f4b740;
+  --font-sans: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Kufi Arabic", Georgia, serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+  --radius: 12px;
+  --radius-card: 16px;
+  --radius-dialog: 18px;
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-2xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.08);
+  --shadow-2xl: 0 24px 60px rgba(0, 0, 0, 0.12);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: #1f2328;
+  --foreground: #ffffff;
+  --card: #2a2f36;
+  --card-foreground: #ffffff;
+  --popover: #2a2f36;
+  --popover-foreground: #ffffff;
+  --primary: #18b2b0;
+  --primary-foreground: #ffffff;
+  --secondary: #5f6368;
+  --secondary-foreground: #ffffff;
+  --muted: #2a2f36;
+  --muted-foreground: #b0b5bb;
+  --accent: rgba(24, 178, 176, 0.16);
+  --accent-foreground: #ffffff;
+  --destructive: #e05252;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #18b2b0;
+  --chart-1: #18b2b0;
+  --chart-2: #8a9098;
+  --chart-3: #f4b740;
+  --chart-4: #dadde1;
+  --chart-5: #e05252;
+  --sidebar: #2a2f36;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #18b2b0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(24, 178, 176, 0.16);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #18b2b0;
+  --success: #18b2b0;
+  --warning: #f4b740;
+}
+
+/* Enterprise utility helpers */
+.rassco-card {
+  background: var(--card);
+  border: 2px solid #18b2b0;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  color: var(--rassco-text);
+}
+
+.rassco-btn-primary {
+  background: var(--rassco-primary);
+  color: #fff;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.rassco-btn-primary:hover {
+  background: var(--rassco-primary-hover);
+}
+
+/**
+ * Contrast fix for light cards/surfaces only.
+ * Dark courier pages (bg-[#0f…]) keep white text unchanged.
+ */
+.rassco-light-surface
+  :is(.bg-white, .bg-card, .rassco-card, [class~="shadow-card"], .bg-rassco-card)
+  :where(.text-white, .text-slate-100, .text-slate-50),
+.rassco-light-surface
+  :is(.bg-white, .bg-card, .rassco-card).text-white,
+.rassco-light-surface
+  :is(.bg-white, .bg-card, .rassco-card).text-slate-100,
+.rassco-light-surface
+  :is(.bg-white, .bg-card, .rassco-card).text-slate-50 {
+  color: var(--rassco-text) !important;
+}
+
+.rassco-light-surface
+  :is(.bg-white, .bg-card, .rassco-card, [class~="shadow-card"])
+  :where(.bg-clip-text).text-transparent {
+  background-image: none !important;
+  -webkit-text-fill-color: var(--rassco-text);
+  color: var(--rassco-text) !important;
+}
+
+/* Near-invisible light grays used as titles on white cards */
+.rassco-light-surface
+  :is(.bg-white, .bg-card, .rassco-card, [class~="shadow-card"])
+  :where(.text-slate-200, .text-slate-300) {
+  color: var(--rassco-gray) !important;
+}
+
+.rassco-light-surface
+  :is(
+    [class~="bg-rassco"],
+    [class~="bg-rassco-hover"],
+    [class~="bg-rassco-danger"],
+    [class~="bg-rassco-warning"],
+    [class~="bg-rassco-gray"],
+    [class~="bg-primary"],
+    [class~="bg-destructive"],
+    [class~="bg-emerald-500"],
+    [class~="bg-emerald-600"],
+    [class~="bg-emerald-700"],
+    [class~="bg-rose-500"],
+    [class~="bg-rose-600"],
+    [class~="bg-red-500"],
+    [class~="bg-red-600"],
+    [class~="bg-orange-500"],
+    [class~="bg-orange-600"],
+    [class~="bg-amber-500"],
+    [class~="bg-amber-600"],
+    [class~="bg-blue-500"],
+    [class~="bg-blue-600"],
+    [class~="bg-indigo-500"],
+    [class~="bg-indigo-600"],
+    [class~="bg-purple-500"],
+    [class~="bg-purple-600"],
+    [class~="bg-teal-500"],
+    [class~="bg-teal-600"],
+    [class~="bg-cyan-500"],
+    [class~="bg-cyan-600"]
+  ):where(.text-white, .text-slate-100, .text-slate-50),
+.rassco-light-surface
+  :is(
+    [class~="bg-rassco"],
+    [class~="bg-rassco-hover"],
+    [class~="bg-rassco-danger"],
+    [class~="bg-rassco-warning"],
+    [class~="bg-rassco-gray"],
+    [class~="bg-primary"],
+    [class~="bg-destructive"],
+    [class~="bg-emerald-500"],
+    [class~="bg-emerald-600"],
+    [class~="bg-emerald-700"],
+    [class~="bg-rose-500"],
+    [class~="bg-rose-600"],
+    [class~="bg-red-500"],
+    [class~="bg-red-600"],
+    [class~="bg-orange-500"],
+    [class~="bg-orange-600"],
+    [class~="bg-amber-500"],
+    [class~="bg-amber-600"],
+    [class~="bg-blue-500"],
+    [class~="bg-blue-600"],
+    [class~="bg-indigo-500"],
+    [class~="bg-indigo-600"],
+    [class~="bg-purple-500"],
+    [class~="bg-purple-600"],
+    [class~="bg-teal-500"],
+    [class~="bg-teal-600"],
+    [class~="bg-cyan-500"],
+    [class~="bg-cyan-600"]
+  )
+  :where(.text-white, .text-slate-100, .text-slate-50) {
+  color: #ffffff !important;
+}
+
+.rassco-light-surface [data-state="active"][class*="bg-rassco"],
+.rassco-light-surface .text-primary-foreground {
+  color: #ffffff !important;
+}
+
+.rassco-light-surface h1,
+.rassco-light-surface h2,
+.rassco-light-surface h3,
+.rassco-light-surface h4 {
+  color: var(--rassco-text);
+}
+
+

@@ -1,4 +1,19 @@
-﻿import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss";
+
+/** RASSCO teal scale — remaps emerald/cyan utilities used across the portal */
+const rasscoTeal = {
+  50: "#eefbfb",
+  100: "#d5f5f4",
+  200: "#aeeae8",
+  300: "#79d9d6",
+  400: "#3fc4c1",
+  500: "#18B2B0",
+  600: "#149D9B",
+  700: "#117f7e",
+  800: "#0f6564",
+  900: "#0e5352",
+  950: "#053534",
+};
 
 export default {
   darkMode: ["class"],
@@ -9,6 +24,11 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "16px",
+        "2xl": "18px",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
       },
       colors: {
         background: "var(--background)",
@@ -63,6 +83,22 @@ export default {
         },
         success: "var(--success)",
         warning: "var(--warning)",
+        rassco: {
+          DEFAULT: "#18B2B0",
+          hover: "#149D9B",
+          gray: "#5F6368",
+          bg: "#F7F8FA",
+          card: "#FFFFFF",
+          border: "#E6E8EC",
+          text: "#2D3135",
+          muted: "#7C838B",
+          danger: "#E05252",
+          warning: "#F4B740",
+        },
+        // Remap popular hard-coded palette names → RASSCO primary
+        emerald: rasscoTeal,
+        cyan: rasscoTeal,
+        teal: rasscoTeal,
       },
       fontFamily: {
         sans: ["var(--font-sans)"],

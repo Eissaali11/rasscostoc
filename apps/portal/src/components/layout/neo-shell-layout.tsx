@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { getRoleLabel } from "@shared/roles";
 import { getAuthorizedNavigation } from "@/lib/navigation";
 import { useTranslation } from "@/lib/language";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/rassco-logo.png";
 import {
   Bell,
   CircleHelp,
@@ -52,6 +52,15 @@ function initials(fullName?: string | null): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   return (parts[0]?.[0] || "U") + (parts[1]?.[0] || "");
 }
+
+const navIdle =
+  "flex items-center gap-3 px-4 py-3 rounded-2xl text-white/85 hover:bg-[rgba(24,178,176,0.12)] hover:text-white transition-colors font-medium";
+const navActive =
+  "flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#18B2B0] text-white font-semibold shadow-[0_8px_20px_rgba(24,178,176,0.28)]";
+const childNavIdle =
+  "flex items-center gap-2.5 px-3 py-2 rounded-2xl text-white/70 hover:text-white hover:bg-[rgba(24,178,176,0.12)] transition-colors text-xs font-medium";
+const childNavActive =
+  "flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-[rgba(24,178,176,0.22)] text-white text-xs font-semibold";
 
 export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
   const { t, dir, language, changeLanguage } = useTranslation();
@@ -173,29 +182,29 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
   const submenuPadClass = dir === "rtl" ? "mr-6 border-r pr-4" : "ml-6 border-l pl-4";
 
   return (
-    <div dir={dir} className="min-h-screen bg-[#102222] text-slate-100 flex overflow-x-hidden">
+    <div dir={dir} className="min-h-screen bg-rassco-bg text-rassco-text flex overflow-x-hidden">
       <div
         className={`fixed inset-0 z-40 transition-all duration-300 ${
           isSidebarOpen
-            ? "bg-black/60 backdrop-blur-sm pointer-events-auto opacity-100"
+            ? "bg-black/40 backdrop-blur-sm pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0"
         }`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
       <aside
-        className={`fixed top-0 bottom-0 z-50 w-72 ${sidebarSideClass} border-slate-700/60 bg-[#1a3636] flex flex-col h-screen transition-transform duration-300 ease-in-out shadow-2xl ${sidebarHiddenClass}`}
+        className={`fixed top-0 bottom-0 z-50 w-72 ${sidebarSideClass} border-white/10 bg-[#5F6368] flex flex-col h-screen transition-transform duration-300 ease-in-out shadow-2xl ${sidebarHiddenClass}`}
       >
-        <div className="p-6 flex items-center justify-between gap-3 border-b border-slate-700/60">
+        <div className="p-6 flex items-center justify-between gap-3 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="h-16 w-16 rounded-xl bg-cyan-400/20 text-cyan-300 flex items-center justify-center overflow-hidden shrink-0">
+            <div className="h-16 w-16 rounded-2xl bg-[rgba(24,178,176,0.18)] text-[#18B2B0] flex items-center justify-center overflow-hidden shrink-0">
               <img src={logo} alt={t("app.name")} className="h-14 w-14 object-contain" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight">{t("app.name")}</h1>
+            <h1 className="text-lg font-bold tracking-tight text-white">{t("app.name")}</h1>
           </div>
           <button
             onClick={() => setIsSidebarOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-2xl text-white/70 hover:text-white hover:bg-[rgba(24,178,176,0.12)] transition-colors"
             aria-label={t("close_sidebar")}
           >
             <X className="h-5 w-5" />
@@ -203,13 +212,13 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
         </div>
 
         <div className="p-4 flex flex-col gap-5 flex-1 overflow-y-auto">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/40 border border-slate-700/40">
-            <div className="size-11 rounded-full bg-cyan-300/20 text-cyan-200 flex items-center justify-center border border-cyan-300/40 font-semibold">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-black/15 border border-white/10">
+            <div className="size-11 rounded-full bg-[rgba(24,178,176,0.18)] text-white flex items-center justify-center border border-[#18B2B0]/40 font-semibold">
               {initials(user?.fullName)}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">{user?.fullName || t("user")}</span>
-              <span className="text-xs text-slate-400">
+              <span className="text-sm font-semibold text-white">{user?.fullName || t("user")}</span>
+              <span className="text-xs text-white/65">
                 {getRoleLabel(user?.role || "technician", language)}
               </span>
             </div>
@@ -231,7 +240,7 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
                     key={`${item.href}-${item.labelKey}`}
                     href={item.href}
                     onClick={(e) => handleExternalClick(e, item.href)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium"
+                    className={navIdle}
                   >
                     <Icon className="h-4 w-4" />
                     {label}
@@ -249,32 +258,24 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
                   <Link
                     href={item.href}
                     onClick={() => setIsSidebarOpen(false)}
-                    className={
-                      active && !item.children
-                        ? "flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-400/20 text-cyan-300 font-medium"
-                        : "flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium"
-                    }
+                    className={active && !item.children ? navActive : navIdle}
                   >
                     <Icon className="h-4 w-4" />
                     {label}
                   </Link>
                   {showChildren && item.children && (
-                    <div className={`${submenuPadClass} border-slate-700/60 py-1 flex flex-col gap-1.5`}>
+                    <div className={`${submenuPadClass} border-white/15 py-1 flex flex-col gap-1.5`}>
                       {item.children
                         .filter((child) => !child.roles || child.roles.includes(user?.role || ""))
                         .map((child) => {
                           const ChildIcon = child.icon;
-                          const childActive = location === child.href;
+                          const isChildActive = location === child.href;
                           return (
                             <Link
                               key={child.href}
                               href={child.href}
                               onClick={() => setIsSidebarOpen(false)}
-                              className={
-                                childActive
-                                  ? "flex items-center gap-2.5 px-3 py-2 rounded-lg bg-cyan-400/10 text-cyan-300 text-xs font-semibold"
-                                  : "flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-colors text-xs font-medium"
-                              }
+                              className={isChildActive ? childNavActive : childNavIdle}
                             >
                               <ChildIcon className="h-3.5 w-3.5" />
                               {t(child.labelKey)}
@@ -289,21 +290,18 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
           </nav>
         </div>
 
-        <div className="p-4 border-t border-slate-700/60">
+        <div className="p-4 border-t border-white/10">
           {user?.role === "admin" && (
             <Link
               href="/admin"
               onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium mb-1"
+              className={`${navIdle} mb-1`}
             >
-              <Users className="h-4 w-4 text-cyan-400" />
+              <Users className="h-4 w-4 text-[#18B2B0]" />
               {t("manage_users")}
             </Link>
           )}
-          <a
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium"
-            href="#"
-          >
+          <a className={navIdle} href="#">
             <CircleHelp className="h-4 w-4" />
             {t("help")}
           </a>
@@ -311,7 +309,7 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="mt-2 w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-300 hover:bg-rose-500/10 transition-colors font-medium disabled:opacity-60"
+            className="mt-2 w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[#E05252] hover:bg-[rgba(224,82,82,0.12)] transition-colors font-medium disabled:opacity-60"
           >
             <LogOut className="h-4 w-4" />
             {isLoggingOut
@@ -322,22 +320,22 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
-        <header className="h-20 border-b border-slate-700/60 bg-[#143030]/90 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 shrink-0 sticky top-0 z-10">
+        <header className="h-20 border-b border-rassco-border bg-white/95 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-2xl text-rassco-gray hover:bg-[rgba(24,178,176,0.12)] hover:text-[#18B2B0] transition-colors"
               aria-label={t("open_sidebar")}
             >
               <Menu className="h-6 w-6" />
             </button>
-            <h2 className="text-xl lg:text-2xl font-bold">{title}</h2>
+            <h2 className="text-xl lg:text-2xl font-bold text-rassco-text">{title}</h2>
           </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => changeLanguage(language === "ar" ? "en" : "ar")}
-              className="px-3 py-1.5 rounded-xl border border-slate-600 text-xs font-bold bg-slate-900/40 text-slate-100 hover:bg-slate-800 transition-all uppercase tracking-wide flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-2xl border border-rassco-border text-xs font-bold bg-rassco-bg text-rassco-text hover:border-[#18B2B0] hover:text-[#18B2B0] transition-all uppercase tracking-wide flex items-center gap-1.5"
               title={language === "ar" ? "Switch to English" : t("arabic")}
               data-testid="button-language-toggle"
             >
@@ -345,21 +343,21 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
               <span>{language === "ar" ? "EN" : "AR"}</span>
             </button>
             <button
-              className="relative p-2 rounded-full hover:bg-slate-800 transition-colors text-slate-300"
+              className="relative p-2 rounded-full hover:bg-[rgba(24,178,176,0.12)] transition-colors text-rassco-gray hover:text-[#18B2B0]"
               type="button"
               onClick={() => setLocation("/notifications")}
               aria-label={t("notifications")}
             >
               <Bell className="h-5 w-5" />
               {pendingNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 bg-red-500 text-white text-[10px] leading-none font-bold rounded-full border border-[#143030] flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 bg-rassco-danger text-white text-[10px] leading-none font-bold rounded-full border border-white flex items-center justify-center">
                   {notificationBadgeLabel}
                 </span>
               )}
             </button>
             <button
               type="button"
-              className="p-2 rounded-full hover:bg-slate-800 transition-colors text-slate-300"
+              className="p-2 rounded-full hover:bg-[rgba(24,178,176,0.12)] transition-colors text-rassco-gray hover:text-[#18B2B0]"
               onClick={() => setLocation("/profile")}
               aria-label={t("settings")}
             >
@@ -368,7 +366,9 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">{children}</div>
+        <div className="flex-1 overflow-y-auto p-8 rassco-light-surface enterprise-atmosphere">
+          {children}
+        </div>
       </main>
     </div>
   );

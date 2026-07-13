@@ -4,14 +4,14 @@
  */
 
 :root {
-  --rassco-text: #1a1d21;
-  --rassco-text-secondary: #4a5056;
-  --foreground: #1a1d21;
-  --muted-foreground: #4a5056;
-  --card-foreground: #1a1d21;
-  --shadow-card: 0 10px 28px rgba(24, 178, 176, 0.14), 0 2px 8px rgba(24, 178, 176, 0.08);
-  --enterprise-card-shadow: 0 10px 28px rgba(24, 178, 176, 0.14), 0 2px 8px rgba(24, 178, 176, 0.08);
-  --enterprise-card-shadow-hover: 0 16px 40px rgba(24, 178, 176, 0.22), 0 6px 16px rgba(24, 178, 176, 0.12);
+  --rassco-text: #2d3135;
+  --rassco-text-secondary: #7c838b;
+  --foreground: #2d3135;
+  --muted-foreground: #7c838b;
+  --card-foreground: #2d3135;
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --enterprise-card-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --enterprise-card-shadow-hover: 0 12px 36px rgba(24, 178, 176, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 /* Base type scale — clearer, heavier */
