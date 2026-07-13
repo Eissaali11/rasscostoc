@@ -6,65 +6,25 @@
 
 :root {
   --enterprise-white: #ffffff;
-  --enterprise-light: #f5f7f8;
-  --enterprise-border: #e3e7ea;
-  --enterprise-gray: #5f6368;
+  --enterprise-light: #f8fafb;
+  --enterprise-border: rgba(24, 178, 176, 0.12);
+  --enterprise-gray: #6b7280;
   --enterprise-teal: #18b2b0;
   --enterprise-teal-soft: rgba(24, 178, 176, 0.09);
   --enterprise-teal-glow: rgba(24, 178, 176, 0.18);
-  --enterprise-gray-soft: rgba(95, 99, 104, 0.06);
+  --enterprise-gray-soft: rgba(107, 114, 128, 0.06);
   --enterprise-card-radius: 22px;
-  --enterprise-card-shadow: 0 10px 40px rgba(45, 49, 53, 0.045), 0 2px 8px rgba(45, 49, 53, 0.03);
-  --enterprise-card-shadow-hover: 0 18px 48px rgba(24, 178, 176, 0.12), 0 8px 20px rgba(45, 49, 53, 0.05);
+  --enterprise-card-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
+  --enterprise-card-shadow-hover: 0 28px 56px rgba(24, 178, 176, 0.16), 0 12px 24px rgba(0, 0, 0, 0.06);
+  --rassco-page-gradient: linear-gradient(180deg, #f8fafb 0%, #eef2f4 45%, #e7ecef 100%);
 }
 
 /* ── Main canvas ──────────────────────────────────────────────── */
 .enterprise-atmosphere {
   position: relative;
   isolation: isolate;
-  background-color: var(--enterprise-white);
-  background-image:
-    /* Center readability wash — almost pure white */
-    radial-gradient(
-      ellipse 72% 58% at 50% 42%,
-      rgba(255, 255, 255, 0.97) 0%,
-      rgba(255, 255, 255, 0.88) 42%,
-      transparent 72%
-    ),
-    /* Soft teal corner lights (≈10%) */
-    radial-gradient(
-      ellipse 48% 42% at 0% 0%,
-      rgba(24, 178, 176, 0.11) 0%,
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 42% 38% at 100% 0%,
-      rgba(24, 178, 176, 0.08) 0%,
-      transparent 58%
-    ),
-    radial-gradient(
-      ellipse 46% 40% at 0% 100%,
-      rgba(95, 99, 104, 0.07) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 50% 44% at 100% 100%,
-      rgba(24, 178, 176, 0.1) 0%,
-      transparent 64%
-    ),
-    /* Flowing asymmetrical waves */
-    radial-gradient(
-      ellipse 90% 55% at 78% 18%,
-      rgba(24, 178, 176, 0.045) 0%,
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse 80% 50% at 18% 78%,
-      rgba(95, 99, 104, 0.05) 0%,
-      transparent 50%
-    ),
-    /* Base light gray structure (≈15–20%) */
-    linear-gradient(165deg, #f8fafb 0%, #f5f7f8 48%, #f7f9fa 100%);
+  background-color: #f8fafb;
+  background-image: var(--rassco-page-gradient);
   background-attachment: local;
 }
 
@@ -157,25 +117,38 @@
 /* ── Floating glass cards ─────────────────────────────────────── */
 .em-card,
 .em-kpi,
-.enterprise-glass-card {
-  border-radius: var(--enterprise-card-radius) !important;
-  background: #ffffff !important;
-  backdrop-filter: blur(10px) saturate(1.1);
-  -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  border: 2px solid #18b2b0 !important;
-  box-shadow: var(--enterprise-card-shadow) !important;
-  color: #1a1d21 !important;
+.enterprise-glass-card,
+.rassco-glass {
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  border: 1px solid rgba(24, 178, 176, 0.12) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08) !important;
+  color: #2d3135 !important;
   transition:
-    transform var(--motion-base, 260ms) var(--motion-spring, cubic-bezier(0.22, 1, 0.36, 1)),
-    box-shadow var(--motion-base, 260ms) ease,
-    border-color var(--motion-base, 260ms) ease;
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .em-card:hover,
 .em-kpi:hover,
-.enterprise-glass-card:hover {
-  border-color: #149d9b !important;
-  box-shadow: var(--enterprise-card-shadow-hover) !important;
+.enterprise-glass-card:hover,
+.rassco-glass:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: #18b2b0 !important;
+  box-shadow: 0 28px 56px rgba(24, 178, 176, 0.16), 0 12px 24px rgba(0, 0, 0, 0.06) !important;
+}
+
+.rassco-glass-static:hover {
+  transform: none;
+}
+
+.rassco-page {
+  min-height: 100%;
+  color: #2d3135;
+  font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Brand border overrides */

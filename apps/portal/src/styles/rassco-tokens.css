@@ -80,12 +80,12 @@
   /* Brand */
   --rassco-primary: #18b2b0;
   --rassco-primary-hover: #149d9b;
-  --rassco-gray: #5f6368;
-  --rassco-bg: #f7f8fa;
+  --rassco-gray: #6b7280;
+  --rassco-bg: #f8fafb;
   --rassco-card: #ffffff;
   --rassco-border: #e6e8ec;
   --rassco-text: #2d3135;
-  --rassco-text-secondary: #7c838b;
+  --rassco-text-secondary: #6b7280;
   --rassco-success: #18b2b0;
   --rassco-warning: #f4b740;
   --rassco-danger: #e05252;
@@ -102,10 +102,10 @@
   --popover-foreground: #2d3135;
   --primary: #18b2b0;
   --primary-foreground: #ffffff;
-  --secondary: #5f6368;
+  --secondary: #6b7280;
   --secondary-foreground: #ffffff;
   --muted: #f3f4f6;
-  --muted-foreground: #7c838b;
+  --muted-foreground: #6b7280;
   --accent: rgba(24, 178, 176, 0.12);
   --accent-foreground: #2d3135;
   --destructive: #e05252;
@@ -134,7 +134,7 @@
   --radius: 12px;
   --radius-card: 16px;
   --radius-dialog: 18px;
-  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 20px 45px rgba(0, 0, 0, 0.08);
   --shadow-2xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);

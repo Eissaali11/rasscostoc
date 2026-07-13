@@ -1,7 +1,6 @@
 import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -17,7 +16,7 @@ import {
   CheckCircle,
   XCircle,
   FileCode,
-  ShieldCheck
+  ShieldCheck,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -26,9 +25,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Cell
+  Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -55,10 +53,12 @@ interface SpanInfo {
   status: "UNFINISHED" | "OK" | "ERROR";
 }
 
+const glass = "rassco-glass rassco-glass-static";
+
 export default function CourierObservabilityPage() {
-  const { t } = useTranslation();
+  const { t, dir } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [refreshInterval, setRefreshInterval] = useState<number>(3000); // 3 seconds live poll
+  const [refreshInterval] = useState<number>(3000);
 
   const { data: health, refetch: refetchHealth } = useQuery<HealthStatus>({
     queryKey: ["/health/ready"],
@@ -78,7 +78,6 @@ export default function CourierObservabilityPage() {
     refetchInterval: refreshInterval,
   });
 
-  // Calculate stats from metrics
   const outboxPending = rawMetrics?.outbox_pending_total ?? 0;
   const outboxDead = rawMetrics?.outbox_dead_total ?? 0;
   const sagaCompensations = rawMetrics?.saga_compensations_total ?? 0;
@@ -86,18 +85,18 @@ export default function CourierObservabilityPage() {
   const idempotencyHits = rawMetrics?.idempotency_hits_total ?? 0;
   const idempotencyMisses = rawMetrics?.idempotency_misses_total ?? 0;
 
-  // Search filter for spans
-  const filteredSpans = spans?.filter((span) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      span.name.toLowerCase().includes(term) ||
-      span.id.toLowerCase().includes(term) ||
-      (span.attributes?.requestId && String(span.attributes.requestId).includes(term)) ||
-      (span.attributes?.technicianCode && String(span.attributes.technicianCode).toLowerCase().includes(term))
-    );
-  }) || [];
+  const filteredSpans =
+    spans?.filter((span) => {
+      const term = searchTerm.toLowerCase();
+      return (
+        span.name.toLowerCase().includes(term) ||
+        span.id.toLowerCase().includes(term) ||
+        (span.attributes?.requestId && String(span.attributes.requestId).includes(term)) ||
+        (span.attributes?.technicianCode &&
+          String(span.attributes.technicianCode).toLowerCase().includes(term))
+      );
+    }) || [];
 
-  // Group spans for chart visualization
   const spanChartData = (spans || [])
     .slice(0, 10)
     .reverse()
@@ -108,377 +107,354 @@ export default function CourierObservabilityPage() {
     }));
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-slate-950 text-slate-100">
-      {/* Title Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div dir={dir} className="rassco-page space-y-6 p-1">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`${glass} p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4`}
+      >
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-teal-400 via-emerald-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-3">
-            <Activity className="w-8 h-8 text-teal-400 animate-pulse" />
-            Enterprise Observability & Telemetry
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-3">
+            <span className="size-11 rounded-2xl bg-[#18B2B0]/12 text-[#18B2B0] flex items-center justify-center">
+              <Activity className="w-6 h-6" />
+            </span>
+            Enterprise Observability
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Real-time health, distributed tracing spans, and operational metric indicators.
+          <p className="text-[#6B7280] text-sm mt-2 font-medium">
+            Real-time health, distributed tracing spans, and operational metrics.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="border-teal-500/30 text-teal-400 bg-teal-950/20 px-3 py-1 flex items-center gap-1.5">
+          <Badge
+            variant="outline"
+            className="border-[#18B2B0]/30 text-[#18B2B0] bg-[#18B2B0]/10 px-3 py-1.5 flex items-center gap-1.5 rounded-full font-bold"
+          >
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#18B2B0] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#18B2B0]" />
             </span>
             Live Monitoring
           </Badge>
           <Button
             size="sm"
             variant="outline"
-            className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
+            className="rounded-2xl border-[rgba(24,178,176,0.2)] bg-white/70 text-[#2D3135] hover:border-[#18B2B0] hover:text-[#18B2B0]"
             onClick={() => {
               refetchHealth();
               refetchMetrics();
               refetchSpans();
             }}
           >
-            <RefreshCw className="w-4 h-4 ml-1.5" />
-            {t('courier.update')}
+            <RefreshCw className="w-4 h-4 me-1.5" />
+            {t("courier.update")}
           </Button>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className={`${glass} p-5`}>
+          <div className="text-sm font-semibold text-[#6B7280] flex items-center gap-2 mb-3">
+            <Heart className="w-4 h-4 text-[#E05252]" />
+            {t("courier.status_2")}
+          </div>
+          {health?.status === "UP" ? (
+            <div className="bg-[#18B2B0]/10 border border-[#18B2B0]/25 text-[#18B2B0] p-3 rounded-2xl flex items-center gap-2 justify-center">
+              <CheckCircle className="w-5 h-5" />
+              <span className="text-base font-extrabold">READY / UP</span>
+            </div>
+          ) : (
+            <div className="bg-[#E05252]/10 border border-[#E05252]/25 text-[#E05252] p-3 rounded-2xl flex items-center gap-2 justify-center">
+              <XCircle className="w-5 h-5" />
+              <span className="text-base font-extrabold">DOWN</span>
+            </div>
+          )}
+        </div>
+
+        <div className={`${glass} p-5`}>
+          <div className="text-sm font-semibold text-[#6B7280] flex items-center gap-2 mb-3">
+            <Database className="w-4 h-4 text-[#18B2B0]" />
+            {t("courier.data_1")}
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-xs text-[#6B7280] font-medium">PostgreSQL Connection</span>
+            <Badge
+              className={
+                health?.details?.database
+                  ? "bg-[#18B2B0]/12 text-[#18B2B0] border-[#18B2B0]/25"
+                  : "bg-[#E05252]/10 text-[#E05252] border-[#E05252]/25"
+              }
+            >
+              {health?.details?.database ? t("courier.completed_5") : t("courier.item_11197")}
+            </Badge>
+          </div>
+        </div>
+
+        <div className={`${glass} p-5 space-y-2`}>
+          <div className="text-sm font-semibold text-[#6B7280] flex items-center gap-2 mb-1">
+            <Layers className="w-4 h-4 text-[#18B2B0]" />
+            {t("courier.workers")}
+          </div>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-[#6B7280]">Subscribers Registered</span>
+            <span className={`font-bold ${health?.details?.subscribers ? "text-[#18B2B0]" : "text-[#E05252]"}`}>
+              {health?.details?.subscribers ? "Active" : "Offline"}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-[#6B7280]">Outbox Worker Loop</span>
+            <span className={`font-bold ${health?.details?.outboxWorker ? "text-[#18B2B0]" : "text-[#E05252]"}`}>
+              {health?.details?.outboxWorker ? "Active" : "Offline"}
+            </span>
+          </div>
+        </div>
+
+        <div className={`${glass} p-5`}>
+          <div className="text-sm font-semibold text-[#6B7280] flex items-center gap-2 mb-3">
+            <ShieldCheck className="w-4 h-4 text-[#18B2B0]" />
+            {t("courier.verification")}
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-xs text-[#6B7280] font-medium">Feature Flags Loaded</span>
+            <Badge
+              className={
+                health?.details?.featureFlags
+                  ? "bg-[#18B2B0]/12 text-[#18B2B0] border-[#18B2B0]/25"
+                  : "bg-[#F4B740]/15 text-[#B8860B] border-[#F4B740]/35"
+              }
+            >
+              {health?.details?.featureFlags ? t("courier.completed_5") : t("courier.pending_loading")}
+            </Badge>
+          </div>
         </div>
       </div>
 
-      {/* Health & Dependency Checklist */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Main Health Status */}
-        <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
-              <Heart className="w-4 h-4 text-rose-500" />
-              {t('courier.status_2')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              {health?.status === "UP" ? (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-2.5 rounded-xl flex items-center gap-2 w-full justify-center">
-                  <CheckCircle className="w-6 h-6 text-emerald-400" />
-                  <span className="text-lg font-bold">READY / UP</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            title: "Pending Outbox Events",
+            value: outboxPending,
+            icon: ArrowRightLeft,
+            warn: outboxPending > 10,
+            hint: t("courier.pending_waiting"),
+            bar: Math.min(100, outboxPending * 5),
+          },
+          {
+            title: "Dead Letter Events (DEAD)",
+            value: outboxDead,
+            icon: AlertTriangle,
+            warn: outboxDead > 0,
+            danger: outboxDead > 0,
+            hint: outboxDead > 0 ? t("courier.item_116375") : t("courier.no_1"),
+          },
+          {
+            title: "Saga Compensations",
+            value: sagaCompensations,
+            icon: RefreshCw,
+            warn: sagaCompensations > 0,
+            hint: t("courier.rate_1"),
+          },
+          {
+            title: "Subscriber Failures",
+            value: subscriberFailures,
+            icon: Server,
+            danger: subscriberFailures > 0,
+            hint: t("courier.item_42969"),
+          },
+        ].map((card) => {
+          const Icon = card.icon;
+          const accent = card.danger ? "#E05252" : card.warn ? "#F4B740" : "#18B2B0";
+          return (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rassco-glass p-6"
+            >
+              <div className="flex justify-between items-start gap-3">
+                <div>
+                  <p className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">{card.title}</p>
+                  <h3
+                    className="text-3xl font-extrabold mt-2 tracking-tight"
+                    style={{ color: card.danger || card.warn ? accent : "#2D3135" }}
+                  >
+                    {card.value}
+                  </h3>
+                </div>
+                <div
+                  className="p-2.5 rounded-2xl"
+                  style={{ backgroundColor: `${accent}18`, color: accent }}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+              </div>
+              {"bar" in card && typeof card.bar === "number" ? (
+                <div className="mt-4">
+                  <div className="w-full bg-[#E6E8EC] rounded-full h-1.5">
+                    <div
+                      className="h-1.5 rounded-full"
+                      style={{
+                        width: `${card.bar}%`,
+                        backgroundColor: accent,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280] mt-1.5 font-medium">{card.hint}</p>
                 </div>
               ) : (
-                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-2.5 rounded-xl flex items-center gap-2 w-full justify-center">
-                  <XCircle className="w-6 h-6 text-rose-400" />
-                  <span className="text-lg font-bold">DOWN</span>
-                </div>
+                <p className="text-xs text-[#6B7280] mt-4 font-medium">{card.hint}</p>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Database Check */}
-        <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
-              <Database className="w-4 h-4 text-blue-400" />
-              {t('courier.data_1')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-450">PostgreSQL Connection</span>
-              <Badge className={health?.details?.database ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}>
-                {health?.details?.database ? t('courier.completed_5') : t('courier.item_11197')}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscribers & Outbox Worker */}
-        <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-purple-400" />
-              {t('courier.workers')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400">Subscribers Registered</span>
-              <span className={health?.details?.subscribers ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
-                {health?.details?.subscribers ? "Active" : "Offline"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400">Outbox Worker Loop</span>
-              <span className={health?.details?.outboxWorker ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
-                {health?.details?.outboxWorker ? "Active" : "Offline"}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Feature Flags */}
-        <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              {t('courier.verification')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-450">Feature Flags Loaded</span>
-              <Badge className={health?.details?.featureFlags ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}>
-                {health?.details?.featureFlags ? t('courier.completed_5') : t('courier.pending_loading')}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+            </motion.div>
+          );
+        })}
       </div>
 
-      {/* Operational Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Pending Outbox */}
-        <Card className="bg-slate-900/40 border-slate-850 hover:border-slate-800 transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Outbox Events</p>
-                <h3 className="text-3xl font-extrabold text-white mt-2">{outboxPending}</h3>
-              </div>
-              <div className={`p-2.5 rounded-lg ${outboxPending > 10 ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"}`}>
-                <ArrowRightLeft className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="w-full bg-slate-800 rounded-full h-1.5">
-                <div
-                  className={`h-1.5 rounded-full ${outboxPending > 10 ? "bg-amber-500" : "bg-teal-500"}`}
-                  style={{ width: `${Math.min(100, outboxPending * 5)}%` }}
-                ></div>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-1.5">{t('courier.pending_waiting')}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Dead Letter Queue */}
-        <Card className="bg-slate-900/40 border-slate-850 hover:border-slate-800 transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Dead Letter Events (DEAD)</p>
-                <h3 className={`text-3xl font-extrabold mt-2 ${outboxDead > 0 ? "text-rose-500" : "text-white"}`}>
-                  {outboxDead}
-                </h3>
-              </div>
-              <div className={`p-2.5 rounded-lg ${outboxDead > 0 ? "bg-rose-500/15 text-rose-500 animate-pulse" : "bg-slate-800 text-slate-400"}`}>
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-xs text-slate-500 flex items-center gap-1">
-                {outboxDead > 0 ? (
-                  <span className="text-rose-450 font-medium">{t('courier.item_116375')}</span>
-                ) : (
-                  <span className="text-slate-450">{t('courier.no_1')}</span>
-                )}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Saga Compensations */}
-        <Card className="bg-slate-900/40 border-slate-850 hover:border-slate-800 transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Saga Compensations</p>
-                <h3 className={`text-3xl font-extrabold mt-2 ${sagaCompensations > 0 ? "text-yellow-500" : "text-white"}`}>
-                  {sagaCompensations}
-                </h3>
-              </div>
-              <div className={`p-2.5 rounded-lg ${sagaCompensations > 0 ? "bg-yellow-500/10 text-yellow-400" : "bg-slate-800 text-slate-400"}`}>
-                <RefreshCw className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-[10px] text-slate-500">{t('courier.rate_1')}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscriber Errors */}
-        <Card className="bg-slate-900/40 border-slate-850 hover:border-slate-800 transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Subscriber Failures</p>
-                <h3 className={`text-3xl font-extrabold mt-2 ${subscriberFailures > 0 ? "text-rose-400" : "text-white"}`}>
-                  {subscriberFailures}
-                </h3>
-              </div>
-              <div className={`p-2.5 rounded-lg ${subscriberFailures > 0 ? "bg-rose-500/10 text-rose-400" : "bg-slate-800 text-slate-400"}`}>
-                <Server className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-[10px] text-slate-500">{t('courier.item_42969')}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Idempotency Hit/Miss and Latency Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Latency Chart */}
-        <Card className="lg:col-span-2 bg-slate-900/40 border-slate-850 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-350 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-teal-400" />
-              Latency of Recent Spans (ms)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {spanChartData.length > 0 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={spanChartData}>
-                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155" }}
-                      labelStyle={{ color: "#f8fafc" }}
-                    />
-                    <Bar dataKey="duration" radius={[4, 4, 0, 0]}>
-                      {spanChartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.status === "ERROR" ? "#f43f5e" : "#0d9488"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64 text-slate-500 text-xs">
-                {t('courier.no_data')}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Idempotency Audit */}
-        <Card className="bg-slate-900/40 border-slate-850 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-350 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              {t('courier.duplicate_requests')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-4 bg-slate-800/40 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 block mb-1">Idempotency Hits</span>
-                <span className="text-2xl font-bold text-emerald-400">{idempotencyHits}</span>
-              </div>
-              <div className="p-4 bg-slate-800/40 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 block mb-1">Idempotency Misses</span>
-                <span className="text-2xl font-bold text-slate-300">{idempotencyMisses}</span>
-              </div>
-            </div>
-
-            {/* Hit ratio calculation */}
-            {idempotencyHits + idempotencyMisses > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">{t('courier.duplicate')}</span>
-                  <span className="text-emerald-400 font-semibold">
-                    {Math.round((idempotencyHits / (idempotencyHits + idempotencyMisses)) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-850 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-2 rounded-full"
-                    style={{ width: `${(idempotencyHits / (idempotencyHits + idempotencyMisses)) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Trace Spans Table */}
-      <Card className="bg-slate-900/40 border-slate-850 backdrop-blur-xl">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-lg font-bold text-slate-200 flex items-center gap-2">
-            <FileCode className="w-5 h-5 text-teal-400" />
-            Distributed Spans & Traces
-          </CardTitle>
-
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-450" />
-            <Input
-              placeholder={t('courier.code')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-9 bg-slate-900 border-slate-800 text-slate-200 placeholder:text-slate-500 w-full"
-            />
+        <div className={`${glass} p-6 lg:col-span-2`}>
+          <div className="text-sm font-bold text-[#2D3135] flex items-center gap-2 mb-4">
+            <Clock className="w-4 h-4 text-[#18B2B0]" />
+            Latency of Recent Spans (ms)
           </div>
-        </CardHeader>
-        <CardContent>
-          {filteredSpans.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 hover:bg-slate-900/30">
-                    <TableHead className="text-slate-400 text-right w-1/4">{t('courier.operation_1')}</TableHead>
-                    <TableHead className="text-slate-400 text-right">Span ID</TableHead>
-                    <TableHead className="text-slate-400 text-right">Parent ID</TableHead>
-                    <TableHead className="text-slate-400 text-right">{t('courier.item_13067')}</TableHead>
-                    <TableHead className="text-slate-400 text-right">{t('courier.status')}</TableHead>
-                    <TableHead className="text-slate-400 text-right">{t('courier.item_16817')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSpans.map((span) => (
-                    <TableRow key={span.id} className="border-slate-850 hover:bg-slate-905 text-slate-100">
-                      <TableCell className="font-semibold text-slate-200 text-sm">
-                        {span.name}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-slate-400">{span.id}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500">{span.parentId || "-"}</TableCell>
-                      <TableCell className="font-mono text-sm text-teal-400">
-                        {span.duration ? `${span.duration}ms` : "Active"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            span.status === "ERROR"
-                              ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
-                              : span.status === "OK"
-                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                              : "bg-slate-800 border-slate-700 text-slate-400"
-                          }
-                        >
-                          {span.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate text-xs text-slate-400">
-                        {span.attributes ? JSON.stringify(span.attributes) : "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          {spanChartData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={spanChartData}>
+                  <XAxis dataKey="name" stroke="#6B7280" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#6B7280" fontSize={10} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E6E8EC",
+                      borderRadius: "12px",
+                      color: "#2D3135",
+                    }}
+                    labelStyle={{ color: "#2D3135" }}
+                  />
+                  <Bar dataKey="duration" radius={[6, 6, 0, 0]}>
+                    {spanChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.status === "ERROR" ? "#E05252" : "#18B2B0"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              {t('courier.no_2')}
+            <div className="flex items-center justify-center h-64 text-[#6B7280] text-xs font-medium">
+              {t("courier.no_data")}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className={`${glass} p-6 space-y-6`}>
+          <div className="text-sm font-bold text-[#2D3135] flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-[#18B2B0]" />
+            {t("courier.duplicate_requests")}
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="p-4 bg-white/70 border border-[rgba(24,178,176,0.12)] rounded-2xl">
+              <span className="text-xs text-[#6B7280] block mb-1 font-semibold">Idempotency Hits</span>
+              <span className="text-2xl font-extrabold text-[#18B2B0]">{idempotencyHits}</span>
+            </div>
+            <div className="p-4 bg-white/70 border border-[rgba(24,178,176,0.12)] rounded-2xl">
+              <span className="text-xs text-[#6B7280] block mb-1 font-semibold">Idempotency Misses</span>
+              <span className="text-2xl font-extrabold text-[#2D3135]">{idempotencyMisses}</span>
+            </div>
+          </div>
+          {idempotencyHits + idempotencyMisses > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-[#6B7280] font-medium">{t("courier.duplicate")}</span>
+                <span className="text-[#18B2B0] font-bold">
+                  {Math.round((idempotencyHits / (idempotencyHits + idempotencyMisses)) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-[#E6E8EC] h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-[#18B2B0] h-2 rounded-full"
+                  style={{
+                    width: `${(idempotencyHits / (idempotencyHits + idempotencyMisses)) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={`${glass} p-6`}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <div className="text-lg font-extrabold text-[#2D3135] flex items-center gap-2">
+            <FileCode className="w-5 h-5 text-[#18B2B0]" />
+            Distributed Spans & Traces
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute end-3 top-2.5 h-4 w-4 text-[#6B7280]" />
+            <Input
+              placeholder={t("courier.code")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pe-9 bg-white/80 border-[rgba(24,178,176,0.18)] text-[#2D3135] placeholder:text-[#6B7280] rounded-2xl focus-visible:ring-[#18B2B0]"
+            />
+          </div>
+        </div>
+
+        {filteredSpans.length > 0 ? (
+          <div className="overflow-x-auto rounded-2xl border border-[rgba(24,178,176,0.12)]">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[#E6E8EC] bg-[#F3F4F6] hover:bg-[#F3F4F6]">
+                  <TableHead className="text-[#6B7280] text-right font-bold w-1/4">
+                    {t("courier.operation_1")}
+                  </TableHead>
+                  <TableHead className="text-[#6B7280] text-right font-bold">Span ID</TableHead>
+                  <TableHead className="text-[#6B7280] text-right font-bold">Parent ID</TableHead>
+                  <TableHead className="text-[#6B7280] text-right font-bold">
+                    {t("courier.item_13067")}
+                  </TableHead>
+                  <TableHead className="text-[#6B7280] text-right font-bold">{t("courier.status")}</TableHead>
+                  <TableHead className="text-[#6B7280] text-right font-bold">
+                    {t("courier.item_16817")}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSpans.map((span) => (
+                  <TableRow key={span.id} className="border-[#E6E8EC] hover:bg-[#18B2B0]/05 text-[#2D3135]">
+                    <TableCell className="font-semibold text-sm">{span.name}</TableCell>
+                    <TableCell className="font-mono text-xs text-[#6B7280]">{span.id}</TableCell>
+                    <TableCell className="font-mono text-xs text-[#6B7280]">{span.parentId || "-"}</TableCell>
+                    <TableCell className="font-mono text-sm text-[#18B2B0] font-bold">
+                      {span.duration ? `${span.duration}ms` : "Active"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          span.status === "ERROR"
+                            ? "bg-[#E05252]/10 border-[#E05252]/25 text-[#E05252]"
+                            : span.status === "OK"
+                              ? "bg-[#18B2B0]/12 border-[#18B2B0]/25 text-[#18B2B0]"
+                              : "bg-[#F3F4F6] border-[#E6E8EC] text-[#6B7280]"
+                        }
+                      >
+                        {span.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-xs text-[#6B7280]">
+                      {span.attributes ? JSON.stringify(span.attributes) : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-[#6B7280] text-sm font-medium">{t("courier.no_2")}</div>
+        )}
+      </div>
     </div>
   );
 }
