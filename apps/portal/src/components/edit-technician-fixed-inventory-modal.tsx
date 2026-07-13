@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -86,6 +87,7 @@ export function EditTechnicianFixedInventoryModal({
   });
 
   useEffect(() => {
+  const { t } = useTranslation();
     if (existingInventory) {
       setFormData(existingInventory);
     }
@@ -103,16 +105,16 @@ export function EditTechnicianFixedInventoryModal({
       queryClient.invalidateQueries({ queryKey: [`/api/technician-fixed-inventory/${technicianId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/fixed-inventory-dashboard'] });
       toast({
-        title: "✓ تم الحفظ بنجاح",
-        description: `تم حفظ المخزون الثابت لـ ${technicianName}`,
+        title: t('inventory.save_success_title'),
+        description: t('inventory.completed_save_inventory_1', { var_0: technicianName }),
       });
       onClose();
     },
     onError: () => {
       toast({
         variant: "destructive",
-        title: "✗ فشل الحفظ",
-        description: "حدث خطأ أثناء حفظ البيانات",
+        title: t('inventory.save_failed_title'),
+        description: t('inventory.error_save_data'),
       });
     },
   });
@@ -130,70 +132,70 @@ export function EditTechnicianFixedInventoryModal({
 
   const items = [
     {
-      name: 'أجهزة N950',
+      name: t('inventory.n950_devices'),
       icon: Box,
       boxesField: 'n950Boxes' as keyof FixedInventory,
       unitsField: 'n950Units' as keyof FixedInventory,
       gradient: 'from-blue-500 to-cyan-500',
     },
     {
-      name: 'أجهزة I9000s',
+      name: t('inventory.i9000s_devices'),
       icon: Box,
       boxesField: 'i9000sBoxes' as keyof FixedInventory,
       unitsField: 'i9000sUnits' as keyof FixedInventory,
       gradient: 'from-purple-500 to-pink-500',
     },
     {
-      name: 'أجهزة I9100',
+      name: t('inventory.i9100_devices'),
       icon: Box,
       boxesField: 'i9100Boxes' as keyof FixedInventory,
       unitsField: 'i9100Units' as keyof FixedInventory,
       gradient: 'from-indigo-500 to-blue-500',
     },
     {
-      name: 'أوراق رول',
+      name: t('inventory.item_12770'),
       icon: FileText,
       boxesField: 'rollPaperBoxes' as keyof FixedInventory,
       unitsField: 'rollPaperUnits' as keyof FixedInventory,
       gradient: 'from-amber-500 to-orange-500',
     },
     {
-      name: 'ملصقات مدى',
+      name: t('inventory.stickers_3'),
       icon: Sticker,
       boxesField: 'stickersBoxes' as keyof FixedInventory,
       unitsField: 'stickersUnits' as keyof FixedInventory,
       gradient: 'from-rose-500 to-red-500',
     },
     {
-      name: 'بطاريات جديدة',
+      name: t('inventory.batteries'),
       icon: Battery,
       boxesField: 'newBatteriesBoxes' as keyof FixedInventory,
       unitsField: 'newBatteriesUnits' as keyof FixedInventory,
       gradient: 'from-emerald-500 to-teal-500',
     },
     {
-      name: 'شرائح موبايلي',
+      name: t('inventory.sims_mobily'),
       icon: Smartphone,
       boxesField: 'mobilySimBoxes' as keyof FixedInventory,
       unitsField: 'mobilySimUnits' as keyof FixedInventory,
       gradient: 'from-green-500 to-lime-500',
     },
     {
-      name: 'شرائح STC',
+      name: t('inventory.stc_sims'),
       icon: Smartphone,
       boxesField: 'stcSimBoxes' as keyof FixedInventory,
       unitsField: 'stcSimUnits' as keyof FixedInventory,
       gradient: 'from-teal-500 to-cyan-500',
     },
     {
-      name: 'شرائح زين',
+      name: t('inventory.sims_zain'),
       icon: Smartphone,
       boxesField: 'zainSimBoxes' as keyof FixedInventory,
       unitsField: 'zainSimUnits' as keyof FixedInventory,
       gradient: 'from-violet-500 to-purple-500',
     },
     {
-      name: 'شرائح ليبارا',
+      name: t('inventory.sims_lebara'),
       icon: Smartphone,
       boxesField: 'lebaraBoxes' as keyof FixedInventory,
       unitsField: 'lebaraUnits' as keyof FixedInventory,
@@ -209,10 +211,10 @@ export function EditTechnicianFixedInventoryModal({
             <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
               <Save className="h-6 w-6 text-white" />
             </div>
-            تعديل المخزون الثابت - {technicianName}
+            {t('inventory.edit_fixed_inventory_count', { count: technicianName })}
           </DialogTitle>
           <DialogDescription className="text-base">
-            أدخل الكميات المتوفرة في المخزون الثابت
+            {t('inventory.inventory_4')}
           </DialogDescription>
         </DialogHeader>
 
@@ -248,7 +250,7 @@ export function EditTechnicianFixedInventoryModal({
 
                 <div className="space-y-2">
                   <Label htmlFor={`${item.name}-boxes`} className="text-sm font-medium">
-                    كراتين
+                    {t('inventory.boxes')}
                   </Label>
                   <Input
                     id={`${item.name}-boxes`}
@@ -263,7 +265,7 @@ export function EditTechnicianFixedInventoryModal({
 
                 <div className="space-y-2">
                   <Label htmlFor={`${item.name}-units`} className="text-sm font-medium">
-                    وحدات
+                    {t('inventory.units_1')}
                   </Label>
                   <Input
                     id={`${item.name}-units`}
@@ -288,7 +290,7 @@ export function EditTechnicianFixedInventoryModal({
             className="flex-1 sm:flex-initial h-11"
             data-testid="button-cancel"
           >
-            إلغاء
+            {t('inventory.cancel_1')}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -297,7 +299,7 @@ export function EditTechnicianFixedInventoryModal({
             data-testid="button-save"
           >
             <Save className="w-4 h-4 ml-2" />
-            {saveMutation.isPending ? "جاري الحفظ..." : "حفظ المخزون"}
+            {saveMutation.isPending ? t('inventory.save') : t('inventory.save_inventory')}
           </Button>
         </DialogFooter>
           </>

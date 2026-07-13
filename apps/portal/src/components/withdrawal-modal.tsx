@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "@/lib/language";
 import React, { useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -32,13 +34,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { InventoryItemWithStatus } from "@shared/schema";
 
-const formSchema = z.object({
-  itemId: z.string().min(1, "يجب اختيار صنف"),
-  quantity: z.number().min(1, "الكمية يجب أن تكون أكثر من صفر"),
+const getFormSchema = (t: (key: string) => string) => z.object(
+{
+  itemId: z.string().min(1, t('common.item_19131')),
+  quantity: z.number().min(1, t('common.quantity_8')),
   reason: z.string().optional(),
-});
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface WithdrawalModalProps {
   open: boolean;
@@ -53,6 +57,8 @@ export default function WithdrawalModal({
   selectedItem, 
   inventory 
 }: WithdrawalModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,16 +95,16 @@ export default function WithdrawalModal({
           query.queryKey[0].startsWith("/api/transactions"),
       });
       toast({
-        title: "تم السحب بنجاح",
-        description: "تم سحب الكمية المطلوبة من المخزون",
+        title: t('common.completed_withdraw_successfull'),
+        description: t('common.completed_withdraw_quantity_in'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في السحب",
-        description: error.message || "حدث خطأ أثناء السحب من المخزون",
+        title: t('common.error_withdraw'),
+        description: error.message || t('common.error_withdraw_inventory_1'),
         variant: "destructive",
       });
     },
@@ -115,9 +121,9 @@ export default function WithdrawalModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>سحب من المخزون</DialogTitle>
+          <DialogTitle>{t('common.withdraw_inventory')}</DialogTitle>
           <DialogDescription>
-            اختر الصنف والكمية المطلوب سحبها من المخزون
+            {t('common.inventory_12')}
           </DialogDescription>
         </DialogHeader>
         
@@ -128,17 +134,17 @@ export default function WithdrawalModal({
               name="itemId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>اختر الصنف</FormLabel>
+                  <FormLabel>{t('common.item_14327_1')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-withdraw-item">
-                        <SelectValue placeholder="اختر الصنف للسحب منه" />
+                        <SelectValue placeholder={t('common.item_27161')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {availableItems.map((item) => (
                         <SelectItem key={item.id} value={item.id}>
-                          {item.name} ({item.quantity} متوفر)
+                          {item.name} ({t('common.item_9058', { count: item.quantity })})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -154,10 +160,10 @@ export default function WithdrawalModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    الكمية المطلوب سحبها
+                    {t('common.quantity_18')}
                     {selectedItemData && (
                       <span className="text-muted-foreground mr-2">
-                        (متوفر: {selectedItemData.quantity})
+                        {t('common.available_qty', { qty: selectedItemData.quantity })}
                       </span>
                     )}
                   </FormLabel>
@@ -181,10 +187,10 @@ export default function WithdrawalModal({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>سبب السحب (اختياري)</FormLabel>
+                  <FormLabel>{t('common.reason_withdraw')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="مثل: تنفيذ طلب، تجديد مخزون فرع..."
+                      placeholder={t('common.branch')}
                       className="resize-none"
                       {...field}
                       data-testid="textarea-withdraw-reason"
@@ -203,7 +209,7 @@ export default function WithdrawalModal({
                 className="flex-1"
                 data-testid="button-submit-withdrawal"
               >
-                {withdrawMutation.isPending ? "جاري السحب..." : "تأكيد السحب"}
+                {withdrawMutation.isPending ? t('common.withdraw_2') : t('common.confirm_withdraw')}
               </Button>
               <Button
                 type="button"
@@ -212,7 +218,7 @@ export default function WithdrawalModal({
                 className="flex-1"
                 data-testid="button-cancel-withdrawal"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
             </div>
           </form>

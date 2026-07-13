@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -151,9 +152,9 @@ const getFileNameFromUrl = (url: string): string => {
   try {
     const cleanUrl = url.split("?")[0].split("#")[0];
     const name = decodeURIComponent(cleanUrl.split("/").pop() || "");
-    return name || "ملف التسليم";
+    return name || t('verification.file_1');
   } catch {
-    return "ملف التسليم";
+    return t('verification.file_1');
   }
 };
 
@@ -275,22 +276,22 @@ const extractUrlFieldFromLogDetails = (details: string | null | undefined, keys:
 
 const stageStatusConfig: Record<JourneyStage["status"], { text: string; badgeClass: string; cardClass: string }> = {
   done: {
-    text: "مكتملة",
+    text: t('verification.item_9572'),
     badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
     cardClass: "border-emerald-500/25 bg-emerald-500/5",
   },
   active: {
-    text: "جارية",
+    text: t('verification.item_7927'),
     badgeClass: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
     cardClass: "border-cyan-500/25 bg-cyan-500/5",
   },
   warn: {
-    text: "متوقفة",
+    text: t('verification.item_9571'),
     badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
     cardClass: "border-rose-500/25 bg-rose-500/5",
   },
   pending: {
-    text: "بانتظار التنفيذ",
+    text: t('verification.item_22277'),
     badgeClass: "bg-slate-500/15 text-slate-300 border-slate-500/30",
     cardClass: "border-white/10 bg-slate-800/40",
   },
@@ -301,28 +302,29 @@ const statusConfig: Record<
   { text: string; badgeClass: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   pending: {
-    text: "قيد المراجعة",
+    text: t('verification.pending_review'),
     badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
     icon: Clock,
   },
   approved: {
-    text: "موافق عليه",
+    text: t('verification.ok'),
     badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
     icon: CheckCircle2,
   },
   rejected: {
-    text: "مرفوض",
+    text: t('verification.rejected'),
     badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
     icon: XCircle,
   },
   delivered: {
-    text: "تم التسليم",
+    text: t('verification.completed'),
     badgeClass: "bg-teal-500/15 text-teal-300 border-teal-500/30",
     icon: Sparkles,
   },
 };
 
 export default function ReceivedDeviceDetails() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -352,7 +354,7 @@ export default function ReceivedDeviceDetails() {
   });
 
   const itemType = itemTypes.find(t => t.id === device?.itemTypeId);
-  const itemName = itemType?.nameAr ?? device?.terminalId ?? "منتج غير معروف";
+  const itemName = itemType?.nameAr ?? device?.terminalId ?? t('verification.item_19214');
 
   const deliveryProof = useMemo<DeliveryProof | null>(() => {
     const deliveryLog = logs.find((log) => {
@@ -362,9 +364,9 @@ export default function ReceivedDeviceDetails() {
         action.includes("deliver") ||
         action.includes("handover") ||
         action.includes("approve") ||
-        text.includes("تسليم") ||
+        text.includes(t('verification.item_7984')) ||
         text.includes("delivery") ||
-        text.includes("عميل");
+        text.includes(t('verification.customer'));
 
       return hasDeliveryHint && !!extractUrlFromLogDetails(log.details || log.description);
     });
@@ -443,11 +445,11 @@ export default function ReceivedDeviceDetails() {
       apiRequest("PATCH", `/api/received-devices/${id}/status`, { status, adminNotes: notes }),
     onSuccess: () => {
       toast({
-        title: actionType === "approve" ? "تمت الموافقة" : "تم الرفض",
+        title: actionType === "approve" ? t('verification.item_17540') : t('verification.completed_reject'),
         description:
           actionType === "approve"
-            ? "تم قبول الجهاز وتحديث رحلة الحالة"
-            : "تم رفض الجهاز وتحديث رحلة الحالة",
+            ? t('verification.completed_approve_device_journ')
+            : t('verification.completed_reject_device_journe'),
       });
 
       setActionDialogOpen(false);
@@ -461,8 +463,8 @@ export default function ReceivedDeviceDetails() {
     },
     onError: (error: any) => {
       toast({
-        title: "تعذر تحديث الحالة",
-        description: error?.message || "حدث خطأ غير متوقع",
+        title: t('verification.update_status'),
+        description: error?.message || t('verification.error'),
         variant: "destructive",
       });
     },
@@ -476,7 +478,7 @@ export default function ReceivedDeviceDetails() {
         if (action === "delivery_proof") {
           return {
             id: log.id,
-            title: "تم رفع إثبات التسليم من تطبيق المندوب",
+            title: t('verification.completed_proof_technician'),
             description: log.description,
             createdAt: new Date(log.createdAt),
             kind: (device?.status === "approved" || device?.status === "delivered" ? "done" : "active") as TimelineItem["kind"],
@@ -488,7 +490,7 @@ export default function ReceivedDeviceDetails() {
         if (action === "approve") {
           return {
             id: log.id,
-            title: "تم تسليم الجهاز للعميل",
+            title: t('verification.completed_device'),
             description: log.description,
             createdAt: new Date(log.createdAt),
             kind: "done" as const,
@@ -500,7 +502,7 @@ export default function ReceivedDeviceDetails() {
         if (action === "reject") {
           return {
             id: log.id,
-            title: "تعذر تسليم الجهاز",
+            title: t('verification.device_1'),
             description: log.description,
             createdAt: new Date(log.createdAt),
             kind: "warn" as const,
@@ -512,7 +514,7 @@ export default function ReceivedDeviceDetails() {
         if (action === "create") {
           return {
             id: log.id,
-            title: "تم استلام الجهاز من المصدر",
+            title: t('verification.completed_receive_device_sourc'),
             description: log.description,
             createdAt: new Date(log.createdAt),
             kind: "active" as const,
@@ -523,7 +525,7 @@ export default function ReceivedDeviceDetails() {
 
         return {
           id: log.id,
-          title: "تحديث في رحلة الجهاز",
+          title: t('verification.update_journey_device'),
           description: log.description,
           createdAt: new Date(log.createdAt),
           kind: (log.severity === "error" ? "warn" : "neutral") as TimelineItem["kind"],
@@ -544,8 +546,8 @@ export default function ReceivedDeviceDetails() {
     const fallback: TimelineItem[] = [
       {
         id: `create-${device.id}`,
-        title: "تم تسجيل الاستلام",
-        description: `تم إدخال الجهاز (${device.serialNumber}) في النظام بانتظار المراجعة.`,
+        title: t('verification.completed_receive'),
+        description: t('verification.completed_submit_device_system_revi', { var_0: device.serialNumber }),
         createdAt: new Date(device.createdAt),
         kind: "active",
         icon: Package,
@@ -555,8 +557,8 @@ export default function ReceivedDeviceDetails() {
     if (device.status === "approved" && device.approvedAt) {
       fallback.unshift({
         id: `approved-${device.id}`,
-        title: "تم تسليم الجهاز",
-        description: "تمت الموافقة على الجهاز واعتماده في الرحلة التشغيلية.",
+        title: t('verification.completed_device_1'),
+        description: t('verification.device_journey'),
         createdAt: new Date(device.approvedAt),
         kind: "done",
         icon: CheckCircle2,
@@ -566,8 +568,8 @@ export default function ReceivedDeviceDetails() {
     if (device.status === "rejected" && device.approvedAt) {
       fallback.unshift({
         id: `rejected-${device.id}`,
-        title: "تم رفض الاستلام",
-        description: device.adminNotes || "تم رفض الجهاز بعد المراجعة.",
+        title: t('verification.completed_reject_receive'),
+        description: device.adminNotes || t('verification.completed_reject_device_review'),
         createdAt: new Date(device.approvedAt),
         kind: "warn",
         icon: XCircle,
@@ -601,8 +603,8 @@ export default function ReceivedDeviceDetails() {
       return (
         action.includes("warehouse") ||
         action.includes("store") ||
-        text.includes("مستودع") ||
-        text.includes("مخزن")
+        text.includes(t('verification.warehouse')) ||
+        text.includes(t('verification.store'))
       );
     });
     const technicianLog = logs.find((log) => {
@@ -612,8 +614,8 @@ export default function ReceivedDeviceDetails() {
         action.includes("technician") ||
         action.includes("assign") ||
         action.includes("handover") ||
-        text.includes("مندوب") ||
-        text.includes("عهدة")
+        text.includes(t('verification.item_7978')) ||
+        text.includes(t('verification.item_6360'))
       );
     });
 
@@ -643,8 +645,8 @@ export default function ReceivedDeviceDetails() {
     const stages: JourneyStage[] = [
       {
         id: "source",
-        title: "استلام من المصدر",
-        description: "تم استلام الجهاز من المصدر وتسجيله في النظام.",
+        title: t('verification.receive_source'),
+        description: t('verification.completed_receive_device_sourc_1'),
         createdAt: receivedAt,
         status: "done",
         icon: MapPin,
@@ -654,8 +656,8 @@ export default function ReceivedDeviceDetails() {
     if (warehouseLog || device.regionId) {
       stages.push({
         id: "storage",
-        title: "إيداع في المستودع",
-        description: "تمت إضافة الجهاز إلى مسار التخزين بالمستودع.",
+        title: t('verification.warehouse_1'),
+        description: t('verification.add_device_route'),
         createdAt: storageAt,
         status: warehouseLog ? "done" : "active",
         icon: Warehouse,
@@ -665,10 +667,10 @@ export default function ReceivedDeviceDetails() {
     if (device.technicianId || technicianLog) {
       stages.push({
         id: "technician",
-        title: "بعهدة المندوب",
+        title: t('verification.technician'),
         description: device.technicianId
-          ? "الجهاز أصبح ضمن عهدة المندوب المسؤول عن عملية التسليم."
-          : "تم رصد مرحلة مندوبة على الجهاز.",
+          ? t('verification.device_technician_admin_operat')
+          : t('verification.completed_track_stage_device'),
         createdAt: device.technicianId || technicianLog ? technicianAt : null,
         status: device.technicianId ? "done" : "active",
         icon: User,
@@ -678,8 +680,8 @@ export default function ReceivedDeviceDetails() {
     if (deliveryProof || receiptFormProof || deliveryProofLog) {
       stages.push({
         id: "delivery-proof",
-        title: "رفع ملف التسليم",
-        description: "تم رفع ملف التسليم/فرم الاستلام الموقّع من تطبيق المندوب وإرساله للمشرف للمراجعة.",
+        title: t('verification.file_2'),
+        description: t('verification.completed_file_receive_technic'),
         createdAt: deliveryProof?.createdAt || receiptFormProof?.createdAt || new Date(deliveryProofLog?.createdAt || Date.now()),
         status: device.status === "approved" || device.status === "delivered" ? "done" : "active",
         icon: FileText,
@@ -688,15 +690,15 @@ export default function ReceivedDeviceDetails() {
 
     stages.push({
       id: "delivery",
-      title: "تسليم العميل",
+      title: t('verification.customer_1'),
       description:
         device.status === "approved" || device.status === "delivered"
-          ? "تم تسليم الجهاز للعميل واعتماد العملية."
+          ? t('verification.completed_device_operation')
           : device.status === "rejected"
-            ? "تم إيقاف التسليم بعد المراجعة."
+            ? t('verification.completed_review')
             : deliveryProof || receiptFormProof
-              ? "تم رفع ملف التسليم من تطبيق المندوب وبانتظار الاعتماد النهائي."
-              : "الجهاز بانتظار إتمام التسليم للعميل.",
+              ? t('verification.completed_file_technician')
+              : t('verification.device_2'),
       createdAt: deliveryAt,
       status: deliveryStatus,
       icon: Home,
@@ -712,8 +714,8 @@ export default function ReceivedDeviceDetails() {
       .slice(0, 2)
       .map((log, index) => ({
         id: `extra-${log.id}`,
-        title: `مرحلة تشغيل إضافية ${index + 1}`,
-        description: log.description || `إجراء مسجل: ${log.action}`,
+        title: t('verification.stage', { var_0: index + 1 }),
+        description: log.description || t('verification.item_15348', { var_0: log.action }),
         createdAt: new Date(log.createdAt),
         status: (log.severity === "error" ? "warn" : "done") as JourneyStage["status"],
         icon: Package,
@@ -740,7 +742,7 @@ export default function ReceivedDeviceDetails() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-slate-300 gap-3">
         <Clock className="h-5 w-5 animate-spin" />
-        <span>جاري تحميل رحلة الجهاز...</span>
+        <span>{t('verification.loading_journey_device')}</span>
       </div>
     );
   }
@@ -749,9 +751,9 @@ export default function ReceivedDeviceDetails() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-center">
         <XCircle className="h-10 w-10 text-rose-400" />
-        <p className="text-slate-300">لم يتم العثور على الجهاز المطلوب.</p>
+        <p className="text-slate-300">{t('verification.device')}</p>
         <Button onClick={() => setLocation("/received-devices/review")} className="bg-cyan-600 hover:bg-cyan-500">
-          العودة لقائمة الأجهزة
+          {t('verification.devices_1')}
         </Button>
       </div>
     );
@@ -776,13 +778,13 @@ export default function ReceivedDeviceDetails() {
       });
 
       toast({
-        title: "تم إنشاء الملف بنجاح",
-        description: "تم تنزيل تقرير PDF مرتب لرحلة الجهاز.",
+        title: t('verification.completed_file_successfully'),
+        description: t('verification.completed_download_report_devi'),
       });
     } catch (error: any) {
       toast({
-        title: "تعذر إنشاء ملف PDF",
-        description: error?.message || "حدث خطأ أثناء تجهيز التقرير",
+        title: t('verification.file_6'),
+        description: error?.message || t('verification.error_report'),
         variant: "destructive",
       });
     } finally {
@@ -798,7 +800,7 @@ export default function ReceivedDeviceDetails() {
       <div className="relative z-10 max-w-6xl mx-auto space-y-6">
         <header className="h-20 border border-white/10 bg-slate-900/60 backdrop-blur-xl rounded-2xl flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-white tracking-tight">رحلة {itemName}</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">{t('verification.journey_1')}{itemName}</h1>
             <div className="h-6 w-px bg-white/10" />
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -806,7 +808,7 @@ export default function ReceivedDeviceDetails() {
                 dir="ltr"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="بحث برقم التسلسل أو الحالة..."
+                placeholder={t('verification.search_status_1')}
                 className="w-72 pr-9 bg-black/20 border-white/10 text-white placeholder:text-slate-500"
               />
             </div>
@@ -824,26 +826,26 @@ export default function ReceivedDeviceDetails() {
               disabled={isExportingPdf}
             >
               <FileText className="h-4 w-4 ml-2" />
-              {isExportingPdf ? "جاري إنشاء الملف..." : "تصدير PDF"}
+              {isExportingPdf ? t('verification.file_3') : t('verification.export')}
             </Button>
           </div>
         </header>
 
         <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400">اسم المنتج / رقم الجهاز</p>
+            <p className="text-xs text-slate-400">{t('verification.name_number_device')}</p>
             <p className="text-white font-bold mt-1">{itemName}</p>
           </article>
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400">السيريال</p>
+            <p className="text-xs text-slate-400">{t('verification.serial')}</p>
             <p className="text-cyan-300 font-mono font-bold mt-1">{device.serialNumber}</p>
           </article>
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400">نوع المخزون المستهدف</p>
-            <p className="text-white font-bold mt-1">{device.inventoryType === 'moving' ? "متحرك (سيارة)" : "ثابت (مستودع)"}</p>
+            <p className="text-xs text-slate-400">{t('verification.type_inventory')}</p>
+            <p className="text-white font-bold mt-1">{device.inventoryType === 'moving' ? t('verification.item_15999') : t('verification.warehouse_2')}</p>
           </article>
           <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400">تاريخ الإدخال</p>
+            <p className="text-xs text-slate-400">{t('verification.date_submit')}</p>
             <p className="text-white font-bold mt-1">{formatDate(device.createdAt)}</p>
           </article>
         </section>
@@ -852,9 +854,9 @@ export default function ReceivedDeviceDetails() {
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-cyan-400" />
-              <h3 className="text-lg font-bold text-white">مراحل التتبع من المصدر إلى العميل</h3>
+              <h3 className="text-lg font-bold text-white">{t('verification.stages_track_source_customer')}</h3>
             </div>
-            <span className="text-xs text-slate-400">{journeyStages.length} مرحلة تشغيلية حسب البيانات</span>
+            <span className="text-xs text-slate-400">{journeyStages.length}{t('verification.stage_data_1')}</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -881,7 +883,7 @@ export default function ReceivedDeviceDetails() {
                   <p className="text-xs text-slate-400 mt-3 font-mono">
                     {stage.createdAt
                       ? `${formatDate(stage.createdAt.toISOString())} - ${formatTime(stage.createdAt.toISOString())}`
-                      : "لا يوجد توقيت مسجل"}
+                      : t('verification.no')}
                   </p>
                 </article>
               );
@@ -893,11 +895,11 @@ export default function ReceivedDeviceDetails() {
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
             <div className="flex items-center gap-3">
               <Clock className="h-6 w-6 text-cyan-400" />
-              <h3 className="text-xl font-bold text-white">سجل الرحلة التاريخي</h3>
+              <h3 className="text-xl font-bold text-white">{t('verification.log_journey')}</h3>
             </div>
             <div className="bg-black/30 border border-white/10 rounded-lg px-3 py-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(13,185,242,0.8)]" />
-              <span className="text-slate-400 text-xs font-mono">{filteredTimeline.length} مسارات مسجلة</span>
+              <span className="text-slate-400 text-xs font-mono">{filteredTimeline.length}{t('verification.item_17490')}</span>
             </div>
           </div>
 
@@ -905,12 +907,12 @@ export default function ReceivedDeviceDetails() {
             <div className="absolute right-4 top-4 bottom-0 w-[2px] bg-gradient-to-b from-cyan-400/80 via-white/10 to-orange-400/80 shadow-[0_0_8px_rgba(13,185,242,0.4)]" />
 
             {filteredTimeline.length === 0 ? (
-              <div className="text-center text-slate-400 py-16">لا توجد مراحل مطابقة في الرحلة.</div>
+              <div className="text-center text-slate-400 py-16">{t('verification.no_stages_journey')}</div>
             ) : (
               filteredTimeline.map((item) => {
                 const Icon = item.icon;
                 const isDeliveryRelated =
-                  item.action === "delivery_proof" || item.action === "approve" || item.title.includes("تسليم");
+                  item.action === "delivery_proof" || item.action === "approve" || item.title.includes(t('verification.item_7984'));
 
                 const dotClass =
                   item.kind === "done"
@@ -965,14 +967,14 @@ export default function ReceivedDeviceDetails() {
                               }
 
                               toast({
-                                title: "لا يوجد ملف تسليم",
-                                description: "لم يتم رفع ملف تسليم أو فرم استلام ورقي من تطبيق المندوب لهذا الجهاز بعد.",
+                                title: t('verification.no_file_1'),
+                                description: t('verification.file_receive_technician_device'),
                               });
                             }}
                             className="border-cyan-500/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-60"
                           >
                             <Eye className="h-4 w-4 ml-1" />
-                            {deliveryProof || receiptFormProof ? "استعراض ملف التسليم" : "لا يوجد ملف تسليم"}
+                            {deliveryProof || receiptFormProof ? t('verification.file_4') : t('verification.no_file_1')}
                           </Button>
                         </div>
                       )}
@@ -988,11 +990,11 @@ export default function ReceivedDeviceDetails() {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-cyan-300" />
-              <h3 className="text-lg font-bold text-white">ملفات التسليم المرفوعة من المندوب</h3>
+              <h3 className="text-lg font-bold text-white">{t('verification.files_technician')}</h3>
             </div>
             {(deliveryProof || receiptFormProof) && (
               <Badge className="border border-cyan-500/30 bg-cyan-500/10 text-cyan-200">
-                {(deliveryProof ? 1 : 0) + (receiptFormProof ? 1 : 0)} ملف
+                {t('verification.count', { count: (deliveryProof ? 1 : 0) + (receiptFormProof ? 1 : 0) })}
               </Badge>
             )}
           </div>
@@ -1008,16 +1010,16 @@ export default function ReceivedDeviceDetails() {
                     <div>
                       <p className="text-sm text-slate-200 font-semibold">{deliveryProof.fileName}</p>
                       <p className="text-xs text-cyan-200/80 mt-0.5">
-                        {deliveryProof.isImage ? "صورة تسليم" : isPdfFileUrl(deliveryProof.url) ? "ملف PDF" : "ملف مرفق"}
+                        {deliveryProof.isImage ? t('verification.image') : isPdfFileUrl(deliveryProof.url) ? t('verification.file_7') : t('verification.file_5')}
                       </p>
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-slate-400 space-y-1">
                     <p>
-                      تاريخ الرفع: {deliveryProof.createdAt ? `${formatDate(deliveryProof.createdAt.toISOString())} - ${formatTime(deliveryProof.createdAt.toISOString())}` : "غير متوفر"}
+                      {t('verification.upload_date', { date: deliveryProof.createdAt ? `${formatDate(deliveryProof.createdAt.toISOString())} - ${formatTime(deliveryProof.createdAt.toISOString())}` : t('verification.item_12798') })}
                     </p>
-                    {deliveryProof.uploadedBy && <p>تم الرفع بواسطة: {deliveryProof.uploadedBy}</p>}
-                    <p>المصدر: {deliveryProof.source === "log" ? "سجل العمليات" : "ملاحظات المشرف"}</p>
+                    {deliveryProof.uploadedBy && <p>{t('verification.completed_3')}{deliveryProof.uploadedBy}</p>}
+                    <p>{t('verification.source')}{deliveryProof.source === "log" ? t('verification.log_operations') : t('verification.notes_supervisor')}</p>
                   </div>
                   <div className="mt-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1030,7 +1032,7 @@ export default function ReceivedDeviceDetails() {
                         className="h-9 bg-cyan-600 hover:bg-cyan-500 text-white"
                       >
                         <Eye className="h-4 w-4 ml-1" />
-                        استعراض
+                        {t('verification.item_11083')}
                       </Button>
 
                       <a
@@ -1040,7 +1042,7 @@ export default function ReceivedDeviceDetails() {
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        فتح ملف التسليم
+                        {t('verification.file')}
                       </a>
                     </div>
                   </div>
@@ -1055,14 +1057,14 @@ export default function ReceivedDeviceDetails() {
                     </div>
                     <div>
                       <p className="text-sm text-slate-200 font-semibold">{receiptFormProof.fileName}</p>
-                      <p className="text-xs text-amber-200/80 mt-0.5">فرم الاستلام الورقي الموقّع</p>
+                      <p className="text-xs text-amber-200/80 mt-0.5">{t('verification.receive')}</p>
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-slate-400 space-y-1">
                     <p>
-                      تاريخ الرفع: {receiptFormProof.createdAt ? `${formatDate(receiptFormProof.createdAt.toISOString())} - ${formatTime(receiptFormProof.createdAt.toISOString())}` : "غير متوفر"}
+                      {t('verification.upload_date', { date: receiptFormProof.createdAt ? `${formatDate(receiptFormProof.createdAt.toISOString())} - ${formatTime(receiptFormProof.createdAt.toISOString())}` : t('verification.item_12798') })}
                     </p>
-                    {receiptFormProof.uploadedBy && <p>تم الرفع بواسطة: {receiptFormProof.uploadedBy}</p>}
+                    {receiptFormProof.uploadedBy && <p>{t('verification.completed_3')}{receiptFormProof.uploadedBy}</p>}
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     <Button
@@ -1074,7 +1076,7 @@ export default function ReceivedDeviceDetails() {
                       className="h-9 bg-amber-600 hover:bg-amber-500 text-white"
                     >
                       <Eye className="h-4 w-4 ml-1" />
-                      استعراض الفرم
+                      {t('verification.item_19085')}
                     </Button>
                     <a
                       href={receiptFormProof.url}
@@ -1083,7 +1085,7 @@ export default function ReceivedDeviceDetails() {
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      فتح فرم الاستلام
+                      {t('verification.receive_1')}
                     </a>
                   </div>
                 </div>
@@ -1091,7 +1093,7 @@ export default function ReceivedDeviceDetails() {
             </div>
           ) : (
             <div className="bg-slate-800/40 border border-white/10 rounded-xl p-4 text-slate-300 text-sm">
-              لا يوجد حالياً ملف تسليم مرفوع لهذا الجهاز. سيظهر هنا تلقائياً عند توفر رابط الملف في سجل العمليات أو الملاحظات، بما يشمل فرم الاستلام الورقي الموقّع.
+              {t('verification.no_file_device_file_log_operat')}
             </div>
           )}
         </section>
@@ -1103,7 +1105,7 @@ export default function ReceivedDeviceDetails() {
               className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-500 text-white"
             >
               <CheckCircle2 className="h-5 w-5 ml-2" />
-              موافقة على التسجيل
+              {t('verification.item_25576')}
             </Button>
             <Button
               onClick={() => handleAction("reject")}
@@ -1111,11 +1113,11 @@ export default function ReceivedDeviceDetails() {
               className="flex-1 h-12"
             >
               <XCircle className="h-5 w-5 ml-2" />
-              رفض التسجيل
+              {t('verification.reject')}
             </Button>
             <Button variant="outline" className="h-12 border-white/15 bg-white/5 text-white" onClick={() => setLocation("/received-devices/review")}>
               <ArrowLeft className="h-4 w-4 ml-2" />
-              العودة للقائمة
+              {t('verification.item_20713')}
             </Button>
           </section>
         )}
@@ -1124,25 +1126,25 @@ export default function ReceivedDeviceDetails() {
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className={`rounded-xl border p-3 ${device.battery ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
               <div className="flex items-center justify-between text-sm">
-                <span>البطارية</span>
+                <span>{t('verification.battery')}</span>
                 {device.battery ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
               </div>
             </div>
             <div className={`rounded-xl border p-3 ${device.chargerCable ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
               <div className="flex items-center justify-between text-sm">
-                <span>كابل الشاحن</span>
+                <span>{t('verification.item_15919')}</span>
                 {device.chargerCable ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
               </div>
             </div>
             <div className={`rounded-xl border p-3 ${device.chargerHead ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
               <div className="flex items-center justify-between text-sm">
-                <span>رأس الشاحن</span>
+                <span>{t('verification.item_14304')}</span>
                 {device.chargerHead ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
               </div>
             </div>
             <div className={`rounded-xl border p-3 ${device.hasSim ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/10 bg-slate-800/40"}`}>
               <div className="flex items-center justify-between text-sm">
-                <span>{device.simCardType || "شريحة SIM"}</span>
+                <span>{device.simCardType || t('verification.sim_2')}</span>
                 {device.hasSim ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-slate-500" />}
               </div>
             </div>
@@ -1153,13 +1155,13 @@ export default function ReceivedDeviceDetails() {
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {device.damagePart && (
               <article className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-                <h4 className="font-semibold text-amber-300 mb-2">معلومات الأضرار</h4>
+                <h4 className="font-semibold text-amber-300 mb-2">{t('verification.info')}</h4>
                 <p className="text-amber-100 text-sm whitespace-pre-wrap">{device.damagePart}</p>
               </article>
             )}
             {device.adminNotes && (
               <article className="bg-slate-800/60 border border-white/10 rounded-xl p-4">
-                <h4 className="font-semibold text-cyan-300 mb-2">ملاحظات المشرف</h4>
+                <h4 className="font-semibold text-cyan-300 mb-2">{t('verification.notes_supervisor')}</h4>
                 <p className="text-slate-200 text-sm whitespace-pre-wrap">{device.adminNotes}</p>
               </article>
             )}
@@ -1172,7 +1174,7 @@ export default function ReceivedDeviceDetails() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               {actionType === "approve" ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <XCircle className="h-5 w-5 text-rose-400" />}
-              {actionType === "approve" ? "تأكيد الموافقة" : "تأكيد الرفض"}
+              {actionType === "approve" ? t('verification.confirm') : t('verification.confirm_reject')}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               {device.terminalId} - {device.serialNumber}
@@ -1181,27 +1183,27 @@ export default function ReceivedDeviceDetails() {
 
           <div className="space-y-3 py-2">
             <Label htmlFor="notes" className="text-slate-300">
-              ملاحظات {actionType === "reject" ? "(مطلوبة)" : "(اختيارية)"}
+              {t('verification.notes_for_action', { action: actionType === "reject" ? t('verification.item_9642') : t('verification.item_12773') })}
             </Label>
             <Textarea
               id="notes"
               value={adminNotes}
               onChange={(event) => setAdminNotes(event.target.value)}
-              placeholder="أضف ملاحظات حول القرار..."
+              placeholder={t('verification.notes_4')}
               className="min-h-[120px] bg-slate-800/50 border-white/15 text-slate-100"
             />
           </div>
 
           <DialogFooter>
             <Button variant="outline" className="border-white/15 bg-white/5 text-slate-100" onClick={() => setActionDialogOpen(false)}>
-              إلغاء
+              {t('verification.cancel_1')}
             </Button>
             <Button
               onClick={confirmAction}
               disabled={updateStatusMutation.isPending || (actionType === "reject" && !adminNotes.trim())}
               className={actionType === "approve" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-rose-600 hover:bg-rose-500"}
             >
-              {updateStatusMutation.isPending ? "جاري الحفظ..." : "تأكيد"}
+              {updateStatusMutation.isPending ? t('verification.save') : t('verification.confirm_1')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1220,10 +1222,10 @@ export default function ReceivedDeviceDetails() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Eye className="h-5 w-5 text-cyan-300" />
-              استعراض بيانات التسليم
+              {t('verification.data')}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
-              {primaryPreviewFile?.fileName || "ملف التسليم"}
+              {primaryPreviewFile?.fileName || t('verification.file_1')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1233,7 +1235,7 @@ export default function ReceivedDeviceDetails() {
                 <div className="bg-black/30 border border-white/10 rounded-lg p-2">
                   <img
                     src={primaryPreviewFile.url}
-                    alt="صورة التسليم"
+                    alt={t('verification.image_1')}
                     className="w-full max-h-[70vh] object-contain rounded"
                   />
                 </div>
@@ -1241,13 +1243,13 @@ export default function ReceivedDeviceDetails() {
                 <div className="bg-black/30 border border-white/10 rounded-lg overflow-hidden">
                   <iframe
                     src={primaryPreviewFile.url}
-                    title="ملف PDF للتسليم"
+                    title={t('verification.file_8')}
                     className="w-full h-[70vh]"
                   />
                 </div>
               ) : (
                 <div className="bg-slate-800/50 border border-white/10 rounded-lg p-4 text-slate-300 text-sm">
-                  هذا النوع من الملفات لا يدعم المعاينة المضمنة حالياً.
+                  {t('verification.type_files_no')}
                 </div>
               )}
 
@@ -1259,12 +1261,12 @@ export default function ReceivedDeviceDetails() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  فتح في نافذة جديدة
+                  {t('verification.item_23943')}
                 </a>
               </div>
             </div>
           ) : (
-            <div className="text-slate-400 text-sm">لا يوجد ملف تسليم للعرض.</div>
+            <div className="text-slate-400 text-sm">{t('verification.no_file')}</div>
           )}
         </DialogContent>
       </Dialog>

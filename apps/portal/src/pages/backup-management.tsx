@@ -13,6 +13,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/language";
 import { apiRequest } from "@/lib/queryClient";
 
 interface BackupEntry {
@@ -20,7 +21,7 @@ interface BackupEntry {
   data: string;
   size: number;
   date: string;
-  type: "محلي" | "سحابي";
+  type: "local" | "cloud";
 }
 
 interface BackupStorageStatsResponse {
@@ -38,7 +39,7 @@ interface BackupHistoryItem {
   name: string;
   createdAt: string | null;
   sizeBytes: number;
-  type: "سحابي";
+  type: "cloud";
 }
 
 interface BackupHistoryResponse {
@@ -67,7 +68,7 @@ type BackupTableRow =
       name: string;
       createdAt: string;
       sizeBytes: number;
-      type: "محلي";
+      type: "local";
       data: string;
     }
   | {
@@ -76,8 +77,10 @@ type BackupTableRow =
       name: string;
       createdAt: string | null;
       sizeBytes: number;
-      type: "سحابي";
+      type: "cloud";
     };
+
+type TranslateFn = (key: string, options?: Record<string, any>) => string;
 
 function formatStorageValue(bytes: number): { value: string; unit: string } {
   if (!Number.isFinite(bytes) || bytes <= 0) {
@@ -107,31 +110,34 @@ function formatStorageValue(bytes: number): { value: string; unit: string } {
   return { value: bytes.toFixed(0), unit: "B" };
 }
 
-function formatRelativeArabic(dateIso?: string | null): string {
-  if (!dateIso) return "لا توجد نسخ";
+function formatRelativeTime(dateIso: string | null | undefined, t: TranslateFn): string {
+  if (!dateIso) return t("settings.no_backups");
 
   const timestamp = new Date(dateIso).getTime();
-  if (Number.isNaN(timestamp)) return "لا توجد نسخ";
+  if (Number.isNaN(timestamp)) return t("settings.no_backups");
 
   const diffMs = Date.now() - timestamp;
-  if (diffMs <= 0) return "الآن";
+  if (diffMs <= 0) return t("settings.just_now");
 
   const diffMinutes = Math.floor(diffMs / 60000);
-  if (diffMinutes < 1) return "الآن";
-  if (diffMinutes < 60) return `منذ ${diffMinutes} دقيقة`;
+  if (diffMinutes < 1) return t("settings.just_now");
+  if (diffMinutes < 60) return t("settings.minutes_ago", { count: diffMinutes });
 
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+  if (diffHours < 24) return t("settings.hours_ago", { count: diffHours });
 
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) return `منذ ${diffDays} يوم`;
+  if (diffDays < 30) return t("settings.days_ago", { count: diffDays });
 
   const diffMonths = Math.floor(diffDays / 30);
-  return `منذ ${diffMonths} شهر`;
+  return t("settings.months_ago", { count: diffMonths });
 }
 
-function formatRestoreSummary(imported?: RestoreResponse["imported"]): string {
-  if (!imported) return "تم استعادة جميع البيانات من النسخة الاحتياطية";
+function formatRestoreSummary(
+  imported: RestoreResponse["imported"] | undefined,
+  t: TranslateFn,
+): string {
+  if (!imported) return t("settings.restore_summary_default");
 
   const usersCount = imported.users ?? 0;
   const regionsCount = imported.regions ?? 0;
@@ -140,11 +146,19 @@ function formatRestoreSummary(imported?: RestoreResponse["imported"]): string {
   const warehousesCount = imported.warehouses ?? 0;
   const warehouseInventoryCount = imported.warehouseInventory ?? 0;
 
-  return `المستخدمون: ${usersCount} | المناطق: ${regionsCount} | المستودعات: ${warehousesCount} | مخزون المستودعات: ${warehouseInventoryCount} | الأصناف: ${itemsCount} | الحركات: ${transactionsCount}`;
+  return t("settings.restore_summary", {
+    users: usersCount,
+    regions: regionsCount,
+    warehouses: warehousesCount,
+    warehouseInventory: warehouseInventoryCount,
+    items: itemsCount,
+    transactions: transactionsCount,
+  });
 }
 
 export default function BackupManagementPage() {
   const { toast } = useToast();
+  const { t, language } = useTranslation();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -153,6 +167,7 @@ export default function BackupManagementPage() {
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
   const [scheduleType, setScheduleType] = useState<"daily" | "weekly">("daily");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dateLocale = language === "en" ? "en-US" : "ar-EG";
 
   const { data: storageStats } = useQuery<BackupStorageStatsResponse>({
     queryKey: ["/api/admin/backup/storage-stats"],
@@ -192,7 +207,7 @@ export default function BackupManagementPage() {
       name: item.name,
       createdAt: item.date,
       sizeBytes: item.size,
-      type: "محلي",
+      type: "local",
       data: item.data,
     }));
 
@@ -206,7 +221,7 @@ export default function BackupManagementPage() {
         name: item.name,
         createdAt: item.createdAt,
         sizeBytes: item.sizeBytes,
-        type: "سحابي",
+        type: "cloud",
       }));
 
     return [...localRows, ...serverRows];
@@ -217,7 +232,10 @@ export default function BackupManagementPage() {
     mergedBackupRows[0]?.createdAt ||
     null;
 
-  const lastBackupLabel = useMemo(() => formatRelativeArabic(latestBackupAt), [latestBackupAt]);
+  const lastBackupLabel = useMemo(
+    () => formatRelativeTime(latestBackupAt, t),
+    [latestBackupAt, t],
+  );
 
   const handleExportBackup = async () => {
     setIsExporting(true);
@@ -231,7 +249,7 @@ export default function BackupManagementPage() {
       });
 
       if (!response.ok) {
-        throw new Error('فشل في تصدير النسخة الاحتياطية');
+        throw new Error(t("settings.export_failed"));
       }
 
       const backup = await response.json();
@@ -254,13 +272,13 @@ export default function BackupManagementPage() {
       URL.revokeObjectURL(url);
 
       setRecentBackups(prev => [
-        { name: filename, data: dataStr, size: dataBlob.size, date: new Date().toISOString(), type: "محلي" },
+        { name: filename, data: dataStr, size: dataBlob.size, date: new Date().toISOString(), type: "local" },
         ...prev,
       ]);
 
       toast({
-        title: "تم التصدير بنجاح",
-        description: "تم تنزيل النسخة الاحتياطية على جهازك",
+        title: t("settings.export_success_title"),
+        description: t("settings.export_success_desc"),
       });
 
       await Promise.all([
@@ -270,8 +288,8 @@ export default function BackupManagementPage() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "خطأ في التصدير",
-        description: error instanceof Error ? error.message : "حدث خطأ أثناء تصدير البيانات",
+        title: t("settings.export_error_title"),
+        description: error instanceof Error ? error.message : t("settings.export_error_desc"),
       });
     } finally {
       setIsExporting(false);
@@ -290,8 +308,8 @@ export default function BackupManagementPage() {
       const restoreResult = (await response.json()) as RestoreResponse;
 
       toast({
-        title: "تمت الاستعادة بنجاح",
-        description: formatRestoreSummary(restoreResult.imported),
+        title: t("settings.backup_restore_success"),
+        description: formatRestoreSummary(restoreResult.imported, t),
       });
 
       await Promise.all([
@@ -306,8 +324,8 @@ export default function BackupManagementPage() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "خطأ في الاستعادة",
-        description: error instanceof Error ? error.message : "حدث خطأ أثناء استعادة البيانات",
+        title: t("settings.restore_error_title"),
+        description: error instanceof Error ? error.message : t("settings.restore_error_desc"),
       });
     } finally {
       setIsImporting(false);
@@ -335,8 +353,8 @@ export default function BackupManagementPage() {
     if (!selectedFile) {
       toast({
         variant: "destructive",
-        title: "ملف غير محدد",
-        description: "اختر ملف نسخة احتياطية قبل بدء الاستيراد",
+        title: t("settings.file_not_selected"),
+        description: t("settings.select_backup_first"),
       });
       return;
     }
@@ -354,9 +372,16 @@ export default function BackupManagementPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast({ title: 'تم تنزيل النسخة', description: `${entry.name} تم تنزيلها` });
+      toast({
+        title: t("settings.download_success_title"),
+        description: t("settings.download_success_desc", { name: entry.name }),
+      });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل في تنزيل النسخة' });
+      toast({
+        variant: 'destructive',
+        title: t("settings.error"),
+        description: t("settings.download_failed"),
+      });
     }
   };
 
@@ -370,7 +395,10 @@ export default function BackupManagementPage() {
       const parsed = JSON.parse(entry.data);
       const response = await apiRequest('POST', '/api/admin/restore', parsed);
       const restoreResult = (await response.json()) as RestoreResponse;
-      toast({ title: 'تمت الاستعادة بنجاح', description: formatRestoreSummary(restoreResult.imported) });
+      toast({
+        title: t("settings.backup_restore_success"),
+        description: formatRestoreSummary(restoreResult.imported, t),
+      });
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/admin/backup/storage-stats"] }),
@@ -383,8 +411,8 @@ export default function BackupManagementPage() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'خطأ في الاستعادة',
-        description: error instanceof Error ? error.message : 'فشل استعادة النسخة',
+        title: t("settings.restore_error_title"),
+        description: error instanceof Error ? error.message : t("settings.restore_failed"),
       });
     } finally {
       setIsImporting(false);
@@ -400,8 +428,8 @@ export default function BackupManagementPage() {
 
         <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-8 z-10">
           <div>
-            <h2 className="text-3xl font-black text-white tracking-tight">إدارة النسخ الاحتياطية</h2>
-            <p className="text-slate-400 mt-1">تأمين بيانات النظام عبر سحابة مشفرة</p>
+            <h2 className="text-3xl font-black text-white tracking-tight">{t("settings.backup_page_title")}</h2>
+            <p className="text-slate-400 mt-1">{t("settings.backup_page_subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
             <label
@@ -409,7 +437,7 @@ export default function BackupManagementPage() {
               className="bg-transparent border border-[#8c25f4]/40 text-[#8c25f4] hover:bg-[#8c25f4]/10 px-6 py-3 rounded-xl flex items-center gap-2 font-bold transition-all cursor-pointer"
             >
               <Upload className="h-4 w-4" />
-              استيراد نسخة
+              {t("settings.import_backup")}
             </label>
             <button
               onClick={handleExportBackup}
@@ -418,7 +446,7 @@ export default function BackupManagementPage() {
               data-testid="button-export-quick"
             >
               <Download className="h-4 w-4" />
-              {isExporting ? "جاري التصدير..." : "إنشاء نسخة احتياطية فورية"}
+              {isExporting ? t("settings.exporting") : t("settings.create_instant_backup")}
             </button>
           </div>
         </header>
@@ -438,7 +466,7 @@ export default function BackupManagementPage() {
           <section className="glass p-6 rounded-2xl border border-[#8c25f4]/20">
             <div className="flex items-center gap-2 mb-6">
               <Upload className="text-[#00f2ff] h-5 w-5" />
-              <h3 className="text-lg font-bold text-white">استيراد البيانات</h3>
+              <h3 className="text-lg font-bold text-white">{t("settings.import_data")}</h3>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
               <label
@@ -450,8 +478,8 @@ export default function BackupManagementPage() {
                 <div className="w-16 h-16 rounded-full bg-[#8c25f4]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <CloudUpload className="text-[#8c25f4] h-8 w-8" />
                 </div>
-                <p className="text-lg font-bold mb-1">قم بسحب وإفلات ملف النسخة هنا</p>
-                <p className="text-sm text-slate-400 mb-4">أو انقر لاختيار ملف من جهازك</p>
+                <p className="text-lg font-bold mb-1">{t("settings.drop_backup_here")}</p>
+                <p className="text-sm text-slate-400 mb-4">{t("settings.or_click_to_choose")}</p>
                 {selectedFile ? (
                   <p className="text-xs text-emerald-400 font-bold mb-3">{selectedFile.name}</p>
                 ) : null}
@@ -465,7 +493,7 @@ export default function BackupManagementPage() {
               <div className="flex flex-col gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-bold text-slate-400">جاري معالجة البيانات...</span>
+                    <span className="font-bold text-slate-400">{t("settings.processing_data")}</span>
                     <span className="text-[#00f2ff] font-bold">65%</span>
                   </div>
                   <div className="w-full h-3 bg-[#8c25f4]/10 rounded-full overflow-hidden">
@@ -476,7 +504,7 @@ export default function BackupManagementPage() {
                 <div className="bg-[#8c25f4]/5 p-4 rounded-xl border border-[#8c25f4]/10">
                   <div className="flex items-center gap-3 text-xs text-slate-400 leading-relaxed">
                     <CheckCircle2 className="text-[#8c25f4] h-4 w-4" />
-                    <p>يرجى التأكد من أن ملف الاستيراد متوافق مع نسخة قاعدة البيانات الحالية لتجنب فقدان البيانات.</p>
+                    <p>{t("settings.import_compat_warning")}</p>
                   </div>
                 </div>
 
@@ -486,7 +514,7 @@ export default function BackupManagementPage() {
                   onClick={handleStartImport}
                   data-testid="button-import-backup"
                 >
-                  {isImporting ? "جاري الاستعادة..." : "بدء عملية الاستيراد"}
+                  {isImporting ? t("settings.restoring") : t("settings.start_import")}
                 </button>
               </div>
             </div>
@@ -495,18 +523,20 @@ export default function BackupManagementPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="glass p-6 rounded-2xl flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">آخر نسخة احتياطية</span>
+                <span className="text-slate-400 text-sm">{t("settings.last_backup")}</span>
                 <History className="text-[#8c25f4] h-4 w-4" />
               </div>
               <div className="text-2xl font-bold text-white">{lastBackupLabel}</div>
               <div className="text-xs text-emerald-500 font-medium">
-                {storageStats?.exportsCount ?? mergedBackupRows.length} نسخة محفوظة
+                {t("settings.saved_copies_count", {
+                  count: storageStats?.exportsCount ?? mergedBackupRows.length,
+                })}
               </div>
             </div>
 
             <div className="glass p-6 rounded-2xl flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">إجمالي حجم البيانات</span>
+                <span className="text-slate-400 text-sm">{t("settings.total_data_size")}</span>
                 <Database className="text-[#8c25f4] h-4 w-4" />
               </div>
               <div className="text-2xl font-bold text-white" dir="ltr">
@@ -515,24 +545,24 @@ export default function BackupManagementPage() {
                   <span>{totalStorageDisplay.unit}</span>
                 </span>
               </div>
-              <div className="text-xs text-emerald-500 font-medium">سعة غير محدودة</div>
+              <div className="text-xs text-emerald-500 font-medium">{t("settings.unlimited_capacity")}</div>
             </div>
 
             <div className="glass p-6 rounded-2xl flex flex-col gap-2 relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">حالة النظام</span>
+                <span className="text-slate-400 text-sm">{t("settings.system_status")}</span>
                 <CheckCircle2 className="text-emerald-500 h-4 w-4" />
               </div>
-              <div className="text-2xl font-bold text-white pr-4 neon-pulse">آمن ومتصل</div>
-              <div className="text-xs text-slate-400">جميع الخدمات تعمل بكفاءة 100%</div>
+              <div className="text-2xl font-bold text-white pr-4 neon-pulse">{t("settings.safe_and_connected")}</div>
+              <div className="text-xs text-slate-400">{t("settings.all_services_ok")}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 glass rounded-2xl overflow-hidden flex flex-col">
               <div className="p-6 border-b border-[#8c25f4]/10 flex items-center justify-between">
-                <h3 className="text-lg font-bold">سجل النسخ الاحتياطية</h3>
-                <button className="p-2 hover:bg-[#8c25f4]/10 rounded-lg transition-colors" type="button" aria-label="فلترة">
+                <h3 className="text-lg font-bold">{t("settings.backup_history")}</h3>
+                <button className="p-2 hover:bg-[#8c25f4]/10 rounded-lg transition-colors" type="button" aria-label={t("settings.filter")}>
                   <Filter className="text-slate-400 h-4 w-4" />
                 </button>
               </div>
@@ -541,18 +571,18 @@ export default function BackupManagementPage() {
                 <table className="w-full text-right border-collapse">
                   <thead>
                     <tr className="bg-[#8c25f4]/5 text-slate-400 text-xs uppercase tracking-wider">
-                      <th className="px-6 py-4 font-bold">اسم النسخة</th>
-                      <th className="px-6 py-4 font-bold">التاريخ والوقت</th>
-                      <th className="px-6 py-4 font-bold">الحجم</th>
-                      <th className="px-6 py-4 font-bold">النوع</th>
-                      <th className="px-6 py-4 font-bold">الإجراءات</th>
+                      <th className="px-6 py-4 font-bold">{t("settings.backup_name")}</th>
+                      <th className="px-6 py-4 font-bold">{t("settings.date_time")}</th>
+                      <th className="px-6 py-4 font-bold">{t("settings.size")}</th>
+                      <th className="px-6 py-4 font-bold">{t("settings.type")}</th>
+                      <th className="px-6 py-4 font-bold">{t("settings.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#8c25f4]/5">
                     {mergedBackupRows.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
-                          لا توجد نسخ احتياطية محفوظة بعد.
+                          {t("settings.no_backups_yet")}
                         </td>
                       </tr>
                     ) : (
@@ -565,7 +595,7 @@ export default function BackupManagementPage() {
                           <tr key={row.id} className="hover:bg-[#8c25f4]/5 transition-colors">
                             <td className="px-6 py-4 text-sm font-medium">{row.name}</td>
                             <td className="px-6 py-4 text-sm text-slate-400">
-                              {row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG') : "-"}
+                              {row.createdAt ? new Date(row.createdAt).toLocaleString(dateLocale) : "-"}
                             </td>
                             <td className="px-6 py-4 text-sm" dir="ltr">
                               {sizeLabel ? `${sizeLabel.value} ${sizeLabel.unit}` : "-"}
@@ -573,12 +603,12 @@ export default function BackupManagementPage() {
                             <td className="px-6 py-4 text-sm">
                               <span
                                 className={
-                                  row.type === "سحابي"
+                                  row.type === "cloud"
                                     ? "px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs border border-blue-500/30"
                                     : "px-2 py-1 rounded bg-[#00f2ff]/20 text-[#00f2ff] text-xs border border-[#00f2ff]/30"
                                 }
                               >
-                                {row.type}
+                                {row.type === "cloud" ? t("settings.cloud") : t("settings.local")}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm">
@@ -587,14 +617,14 @@ export default function BackupManagementPage() {
                                   <>
                                     <button
                                       className="text-[#8c25f4] hover:text-[#8c25f4]/80"
-                                      title="استعادة"
+                                      title={t("settings.restore")}
                                       onClick={() =>
                                         handleRestoreRecent({
                                           name: row.name,
                                           data: row.data,
                                           size: row.sizeBytes,
                                           date: row.createdAt,
-                                          type: "محلي",
+                                          type: "local",
                                         })
                                       }
                                       type="button"
@@ -603,13 +633,13 @@ export default function BackupManagementPage() {
                                     </button>
                                     <button
                                       className="text-slate-400 hover:text-white"
-                                      title="تحميل"
+                                      title={t("settings.download")}
                                       onClick={() => handleRedownload({
                                         name: row.name,
                                         data: row.data,
                                         size: row.sizeBytes,
                                         date: row.createdAt,
-                                        type: "محلي",
+                                        type: "local",
                                       })}
                                       type="button"
                                     >
@@ -617,7 +647,7 @@ export default function BackupManagementPage() {
                                     </button>
                                     <button
                                       className="text-slate-400 hover:text-white"
-                                      title="حذف"
+                                      title={t("settings.delete")}
                                       onClick={() => handleRemoveBackup(row.name)}
                                       type="button"
                                     >
@@ -628,14 +658,14 @@ export default function BackupManagementPage() {
                                   <>
                                     <button
                                       className="text-slate-600 cursor-not-allowed"
-                                      title="الاستعادة متاحة فقط للنسخ المحلية المحفوظة في الجلسة"
+                                      title={t("settings.restore_local_only")}
                                       type="button"
                                     >
                                       <RotateCcw className="h-4 w-4" />
                                     </button>
                                     <button
                                       className="text-slate-600 cursor-not-allowed"
-                                      title="التحميل المباشر متاح فقط للنسخ المحلية المحفوظة في الجلسة"
+                                      title={t("settings.download_local_only")}
                                       type="button"
                                     >
                                       <Download className="h-4 w-4" />
@@ -655,7 +685,7 @@ export default function BackupManagementPage() {
 
             <div className="flex flex-col gap-6">
               <div className="glass p-8 rounded-2xl flex flex-col items-center justify-center text-center">
-                <h4 className="text-sm font-bold mb-6 self-start">استهلاك التخزين السحابي</h4>
+                <h4 className="text-sm font-bold mb-6 self-start">{t("settings.cloud_storage_usage")}</h4>
                 <div className="relative w-48 h-48 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200" fill="none">
                     <circle cx="100" cy="100" r="88" stroke="rgba(140,37,244,0.2)" strokeWidth="12" />
@@ -678,7 +708,7 @@ export default function BackupManagementPage() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-black text-white" dir="ltr">{usedCapacityPercent}%</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">Used Capacity</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">{t("settings.used_capacity")}</span>
                   </div>
                 </div>
 
@@ -686,13 +716,13 @@ export default function BackupManagementPage() {
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-[#8c25f4]" />
                     <span className="text-slate-400">
-                      مستخدم <span dir="ltr">({usedStorageDisplay.value} {usedStorageDisplay.unit})</span>
+                      {t("settings.used")} <span dir="ltr">({usedStorageDisplay.value} {usedStorageDisplay.unit})</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-[#8c25f4]/10" />
                     <span className="text-slate-400">
-                      متاح <span dir="ltr">({availableStorageDisplay.value} {availableStorageDisplay.unit})</span>
+                      {t("settings.available")} <span dir="ltr">({availableStorageDisplay.value} {availableStorageDisplay.unit})</span>
                     </span>
                   </div>
                 </div>
@@ -700,12 +730,12 @@ export default function BackupManagementPage() {
 
               <div className="glass p-6 rounded-2xl">
                 <div className="flex items-center justify-between mb-6">
-                  <h4 className="font-bold">الجدولة التلقائية</h4>
+                  <h4 className="font-bold">{t("settings.auto_schedule")}</h4>
                   <button
                     type="button"
                     onClick={() => setScheduleEnabled((prev) => !prev)}
                     className={`w-11 h-6 rounded-full relative transition-colors ${scheduleEnabled ? "bg-[#8c25f4]" : "bg-[#8c25f4]/20"}`}
-                    aria-label="تفعيل الجدولة"
+                    aria-label={t("settings.enable_schedule")}
                   >
                     <span
                       className={`absolute top-[2px] h-5 w-5 rounded-full bg-white transition-transform ${scheduleEnabled ? "translate-x-[22px]" : "translate-x-[2px]"}`}
@@ -723,8 +753,8 @@ export default function BackupManagementPage() {
                       onChange={() => setScheduleType("daily")}
                     />
                     <div className="mr-4">
-                      <p className="text-sm font-bold">يومي</p>
-                      <p className="text-[10px] text-slate-400">كل ليلة في تمام الساعة 03:00 صباحاً</p>
+                      <p className="text-sm font-bold">{t("settings.daily")}</p>
+                      <p className="text-[10px] text-slate-400">{t("settings.daily_desc")}</p>
                     </div>
                   </label>
 
@@ -737,14 +767,14 @@ export default function BackupManagementPage() {
                       onChange={() => setScheduleType("weekly")}
                     />
                     <div className="mr-4">
-                      <p className="text-sm font-bold">أسبوعي</p>
-                      <p className="text-[10px] text-slate-400">كل يوم أحد الساعة 00:00 صباحاً</p>
+                      <p className="text-sm font-bold">{t("settings.weekly")}</p>
+                      <p className="text-[10px] text-slate-400">{t("settings.weekly_desc")}</p>
                     </div>
                   </label>
                 </div>
 
                 <button className="w-full mt-6 py-2.5 rounded-xl border border-[#8c25f4]/40 text-[#8c25f4] text-xs font-bold hover:bg-[#8c25f4] hover:text-white transition-all" type="button">
-                  تحديث إعدادات الجدول
+                  {t("settings.update_schedule")}
                 </button>
               </div>
             </div>
@@ -765,7 +795,7 @@ export default function BackupManagementPage() {
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuAATPAnMuYkpNL44qjRYOzUNFAcuteUpUk4T51lZ5u4Kzi2LQLMtcysDOeUxlIykkDs8mb5qs_AQypgt3mBZngz4IBTOmBB_E-cK39c98u_ZgKiyNAn-D5NC0r97WMmft4vK1fsWjVLTl5L0cXget8dN0cnFfsjWsP_68PhWcMneFy142L5MzxkGZrw0gDhb3iVACihOoZXO9mvgxyNqlrmFXmlz5JasQrxLOq7IyhyG5NdeF6eBDSsJ5SpQTGRpBrvm1Q-bTVqt70"
               />
             </div>
-            <p className="text-xs text-slate-400">فريق الدعم الفني متصل حالياً للمساعدة في عمليات الاستعادة</p>
+            <p className="text-xs text-slate-400">{t("settings.support_team_online")}</p>
           </div>
 
           <div className="flex items-center gap-6">
@@ -783,4 +813,3 @@ export default function BackupManagementPage() {
     </div>
   );
 }
-

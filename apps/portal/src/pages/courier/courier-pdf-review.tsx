@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,6 +53,7 @@ function ConfidenceBadge({ value }: { value: number | null }) {
 }
 
 export default function CourierPdfReviewPage() {
+  const { t, dir } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -119,8 +121,8 @@ export default function CourierPdfReviewPage() {
   async function handleApply() {
     if (!linkedRequestId) {
       toast({
-        title: "تنبيه",
-        description: "يرجى ربط هذا التقرير بطلب أولاً.",
+        title: t('courier.alert'),
+        description: t('courier.report'),
         variant: "destructive",
       });
       return;
@@ -148,23 +150,23 @@ export default function CourierPdfReviewPage() {
 
       if (res.ok) {
         toast({
-          title: "تم بنجاح",
-          description: "تم تفريغ تقرير الـ PDF وتحديث بيانات التنفيذ بنجاح.",
+          title: t('courier.completed_successfully'),
+          description: t('courier.completed_report_data_successf'),
         });
         queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf"] });
         navigate(`/courier/requests/${linkedRequestId}`);
       } else {
         const data = await res.json().catch(() => ({}));
         toast({
-          title: "خطأ",
-          description: data.error || "فشل تطبيق التقرير.",
+          title: t('courier.error'),
+          description: data.error || t('courier.fail_report'),
           variant: "destructive",
         });
       }
     } catch (err) {
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء إرسال البيانات.",
+        title: t('courier.error'),
+        description: t('courier.error_send_data'),
         variant: "destructive",
       });
     } finally {
@@ -174,10 +176,10 @@ export default function CourierPdfReviewPage() {
 
   const getFieldLabel = (key: string) => {
     const labels: Record<string, string> = {
-      sn: "رقم السيريال (SN)",
-      sim_serial: "الرقم التسلسلي للشريحة (SIM Serial)",
-      time: "الوقت (Time)",
-      date: "التاريخ (Date)",
+      sn: t('courier.number_serial_8'),
+      sim_serial: t('courier.number_serial_9'),
+      time: t('courier.time_1'),
+      date: t('courier.date_7'),
     };
     return labels[key] || key;
   };
@@ -190,7 +192,7 @@ export default function CourierPdfReviewPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-slate-400">
         <Loader2 className="w-8 h-8 animate-spin text-purple-400 mb-2" />
-        <p className="text-sm">جاري تحميل تقرير الـ PDF واستخراج البيانات...</p>
+        <p className="text-sm">{t('courier.loading_report_data')}</p>
       </div>
     );
   }
@@ -199,7 +201,7 @@ export default function CourierPdfReviewPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-slate-400">
         <AlertCircle className="w-8 h-8 text-red-400 mb-2" />
-        <p className="text-sm">فشل تحميل تفاصيل التقرير.</p>
+        <p className="text-sm">{t('courier.fail_loading_details_report')}</p>
       </div>
     );
   }
@@ -208,7 +210,7 @@ export default function CourierPdfReviewPage() {
   const pdfUrl = `/api/courier/pdf/${report.id}?raw=1&token=${getAuthToken() || ""}`;
 
   return (
-    <div dir="rtl" className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div dir={dir} className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -217,14 +219,14 @@ export default function CourierPdfReviewPage() {
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 transition-colors mb-2"
           >
             <ArrowRight className="w-3.5 h-3.5" />
-            العودة لصفحة الرفع
+            {t('courier.item_25514')}
           </button>
           <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-400" />
-            مراجعة المستند واستخراج البيانات الذكي (PDF / صور)
+            {t('courier.review_document_data_images')}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            ملف: <span className="font-mono text-purple-300">{report.fileName}</span>
+            {t('courier.file_1')} <span className="font-mono text-purple-300">{report.fileName}</span>
           </p>
         </div>
       </div>
@@ -233,13 +235,13 @@ export default function CourierPdfReviewPage() {
         {/* PDF/Image Preview Frame */}
         <div className="lg:col-span-6 bg-[#1a3636] border border-slate-700/50 rounded-xl overflow-hidden shadow-sm flex flex-col">
           <div className="bg-[#142d2d] px-4 py-3 border-b border-slate-700/50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">معاينة المستند الأصلي</span>
+            <span className="text-xs font-semibold text-slate-300">{t('courier.document')}</span>
           </div>
           {report.fileName.toLowerCase().match(/\.(png|jpe?g|webp)$/) ? (
             <div className="w-full h-[650px] bg-slate-800 flex items-center justify-center overflow-auto p-4">
               <img
                 src={pdfUrl}
-                alt="معاينة المستند"
+                alt={t('courier.document_1')}
                 className="max-w-full max-h-full object-contain rounded"
               />
             </div>
@@ -256,7 +258,7 @@ export default function CourierPdfReviewPage() {
         <div className="lg:col-span-3 flex flex-col gap-6">
           <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl p-5 shadow-sm space-y-4">
             <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-700/30 pb-2">
-              الحقول المستخرجة تلقائياً
+              {t('courier.item_36640')}
             </h2>
             {Object.entries(report.extractedJson || {}).map(([key, field]) => (
               <div key={key} className="space-y-1.5">
@@ -277,7 +279,7 @@ export default function CourierPdfReviewPage() {
               </div>
             ))}
             <div className="pt-2 border-t border-slate-700/30 flex items-center justify-between text-xs text-slate-400">
-              <span>معدل الثقة الإجمالي:</span>
+              <span>{t('courier.rate_total')}</span>
               <ConfidenceBadge value={report.overallConfidence} />
             </div>
           </div>
@@ -288,7 +290,7 @@ export default function CourierPdfReviewPage() {
           <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl p-5 shadow-sm flex flex-col gap-4 flex-1">
             <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-700/30 pb-2 flex items-center gap-1.5">
               <Link2 className="w-4 h-4 text-purple-400" />
-              الربط بطلب العمل الميداني
+              {t('courier.item_35123')}
             </h2>
 
             {linkedRequestId ? (
@@ -296,10 +298,10 @@ export default function CourierPdfReviewPage() {
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg p-3 text-sm flex flex-col gap-1">
                   <span className="font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4" />
-                    مرتبط بـ TID: {linkedRequestTid || "جاري التحميل..."}
+                    {t('courier.linked_to_tid', { tid: linkedRequestTid || t('courier.loading') })}
                   </span>
                   <span className="text-xs text-emerald-500/80 font-mono">
-                    معرف الطلب: #{linkedRequestId}
+                    {t('courier.request_count', { count: linkedRequestId })}
                   </span>
                 </div>
                 <button
@@ -309,20 +311,20 @@ export default function CourierPdfReviewPage() {
                   }}
                   className="w-full text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 py-2 rounded-lg transition-colors border border-rose-500/20"
                 >
-                  تغيير الطلب المرتبط
+                  {t('courier.request')}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  ابحث عن الطلب المناسب لمطابقته وتفريغ البيانات المستخرجة فيه.
+                  {t('courier.request_data')}
                 </p>
                 <div className="relative">
                   <Search className="absolute right-3 top-2.5 w-4 h-4 text-slate-500" />
                   <input
                     value={linkQuery}
                     onChange={(e) => setLinkQuery(e.target.value)}
-                    placeholder="ابحث برقم TID، الجوال أو اسم العميل..."
+                    placeholder={t('courier.mobile_name_customer_1')}
                     className="w-full rounded-lg bg-[#142d2d] border border-slate-700/80 pr-9 pl-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-purple-500 focus:outline-none"
                   />
                 </div>
@@ -331,7 +333,7 @@ export default function CourierPdfReviewPage() {
                   <div className="bg-[#142d2d] border border-slate-700/50 rounded-lg divide-y divide-slate-700/30 overflow-hidden max-h-60 overflow-y-auto">
                     {linkResults.length === 0 ? (
                       <div className="p-3 text-xs text-slate-500 text-center">
-                        لا توجد نتائج مطابقة
+                        {t('courier.no_results')}
                       </div>
                     ) : (
                       linkResults.map((r) => (
@@ -344,7 +346,7 @@ export default function CourierPdfReviewPage() {
                           className="w-full text-start p-2.5 hover:bg-slate-700/15 flex flex-col gap-0.5 transition-colors"
                         >
                           <span className="text-xs font-semibold text-slate-200">
-                            {r.customerName || "عميل غير معروف"}
+                            {r.customerName || t('courier.customer')}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono">
                             TID: {r.tid} | Terminal ID: {r.terminalId}
@@ -366,12 +368,12 @@ export default function CourierPdfReviewPage() {
                 {applying ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    جاري تطبيق البيانات...
+                    {t('courier.data_2')}
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    اعتماد وتحديث التنفيذ
+                    {t('courier.item_30270')}
                   </>
                 )}
               </button>

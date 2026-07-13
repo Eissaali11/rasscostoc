@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -30,10 +31,11 @@ interface Stats {
 }
 
 function ConfidenceBadge({ value }: { value: number | null }) {
+  const { t } = useTranslation();
   if (value === null) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
-        بدون
+        {t('courier.item_6373')}
       </span>
     );
   }
@@ -48,12 +50,13 @@ function ConfidenceBadge({ value }: { value: number | null }) {
 
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${color}`}>
-      {pct}% ثقة
+      {t('courier.count_1', { count: pct })}
     </span>
   );
 }
 
 export default function CourierAiMonitorPage() {
+  const { t, dir } = useTranslation();
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/courier/ai-monitor/stats"],
     queryFn: () => apiRequest("GET", "/api/courier/ai-monitor/stats").then((r) => r.json())
@@ -63,7 +66,7 @@ export default function CourierAiMonitorPage() {
     return (
       <div className="flex items-center justify-center p-20 text-slate-400">
         <Loader2 className="w-6 h-6 animate-spin text-cyan-400 ml-2" />
-        جاري تحميل بيانات مراقبة الذكاء الاصطناعي...
+        {t('courier.loading_data_monitor')}
       </div>
     );
   }
@@ -76,15 +79,15 @@ export default function CourierAiMonitorPage() {
   const recent = stats?.recent || [];
 
   return (
-    <div dir="rtl" className="space-y-6 text-slate-100">
+    <div dir={dir} className="space-y-6 text-slate-100">
       {/* Title */}
       <div className="border-b border-slate-700/60 pb-6">
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
           <BrainCircuit className="w-6 h-6 text-cyan-400" />
-          مراقبة وتدقيق الذكاء الاصطناعي (AI Monitor)
+          {t('courier.monitor')}
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          أداء ومؤشرات استخراج البيانات التلقائية عبر خوارزميات OCR وقراءة الفواتير.
+          {t('courier.data_invoices')}
         </p>
       </div>
 
@@ -92,7 +95,7 @@ export default function CourierAiMonitorPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl p-5 shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">الملفات المعالجة</span>
+            <span className="text-xs text-slate-400">{t('courier.files')}</span>
             <FileText className="w-4 h-4 text-cyan-400" />
           </div>
           <div className="text-2xl font-bold text-white mt-2">{total}</div>
@@ -100,7 +103,7 @@ export default function CourierAiMonitorPage() {
 
         <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl p-5 shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">تم التطبيق والمطابقة</span>
+            <span className="text-xs text-slate-400">{t('courier.completed')}</span>
             <CheckCircle className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-emerald-400 mt-2">{applied}</div>
@@ -108,7 +111,7 @@ export default function CourierAiMonitorPage() {
 
         <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl p-5 shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">بانتظار المراجعة البشرية</span>
+            <span className="text-xs text-slate-400">{t('courier.review')}</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl font-bold text-amber-400 mt-2">{pending}</div>
@@ -116,7 +119,7 @@ export default function CourierAiMonitorPage() {
 
         <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl p-5 shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">فشل الاستخراج</span>
+            <span className="text-xs text-slate-400">{t('courier.fail')}</span>
             <AlertTriangle className="w-4 h-4 text-red-400" />
           </div>
           <div className="text-2xl font-bold text-red-400 mt-2">{failed}</div>
@@ -126,7 +129,7 @@ export default function CourierAiMonitorPage() {
       {/* Avg confidence card */}
       <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl p-5 shadow-lg max-w-xs flex items-center justify-between">
         <div>
-          <span className="text-xs text-slate-400 block mb-1">متوسط نسبة ثقة الذكاء الاصطناعي</span>
+          <span className="text-xs text-slate-400 block mb-1">{t('courier.item_43029')}</span>
           <ConfidenceBadge value={avgConf} />
         </div>
         <BrainCircuit className="w-10 h-10 text-cyan-450 opacity-20" />
@@ -134,43 +137,43 @@ export default function CourierAiMonitorPage() {
 
       {/* Recent Files Table */}
       <div className="space-y-3">
-        <h2 className="text-md font-semibold text-slate-200">أحدث الملفات المرفوعة</h2>
+        <h2 className="text-md font-semibold text-slate-200">{t('courier.files_1')}</h2>
         <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-right">
               <thead className="bg-[#102222] text-slate-300 border-b border-slate-700/60">
                 <tr>
-                  <th className="p-4 font-semibold">اسم الملف</th>
-                  <th className="p-4 font-semibold">بواسطة</th>
-                  <th className="p-4 font-semibold">تاريخ الرفع</th>
-                  <th className="p-4 font-semibold">نسبة الثقة</th>
-                  <th className="p-4 font-semibold">الحالة</th>
-                  <th className="p-4 font-semibold">الإجراء</th>
+                  <th className="p-4 font-semibold">{t('courier.name_file')}</th>
+                  <th className="p-4 font-semibold">{t('courier.item_9514')}</th>
+                  <th className="p-4 font-semibold">{t('courier.date')}</th>
+                  <th className="p-4 font-semibold">{t('courier.item_14315')}</th>
+                  <th className="p-4 font-semibold">{t('courier.status')}</th>
+                  <th className="p-4 font-semibold">{t('courier.item_11061')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {recent.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-500">
-                      لا يوجد أي تقارير PDF حديثة.
+                      {t('courier.no')}
                     </td>
                   </tr>
                 ) : (
                   recent.map((rep) => (
                     <tr key={rep.id} className="hover:bg-slate-800/20 transition-colors">
                       <td className="p-4 font-medium text-slate-200">{rep.fileName}</td>
-                      <td className="p-4">{rep.uploadedByName || "فني ميداني"}</td>
+                      <td className="p-4">{rep.uploadedByName || t('courier.item_14438')}</td>
                       <td className="p-4 text-xs text-slate-400">{rep.uploadedAt || "—"}</td>
                       <td className="p-4">
                         <ConfidenceBadge value={rep.overallConfidence} />
                       </td>
                       <td className="p-4 capitalize">
                         {rep.status === "applied" ? (
-                          <span className="text-emerald-400 font-semibold">تم التطبيق</span>
+                          <span className="text-emerald-400 font-semibold">{t('courier.completed_1')}</span>
                         ) : rep.status === "failed" ? (
-                          <span className="text-red-400 font-semibold">فشل</span>
+                          <span className="text-red-400 font-semibold">{t('courier.fail_1')}</span>
                         ) : (
-                          <span className="text-amber-400 font-semibold">بانتظار المراجعة</span>
+                          <span className="text-amber-400 font-semibold">{t('courier.review_1')}</span>
                         )}
                       </td>
                       <td className="p-4">
@@ -178,7 +181,7 @@ export default function CourierAiMonitorPage() {
                           href={`/courier/pdf/${rep.id}`}
                           className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-semibold"
                         >
-                          مراجعة التقرير
+                          {t('courier.review_report')}
                           <ChevronLeft className="w-3.5 h-3.5" />
                         </Link>
                       </td>

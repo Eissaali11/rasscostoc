@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ export function WarehouseDetailsModals({
   setShowDeleteDialog,
   onDeleteWarehouse,
 }: WarehouseDetailsModalsProps) {
+  const { t } = useTranslation();
   return (
     <>
       <UpdateWarehouseInventoryModal
@@ -61,18 +63,18 @@ export function WarehouseDetailsModals({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogTitle>{t('warehouse.text')}</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              سيتم حذف المستودع نهائياً ولن يمكن استرجاعه.
+              {t('warehouse.delete_warehouse_1')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/10 text-white hover:bg-white/20">إلغاء</AlertDialogCancel>
+            <AlertDialogCancel className="bg-white/10 text-white hover:bg-white/20">{t('warehouse.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={onDeleteWarehouse}
               className="bg-red-600 hover:bg-red-700"
             >
-              حذف
+              {t('warehouse.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

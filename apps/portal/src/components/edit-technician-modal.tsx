@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,19 +24,21 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertTechnicianInventorySchema, TechnicianInventory } from "@shared/schema";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
-const formSchema = insertTechnicianInventorySchema.extend({
-  n950Devices: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  i900Devices: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  rollPaper: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  stickers: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  mobilySim: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  stcSim: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  zainSim: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-});
+const getFormSchema = (t: (key: string) => string) => insertTechnicianInventorySchema.extend(
+{
+  n950Devices: z.number().min(0, t('common.quantity_6')),
+  i900Devices: z.number().min(0, t('common.quantity_6')),
+  rollPaper: z.number().min(0, t('common.quantity_6')),
+  stickers: z.number().min(0, t('common.quantity_6')),
+  mobilySim: z.number().min(0, t('common.quantity_6')),
+  stcSim: z.number().min(0, t('common.quantity_6')),
+  zainSim: z.number().min(0, t('common.quantity_6')),
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface EditTechnicianModalProps {
   open: boolean;
@@ -44,6 +47,8 @@ interface EditTechnicianModalProps {
 }
 
 export default function EditTechnicianModal({ open, onOpenChange, technician }: EditTechnicianModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -91,15 +96,15 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians"] });
       toast({
-        title: "تم التعديل بنجاح",
-        description: "تم تحديث بيانات المندوب",
+        title: t('common.completed_edit_successfully'),
+        description: t('common.completed_update_data_technici'),
       });
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في التعديل",
-        description: error.message || "حدث خطأ أثناء تحديث البيانات",
+        title: t('common.error_edit'),
+        description: error.message || t('common.error_update_data_1'),
         variant: "destructive",
       });
     },
@@ -113,9 +118,9 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">تعديل بيانات مندوب</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{t('common.edit_data')}</DialogTitle>
           <DialogDescription className="text-sm">
-            قم بتعديل بيانات المندوب وتجهيزاته
+            {t('common.data_technician')}
           </DialogDescription>
         </DialogHeader>
         
@@ -127,10 +132,10 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="technicianName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اسم المندوب</FormLabel>
+                    <FormLabel>{t('common.name_technician')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل اسم المندوب"
+                        placeholder={t('common.name_technician_2')}
                         {...field}
                         data-testid="input-technician-name"
                       />
@@ -145,10 +150,10 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المدينة</FormLabel>
+                    <FormLabel>{t('common.city_1')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل اسم المدينة"
+                        placeholder={t('common.name_city')}
                         {...field}
                         data-testid="input-city"
                       />
@@ -165,7 +170,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="n950Devices"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>أجهزة N950</FormLabel>
+                    <FormLabel>{t('common.devices_4')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -186,7 +191,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="i900Devices"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>أجهزة I900</FormLabel>
+                    <FormLabel>{t('common.devices_7')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -209,7 +214,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="rollPaper"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>أوراق رول</FormLabel>
+                    <FormLabel>{t('common.item_12770')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -230,7 +235,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="stickers"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ملصقات مداى</FormLabel>
+                    <FormLabel>{t('common.stickers_3')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -253,7 +258,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="mobilySim"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>شرائح موبايلي</FormLabel>
+                    <FormLabel>{t('common.sims_mobily')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -274,7 +279,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="stcSim"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>شرائح STC</FormLabel>
+                    <FormLabel>{t('common.sims_2')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -295,7 +300,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 name="zainSim"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>شرائح زين</FormLabel>
+                    <FormLabel>{t('common.sims_zain')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -317,10 +322,10 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ملاحظات</FormLabel>
+                  <FormLabel>{t('common.notes_2')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="أضف ملاحظات إضافية..."
+                      placeholder={t('common.notes_3')}
                       {...field}
                       value={field.value || ""}
                       data-testid="input-notes"
@@ -339,7 +344,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 className="flex-1 text-sm sm:text-base"
                 data-testid="button-cancel"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -347,7 +352,7 @@ export default function EditTechnicianModal({ open, onOpenChange, technician }: 
                 className="flex-1 text-sm sm:text-base"
                 data-testid="button-submit"
               >
-                {updateTechMutation.isPending ? "جاري التحديث..." : "حفظ التعديلات"}
+                {updateTechMutation.isPending ? t('common.update_3') : t('common.save_1')}
               </Button>
             </div>
           </form>

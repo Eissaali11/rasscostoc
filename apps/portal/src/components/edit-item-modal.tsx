@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useTranslation } from "@/lib/language";
+import { useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,14 +33,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { InventoryItemWithStatus } from "@shared/schema";
 
-const formSchema = z.object({
-  name: z.string().min(1, "اسم الصنف مطلوب"),
-  type: z.enum(["devices", "sim", "papers"], { required_error: "نوع الصنف مطلوب" }),
-  unit: z.string().min(1, "الوحدة مطلوبة"),
-  minThreshold: z.number().min(0, "الحد الأدنى يجب أن يكون صفر أو أكثر"),
-});
+const getFormSchema = (t: (key: string) => string) => z.object(
+{
+  name: z.string().min(1, t('common.name_9')),
+  type: z.enum(["devices", "sim", "papers"], { required_error: t('common.type_6') }),
+  unit: z.string().min(1, t('common.unit_3')),
+  minThreshold: z.number().min(0, t('common.item_44777')),
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface EditItemModalProps {
   open: boolean;
@@ -52,6 +55,8 @@ export default function EditItemModal({
   onOpenChange, 
   selectedItem 
 }: EditItemModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -84,16 +89,16 @@ export default function EditItemModal({
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({
-        title: "تم التعديل بنجاح",
-        description: "تم تحديث بيانات الصنف بنجاح",
+        title: t('common.completed_edit_successfully'),
+        description: t('common.completed_update_data_successf'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في التعديل",
-        description: error.message || "حدث خطأ أثناء تحديث بيانات الصنف",
+        title: t('common.error_edit'),
+        description: error.message || t('common.error_update_data'),
         variant: "destructive",
       });
     },
@@ -107,9 +112,9 @@ export default function EditItemModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>تعديل الصنف</DialogTitle>
+          <DialogTitle>{t('common.edit_3')}</DialogTitle>
           <DialogDescription>
-            تعديل بيانات "{selectedItem?.name}"
+            {t('inventory.edit_item_data', { name: selectedItem?.name })}
           </DialogDescription>
         </DialogHeader>
         
@@ -120,10 +125,10 @@ export default function EditItemModal({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>اسم الصنف</FormLabel>
+                  <FormLabel>{t('common.name_8')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: نيوليب، نيولاند..."
+                      placeholder={t('common.item_27402')}
                       {...field}
                       data-testid="input-edit-name"
                     />
@@ -138,17 +143,17 @@ export default function EditItemModal({
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>نوع الصنف</FormLabel>
+                  <FormLabel>{t('common.type_4')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-edit-type">
-                        <SelectValue placeholder="اختر النوع" />
+                        <SelectValue placeholder={t('common.type_5')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="devices">أجهزة</SelectItem>
-                      <SelectItem value="sim">شرائح</SelectItem>
-                      <SelectItem value="papers">أوراق</SelectItem>
+                      <SelectItem value="devices">{t('common.devices_3')}</SelectItem>
+                      <SelectItem value="sim">{t('common.sims_1')}</SelectItem>
+                      <SelectItem value="papers">{t('common.item_7941')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -161,10 +166,10 @@ export default function EditItemModal({
               name="unit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الوحدة</FormLabel>
+                  <FormLabel>{t('common.unit_2')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: جهاز، قطعة، كرتون..."
+                      placeholder={t('common.box_1')}
                       {...field}
                       data-testid="input-edit-unit"
                     />
@@ -179,7 +184,7 @@ export default function EditItemModal({
               name="minThreshold"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الحد الأدنى للتنبيه</FormLabel>
+                  <FormLabel>{t('common.item_27140')}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -201,7 +206,7 @@ export default function EditItemModal({
                 className="flex-1"
                 data-testid="button-submit-edit"
               >
-                {editItemMutation.isPending ? "جاري التحديث..." : "حفظ التعديلات"}
+                {editItemMutation.isPending ? t('common.update_3') : t('common.save_1')}
               </Button>
               <Button
                 type="button"
@@ -210,7 +215,7 @@ export default function EditItemModal({
                 className="flex-1"
                 data-testid="button-cancel-edit"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
             </div>
           </form>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -57,11 +58,12 @@ interface ImportSummary {
 }
 
 function StatusBadge({ status }: { status: string | null | undefined }) {
+  const { t } = useTranslation();
   if (!status)
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 bg-slate-700/40 px-2.5 py-1 rounded-full">
         <Clock className="w-3 h-3" />
-        بانتظار التحقق
+        {t('courier.verification_3')}
       </span>
     );
 
@@ -70,7 +72,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/25">
         <CheckCircle2 className="w-3 h-3" />
-        مكتمل
+        {t('courier.completed_5')}
       </span>
     );
 
@@ -78,7 +80,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2.5 py-1 rounded-full border border-red-500/25">
         <XCircle className="w-3 h-3" />
-        غير مكتمل
+        {t('courier.completed_6')}
       </span>
     );
 
@@ -86,7 +88,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 bg-indigo-500/15 px-2.5 py-1 rounded-full border border-indigo-500/25">
         <Phone className="w-3 h-3" />
-        العميل لا يرد
+        {t('courier.customer_no')}
       </span>
     );
 
@@ -94,7 +96,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/25">
         <Clock className="w-3 h-3" />
-        تحت الإجراء
+        {t('courier.item_15830')}
       </span>
     );
 
@@ -109,6 +111,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 const PAGE_SIZE = 25;
 
 export default function CourierRequestsPage() {
+  const { t, dir } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
@@ -174,21 +177,21 @@ export default function CourierRequestsPage() {
       if (res.ok) {
         setImportSummary(result);
         toast({
-          title: "تم الاستيراد بنجاح",
-          description: `تمت معالجة ${result.totalRows} صفاً: استيراد ${result.importedCount}، تخطي ${result.skippedCount} مكررين.`,
+          title: t('courier.completed_import_successfully'),
+          description: t('courier.import_3', { var_0: result.totalRows, var_1: result.importedCount, var_2: result.skippedCount }),
         });
         queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
       } else {
         toast({
-          title: "فشل الاستيراد",
-          description: result.error || "حدث خطأ أثناء معالجة ملف إكسل.",
+          title: t('courier.fail_import'),
+          description: result.error || t('courier.error_file'),
           variant: "destructive",
         });
       }
     } catch (err) {
       toast({
-        title: "خطأ",
-        description: "تعذر الاتصال بالخادم للاستيراد.",
+        title: t('courier.error'),
+        description: t('courier.item_42983'),
         variant: "destructive",
       });
     } finally {
@@ -209,16 +212,16 @@ export default function CourierRequestsPage() {
   };
 
   return (
-    <div dir="rtl" className="space-y-5">
+    <div dir={dir} className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <Package className="w-5 h-5 text-emerald-400" />
-            شاشة التحقق وإغلاق الطلبات
+            {t('courier.verification_requests')}
           </h1>
           <p className="text-sm text-slate-400 mt-0.5">
-            إجمالي الحالات بانتظار المراجعة والتحقق: <span className="text-slate-200 font-medium">{total}</span> طلب
+            {t('courier.total_review_with_count', { total })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -239,20 +242,20 @@ export default function CourierRequestsPage() {
             ) : (
               <Upload className="w-3.5 h-3.5" />
             )}
-            استيراد إكسل
+            {t('courier.import_4')}
           </button>
           <button
             onClick={handleExportExcel}
             className="bg-[#3c6e71] hover:bg-[#2d5355] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" />
-            تصدير إكسل
+            {t('courier.export_2')}
           </button>
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
           >
-            + إضافة طلب جديد
+            {t('courier.add_request_new_2')}
           </button>
         </div>
       </div>
@@ -268,23 +271,23 @@ export default function CourierRequestsPage() {
           </button>
           <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4" />
-            ملخص تقرير استيراد ملف الإكسل
+            {t('courier.report_import_file')}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div className="bg-[#142d2d] rounded-lg p-2.5 border border-slate-700/30">
-              <div className="text-slate-400">إجمالي الأسطر المقروءة</div>
+              <div className="text-slate-400">{t('courier.total')}</div>
               <div className="text-lg font-bold text-slate-200 mt-0.5">{importSummary.totalRows}</div>
             </div>
             <div className="bg-emerald-500/10 rounded-lg p-2.5 border border-emerald-500/20">
-              <div className="text-emerald-400">تم استيرادها بنجاح</div>
+              <div className="text-emerald-400">{t('courier.completed_successfully_1')}</div>
               <div className="text-lg font-bold text-emerald-300 mt-0.5">{importSummary.importedCount}</div>
             </div>
             <div className="bg-amber-500/10 rounded-lg p-2.5 border border-amber-500/20">
-              <div className="text-amber-400">تم تخطيها (مكررة TID)</div>
+              <div className="text-amber-400">{t('courier.completed_8')}</div>
               <div className="text-lg font-bold text-amber-300 mt-0.5">{importSummary.skippedCount}</div>
             </div>
             <div className="bg-red-500/10 rounded-lg p-2.5 border border-red-500/20">
-              <div className="text-red-400">تم رفضها (أخطاء بنية)</div>
+              <div className="text-red-400">{t('courier.completed_9')}</div>
               <div className="text-lg font-bold text-red-300 mt-0.5">{importSummary.rejectedCount}</div>
             </div>
           </div>
@@ -294,13 +297,13 @@ export default function CourierRequestsPage() {
               {importSummary.skipped.map((s, idx) => (
                 <div key={`s-${idx}`} className="text-amber-400 flex items-start gap-1">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <span>السطر {s.rowNumber}: {s.error || `TID ${s.data.tid} مكرر مسبقاً`}</span>
+                  <span>{t('courier.item_7942')}{s.rowNumber}: {s.error || t('courier.duplicate_3', { var_0: s.data.tid })}</span>
                 </div>
               ))}
               {importSummary.rejected.map((r, idx) => (
                 <div key={`r-${idx}`} className="text-red-400 flex items-start gap-1">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <span>السطر {r.rowNumber}: {r.error || "بيانات TID أو Terminal ID مفقودة"}</span>
+                  <span>{t('courier.item_7942')}{r.rowNumber}: {r.error || t('courier.data_5')}</span>
                 </div>
               ))}
             </div>
@@ -316,7 +319,7 @@ export default function CourierRequestsPage() {
             <input
               value={q}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="البحث بـ TID، اسم العميل، رقم الحادثة أو السيريال (SN/SIM)..."
+              placeholder={t('courier.search_name_number_serial_1')}
               className="w-full bg-[#1a3636] border border-slate-700/50 rounded-lg pr-10 pl-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/60"
             />
           </div>
@@ -325,33 +328,33 @@ export default function CourierRequestsPage() {
             onChange={(e) => { setStatus(e.target.value); setPage(1); }}
             className="bg-[#1a3636] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
           >
-            <option value="">جميع الحالات (الكل)</option>
-            <option value="pending">بانتظار التحقق</option>
-            <option value="Installation Completed">مكتمل</option>
-            <option value="Not Completed">غير مكتمل</option>
-            <option value="Customer Not Answering">العميل لا يرد</option>
-            <option value="In Progress">تحت الإجراء</option>
+            <option value="">{t('courier.all')}</option>
+            <option value="pending">{t('courier.verification_3')}</option>
+            <option value="Installation Completed">{t('courier.completed_5')}</option>
+            <option value="Not Completed">{t('courier.completed_6')}</option>
+            <option value="Customer Not Answering">{t('courier.customer_no')}</option>
+            <option value="In Progress">{t('courier.item_15830')}</option>
           </select>
         </div>
 
         {(status || reason || q) && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-slate-400">الفلاتر النشطة:</span>
+            <span className="text-slate-400">{t('courier.active')}</span>
             {status && (
               <span className="bg-emerald-500/15 text-emerald-450 border border-emerald-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
-                الحالة: {status === "pending" ? "بانتظار التحقق" : status}
+                {t('courier.status_filter_label', { status: status === "pending" ? t('courier.verification_3') : status })}
                 <button onClick={() => { setStatus(""); setPage(1); }} className="hover:text-emerald-300 font-bold ml-1 cursor-pointer">×</button>
               </span>
             )}
             {reason && (
               <span className="bg-red-500/15 text-red-400 border border-red-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
-                سبب الفشل: {reason}
+                {t('courier.reason_failed_count', { count: reason })}
                 <button onClick={() => { setReason(""); setPage(1); }} className="hover:text-red-300 font-bold ml-1 cursor-pointer">×</button>
               </span>
             )}
             {q && (
               <span className="bg-blue-500/15 text-blue-400 border border-blue-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
-                البحث: {q}
+                {t('courier.search_count', { count: q })}
                 <button onClick={() => { setQ(""); setPage(1); }} className="hover:text-blue-300 font-bold ml-1 cursor-pointer">×</button>
               </span>
             )}
@@ -359,7 +362,7 @@ export default function CourierRequestsPage() {
               onClick={() => { setStatus(""); setReason(""); setQ(""); setPage(1); }}
               className="text-slate-400 hover:text-slate-200 underline font-medium cursor-pointer text-xs"
             >
-              مسح الكل
+              {t('courier.scan_all')}
             </button>
           </div>
         )}
@@ -371,7 +374,7 @@ export default function CourierRequestsPage() {
           <table className="w-full text-sm whitespace-nowrap">
             <thead className="bg-[#142d2d] text-slate-400 sticky top-0 z-10">
               <tr>
-                {["#", "التاريخ", "TID", "Terminal ID", "العميل", "المدينة", "الفني", "الحالة", "إجراء"].map((h, i) => (
+                {["#", t('courier.date_2'), "TID", "Terminal ID", t('courier.customer_1'), t('courier.city'), t('courier.technician'), t('courier.status'), t('courier.item_7882')].map((h, i) => (
                   <th key={i} className="px-4 py-3 text-start font-semibold border-b border-slate-700/50">
                     {h}
                   </th>
@@ -383,13 +386,13 @@ export default function CourierRequestsPage() {
                 <tr>
                   <td colSpan={9} className="text-center py-16 text-slate-500">
                     <Loader2 className="animate-spin w-5 h-5 inline-block mr-2" />
-                    جاري التحميل...
+                    {t('courier.loading_ellipsis')}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-16 text-slate-500">
-                    لا توجد نتائج
+                    {t('courier.no_results_1')}
                   </td>
                 </tr>
               ) : (
@@ -418,7 +421,7 @@ export default function CourierRequestsPage() {
                         }}
                         className="text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                       >
-                        {(!r.execution || !r.execution.installationStatus) ? "إدخال البيانات" : "تعديل بيانات التحقق"}
+                        {(!r.execution || !r.execution.installationStatus) ? t('courier.submit_data') : t('courier.edit_data_verification')}
                       </button>
                     </td>
                   </tr>
@@ -432,7 +435,7 @@ export default function CourierRequestsPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-slate-400">
         <span>
-          صفحة {page} من {totalPages}
+          {t('courier.page_of', { page, totalPages })}
         </span>
         <div className="flex gap-2">
           <button

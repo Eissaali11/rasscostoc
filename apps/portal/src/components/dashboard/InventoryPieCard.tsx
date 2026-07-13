@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Package, TruckIcon } from "lucide-react";
@@ -8,9 +9,10 @@ interface InventoryPieCardProps {
 }
 
 export const InventoryPieCard = ({ fixedTotal, movingTotal }: InventoryPieCardProps) => {
+  const { t } = useTranslation();
   const data = [
-    { name: "المخزون الثابت", value: fixedTotal, color: "#18B2B0" },
-    { name: "المخزون المتحرك", value: movingTotal, color: "#10b981" },
+    { name: t('inventory.fixed'), value: fixedTotal, color: "#18B2B0" },
+    { name: t('inventory.moving'), value: movingTotal, color: "#10b981" },
   ];
 
   const total = fixedTotal + movingTotal;
@@ -22,9 +24,9 @@ export const InventoryPieCard = ({ fixedTotal, movingTotal }: InventoryPieCardPr
         <div className="bg-[#0a0a0f]/95 backdrop-blur-xl border border-[#18B2B0]/30 p-4 rounded-xl shadow-2xl">
           <p className="text-white font-bold mb-1">{payload[0].name}</p>
           <p className="text-[#18B2B0] font-semibold">
-            {payload[0].value.toLocaleString()} وحدة
+            {t('inventory.unit_2', { count: payload[0].value.toLocaleString() })}
           </p>
-          <p className="text-gray-400 text-sm">{percent}% من الإجمالي</p>
+          <p className="text-gray-400 text-sm">{percent}{t('inventory.total_4')}</p>
         </div>
       );
     }
@@ -55,7 +57,7 @@ export const InventoryPieCard = ({ fixedTotal, movingTotal }: InventoryPieCardPr
         </div>
       ))}
       <div className="flex items-center justify-between bg-gradient-to-r from-[#18B2B0]/20 to-[#10b981]/20 rounded-lg p-3 border border-[#18B2B0]/30 mt-2">
-        <span className="text-white font-bold">الإجمالي الكلي</span>
+        <span className="text-white font-bold">{t('inventory.total_2')}</span>
         <span className="text-[#18B2B0] font-bold text-lg">{total.toLocaleString()}</span>
       </div>
     </div>
@@ -86,7 +88,7 @@ export const InventoryPieCard = ({ fixedTotal, movingTotal }: InventoryPieCardPr
           <div className="p-2 bg-gradient-to-br from-[#18B2B0] to-[#0ea5a3] rounded-xl">
             <Package className="h-6 w-6 text-white" />
           </div>
-          توزيع المخزون
+          {t('inventory.inventory_2')}
         </h3>
 
         {total > 0 ? (
@@ -118,7 +120,7 @@ export const InventoryPieCard = ({ fixedTotal, movingTotal }: InventoryPieCardPr
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">لا توجد بيانات متاحة</p>
+            <p className="text-gray-400 text-lg">{t('inventory.no_data_4')}</p>
           </div>
         )}
       </div>

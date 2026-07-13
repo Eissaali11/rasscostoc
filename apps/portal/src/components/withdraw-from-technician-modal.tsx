@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,12 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 import { getItemTypeVisuals, legacyFieldMapping, useActiveItemTypes } from "@/hooks/use-item-types";
 import type { TechnicianMovingInventoryEntry, UserSafe } from "@shared/schema";
 
-const formSchema = z.object({
-  warehouseId: z.string().min(1, "يجب اختيار المستودع"),
+const getFormSchema = (t: (key: string) => string) => z.object(
+{
+  warehouseId: z.string().min(1, t('common.warehouse_11')),
   notes: z.string().optional(),
-});
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 type TransferItem = {
   selected: boolean;
@@ -53,6 +56,8 @@ export default function WithdrawFromTechnicianModal({
   technicianName,
   movingInventoryFallback,
 }: WithdrawFromTechnicianModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
 
   const [itemTransfers, setItemTransfers] = useState<Record<string, TransferItem>>({});
@@ -322,7 +327,7 @@ export default function WithdrawFromTechnicianModal({
 
       const notesWithPriority = [
         data.notes?.trim() || "",
-        `الأولوية: ${priority === "urgent" ? "عاجل" : priority === "critical" ? "طارئ" : "عادي"}`,
+        t('common.item_13815', { var_0: priority === "urgent" ? t('common.item_6352') : priority === "critical" ? t('common.item_6325') : t('common.item_6361') }),
       ]
         .filter(Boolean)
         .join(" | ");
@@ -345,16 +350,16 @@ export default function WithdrawFromTechnicianModal({
       await queryClient.invalidateQueries({ queryKey: ["/api/warehouses", variables.warehouseId, "inventory-entries"] });
 
       toast({
-        title: "تم السحب بنجاح",
-        description: "تم تحويل المخزون من المندوب إلى المستودع",
+        title: t('common.completed_withdraw_successfull'),
+        description: t('common.completed_transfer_inventory_t'),
       });
 
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "فشل عملية السحب",
-        description: error?.message || "حدث خطأ أثناء سحب المخزون",
+        title: t('common.fail_operation_withdraw'),
+        description: error?.message || t('common.error_withdraw_inventory'),
         variant: "destructive",
       });
     },
@@ -366,8 +371,8 @@ export default function WithdrawFromTechnicianModal({
 
     if (selected.length === 0) {
       toast({
-        title: "لا توجد أصناف محددة",
-        description: "اختر صنفًا واحدًا على الأقل مع كمية صحيحة",
+        title: t('common.no_15'),
+        description: t('common.quantity_13'),
         variant: "destructive",
       });
       return;
@@ -378,8 +383,8 @@ export default function WithdrawFromTechnicianModal({
       if (transfer.quantity > available) {
         const itemName = visibleItems.find((item) => item.id === itemTypeId)?.nameAr || itemTypeId;
         toast({
-          title: "كمية غير متاحة",
-          description: `${itemName}: المطلوب ${transfer.quantity} والمتاح ${available}`,
+          title: t('common.quantity_14'),
+          description: t('common.item_25382', { var_0: itemName, var_1: transfer.quantity, var_2: available }),
           variant: "destructive",
         });
         return;
@@ -399,9 +404,9 @@ export default function WithdrawFromTechnicianModal({
                 <Warehouse className="h-5 w-5 text-cyan-300" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold">سحب مخزون المندوب</DialogTitle>
+                <DialogTitle className="text-xl font-bold">{t('common.withdraw_technician')}</DialogTitle>
                 <DialogDescription className="text-xs text-cyan-300/70 mt-1">
-                  إدارة طلب سحب الأصناف وتحويلها للمستودع
+                  {t('common.management_request_withdraw')}
                 </DialogDescription>
               </div>
             </div>
@@ -420,42 +425,42 @@ export default function WithdrawFromTechnicianModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="max-h-[85vh] flex flex-col">
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">المندوب المستلم</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">{t('common.technician_received')}</label>
                 <div className="flex items-center gap-3 p-3 bg-[#102222]/70 border border-cyan-400/10 rounded-xl">
                   <div className="size-10 rounded-full border border-cyan-300/30 bg-slate-800 flex items-center justify-center text-cyan-200 font-bold shrink-0">
-                    {(technicianName || "ف").slice(0, 1)}
+                    {(technicianName || t('common.item_1601')).slice(0, 1)}
                   </div>
                   <div>
                     <span className="text-slate-100 font-bold block">{technicianName}</span>
-                    <span className="text-cyan-300/70 text-xs">مندوب صيانة وتمديد</span>
+                    <span className="text-cyan-300/70 text-xs">{t('common.maintenance')}</span>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">نوع التوريد</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">{t('common.type_8')}</label>
                   <div className="relative">
                     <select
                       value={supplyType}
                       onChange={(event) => setSupplyType(event.target.value as SupplyType)}
                       className="w-full appearance-none bg-[#102222]/70 border border-cyan-400/20 rounded-xl px-4 py-3 text-slate-100 focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 outline-none"
                     >
-                      <option value="static">مخزون ثابت</option>
-                      <option value="mobile">مخزون متحرك</option>
+                      <option value="static">{t('common.item_14327')}</option>
+                      <option value="mobile">{t('common.item_15971')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">المستودع المستلم</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">{t('common.warehouse_received')}</label>
                   <div className="relative">
                     <select
                       value={form.watch("warehouseId")}
                       onChange={(event) => form.setValue("warehouseId", event.target.value, { shouldValidate: true })}
                       className="w-full appearance-none bg-[#102222]/70 border border-cyan-400/20 rounded-xl px-4 py-3 text-slate-100 focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 outline-none"
                     >
-                      <option value="">اختر المستودع</option>
+                      <option value="">{t('common.warehouse_10')}</option>
                       {warehouses.map((warehouse) => (
                         <option key={warehouse.id} value={warehouse.id}>
                           {warehouse.name} - {warehouse.location}
@@ -471,7 +476,7 @@ export default function WithdrawFromTechnicianModal({
 
               <div className="p-4 bg-[#102222]/60 rounded-xl border border-cyan-400/10 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <label className="block text-sm font-medium text-slate-300">الأصناف المتوفرة للتحديد</label>
+                  <label className="block text-sm font-medium text-slate-300">{t('common.item_35061')}</label>
 
                   <div className="flex items-center gap-2">
                     <button
@@ -483,7 +488,7 @@ export default function WithdrawFromTechnicianModal({
                           : "px-3 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-800/60 text-slate-300"
                       }
                     >
-                      الكل
+                      {t('common.all')}
                     </button>
                     <button
                       type="button"
@@ -494,7 +499,7 @@ export default function WithdrawFromTechnicianModal({
                           : "px-3 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-800/60 text-slate-300"
                       }
                     >
-                      حسب التحديد ({selectedItems.length})
+                      {t('inventory.selected_count', { count: selectedItems.length })}
                     </button>
                   </div>
                 </div>
@@ -505,19 +510,19 @@ export default function WithdrawFromTechnicianModal({
                     onClick={selectAllAvailableItems}
                     className="px-3 py-1.5 text-xs rounded-lg border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20"
                   >
-                    تحديد الكل
+                    {t('common.all_1')}
                   </button>
                   <button
                     type="button"
                     onClick={clearAllSelections}
                     className="px-3 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-700/70"
                   >
-                    إلغاء التحديد
+                    {t('common.cancel_8')}
                   </button>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-300">البحث عن المنتج</label>
+                  <label className="block text-sm font-medium text-slate-300">{t('common.search_9')}</label>
                   <div className="relative">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-300/70" />
                     <input
@@ -525,21 +530,21 @@ export default function WithdrawFromTechnicianModal({
                       type="text"
                       value={productSearchQuery}
                       onChange={(event) => setProductSearchQuery(event.target.value)}
-                      placeholder="ابحث بالاسم أو الباركود"
+                      placeholder={t('common.item_31817')}
                       className="w-full bg-[#0f2526] border border-cyan-400/20 rounded-xl px-4 py-2.5 pr-10 pl-10 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 outline-none"
                     />
                     {productSearchQuery.trim().length > 0 && (
                       <button
                         type="button"
                         onClick={() => setProductSearchQuery("")}
-                        aria-label="مسح البحث"
+                        aria-label={t('common.scan_search_3')}
                         className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-cyan-300/70 hover:text-cyan-200 hover:bg-cyan-400/10 transition-colors"
                       >
                         <XCircle className="h-4 w-4" />
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500">عرض {filteredDisplayedItems.length} من {displayedItems.length} صنف</p>
+                  <p className="text-xs text-slate-500">{t('common.view')}{filteredDisplayedItems.length}{t('common.item_3211')}{displayedItems.length}{t('common.item_4796')}</p>
                 </div>
 
                 <div className="space-y-3">
@@ -575,13 +580,13 @@ export default function WithdrawFromTechnicianModal({
                           <div className="min-w-0">
                             <span className="text-slate-200 text-sm font-medium block truncate">{item.nameAr}</span>
                             <span className="text-slate-500 text-xs">
-                              {item.barcode} • المتاح: {item.availableForSupply}
+                              {t('common.available_supply', { barcode: item.barcode, qty: item.availableForSupply })}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-400">الكمية:</span>
+                          <span className="text-xs text-slate-400">{t('common.quantity_10')}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -590,7 +595,7 @@ export default function WithdrawFromTechnicianModal({
                             }}
                             className="size-8 rounded-lg border border-cyan-400/30 bg-[#0f2526] text-cyan-300 hover:bg-cyan-400/10 transition-colors flex items-center justify-center disabled:opacity-50"
                             disabled={!isSelected || quantity <= 0}
-                            aria-label="إنقاص الكمية"
+                            aria-label={t('common.quantity_12')}
                           >
                             <Minus className="h-3.5 w-3.5" />
                           </button>
@@ -614,7 +619,7 @@ export default function WithdrawFromTechnicianModal({
                             }}
                             className="size-8 rounded-lg border border-cyan-400/30 bg-[#0f2526] text-cyan-300 hover:bg-cyan-400/10 transition-colors flex items-center justify-center disabled:opacity-50"
                             disabled={!isSelected || quantity >= maxQty}
-                            aria-label="زيادة الكمية"
+                            aria-label={t('common.quantity_16')}
                           >
                             <Plus className="h-3.5 w-3.5" />
                           </button>
@@ -627,7 +632,7 @@ export default function WithdrawFromTechnicianModal({
                             className="px-2.5 py-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 text-xs hover:bg-cyan-400/20 transition-colors disabled:opacity-50"
                             disabled={!isSelected || maxQty === 0}
                           >
-                            الحد الأقصى
+                            {t('common.item_15925')}
                           </button>
                           <button
                             type="button"
@@ -644,14 +649,14 @@ export default function WithdrawFromTechnicianModal({
 
                   {filteredDisplayedItems.length === 0 && (
                     <div className="text-sm text-slate-500 text-center py-3 border border-dashed border-cyan-400/20 rounded-xl">
-                      لا توجد أصناف مطابقة للبحث أو العرض الحالي.
+                      {t('inventory.no_view')}
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">الأولوية</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">{t('common.item_12757')}</label>
                 <div className="grid grid-cols-3 gap-2 bg-[#102222]/70 p-1.5 rounded-xl border border-cyan-400/10">
                   <button
                     type="button"
@@ -662,7 +667,7 @@ export default function WithdrawFromTechnicianModal({
                         : "py-2.5 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded-lg"
                     }
                   >
-                    عادي
+                    {t('common.item_6361')}
                   </button>
                   <button
                     type="button"
@@ -674,7 +679,7 @@ export default function WithdrawFromTechnicianModal({
                     }
                   >
                     {priority === "urgent" && <span className="size-2 rounded-full bg-cyan-300 animate-pulse" />}
-                    عاجل
+                    {t('common.item_6352')}
                   </button>
                   <button
                     type="button"
@@ -685,18 +690,18 @@ export default function WithdrawFromTechnicianModal({
                         : "py-2.5 text-sm text-orange-300/70 hover:text-orange-300 hover:bg-orange-400/10 rounded-lg"
                     }
                   >
-                    طارئ
+                    {t('common.item_6325')}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">ملاحظات إضافية</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">{t('common.notes_4')}</label>
                 <textarea
                   rows={3}
                   value={form.watch("notes") || ""}
                   onChange={(event) => form.setValue("notes", event.target.value)}
-                  placeholder="أضف أي ملاحظات أو تعليمات خاصة هنا..."
+                  placeholder={t('common.notes_7')}
                   className="w-full bg-[#102222]/70 border border-cyan-400/20 rounded-xl p-4 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 outline-none resize-none"
                 />
               </div>
@@ -709,7 +714,7 @@ export default function WithdrawFromTechnicianModal({
                 disabled={mutation.isPending}
                 className="px-6 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all font-medium"
               >
-                إلغاء
+                {t('common.cancel')}
               </button>
 
               <button
@@ -720,12 +725,12 @@ export default function WithdrawFromTechnicianModal({
                 {mutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    جاري الإرسال...
+                    {t('inventory.send')}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4" />
-                    إرسال الطلب
+                    {t('common.send_request')}
                   </>
                 )}
               </button>

@@ -10,6 +10,7 @@ export interface ItemType {
   isActive: boolean;
   isVisible: boolean;
   sortOrder: number;
+  requiresSerial?: boolean;
 }
 
 export interface InventoryEntry {

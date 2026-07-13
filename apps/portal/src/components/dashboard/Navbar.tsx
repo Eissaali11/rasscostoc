@@ -50,7 +50,7 @@ interface PendingCountResponse {
 export const Navbar = () => {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, changeLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { data: pendingTransfers = [] } = useQuery<WarehouseTransfer[]>({
@@ -118,14 +118,14 @@ export const Navbar = () => {
       technicianOnly: true,
     },
     {
-      title: "إدخال أجهزة مستقبلة",
+      title: t('common.submit_devices'),
       href: "/received-devices/submit",
       icon: PackagePlus,
       gradient: "from-cyan-500 to-blue-600",
       technicianOnly: true,
     },
     {
-      title: "مراجعة الأجهزة المستقبلة",
+      title: t('common.review_devices'),
       href: "/received-devices/review",
       icon: ClipboardCheck,
       gradient: "from-indigo-500 to-purple-600",
@@ -153,14 +153,14 @@ export const Navbar = () => {
       supervisorOrAbove: true,
     },
     {
-      title: "النسخ الاحتياطية",
+      title: t('common.backup_backup_2'),
       href: "/backup",
       icon: Database,
       gradient: "from-gray-500 to-slate-600",
       adminOnly: true,
     },
     {
-      title: "إدارة الأصناف",
+      title: t('common.management_1'),
       href: "/item-types",
       icon: Package,
       gradient: "from-teal-500 to-cyan-600",
@@ -200,16 +200,16 @@ export const Navbar = () => {
               <Button
                 variant={language === 'ar' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setLanguage('ar')}
+                onClick={() => changeLanguage('ar')}
                 data-testid="button-lang-ar"
                 className={`text-xs px-3 py-1 ${language === 'ar' ? 'bg-[#18B2B0] hover:bg-[#18B2B0]/90' : 'border-[#18B2B0]/40 text-gray-300 hover:bg-white/10'}`}
               >
-                ع
+                {t('common.item_1593')}
               </Button>
               <Button
                 variant={language === 'en' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setLanguage('en')}
+                onClick={() => changeLanguage('en')}
                 data-testid="button-lang-en"
                 className={`text-xs px-3 py-1 ${language === 'en' ? 'bg-[#18B2B0] hover:bg-[#18B2B0]/90' : 'border-[#18B2B0]/40 text-gray-300 hover:bg-white/10'}`}
               >
@@ -307,16 +307,16 @@ export const Navbar = () => {
               <Button
                 variant={language === 'ar' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setLanguage('ar')}
+                onClick={() => changeLanguage('ar')}
                 data-testid="button-mobile-lang-ar"
                 className={`text-xs px-2 py-1 ${language === 'ar' ? 'bg-[#18B2B0] hover:bg-[#18B2B0]/90' : 'border-[#18B2B0]/40 text-gray-300'}`}
               >
-                ع
+                {t('common.item_1593')}
               </Button>
               <Button
                 variant={language === 'en' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setLanguage('en')}
+                onClick={() => changeLanguage('en')}
                 data-testid="button-mobile-lang-en"
                 className={`text-xs px-2 py-1 ${language === 'en' ? 'bg-[#18B2B0] hover:bg-[#18B2B0]/90' : 'border-[#18B2B0]/40 text-gray-300'}`}
               >

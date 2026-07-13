@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { LanguageProvider } from "@/lib/language";
+import { LanguageProvider, useTranslation } from "@/lib/language";
 import LandingPage from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import AdminPage from "@/pages/admin";
@@ -76,9 +76,9 @@ function AuthenticatedRouter() {
 
   const withShell = (
     Component: ComponentType,
-    title: string,
+    titleKey: string,
   ) => () => (
-    <NeoShellLayout title={title}>
+    <NeoShellLayout titleKey={titleKey}>
       <Component />
     </NeoShellLayout>
   );
@@ -89,70 +89,70 @@ function AuthenticatedRouter() {
       <Route path="/" component={() => <Redirect to="/home" />} />
       <Route path="/devices" component={() => <Redirect to="/home" />} />
       <Route path="/stock" component={LandingPage} />
-      <Route path="/home" component={withShell(Dashboard, "الصفحة الرئيسية")} />
-      <Route path="/transactions" component={withShell(TransactionHistoryPage, "سجل الحركات")} />
-      <Route path="/operations-search" component={withShell(OperationsSearchPage, "البحث في العمليات")} />
-      <Route path="/withdrawn-devices" component={withShell(WithdrawnDevicesPage, "الأصناف المرتجعة")} />
-      <Route path="/withdrawn-devices/management" component={withShell(WithdrawnDevicesManagementPage, "إدارة الأصناف المرتجعة")} />
-      <Route path="/withdrawn-devices/all" component={withShell(WithdrawnDevicesAllPage, "سجل العمليات المرتجعة")} />
-      <Route path="/withdrawn-devices/:id" component={withShell(WithdrawnDeviceDetailsPage, "تفاصيل الجهاز المرتجع")} />
-      <Route path="/received-devices/submit" component={withShell(ReceivedDevicesSubmit, "إدخال أجهزة مستقبلة")} />
-      <Route path="/received-devices/review" component={withShell(ReceivedDevicesReview, "مراجعة الأجهزة المستقبلة")} />
-      <Route path="/received-devices/:id" component={withShell(ReceivedDeviceDetails, "تفاصيل الجهاز المستلم")} />
-      <Route path="/notifications" component={withShell(NotificationsPage, "مركز التنبيهات الذكي")} />
-      <Route path="/products-management" component={withShell(ProductsManagementPage, "إدارة المنتجات")} />
-      <Route path="/products-management/:id/details" component={withShell(ProductDetailsPage, "تفاصيل المنتج")} />
-      <Route path="/products-management/:id/smart-add" component={withShell(ProductSmartAddPage, "مركز المسح والتحقق الذكي")} />
-      <Route path="/profile" component={withShell(ProfilePage, "الملف الشخصي")} />
-      <Route path="/technician-details/:id" component={withShell(TechnicianDetailsPage, "تفاصيل عهدة المندوب")} />
-      <Route path="/technician-details/:technicianId/item/:itemTypeId" component={withShell(TechnicianItemDetailsPage, "تفاصيل المنتج")} />
-      <Route path="/employee-detailed-profile-template" component={withShell(EmployeeDetailedProfileTemplatePage, "الملف التفصيلي للموظف")} />
-      <Route path="/employee-edit-profile-template" component={withShell(EmployeeEditProfileTemplatePage, "تعديل بيانات الموظف")} />
-      <Route path="/system-logs" component={withShell(SystemLogsPage, "سجل النظام")} />
+      <Route path="/home" component={withShell(Dashboard, "titles.home")} />
+      <Route path="/transactions" component={withShell(TransactionHistoryPage, "titles.transactions")} />
+      <Route path="/operations-search" component={withShell(OperationsSearchPage, "titles.operations_search")} />
+      <Route path="/withdrawn-devices" component={withShell(WithdrawnDevicesPage, "titles.withdrawn_devices")} />
+      <Route path="/withdrawn-devices/management" component={withShell(WithdrawnDevicesManagementPage, "titles.withdrawn_management")} />
+      <Route path="/withdrawn-devices/all" component={withShell(WithdrawnDevicesAllPage, "titles.withdrawn_all")} />
+      <Route path="/withdrawn-devices/:id" component={withShell(WithdrawnDeviceDetailsPage, "titles.withdrawn_details")} />
+      <Route path="/received-devices/submit" component={withShell(ReceivedDevicesSubmit, "titles.received_submit")} />
+      <Route path="/received-devices/review" component={withShell(ReceivedDevicesReview, "titles.received_review")} />
+      <Route path="/received-devices/:id" component={withShell(ReceivedDeviceDetails, "titles.received_details")} />
+      <Route path="/notifications" component={withShell(NotificationsPage, "titles.notifications")} />
+      <Route path="/products-management" component={withShell(ProductsManagementPage, "titles.products")} />
+      <Route path="/products-management/:id/details" component={withShell(ProductDetailsPage, "titles.product_details")} />
+      <Route path="/products-management/:id/smart-add" component={withShell(ProductSmartAddPage, "titles.product_smart_add")} />
+      <Route path="/profile" component={withShell(ProfilePage, "titles.profile")} />
+      <Route path="/technician-details/:id" component={withShell(TechnicianDetailsPage, "titles.technician_details")} />
+      <Route path="/technician-details/:technicianId/item/:itemTypeId" component={withShell(TechnicianItemDetailsPage, "titles.product_details")} />
+      <Route path="/employee-detailed-profile-template" component={withShell(EmployeeDetailedProfileTemplatePage, "titles.employee_profile")} />
+      <Route path="/employee-edit-profile-template" component={withShell(EmployeeEditProfileTemplatePage, "titles.employee_edit")} />
+      <Route path="/system-logs" component={withShell(SystemLogsPage, "titles.system_logs")} />
       {user?.role === "technician" && (
         <>
-          <Route path="/my-fixed-inventory" component={withShell(MyFixedInventory, "المخزون الثابت")} />
-          <Route path="/my-moving-inventory" component={withShell(MyMovingInventory, "المخزون المتحرك")} />
+          <Route path="/my-fixed-inventory" component={withShell(MyFixedInventory, "titles.my_fixed")} />
+          <Route path="/my-moving-inventory" component={withShell(MyMovingInventory, "titles.my_moving")} />
         </>
       )}
       {hasRoleOrAbove(user?.role || '', ROLES.SUPERVISOR) && (
         <>
-          <Route path="/verification" component={withShell(VerificationPage, "بوابة التحقق من الرقم التسلسلي")} />
-          <Route path="/admin-inventory-overview" component={withShell(AdminInventoryOverview, "لوحة مخزون المندوبين")} />
-          <Route path="/warehouses" component={withShell(WarehousesPage, "إدارة المستودعات")} />
-          <Route path="/warehouses/:id" component={withShell(WarehouseDetailsPage, "تفاصيل المستودع")} />
-          <Route path="/transfer-details/:id" component={withShell(TransferDetailsPage, "تفاصيل التحويل")} />
-          <Route path="/operations" component={withShell(OperationsPage, "لوحة العمليات")} />
-          <Route path="/operation-details/:groupId" component={withShell(OperationDetailsPage, "تفاصيل العملية")} />
+          <Route path="/verification" component={withShell(VerificationPage, "titles.verification")} />
+          <Route path="/admin-inventory-overview" component={withShell(AdminInventoryOverview, "titles.admin_inventory")} />
+          <Route path="/warehouses" component={withShell(WarehousesPage, "titles.warehouses")} />
+          <Route path="/warehouses/:id" component={withShell(WarehouseDetailsPage, "titles.warehouse_details")} />
+          <Route path="/transfer-details/:id" component={withShell(TransferDetailsPage, "titles.transfer_details")} />
+          <Route path="/operations" component={withShell(OperationsPage, "titles.operations")} />
+          <Route path="/operation-details/:groupId" component={withShell(OperationDetailsPage, "titles.operation_details")} />
         </>
       )}
-      <Route path="/accounting" component={withShell(AccountingDashboardPage, "قسم المحاسبة")} />
+      <Route path="/accounting" component={withShell(AccountingDashboardPage, "titles.accounting")} />
 
       {user?.role === "admin" && (
         <>
           {/* Courier Module Routes */}
-          <Route path="/courier" component={withShell(CourierDashboardPage, "لوحة التحكم")} />
-          <Route path="/courier/raw-data" component={withShell(CourierRawDataPage, "البيانات الخام")} />
-          <Route path="/courier/requests" component={withShell(CourierRequestsPage, "التحقق")} />
-          <Route path="/courier/requests/:id" component={withShell(CourierRequestDetailPage, "تفاصيل الطلب")} />
-          <Route path="/courier/pdf" component={withShell(CourierPdfUploadPage, "تقارير PDF")} />
-          <Route path="/courier/pdf/:id" component={withShell(CourierPdfReviewPage, "مراجعة تقرير PDF")} />
-          <Route path="/courier/reports" component={withShell(CourierReportsPage, "التقارير")} />
-          <Route path="/courier/export" component={withShell(CourierExportPage, "تصدير Excel")} />
-          <Route path="/courier/ai-monitor" component={withShell(CourierAiMonitorPage, "مراقبة الذكاء الاصطناعي")} />
-          <Route path="/courier/audit-log" component={withShell(CourierAuditLogPage, "سجل التدقيق")} />
-          <Route path="/courier/settings" component={withShell(CourierSettingsPage, "الإعدادات")} />
-          <Route path="/courier/observability" component={withShell(CourierObservabilityPage, "مراقبة النظام والتتبع")} />
+          <Route path="/courier" component={withShell(CourierDashboardPage, "titles.courier")} />
+          <Route path="/courier/raw-data" component={withShell(CourierRawDataPage, "titles.courier_raw")} />
+          <Route path="/courier/requests" component={withShell(CourierRequestsPage, "titles.courier_requests")} />
+          <Route path="/courier/requests/:id" component={withShell(CourierRequestDetailPage, "titles.courier_request_detail")} />
+          <Route path="/courier/pdf" component={withShell(CourierPdfUploadPage, "titles.courier_pdf")} />
+          <Route path="/courier/pdf/:id" component={withShell(CourierPdfReviewPage, "titles.courier_pdf_review")} />
+          <Route path="/courier/reports" component={withShell(CourierReportsPage, "titles.courier_reports")} />
+          <Route path="/courier/export" component={withShell(CourierExportPage, "titles.courier_export")} />
+          <Route path="/courier/ai-monitor" component={withShell(CourierAiMonitorPage, "titles.courier_ai")} />
+          <Route path="/courier/audit-log" component={withShell(CourierAuditLogPage, "titles.courier_audit")} />
+          <Route path="/courier/settings" component={withShell(CourierSettingsPage, "titles.courier_settings")} />
+          <Route path="/courier/observability" component={withShell(CourierObservabilityPage, "titles.courier_observability")} />
         </>
       )}
       {user?.role === "admin" && (
         <>
-          <Route path="/admin" component={withShell(AdminPage, "إدارة المستخدمين والمناطق")} />
-          <Route path="/users" component={withShell(UsersPage, "إدارة المستخدمين")} />
-          <Route path="/fixed-inventory" component={withShell(FixedInventoryDashboard, "المخزون الثابت للمندوبين")} />
-          <Route path="/backup" component={withShell(BackupManagementPage, "إدارة النسخ الاحتياطية")} />
-          <Route path="/item-types" component={withShell(ItemTypesManagement, "إدارة الأصناف")} />
-          <Route path="/item-types/:id/details" component={withShell(ItemTypeDetailsPage, "تفاصيل الصنف")} />
+          <Route path="/admin" component={withShell(AdminPage, "titles.admin")} />
+          <Route path="/users" component={withShell(UsersPage, "titles.users")} />
+          <Route path="/fixed-inventory" component={withShell(FixedInventoryDashboard, "titles.fixed_inventory")} />
+          <Route path="/backup" component={withShell(BackupManagementPage, "titles.backup")} />
+          <Route path="/item-types" component={withShell(ItemTypesManagement, "titles.item_types")} />
+          <Route path="/item-types/:id/details" component={withShell(ItemTypeDetailsPage, "titles.item_type_details")} />
         </>
       )}
       <Route component={NotFound} />
@@ -162,13 +162,14 @@ function AuthenticatedRouter() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t, dir } = useTranslation();
   
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>جاري التحميل...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir={dir}>
+        <div className="flex items-center gap-2 text-rassco-text font-semibold">
+          <Loader2 className="h-6 w-6 animate-spin text-rassco" />
+          <span>{t("messages.loading")}</span>
         </div>
       </div>
     );

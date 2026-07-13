@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Bell, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
+  const { t } = useTranslation();
   const { logout, user } = useAuth();
   const { toast } = useToast();
 
@@ -18,14 +20,14 @@ export default function Header() {
     try {
       await logout();
       toast({
-        title: "تم تسجيل الخروج بنجاح",
-        description: "شكراً لك على استخدام النظام",
+        title: t('common.completed_successfully_3'),
+        description: t('common.system_5'),
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "خطأ في تسجيل الخروج",
-        description: "حدث خطأ غير متوقع",
+        title: t('common.error_3'),
+        description: t('common.error_2'),
       });
     }
   };
@@ -41,7 +43,7 @@ export default function Header() {
               className="h-8 sm:h-10 md:h-12 w-auto object-contain flex-shrink-0"
             />
             <h1 className="text-sm sm:text-lg md:text-xl font-bold text-foreground truncate">
-              <span className="hidden sm:inline">نظام </span>إدارة المخزون
+              <span className="hidden sm:inline">{t('common.system_4')} </span>{t('common.inventory_management')}
             </h1>
           </div>
           
@@ -63,23 +65,23 @@ export default function Header() {
                 <Button variant="ghost" className="flex items-center space-x-1 sm:space-x-2 space-x-reverse px-2 sm:px-3" data-testid="button-user-menu">
                   <img 
                     src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40" 
-                    alt="صورة المستخدم" 
+                    alt={t('common.image_user')} 
                     className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex-shrink-0" 
                   />
-                  <span className="text-xs sm:text-sm font-medium hidden xs:inline">{user?.fullName || 'المستخدم'}</span>
+                  <span className="text-xs sm:text-sm font-medium hidden xs:inline">{user?.fullName || t('common.user')}</span>
                   <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 hidden xs:inline" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem data-testid="link-profile">الملف الشخصي</DropdownMenuItem>
-                <DropdownMenuItem data-testid="link-settings">الإعدادات</DropdownMenuItem>
+                <DropdownMenuItem data-testid="link-profile">{t('common.profile')}</DropdownMenuItem>
+                <DropdownMenuItem data-testid="link-settings">{t('common.settings')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   className="text-destructive cursor-pointer" 
                   onClick={handleLogout}
                   data-testid="button-logout"
                 >
-                  تسجيل الخروج
+                  {t('common.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

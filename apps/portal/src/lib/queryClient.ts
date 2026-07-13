@@ -1,5 +1,20 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+function getClientError(key: 'server_connection_failed' | 'html_instead_of_json'): string {
+  const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('language') === 'en') ? 'en' : 'ar';
+  const messages = {
+    server_connection_failed: {
+      ar: 'فشل الاتصال بالسيرفر. يرجى التحقق من الاتصال بالإنترنت أو الاتصال بالدعم الفني.',
+      en: 'Failed to connect to the server. Please check your internet connection or contact support.',
+    },
+    html_instead_of_json: {
+      ar: 'تم استلام HTML بدل JSON من السيرفر. تحقق من مسارات API أو إعادة تشغيل الخادم.',
+      en: 'Received HTML instead of JSON from the server. Check API routes or restart the server.',
+    },
+  } as const;
+  return messages[key][lang];
+}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -16,7 +31,10 @@ async function refreshAccessToken(): Promise<string | null> {
 
       const res = await fetch('/api/auth/refresh', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({ refreshToken }),
       });
 
@@ -74,6 +92,7 @@ export async function apiRequest(
 ): Promise<Response> {
   let token = localStorage.getItem('auth-token');
   const headers: Record<string, string> = {
+    "X-Requested-With": "XMLHttpRequest",
     ...(data ? { "Content-Type": "application/json" } : {}),
     ...(token ? { "Authorization": `Bearer ${token}` } : {}),
   };
@@ -104,7 +123,7 @@ export async function apiRequest(
   } catch (error: any) {
     // If it's a network error (Failed to fetch), provide a more helpful message
     if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-      throw new Error('فشل الاتصال بالسيرفر. يرجى التحقق من الاتصال بالإنترنت أو الاتصال بالدعم الفني.');
+      throw new Error(getClientError('server_connection_failed'));
     }
     throw error;
   }
@@ -118,6 +137,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     let token = localStorage.getItem('auth-token');
     const headers: Record<string, string> = {
+      "X-Requested-With": "XMLHttpRequest",
       ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     };
     
@@ -155,14 +175,14 @@ export const getQueryFn: <T>(options: {
       const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
 
       if (!contentType.includes("application/json") && !looksLikeJson) {
-        throw new Error("تم استلام HTML بدل JSON من السيرفر. تحقق من مسارات API أو إعادة تشغيل الخادم.");
+        throw new Error(getClientError("html_instead_of_json"));
       }
 
       return JSON.parse(responseText);
     } catch (error: any) {
       // If it's a network error (Failed to fetch), provide a more helpful message
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        throw new Error('فشل الاتصال بالسيرفر. يرجى التحقق من الاتصال بالإنترنت أو الاتصال بالدعم الفني.');
+        throw new Error(getClientError('server_connection_failed'));
       }
       throw error;
     }

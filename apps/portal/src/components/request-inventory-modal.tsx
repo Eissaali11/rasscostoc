@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useTranslation } from "@/lib/language";
+import { useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +26,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PackageOpen } from "lucide-react";
 
-const formSchema = z.object({
+const getFormSchema = (t: (key: string) => string) => z.object(
+{
   n950Boxes: z.number().min(0).default(0),
   n950Units: z.number().min(0).default(0),
   i9000sBoxes: z.number().min(0).default(0),
@@ -47,9 +49,10 @@ const formSchema = z.object({
   lebaraBoxes: z.number().min(0).default(0),
   lebaraUnits: z.number().min(0).default(0),
   notes: z.string().optional(),
-});
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface RequestInventoryModalProps {
   open: boolean;
@@ -60,6 +63,8 @@ export default function RequestInventoryModal({
   open, 
   onOpenChange, 
 }: RequestInventoryModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -102,16 +107,16 @@ export default function RequestInventoryModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory-requests/my"] });
       toast({
-        title: "تم إرسال الطلب بنجاح",
-        description: "سيتم مراجعة طلبك من قبل المدير",
+        title: t('inventory.completed_send_request_success'),
+        description: t('inventory.review_manager'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في إرسال الطلب",
-        description: error.message || "حدث خطأ أثناء إرسال الطلب",
+        title: t('inventory.error_send_request'),
+        description: error.message || t('inventory.error_send_request_1'),
         variant: "destructive",
       });
     },
@@ -125,8 +130,8 @@ export default function RequestInventoryModal({
 
     if (!hasItems) {
       toast({
-        title: "خطأ",
-        description: "يجب طلب صنف واحد على الأقل",
+        title: t('inventory.error'),
+        description: t('inventory.request_1'),
         variant: "destructive",
       });
       return;
@@ -139,13 +144,13 @@ export default function RequestInventoryModal({
     { name: "N950", boxField: "n950Boxes" as const, unitField: "n950Units" as const },
     { name: "I9000S", boxField: "i9000sBoxes" as const, unitField: "i9000sUnits" as const },
     { name: "I9100", boxField: "i9100Boxes" as const, unitField: "i9100Units" as const },
-    { name: "ورق الطباعة", boxField: "rollPaperBoxes" as const, unitField: "rollPaperUnits" as const },
-    { name: "الملصقات", boxField: "stickersBoxes" as const, unitField: "stickersUnits" as const },
-    { name: "البطاريات", boxField: "newBatteriesBoxes" as const, unitField: "newBatteriesUnits" as const },
-    { name: "موبايلي", boxField: "mobilySimBoxes" as const, unitField: "mobilySimUnits" as const },
+    { name: t('inventory.paper_print'), boxField: "rollPaperBoxes" as const, unitField: "rollPaperUnits" as const },
+    { name: t('inventory.stickers_4'), boxField: "stickersBoxes" as const, unitField: "stickersUnits" as const },
+    { name: t('inventory.batteries_2'), boxField: "newBatteriesBoxes" as const, unitField: "newBatteriesUnits" as const },
+    { name: t('inventory.mobily'), boxField: "mobilySimBoxes" as const, unitField: "mobilySimUnits" as const },
     { name: "STC", boxField: "stcSimBoxes" as const, unitField: "stcSimUnits" as const },
-    { name: "زين", boxField: "zainSimBoxes" as const, unitField: "zainSimUnits" as const },
-    { name: "ليبارا", boxField: "lebaraBoxes" as const, unitField: "lebaraUnits" as const },
+    { name: t('inventory.zain'), boxField: "zainSimBoxes" as const, unitField: "zainSimUnits" as const },
+    { name: t('inventory.lebara'), boxField: "lebaraBoxes" as const, unitField: "lebaraUnits" as const },
   ];
 
   return (
@@ -157,9 +162,9 @@ export default function RequestInventoryModal({
               <PackageOpen className="h-6 w-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-white text-xl">طلب مخزون</DialogTitle>
+              <DialogTitle className="text-white text-xl">{t('inventory.request')}</DialogTitle>
               <DialogDescription className="text-gray-400">
-                اختر الأصناف والكميات التي تحتاجها
+                {t('inventory.item_47768')}
               </DialogDescription>
             </div>
           </div>
@@ -177,7 +182,7 @@ export default function RequestInventoryModal({
                       name={item.boxField}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs text-gray-400">كراتين</FormLabel>
+                          <FormLabel className="text-xs text-gray-400">{t('inventory.boxes')}</FormLabel>
                           <FormControl>
                             <Input 
                               type="number"
@@ -197,7 +202,7 @@ export default function RequestInventoryModal({
                       name={item.unitField}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs text-gray-400">وحدات</FormLabel>
+                          <FormLabel className="text-xs text-gray-400">{t('inventory.units_1')}</FormLabel>
                           <FormControl>
                             <Input 
                               type="number"
@@ -222,10 +227,10 @@ export default function RequestInventoryModal({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">ملاحظات</FormLabel>
+                  <FormLabel className="text-white">{t('inventory.notes')}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="أضف ملاحظات إضافية للطلب..."
+                      placeholder={t('inventory.notes_1')}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 resize-none"
                       rows={3}
                       {...field}
@@ -245,7 +250,7 @@ export default function RequestInventoryModal({
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                 data-testid="button-cancel"
               >
-                إلغاء
+                {t('inventory.cancel_1')}
               </Button>
               <Button 
                 type="submit" 
@@ -253,7 +258,7 @@ export default function RequestInventoryModal({
                 className="bg-gradient-to-r from-[#18B2B0] to-teal-500 hover:from-[#16a09e] hover:to-teal-600"
                 data-testid="button-submit"
               >
-                {requestMutation.isPending ? "جاري الإرسال..." : "إرسال الطلب"}
+                {requestMutation.isPending ? t('inventory.send') : t('inventory.send_request')}
               </Button>
             </div>
           </form>

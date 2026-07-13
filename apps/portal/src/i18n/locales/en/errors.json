@@ -1,0 +1,15 @@
+{
+  "unexpected": "An unexpected error occurred",
+  "network": "Unable to reach the server",
+  "unauthorized": "You are not authorized",
+  "forbidden": "You do not have permission for this action",
+  "not_found": "Item not found",
+  "validation": "Please check the entered data",
+  "save_failed": "Save failed",
+  "delete_failed": "Delete failed",
+  "load_failed": "Failed to load data",
+  "timeout": "Request timed out",
+  "try_again": "Please try again",
+  "server_connection_failed": "Failed to connect to the server. Please check your internet connection or contact support.",
+  "html_instead_of_json": "Received HTML instead of JSON from the server. Check API routes or restart the server."
+}

@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
@@ -103,7 +104,7 @@ function createMockOperations(productName: string): ProductOperationRow[] {
       id: "mock-1",
       productName,
       serial: "SN-9382-AX11",
-      status: "في المخزون",
+      status: t('common.inventory_6'),
       statusClass: inStockClass,
       datetime: formatDateTime(new Date(now - 1000 * 60 * 15).toISOString()),
       type: "device",
@@ -120,7 +121,7 @@ function createMockOperations(productName: string): ProductOperationRow[] {
         chargerHead: false,
         hasSim: true,
         simCardType: "Zain",
-        damagePart: "خدوش بسيطة في الشاشة",
+        damagePart: t('common.item_27116'),
         adminNotes: null,
         approvedBy: null,
         approvedAt: null,
@@ -131,7 +132,7 @@ function createMockOperations(productName: string): ProductOperationRow[] {
       id: "mock-2",
       productName,
       serial: "SN-9382-AX12",
-      status: "في المخزون",
+      status: t('common.inventory_6'),
       statusClass: inStockClass,
       datetime: formatDateTime(new Date(now - 1000 * 60 * 40).toISOString()),
       type: "device",
@@ -149,8 +150,8 @@ function createMockOperations(productName: string): ProductOperationRow[] {
         hasSim: false,
         simCardType: null,
         damagePart: null,
-        adminNotes: "تم اعتماد الجهاز وإضافته للعهدة",
-        approvedBy: "المشرف العام",
+        adminNotes: t('common.completed_device'),
+        approvedBy: t('common.supervisor_1'),
         approvedAt: new Date(now - 1000 * 60 * 30).toISOString(),
         inventoryType: "fixed",
       }
@@ -159,7 +160,7 @@ function createMockOperations(productName: string): ProductOperationRow[] {
       id: "mock-3",
       productName,
       serial: "SN-9382-AX13",
-      status: "تم التسليم",
+      status: t('common.completed_3'),
       statusClass: deliveredClass,
       datetime: formatDateTime(new Date(now - 1000 * 60 * 90).toISOString()),
       type: "device",
@@ -177,8 +178,8 @@ function createMockOperations(productName: string): ProductOperationRow[] {
         hasSim: true,
         simCardType: "STC",
         damagePart: null,
-        adminNotes: "تم التسليم للعميل النهائي بنجاح",
-        approvedBy: "المشرف العام",
+        adminNotes: t('common.completed_successfully_2'),
+        approvedBy: t('common.supervisor_1'),
         approvedAt: new Date(now - 1000 * 60 * 80).toISOString(),
         inventoryType: "moving",
       }
@@ -187,7 +188,7 @@ function createMockOperations(productName: string): ProductOperationRow[] {
       id: "mock-4",
       productName,
       serial: "SN-9382-AX14",
-      status: "تم التسليم",
+      status: t('common.completed_3'),
       statusClass: deliveredClass,
       datetime: formatDateTime(new Date(now - 1000 * 60 * 180).toISOString()),
       type: "device",
@@ -204,9 +205,9 @@ function createMockOperations(productName: string): ProductOperationRow[] {
         chargerHead: false,
         hasSim: false,
         simCardType: null,
-        damagePart: "أعطال في لوحة المفاتيح",
-        adminNotes: "تم الاستلام مع تقرير التلف",
-        approvedBy: "المشرف العام",
+        damagePart: t('common.dashboard'),
+        adminNotes: t('common.completed_receive_report_damag'),
+        approvedBy: t('common.supervisor_1'),
         approvedAt: new Date(now - 1000 * 60 * 170).toISOString(),
         inventoryType: "fixed",
       }
@@ -241,7 +242,7 @@ function statusUi(status: string): { text: string; className: string; delivered:
 
   if (normalized === "delivered" || normalized === "installed") {
     return {
-      text: "تم التسليم",
+      text: t('common.completed_3'),
       className: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20",
       delivered: true,
     };
@@ -249,7 +250,7 @@ function statusUi(status: string): { text: string; className: string; delivered:
 
   if (normalized === "rejected") {
     return {
-      text: "مرفوض",
+      text: t('common.rejected'),
       className: "text-rose-400 bg-rose-500/10 border border-rose-500/20",
       delivered: false,
     };
@@ -257,7 +258,7 @@ function statusUi(status: string): { text: string; className: string; delivered:
 
   if (normalized === "approved" || normalized === "accepted" || normalized === "received_by_technician" || normalized === "in_transit_custody") {
     return {
-      text: "في المخزون",
+      text: t('common.inventory_6'),
       className: "text-orange-400 bg-orange-500/10 border border-orange-500/20",
       delivered: false,
     };
@@ -265,20 +266,21 @@ function statusUi(status: string): { text: string; className: string; delivered:
 
   if (normalized === "in-stock" || normalized === "available" || normalized === "pending") {
     return {
-      text: "في المخزون",
+      text: t('common.inventory_6'),
       className: "text-orange-400 bg-orange-500/10 border border-orange-500/20",
       delivered: false,
     };
   }
 
   return {
-    text: "في المخزون",
+    text: t('common.inventory_6'),
     className: "text-orange-400 bg-orange-500/10 border border-orange-500/20",
     delivered: false,
   };
 }
 
 export default function TechnicianItemDetailsPage() {
+  const { t, dir } = useTranslation();
   const [, params] = useRoute("/technician-details/:technicianId/item/:itemTypeId");
   const technicianId = params?.technicianId;
   const itemTypeId = params?.itemTypeId;
@@ -354,7 +356,7 @@ export default function TechnicianItemDetailsPage() {
   const totalStock = fixedTotal + movingTotal;
 
   const liveOperations = useMemo(() => {
-    const productNameAr = itemType?.nameAr || "منتج";
+    const productNameAr = itemType?.nameAr || t('common.item_6369');
     const productNameEn = itemType?.nameEn || "";
     const deliveredClass = "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20";
     const inStockClass = "text-orange-400 bg-orange-500/10 border border-orange-500/20";
@@ -365,7 +367,7 @@ export default function TechnicianItemDetailsPage() {
         id: `active-${item.id}`,
         productName: item.itemTypeName || productNameAr,
         serial: item.serialNumber || "-",
-        status: "في المخزون",
+        status: t('common.inventory_6'),
         statusClass: inStockClass,
         datetime: formatDateTime(item.createdAt),
         raw: {
@@ -388,7 +390,7 @@ export default function TechnicianItemDetailsPage() {
         id: `delivered-${item.movementId || item.id}`,
         productName: item.itemTypeName || productNameAr,
         serial: item.serialNumber || "-",
-        status: "تم التسليم",
+        status: t('common.completed_3'),
         statusClass: deliveredClass,
         datetime: formatDateTime(item.deliveredAt || item.createdAt),
         raw: {
@@ -401,7 +403,7 @@ export default function TechnicianItemDetailsPage() {
           inventoryType: "moving",
           simCardType: item.carrierName,
           hasSim: !!item.carrierName,
-          adminNotes: item.notes || (item.referenceId ? `طلب #${item.referenceId}` : null),
+          adminNotes: item.notes || (item.referenceId ? t('common.request_1', { var_0: item.referenceId }) : null),
         },
         type: "device" as const,
       }));
@@ -469,8 +471,8 @@ export default function TechnicianItemDetailsPage() {
   const hasLiveData = true; // never fall back to mock inventory for a real technician item page
   const productOperations = liveOperations;
 
-  const deliveredRows = productOperations.filter((row) => row.status === "تم التسليم");
-  const availableRows = productOperations.filter((row) => row.status !== "تم التسليم");
+  const deliveredRows = productOperations.filter((row) => row.status === t('common.completed_3'));
+  const availableRows = productOperations.filter((row) => row.status !== t('common.completed_3'));
 
   const shownRows = (tab === "available" ? availableRows : deliveredRows).filter((row) => {
     const term = normalize(search);
@@ -492,7 +494,7 @@ export default function TechnicianItemDetailsPage() {
   const estimatedValue = remainingStock * 35;
 
   const displayTechnicianName = technician?.fullName || "-";
-  const displayItemName = itemType?.nameAr || "غير معروف";
+  const displayItemName = itemType?.nameAr || t('common.item_12813');
 
   const refreshData = async () => {
     await Promise.all([
@@ -518,16 +520,16 @@ export default function TechnicianItemDetailsPage() {
     },
     onSuccess: () => {
       toast({
-        title: "تم تحديث حالة الجهاز",
-        description: "تم اعتماد القرار بنجاح وتحديث السجلات",
+        title: t('common.completed_update_status_device_1'),
+        description: t('common.completed_successfully_logs'),
       });
       refreshData();
       setSelectedRow(null);
     },
     onError: (err: any) => {
       toast({
-        title: "فشل تحديث الحالة",
-        description: err.message || "حدث خطأ غير متوقع",
+        title: t('common.fail_update_status'),
+        description: err.message || t('common.error_2'),
         variant: "destructive",
       });
     },
@@ -595,22 +597,22 @@ export default function TechnicianItemDetailsPage() {
 
     if (category === "sim") {
       Icon = Handshake; // or CreditCard
-      if (name.includes("stc") || name.includes("اس تي سي")) {
+      if (name.includes("stc") || name.includes(t('common.item_9611'))) {
         gradient = "from-purple-900/60 to-indigo-950/80 border-purple-500/60";
         brandText = "stc";
         brandTextColor = "text-purple-300";
         imageSrc = "/assets/stc.jpg";
-      } else if (name.includes("zain") || name.includes("زين")) {
+      } else if (name.includes("zain") || name.includes(t('common.zain'))) {
         gradient = "from-neutral-900/80 to-slate-950/90 border-lime-500/50";
         brandText = "Zain";
         brandTextColor = "text-lime-400";
         imageSrc = "/assets/zein.png";
-      } else if (name.includes("mobily") || name.includes("موبايلي")) {
+      } else if (name.includes("mobily") || name.includes(t('common.mobily'))) {
         gradient = "from-cyan-900/60 to-blue-950/80 border-cyan-500/60";
         brandText = "Mobily";
         brandTextColor = "text-cyan-300";
         imageSrc = "/assets/mobile.png";
-      } else if (name.includes("lebara") || name.includes("ليبارا")) {
+      } else if (name.includes("lebara") || name.includes(t('common.lebara'))) {
         gradient = "from-red-900/60 to-blue-950/80 border-red-500/60";
         brandText = "Lebara";
         brandTextColor = "text-red-400";
@@ -639,21 +641,21 @@ export default function TechnicianItemDetailsPage() {
     } else if (category === "accessories") {
       gradient = "from-purple-900/50 to-slate-950/80 border-purple-500/40";
       Icon = Cable;
-      if (name.includes("battery") || name.includes("بطارية")) {
+      if (name.includes("battery") || name.includes(t('common.battery'))) {
         Icon = Plug;
-        brandText = "بطارية";
+        brandText = t('common.battery');
       } else {
-        brandText = "ملحق";
+        brandText = t('common.item_6392');
       }
-    } else if (category === "stickers" || name.includes("ملصق") || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes("الملصقات") || name.includes("stickers")) {
+    } else if (category === "stickers" || name.includes(t('common.sticker')) || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes(t('common.stickers_1')) || name.includes("stickers")) {
       gradient = "from-emerald-900/50 to-slate-950/80 border-emerald-500/40";
       Icon = FileText;
-      brandText = "ملصق";
+      brandText = t('common.sticker');
       imageSrc = "/assets/mol.png";
     } else if (category === "papers") {
       gradient = "from-amber-900/50 to-slate-950/80 border-amber-500/40";
       Icon = FileText;
-      brandText = "ورق";
+      brandText = t('common.paper');
     }
 
     return (
@@ -681,10 +683,10 @@ export default function TechnicianItemDetailsPage() {
   };
 
   const steps = [
-    { title: "التوريد", desc: "مسح الجهاز", icon: Activity },
-    { title: "الاعتماد", desc: "قرار المشرف", icon: ShieldCheck },
-    { title: "العهدة", desc: "إضافة للعهدة", icon: Boxes },
-    { title: "التسليم", desc: "العميل النهائي", icon: Truck },
+    { title: t('common.item_11143'), desc: t('common.scan_device'), icon: Activity },
+    { title: t('common.item_12688'), desc: t('common.supervisor'), icon: ShieldCheck },
+    { title: t('common.item_9539'), desc: t('common.add_6'), icon: Boxes },
+    { title: t('common.item_11163_1'), desc: t('common.customer'), icon: Truck },
   ];
 
   if (isLoading) {
@@ -703,12 +705,12 @@ export default function TechnicianItemDetailsPage() {
   }
 
   return (
-    <div className="space-y-8" dir="rtl">
+    <div className="space-y-8" dir={dir}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-100 tracking-tight">عمليات المنتج</h2>
-          <p className="text-slate-400 mt-1">عرض تفاصيل وحالة المنتج • {displayItemName}</p>
-          <p className="text-xs text-cyan-300 mt-1">المندوب: {displayTechnicianName}</p>
+          <h2 className="text-3xl font-black text-slate-100 tracking-tight">{t('common.item_19145')}</h2>
+          <p className="text-slate-400 mt-1">{t('common.view_details_4')}{displayItemName}</p>
+          <p className="text-xs text-cyan-300 mt-1">{t('common.technician_1')}{displayTechnicianName}</p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <Button
@@ -717,16 +719,16 @@ export default function TechnicianItemDetailsPage() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-400/10 text-cyan-300 border-cyan-400/20 font-bold text-sm hover:bg-cyan-400/20"
           >
             <RefreshCw className="h-4 w-4" />
-            تحديث البيانات
+            {t('common.update_data')}
           </Button>
           <Button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-400 text-slate-900 font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-cyan-400/20">
             <Plus className="h-4 w-4" />
-            إضافة
+            {t('common.add')}
           </Button>
           <Link href={`/technician-details/${technicianId}`}>
             <Button variant="outline" className="inline-flex items-center gap-2 border-slate-700 text-slate-200 hover:bg-slate-800">
               <ArrowLeft className="h-4 w-4 shrink-0" />
-              رجوع
+              {t('common.item_6366')}
             </Button>
           </Link>
         </div>
@@ -735,7 +737,7 @@ export default function TechnicianItemDetailsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-slate-900/60 border-cyan-400/10">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">إجمالي المسح (نشط + مسلم)</p>
+            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.total_scan_active')}</p>
             <div className="flex items-end gap-3">
               <h3 className="text-3xl font-black text-slate-100">{arNumber(effectiveTotalStock)}</h3>
               <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 mb-1">+5%</span>
@@ -745,7 +747,7 @@ export default function TechnicianItemDetailsPage() {
 
         <Card className="bg-slate-900/60 border-cyan-400/10">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">المخزون المسلم</p>
+            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.inventory_5')}</p>
             <div className="flex items-end gap-3">
               <h3 className="text-3xl font-black text-slate-100">{arNumber(deliveredCount)}</h3>
               <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 mb-1">+12%</span>
@@ -755,12 +757,12 @@ export default function TechnicianItemDetailsPage() {
 
         <Card className="bg-slate-900/60 border-orange-500/20">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">إجمالي المخزون الباقي</p>
+            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.total_inventory_1')}</p>
             <div className="flex items-end gap-3">
               <h3 className="text-3xl font-black text-slate-100">{arNumber(remainingDisplay)}</h3>
               <span className="text-orange-400 text-sm font-bold flex items-center gap-1 mb-1">
                 <AlertTriangle className="h-3 w-3" />
-                {urgentCount > 0 ? "عاجل" : "مستقر"}
+                {urgentCount > 0 ? t('common.item_6352') : t('common.item_7957')}
               </span>
             </div>
           </CardContent>
@@ -768,7 +770,7 @@ export default function TechnicianItemDetailsPage() {
 
         <Card className="bg-slate-900/60 border-cyan-400/10">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">إجمالي قيمة المنتج الباقي</p>
+            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.total_value')}</p>
             <div className="flex items-end gap-3">
               <h3 className="text-3xl font-black text-slate-100">{arNumber(estimatedValue)}</h3>
               <span className="text-cyan-300 text-xs font-bold mb-1">SAR</span>
@@ -786,7 +788,7 @@ export default function TechnicianItemDetailsPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="w-full md:w-96 py-3 pr-11 pl-4 rounded-xl text-sm text-slate-100 bg-slate-900/60 border-cyan-400/20"
-            placeholder="ابحث برقم السيريال..."
+            placeholder={t('common.serial_3')}
           />
           <div className="absolute inset-y-0 left-0 flex items-center pl-3">
             <span className="text-[10px] text-slate-600 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">Ctrl + K</span>
@@ -801,14 +803,14 @@ export default function TechnicianItemDetailsPage() {
             className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
           >
             <Warehouse className="h-4 w-4 shrink-0" />
-            المخزون الموجود ({availableRows.length})
+            {t('inventory.inventory_present_count', { count: availableRows.length })}
           </TabsTrigger>
           <TabsTrigger
             value="delivered"
             className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
           >
             <Truck className="h-4 w-4 shrink-0" />
-            المخزون المسلم ({deliveredCount})
+            {t('inventory.inventory_count', { count: deliveredCount })}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -818,18 +820,18 @@ export default function TechnicianItemDetailsPage() {
           <table className="w-full text-right border-collapse">
             <thead>
               <tr className="bg-cyan-400/5 border-b border-cyan-400/10">
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider">اسم المنتج</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">الرقم التسلسلي</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">حالة المنتج</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">التاريخ والوقت</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-left">إجراءات</th>
+                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider">{t('common.name_6')}</th>
+                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t('common.number_serial_1')}</th>
+                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t('common.status_4')}</th>
+                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t('common.date')}</th>
+                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-left">{t('common.item_11035')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-cyan-400/5">
               {shownRows.length === 0 ? (
                 <tr>
                   <td className="px-6 py-8 text-center text-slate-400" colSpan={5}>
-                    لا توجد بيانات مطابقة — لا يوجد مخزون نشط لهذا الصنف
+                    {t('inventory.no_data_no_active')}
                   </td>
                 </tr>
               ) : (
@@ -889,7 +891,7 @@ export default function TechnicianItemDetailsPage() {
         </div>
 
         <div className="bg-cyan-400/5 px-6 py-4 border-t border-cyan-400/10 flex items-center justify-between">
-          <p className="text-xs text-slate-500">عرض {shownRows.length} من أصل {productOperations.length} عنصر</p>
+          <p className="text-xs text-slate-500">{t('common.view')}{shownRows.length}{t('common.item_8007')}{productOperations.length}{t('common.item_1')}</p>
           <div className="flex gap-2">
             <Button variant="outline" size="icon" className="w-8 h-8 border-cyan-400/20 text-slate-400" disabled>
               <ChevronRight className="h-3 w-3" />
@@ -908,33 +910,33 @@ export default function TechnicianItemDetailsPage() {
             <div className="p-2 rounded bg-cyan-400/10 text-cyan-300">
               <RefreshCw className="h-4 w-4" />
             </div>
-            <p className="text-xs text-slate-400">آخر مزامنة لقاعدة البيانات منذ دقائق</p>
+            <p className="text-xs text-slate-400">{t('common.data_5')}</p>
           </div>
-          <button className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">تحديث يدوي</button>
+          <button className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">{t('common.update_2')}</button>
         </div>
         <div className="rounded-xl p-4 flex items-center justify-between border border-cyan-400/10 bg-slate-900/60">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded bg-cyan-400/10 text-cyan-300">
               <Boxes className="h-4 w-4" />
             </div>
-            <p className="text-xs text-slate-400">المنتج الحالي مرتبط بمخزون المندوب والمستودع</p>
+            <p className="text-xs text-slate-400">{t('common.technician_7')}</p>
           </div>
-          <button className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">دليل الاستخدام</button>
+          <button className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">{t('common.item_20697')}</button>
         </div>
       </div>
 
       {/* Details Dialog for Scanned Devices / Transfers */}
       <Dialog open={!!selectedRow} onOpenChange={(open) => !open && setSelectedRow(null)}>
-        <DialogContent className="sm:max-w-2xl bg-slate-950/95 border border-cyan-400/20 backdrop-blur-2xl text-slate-100 p-6 rounded-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="sm:max-w-2xl bg-slate-950/95 border border-cyan-400/20 backdrop-blur-2xl text-slate-100 p-6 rounded-2xl max-h-[90vh] overflow-y-auto" dir={dir}>
           <DialogHeader className="text-right border-b border-slate-800 pb-4 mb-4">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-cyan-400" />
-              {selectedRow?.type === "device" ? "تفاصيل ودورة حياة الجهاز / الشريحة" : "تفاصيل حركة المخزون"}
+              {selectedRow?.type === "device" ? t('common.details_device_sim') : t('common.details_transaction_inventory')}
             </DialogTitle>
             <DialogDescription className="text-slate-400 text-xs mt-1">
               {selectedRow?.type === "device" 
-                ? "تتبع تفاصيل الجهاز، الملحقات المرفقة، وحالته التشغيلية"
-                : "عرض تفاصيل مستند التحويل الخاص بالمستودع"}
+                ? t('common.track_details_1')
+                : t('common.view_details_document_transfer')}
             </DialogDescription>
           </DialogHeader>
 
@@ -998,81 +1000,81 @@ export default function TechnicianItemDetailsPage() {
                   {activeStepIndex === 2 && <Boxes className="w-4 h-4 text-cyan-400" />}
                   {activeStepIndex === 3 && <Truck className="w-4 h-4 text-cyan-400" />}
                   <h4 className="text-sm font-bold text-slate-200">
-                    {activeStepIndex === 0 && "تفاصيل التوريد والمسح الضوئي (Intake)"}
-                    {activeStepIndex === 1 && "الاعتماد وموافقة المشرف (Approval)"}
-                    {activeStepIndex === 2 && "حالة العهدة الميدانية (Active Custody)"}
-                    {activeStepIndex === 3 && "تسليم الجهاز النهائي (Handover)"}
+                    {activeStepIndex === 0 && t('common.details_7')}
+                    {activeStepIndex === 1 && t('common.supervisor_2')}
+                    {activeStepIndex === 2 && t('common.status_10')}
+                    {activeStepIndex === 3 && t('common.device_4')}
                   </h4>
                 </div>
 
                 <div className="divide-y divide-slate-800/60">
                   {activeStepIndex === 0 && (
                     <>
-                      {renderDetailItem("المنتج", selectedRow.productName)}
-                      {renderDetailItem("الرقم التسلسلي S/N", selectedRow.raw?.serialNumber, true)}
-                      {renderDetailItem("رقم الجهاز (Terminal ID)", selectedRow.raw?.terminalId || "-", true)}
-                      {renderDetailItem("تاريخ المسح", formatDateTime(selectedRow.raw?.createdAt))}
-                      {renderDetailItem("نوع المستودع", selectedRow.raw?.inventoryType === "moving" ? "مخزون متحرك (حقيبة)" : "مخزون ثابت")}
+                      {renderDetailItem(t('common.item_9548'), selectedRow.productName)}
+                      {renderDetailItem(t('common.number_serial_3'), selectedRow.raw?.serialNumber, true)}
+                      {renderDetailItem(t('common.number_device_2'), selectedRow.raw?.terminalId || "-", true)}
+                      {renderDetailItem(t('common.date_scan'), formatDateTime(selectedRow.raw?.createdAt))}
+                      {renderDetailItem(t('common.type_warehouse'), selectedRow.raw?.inventoryType === "moving" ? t('common.item_24030') : t('common.item_14327'))}
                     </>
                   )}
 
                   {activeStepIndex === 1 && (
                     <>
-                      {renderDetailItem("الحالة الحالية للطلب", 
-                        selectedRow.raw?.status === "approved" ? "مقبول" : 
-                        selectedRow.raw?.status === "rejected" ? "مرفوض" : "قيد المراجعة"
+                      {renderDetailItem(t('common.status_5'), 
+                        selectedRow.raw?.status === "approved" ? t('common.approved') : 
+                        selectedRow.raw?.status === "rejected" ? t('common.rejected') : t('common.pending_review')
                       )}
-                      {renderDetailItem("المشرف المسؤول", selectedRow.raw?.approvedBy || "بانتظار المراجعة...")}
-                      {renderDetailItem("تاريخ القرار", formatDateTime(selectedRow.raw?.approvedAt))}
-                      {renderDetailItem("ملاحظات المراجعة", selectedRow.raw?.adminNotes || "لا توجد")}
+                      {renderDetailItem(t('common.supervisor_admin'), selectedRow.raw?.approvedBy || t('common.review_1'))}
+                      {renderDetailItem(t('common.date_3'), formatDateTime(selectedRow.raw?.approvedAt))}
+                      {renderDetailItem(t('common.notes_review'), selectedRow.raw?.adminNotes || t('common.no_10'))}
                     </>
                   )}
 
                   {activeStepIndex === 2 && (
                     <>
-                      {renderDetailItem("حائز العهدة الحالي", displayTechnicianName)}
-                      {renderDetailItem("حالة العهدة الفنية", 
+                      {renderDetailItem(t('common.item_25468'), displayTechnicianName)}
+                      {renderDetailItem(t('common.status_6'), 
                         (selectedRow.raw?.status === "approved" || selectedRow.raw?.status === "delivered")
-                          ? "نشطة (في عهدة المندوب)" 
-                          : "غير نشطة (بانتظار الاعتماد)"
+                          ? t('common.technician_5') 
+                          : t('common.item_35103')
                       )}
-                      {renderDetailItem("نوع العهدة الجغرافية", selectedRow.raw?.inventoryType === "moving" ? "حقيبة المندوب الميدانية" : "المستودع الرئيسي")}
-                      {renderDetailItem("الموقع الجغرافي المسجل", "الرياض، المملكة العربية السعودية")}
+                      {renderDetailItem(t('common.type_3'), selectedRow.raw?.inventoryType === "moving" ? t('common.technician_6') : t('common.warehouse_primary'))}
+                      {renderDetailItem(t('common.signed_3'), t('common.item_46213'))}
                     </>
                   )}
 
                   {activeStepIndex === 3 && (
                     <>
-                      {renderDetailItem("حالة التسليم النهائية", "تم التسليم للعميل بنجاح")}
-                      {renderDetailItem("اسم العميل / المنشأة", "متجر الاتصالات الحديثة (سجل تجاري: 1010384729)")}
-                      {renderDetailItem("تاريخ ووقت التسليم", formatDateTime(selectedRow.raw?.updatedAt || selectedRow.raw?.createdAt))}
-                      {renderDetailItem("كود التحقق الثنائي OTP", "OTP-4820", true)}
-                      {renderDetailItem("المستلم المسؤول", "أحمد المحمد (مدير الفرع)")}
+                      {renderDetailItem(t('common.status_7'), t('common.completed_successfully_1'))}
+                      {renderDetailItem(t('common.name_customer'), t('common.log_2'))}
+                      {renderDetailItem(t('common.date_4'), formatDateTime(selectedRow.raw?.updatedAt || selectedRow.raw?.createdAt))}
+                      {renderDetailItem(t('common.code_verification'), "OTP-4820", true)}
+                      {renderDetailItem(t('common.received_admin'), t('common.manager_branch'))}
                       
                       {/* Customer Signature display */}
                       <div className="py-3 border-b border-slate-800/60">
-                        <span className="text-slate-400 text-xs block mb-2 font-medium">التوقيع الرقمي للعميل</span>
+                        <span className="text-slate-400 text-xs block mb-2 font-medium">{t('common.signature_digital')}</span>
                         <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-800/60 flex items-center justify-center h-24 relative overflow-hidden">
                           {/* Signature mock graphic */}
                           <svg className="w-48 h-16 text-cyan-400/80 stroke-current opacity-75" viewBox="0 0 200 60" fill="none" strokeWidth="2" strokeLinecap="round">
                             <path d="M20,40 Q40,10 60,30 T100,20 T140,40 T180,25 Q190,15 170,45" />
                           </svg>
-                          <span className="absolute bottom-1.5 right-3 text-[10px] text-slate-500 font-mono">تم التوقيع إلكترونياً</span>
+                          <span className="absolute bottom-1.5 right-3 text-[10px] text-slate-500 font-mono">{t('common.completed_signature')}</span>
                         </div>
                       </div>
 
                       {/* Evidence Photo display */}
                       <div className="py-3">
-                        <span className="text-slate-400 text-xs block mb-2 font-medium">صورة إثبات التركيب والتسليم</span>
+                        <span className="text-slate-400 text-xs block mb-2 font-medium">{t('common.image_proof')}</span>
                         <div className="relative rounded-xl border border-slate-800 overflow-hidden bg-slate-900 aspect-video flex items-center justify-center">
                           <img 
                             src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=400" 
-                            alt="إثبات التركيب" 
+                            alt={t('common.proof')} 
                             className="object-cover w-full h-full opacity-60"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
                           <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] text-slate-300">
-                            <span className="font-bold">صورة الجهاز في الموقع</span>
+                            <span className="font-bold">{t('common.image_device_signed')}</span>
                             <span className="font-mono text-slate-400">TID: {selectedRow.raw?.terminalId || "N/A"}</span>
                           </div>
                         </div>
@@ -1081,12 +1083,12 @@ export default function TechnicianItemDetailsPage() {
                       {/* GPS verification map */}
                       <div className="py-3 border-t border-slate-800/60 flex items-center justify-between">
                         <div>
-                          <span className="text-slate-400 text-xs font-medium block">إحداثيات التحقق GPS</span>
+                          <span className="text-slate-400 text-xs font-medium block">{t('common.verification')}</span>
                           <span className="font-mono text-xs text-slate-300 font-bold">24.7136° N, 46.6753° E</span>
                         </div>
                         <Button size="sm" variant="outline" className="border-slate-800 text-cyan-400 hover:bg-cyan-400/5 text-xs">
                           <MapPin className="w-3.5 h-3.5 ml-1" />
-                          عرض الخريطة
+                          {t('common.view_3')}
                         </Button>
                       </div>
                     </>
@@ -1097,13 +1099,13 @@ export default function TechnicianItemDetailsPage() {
               {/* Hardware Diagnostic Profile (If item category is pos/devices) */}
               {(!itemType || itemType.category === "devices") && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400">التشخيص الفني والملحقات</h4>
+                  <h4 className="text-xs font-bold text-slate-400">{t('common.technician_4')}</h4>
                   <div className="grid grid-cols-2 gap-3">
-                    {renderAccessoryChip("بطارية سليمة", !!selectedRow.raw?.battery, Smartphone)}
-                    {renderAccessoryChip("كابل شاحن", !!selectedRow.raw?.chargerCable, Cable)}
-                    {renderAccessoryChip("رأس شاحن", !!selectedRow.raw?.chargerHead, Plug)}
+                    {renderAccessoryChip(t('common.battery_1'), !!selectedRow.raw?.battery, Smartphone)}
+                    {renderAccessoryChip(t('common.item_12740'), !!selectedRow.raw?.chargerCable, Cable)}
+                    {renderAccessoryChip(t('common.item_11125'), !!selectedRow.raw?.chargerHead, Plug)}
                     {renderAccessoryChip(
-                      selectedRow.raw?.hasSim ? `شريحة ${selectedRow.raw?.simCardType || "SIM"}` : "شريحة SIM",
+                      selectedRow.raw?.hasSim ? t('common.sim_2', { var_0: selectedRow.raw?.simCardType || "SIM" }) : t('common.sim_3'),
                       !!selectedRow.raw?.hasSim,
                       Smartphone
                     )}
@@ -1116,7 +1118,7 @@ export default function TechnicianItemDetailsPage() {
                 <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex gap-3 items-start">
                   <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="text-sm font-bold text-rose-300">تقرير الضرر / الأعطال</h5>
+                    <h5 className="text-sm font-bold text-rose-300">{t('common.report')}</h5>
                     <p className="text-xs text-rose-400/90 mt-1">{selectedRow.raw.damagePart}</p>
                   </div>
                 </div>
@@ -1127,12 +1129,12 @@ export default function TechnicianItemDetailsPage() {
                 <div className="mt-6 pt-5 border-t border-slate-800">
                   <h5 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
                     <Settings className="w-4 h-4 text-cyan-400" />
-                    اتخاذ قرار بشأن الاستلام
+                    {t('common.receive')}
                   </h5>
                   <textarea
                     value={adminNotesText}
                     onChange={(e) => setAdminNotesText(e.target.value)}
-                    placeholder="أدخل أي ملاحظات فنية للمندوب أو أسباب لرفض اعتماد الجهاز..."
+                    placeholder={t('common.notes_device_1')}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-400/40 mb-4 h-20 placeholder:text-slate-600"
                   />
                   <div className="flex gap-3">
@@ -1141,14 +1143,14 @@ export default function TechnicianItemDetailsPage() {
                       disabled={updateStatusMutation.isPending}
                       className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black"
                     >
-                      {updateStatusMutation.isPending ? "جاري الاعتماد..." : "قبول واعتماد الجهاز"}
+                      {updateStatusMutation.isPending ? t('common.item_19208') : t('common.approve_device')}
                     </Button>
                     <Button
                       onClick={() => updateStatusMutation.mutate({ status: "rejected", adminNotes: adminNotesText })}
                       disabled={updateStatusMutation.isPending}
                       className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold"
                     >
-                      {updateStatusMutation.isPending ? "جاري الرفض..." : "رفض الطلب"}
+                      {updateStatusMutation.isPending ? t('common.reject_1') : t('common.reject_request')}
                     </Button>
                   </div>
                 </div>
@@ -1158,17 +1160,17 @@ export default function TechnicianItemDetailsPage() {
             /* Layout for Warehouse Transfer */
             <div className="space-y-4">
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 divide-y divide-slate-800/60">
-                {renderDetailItem("المنتج", selectedRow?.productName || "-")}
-                {renderDetailItem("نوع المستند", "تحويل مخزون (Warehouse Transfer)")}
-                {renderDetailItem("رقم مستند التحويل", selectedRow?.id || "-", true)}
-                {renderDetailItem("الحالة", selectedRow?.status || "-")}
-                {renderDetailItem("التاريخ والوقت", selectedRow?.datetime || "-")}
-                {renderDetailItem("الجهة المرسلة", "المستودع الرئيسي")}
-                {renderDetailItem("المستلم", displayTechnicianName)}
+                {renderDetailItem(t('common.item_9548'), selectedRow?.productName || "-")}
+                {renderDetailItem(t('common.type_document'), t('common.transfer_4'))}
+                {renderDetailItem(t('common.number_document_transfer'), selectedRow?.id || "-", true)}
+                {renderDetailItem(t('common.status'), selectedRow?.status || "-")}
+                {renderDetailItem(t('common.date'), selectedRow?.datetime || "-")}
+                {renderDetailItem(t('common.item_19112'), t('common.warehouse_primary'))}
+                {renderDetailItem(t('common.received_1'), displayTechnicianName)}
               </div>
               <div className="p-4 rounded-xl border border-cyan-400/10 bg-cyan-400/5 flex gap-3 items-center">
                 <Info className="w-5 h-5 text-cyan-400 shrink-0" />
-                <p className="text-xs text-slate-400">هذا السجل يمثل شحنة/تحويل للمندوب من المستودع الرئيسي ولا يتبع دورة حياة الأجهزة الذكية الفردية.</p>
+                <p className="text-xs text-slate-400">{t('common.log_batch_transfer_warehouse_p')}</p>
               </div>
             </div>
           )}
@@ -1179,7 +1181,7 @@ export default function TechnicianItemDetailsPage() {
               onClick={() => setSelectedRow(null)}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6"
             >
-              إغلاق
+              {t('common.close')}
             </Button>
           </div>
         </DialogContent>

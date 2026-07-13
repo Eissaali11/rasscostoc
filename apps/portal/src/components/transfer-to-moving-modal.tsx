@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -86,6 +87,7 @@ export function TransferToMovingModal({
   const [transfers, setTransfers] = useState<Record<string, TransferEntry>>({});
 
   useEffect(() => {
+  const { t } = useTranslation();
     if (itemTypes && itemTypes.length > 0) {
       const initialTransfers: Record<string, TransferEntry> = {};
       itemTypes.forEach((itemType) => {
@@ -181,8 +183,8 @@ export function TransferToMovingModal({
       queryClient.invalidateQueries({ queryKey: ['/api/admin/all-technicians-inventory'] });
       queryClient.invalidateQueries({ queryKey: [`/api/technician-inventory/${technicianId}`] });
       toast({
-        title: "✓ تم النقل بنجاح",
-        description: "تم نقل الكميات من المخزون الثابت إلى المتحرك",
+        title: t('common.completed_successfully_5'),
+        description: t('common.completed_inventory'),
       });
       const resetTransfers: Record<string, TransferEntry> = {};
       Object.keys(transfers).forEach((key) => {
@@ -194,8 +196,8 @@ export function TransferToMovingModal({
     onError: () => {
       toast({
         variant: "destructive",
-        title: "✗ فشل النقل",
-        description: "حدث خطأ أثناء نقل الكميات",
+        title: t('common.fail'),
+        description: t('common.error_4'),
       });
     },
   });
@@ -221,8 +223,8 @@ export function TransferToMovingModal({
     if (hasExceededQuantity) {
       toast({
         variant: "destructive",
-        title: "خطأ في الكمية",
-        description: "الكمية المطلوبة أكبر من المتاح في النوع المحدد",
+        title: t('common.error_quantity'),
+        description: t('common.quantity_type'),
       });
       return;
     }
@@ -230,8 +232,8 @@ export function TransferToMovingModal({
     if (!hasAnyTransfer) {
       toast({
         variant: "destructive",
-        title: "لا توجد كميات",
-        description: "يرجى إدخال كميات للنقل",
+        title: t('common.no_14'),
+        description: t('common.submit'),
       });
       return;
     }
@@ -257,10 +259,10 @@ export function TransferToMovingModal({
             <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
               <ArrowRight className="h-6 w-6 text-white" />
             </div>
-            نقل إلى المخزون المتحرك
+            {t('common.inventory_11')}
           </DialogTitle>
           <DialogDescription className="text-base">
-            أدخل الكميات المراد نقلها من المخزون الثابت إلى المتحرك (اختر نوع التعبئة لكل صنف)
+            {t('common.inventory_type')}
           </DialogDescription>
         </DialogHeader>
 
@@ -285,18 +287,18 @@ export function TransferToMovingModal({
                   </div>
                   <div className="flex items-center gap-3 text-xs">
                     <span className="text-muted-foreground">
-                      كراتين: <span className="font-bold text-foreground">{item.boxes}</span>
+                      {t('common.boxes_3')} <span className="font-bold text-foreground">{item.boxes}</span>
                     </span>
                     <span className="text-muted-foreground">|</span>
                     <span className="text-muted-foreground">
-                      وحدات: <span className="font-bold text-foreground">{item.units}</span>
+                      {t('common.units_3')} <span className="font-bold text-foreground">{item.units}</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">نوع التعبئة</Label>
+                    <Label className="text-sm text-muted-foreground">{t('common.type_7')}</Label>
                     <RadioGroup
                       value={item.transfer.packagingType}
                       onValueChange={(value) => updateItemTransfer(item.id, 'packagingType', value as PackagingType)}
@@ -313,7 +315,7 @@ export function TransferToMovingModal({
                           htmlFor={`${item.id}-box`} 
                           className="cursor-pointer font-medium text-sm"
                         >
-                          كراتين ({item.boxes})
+                          {t('common.cartons_count', { count: item.boxes })}
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2 space-x-reverse">
@@ -326,7 +328,7 @@ export function TransferToMovingModal({
                           htmlFor={`${item.id}-unit`} 
                           className="cursor-pointer font-medium text-sm"
                         >
-                          وحدات ({item.units})
+                          {t('common.units_count', { count: item.units })}
                         </Label>
                       </div>
                     </RadioGroup>
@@ -334,7 +336,7 @@ export function TransferToMovingModal({
 
                   <div className="space-y-2">
                     <Label htmlFor={`${item.id}-quantity`} className="text-sm text-muted-foreground">
-                      الكمية المراد نقلها
+                      {t('common.quantity_9')}
                     </Label>
                     <div className="relative">
                       <Input
@@ -370,7 +372,7 @@ export function TransferToMovingModal({
             className="flex-1 sm:flex-initial h-11"
             data-testid="button-cancel-transfer"
           >
-            إلغاء
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleTransfer}
@@ -379,7 +381,7 @@ export function TransferToMovingModal({
             data-testid="button-confirm-transfer"
           >
             <Package className="w-4 h-4 ml-2" />
-            {transferMutation.isPending ? "جاري النقل..." : "نقل الكميات"}
+            {transferMutation.isPending ? t('common.item_14511') : t('common.item_15994')}
           </Button>
         </DialogFooter>
       </DialogContent>

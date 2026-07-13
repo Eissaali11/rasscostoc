@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ExcelJS from "exceljs";
@@ -37,16 +38,16 @@ import type { AdminStats, InsertRegion, InsertUser, Region, RegionWithStats, Use
 import { ROLE_LABELS_AR, ROLES } from "@shared/roles";
 
 const regionFormSchema = z.object({
-  name: z.string().min(1, "اسم المنطقة مطلوب"),
+  name: z.string().min(1, t('common.name_region_2')),
   description: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
 const userFormSchema = z.object({
-  username: z.string().min(3, "اسم المستخدم يجب أن يكون 3 أحرف على الأقل"),
-  email: z.string().email("البريد الإلكتروني غير صالح"),
-  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
-  fullName: z.string().min(1, "الاسم الكامل مطلوب"),
+  username: z.string().min(3, t('common.name_user_1')),
+  email: z.string().email(t('common.item_36713')),
+  password: z.string().min(6, t('common.item_49699')),
+  fullName: z.string().min(1, t('common.name_1')),
   role: z.enum(["admin", "supervisor", "technician"]),
   regionId: z.string().optional(),
   isActive: z.boolean().default(true),
@@ -56,7 +57,7 @@ type RoleFilter = "all" | "managers" | "technicians";
 
 function userInitials(fullName: string): string {
   const parts = fullName.split(" ").filter(Boolean);
-  return (parts[0]?.[0] || "م") + (parts[1]?.[0] || "");
+  return (parts[0]?.[0] || t('common.item_1605')) + (parts[1]?.[0] || "");
 }
 
 function arNumber(value: number): string {
@@ -70,6 +71,7 @@ function roleBadgeClass(role: string): string {
 }
 
 export default function AdminPage() {
+  const { t, dir } = useTranslation();
   const { toast } = useToast();
 
   const [showRegionModal, setShowRegionModal] = useState(false);
@@ -121,10 +123,10 @@ export default function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/regions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       handleCloseRegionModal();
-      toast({ title: "تم إنشاء المنطقة بنجاح" });
+      toast({ title: t('common.completed_region_successfully') });
     },
     onError: () => {
-      toast({ title: "فشل في إنشاء المنطقة", variant: "destructive" });
+      toast({ title: t('common.fail_region'), variant: "destructive" });
     },
   });
 
@@ -133,10 +135,10 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/regions"] });
       handleCloseRegionModal();
-      toast({ title: "تم تحديث المنطقة بنجاح" });
+      toast({ title: t('common.completed_update_region_succes') });
     },
     onError: () => {
-      toast({ title: "فشل في تحديث المنطقة", variant: "destructive" });
+      toast({ title: t('common.fail_update_region'), variant: "destructive" });
     },
   });
 
@@ -145,18 +147,18 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/regions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "تم حذف المنطقة بنجاح" });
+      toast({ title: t('common.completed_delete_region_succes') });
     },
     onError: (error) => {
-      let message = "فشل في حذف المنطقة";
+      let message = t('common.fail_delete_region');
       if (error instanceof Error) {
         if (error.message.includes("Cannot delete region that has assigned users")) {
-          message = "لا يمكن حذف المنطقة لأنها مرتبطة بموظفين.";
+          message = t('common.no_delete_region');
         } else if (error.message.includes("Cannot delete region")) {
-          message = "لا يمكن حذف المنطقة لأنها مرتبطة ببيانات أخرى.";
+          message = t('common.no_delete_region_other');
         }
       }
-      toast({ title: "تعذر حذف المنطقة", description: message, variant: "destructive" });
+      toast({ title: t('common.delete_region'), description: message, variant: "destructive" });
     },
   });
 
@@ -166,10 +168,10 @@ export default function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       handleCloseUserModal();
-      toast({ title: "تم إنشاء المستخدم بنجاح" });
+      toast({ title: t('common.completed_user_successfully') });
     },
     onError: () => {
-      toast({ title: "فشل في إنشاء المستخدم", variant: "destructive" });
+      toast({ title: t('common.fail_user'), variant: "destructive" });
     },
   });
 
@@ -179,10 +181,10 @@ export default function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       handleCloseUserModal();
-      toast({ title: "تم تحديث بيانات المستخدم" });
+      toast({ title: t('common.completed_update_data_user') });
     },
     onError: () => {
-      toast({ title: "فشل في تحديث بيانات المستخدم", variant: "destructive" });
+      toast({ title: t('common.fail_update_data_user'), variant: "destructive" });
     },
   });
 
@@ -191,10 +193,10 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "تم تحديث حالة المستخدم" });
+      toast({ title: t('common.completed_update_status_user') });
     },
     onError: () => {
-      toast({ title: "فشل في تحديث حالة المستخدم", variant: "destructive" });
+      toast({ title: t('common.fail_update_status_user'), variant: "destructive" });
     },
   });
 
@@ -203,10 +205,10 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "تم حذف المستخدم" });
+      toast({ title: t('common.completed_delete_user') });
     },
     onError: () => {
-      toast({ title: "فشل في حذف المستخدم", variant: "destructive" });
+      toast({ title: t('common.fail_delete_user'), variant: "destructive" });
     },
   });
 
@@ -216,14 +218,14 @@ export default function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
-        title: isActive ? "تم تفعيل جميع المستخدمين بنجاح" : "تم إيقاف جميع المستخدمين بنجاح",
+        title: isActive ? t('common.completed_users_successfully') : t('common.completed_users_successfully_1'),
         description: isActive
-          ? "تم تفعيل حسابات جميع مستخدمي النظام بنجاح."
-          : "تم إيقاف حسابات جميع مستخدمي النظام باستثناء حسابك الحالي.",
+          ? t('common.completed_system_successfully')
+          : t('common.completed_system'),
       });
     },
     onError: () => {
-      toast({ title: "فشل في تحديث حالة المستخدمين الجماعية", variant: "destructive" });
+      toast({ title: t('common.fail_update_status_users'), variant: "destructive" });
     },
   });
 
@@ -338,17 +340,17 @@ export default function AdminPage() {
   const handleExportUsers = async () => {
     if (filteredUsers.length === 0) {
       toast({
-        title: "لا توجد بيانات للتصدير",
-        description: "لا يوجد مستخدمون في نتائج البحث الحالية",
+        title: t('common.no_data'),
+        description: t('common.no_results_search'),
         variant: "destructive",
       });
       return;
     }
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("المستخدمون");
+    const worksheet = workbook.addWorksheet(t('common.item_15933'));
 
-    worksheet.addRow(["#", "اسم المستخدم", "الاسم الكامل", "البريد", "الدور", "المنطقة", "الحالة"]);
+    worksheet.addRow(["#", t('common.name_user'), t('common.name'), t('common.item_9533'), t('common.item_7955'), t('common.region'), t('common.status')]);
 
     filteredUsers.forEach((user, index) => {
       const regionName = regions.find((region) => region.id === user.regionId)?.name || "-";
@@ -359,7 +361,7 @@ export default function AdminPage() {
         user.email,
         ROLE_LABELS_AR[user.role as keyof typeof ROLE_LABELS_AR],
         regionName,
-        user.isActive ? "نشط" : "غير نشط",
+        user.isActive ? t('common.active_1') : t('common.active_2'),
       ]);
     });
 
@@ -373,13 +375,13 @@ export default function AdminPage() {
     window.URL.revokeObjectURL(url);
 
     toast({
-      title: "تم التصدير بنجاح",
-      description: `تم تصدير ${filteredUsers.length} مستخدم`,
+      title: t('common.completed_export_successfully'),
+      description: t('common.completed_export_1', { var_0: filteredUsers.length }),
     });
   };
 
   return (
-      <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#050a0a] p-6 md:p-8 relative overflow-hidden" dir="rtl">
+      <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#050a0a] p-6 md:p-8 relative overflow-hidden" dir={dir}>
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-cyan-400/5 rounded-full blur-[120px]" />
           <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px]" />
@@ -389,12 +391,12 @@ export default function AdminPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-1 h-8 bg-gradient-to-b from-cyan-300 to-blue-500 rounded-full" />
-              <h1 className="text-2xl md:text-3xl font-black text-white">إدارة المستخدمين والمناطق</h1>
+              <h1 className="text-2xl md:text-3xl font-black text-white">{t('common.management_users')}</h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 onClick={() => {
-                  if (window.confirm("هل أنت متأكد من تفعيل جميع المستخدمين في النظام؟")) {
+                  if (window.confirm(t('common.users_3'))) {
                     bulkUserStatusMutation.mutate(true);
                   }
                 }}
@@ -403,11 +405,11 @@ export default function AdminPage() {
                 className="border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/25 font-bold"
               >
                 <UserCheck className="h-4 w-4 ml-2" />
-                تفعيل جميع المستخدمين
+                {t('common.users')}
               </Button>
               <Button
                 onClick={() => {
-                  if (window.confirm("تحذير: هل أنت متأكد من إيقاف جميع المستخدمين في النظام؟ سيتم تعطيل الجميع باستثنائك أنت.")) {
+                  if (window.confirm(t('common.warning_users'))) {
                     bulkUserStatusMutation.mutate(false);
                   }
                 }}
@@ -416,7 +418,7 @@ export default function AdminPage() {
                 className="border-rose-500/30 text-rose-400 bg-rose-500/10 hover:bg-rose-500/25 font-bold"
               >
                 <XCircle className="h-4 w-4 ml-2" />
-                إيقاف جميع المستخدمين
+                {t('common.users_1')}
               </Button>
               <Button
                 onClick={() => {
@@ -427,7 +429,7 @@ export default function AdminPage() {
                 data-testid="button-add-user"
               >
                 <UserPlus className="h-4 w-4 ml-2" />
-                إضافة مستخدم جديد
+                {t('common.add_new')}
               </Button>
             </div>
           </div>
@@ -436,7 +438,7 @@ export default function AdminPage() {
             <div className="group relative overflow-hidden rounded-3xl border border-cyan-400/15 bg-[#0a1314]/80 backdrop-blur-xl p-6 flex items-center justify-between transition-all hover:border-cyan-300/35">
               <div className="absolute inset-0 bg-cyan-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div>
-                <p className="text-slate-400 text-sm">إجمالي المستخدمين</p>
+                <p className="text-slate-400 text-sm">{t('common.total_users')}</p>
                 <p className="text-4xl font-black text-white mt-2">{arNumber(totalUsers)}</p>
               </div>
               <div className="size-14 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 flex items-center justify-center">
@@ -447,7 +449,7 @@ export default function AdminPage() {
             <div className="group relative overflow-hidden rounded-3xl border border-green-500/20 bg-[#0a1314]/80 backdrop-blur-xl p-6 flex items-center justify-between transition-all hover:border-green-400/40">
               <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div>
-                <p className="text-slate-400 text-sm">المستخدمين النشطين</p>
+                <p className="text-slate-400 text-sm">{t('common.users_2')}</p>
                 <p className="text-4xl font-black text-white mt-2 flex items-center gap-2">
                   {arNumber(activeUsers)}
                   <span className="size-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.9)]" />
@@ -461,7 +463,7 @@ export default function AdminPage() {
             <div className="group relative overflow-hidden rounded-3xl border border-orange-500/20 bg-[#0a1314]/80 backdrop-blur-xl p-6 flex items-center justify-between transition-all hover:border-orange-400/40">
               <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div>
-                <p className="text-slate-400 text-sm">طلبات التسجيل</p>
+                <p className="text-slate-400 text-sm">{t('common.requests')}</p>
                 <p className="text-4xl font-black text-white mt-2">{arNumber(registrationRequests)}</p>
               </div>
               <div className="size-14 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center">
@@ -476,7 +478,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-white font-bold flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-cyan-300" />
-                  إدارة المناطق
+                  {t('common.management')}
                 </h3>
                 <Button
                   size="icon"
@@ -497,14 +499,14 @@ export default function AdminPage() {
                 <Input
                   value={regionSearchTerm}
                   onChange={(event) => setRegionSearchTerm(event.target.value)}
-                  placeholder="ابحث عن منطقة"
+                  placeholder={t('common.region_3')}
                   className="bg-black/30 border-white/10 pr-10 pl-10 text-white"
                 />
                 {regionSearchTerm.trim().length > 0 && (
                   <button
                     type="button"
                     onClick={() => setRegionSearchTerm("")}
-                    aria-label="مسح البحث"
+                    aria-label={t('common.scan_search_3')}
                     className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                   >
                     <XCircle className="h-4 w-4" />
@@ -522,8 +524,8 @@ export default function AdminPage() {
                       : "w-full text-right p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
                   }
                 >
-                  <p className="text-sm font-bold text-white">كل المناطق</p>
-                  <p className="text-xs text-slate-400">{arNumber(users.length)} مستخدم</p>
+                  <p className="text-sm font-bold text-white">{t('common.item_14397')}</p>
+                  <p className="text-xs text-slate-400">{arNumber(users.length)}{t('common.item_9540')}</p>
                 </button>
 
                 {filteredRegions.map((region) => {
@@ -546,7 +548,7 @@ export default function AdminPage() {
                           className="text-right flex-1"
                         >
                           <p className={isSelected ? "text-cyan-300 font-bold text-sm" : "text-slate-300 font-bold text-sm"}>{region.name}</p>
-                          <p className={isSelected ? "text-cyan-300/80 text-xs" : "text-slate-500 text-xs"}>{arNumber(usersCount)} مستخدم</p>
+                          <p className={isSelected ? "text-cyan-300/80 text-xs" : "text-slate-500 text-xs"}>{arNumber(usersCount)}{t('common.item_9540')}</p>
                         </button>
                         <Button
                           size="icon"
@@ -564,7 +566,7 @@ export default function AdminPage() {
 
                 {filteredRegions.length === 0 && (
                   <div className="text-center text-sm text-slate-500 py-6 border border-dashed border-white/10 rounded-xl">
-                    لا توجد مناطق مطابقة
+                    {t('common.no')}
                   </div>
                 )}
               </div>
@@ -578,21 +580,21 @@ export default function AdminPage() {
                     onClick={() => setRoleFilter("all")}
                     className={roleFilter === "all" ? "bg-cyan-400/20 text-cyan-300 border border-cyan-400/30" : "text-slate-400 hover:text-white hover:bg-white/5"}
                   >
-                    الكل ({arNumber(filteredUsers.length)})
+                    {t('users.all_count', { count: arNumber(filteredUsers.length) })}
                   </Button>
                   <Button
                     variant={roleFilter === "managers" ? "default" : "ghost"}
                     onClick={() => setRoleFilter("managers")}
                     className={roleFilter === "managers" ? "bg-cyan-400/20 text-cyan-300 border border-cyan-400/30" : "text-slate-400 hover:text-white hover:bg-white/5"}
                   >
-                    المسؤولين ({arNumber(managersCount)})
+                    {t('users.count', { count: arNumber(managersCount) })}
                   </Button>
                   <Button
                     variant={roleFilter === "technicians" ? "default" : "ghost"}
                     onClick={() => setRoleFilter("technicians")}
                     className={roleFilter === "technicians" ? "bg-cyan-400/20 text-cyan-300 border border-cyan-400/30" : "text-slate-400 hover:text-white hover:bg-white/5"}
                   >
-                    المندوبين ({arNumber(techniciansCount)})
+                    {t('users.technician_count', { count: arNumber(techniciansCount) })}
                   </Button>
                 </div>
 
@@ -602,7 +604,7 @@ export default function AdminPage() {
                     <Input
                       value={userSearchTerm}
                       onChange={(event) => setUserSearchTerm(event.target.value)}
-                      placeholder="البحث عن مستخدم، بريد، أو دور..."
+                      placeholder={t('common.search_1')}
                       className="bg-white/5 border-white/10 pr-10 pl-10 text-white"
                       data-testid="input-search-user"
                     />
@@ -610,7 +612,7 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => setUserSearchTerm("")}
-                        aria-label="مسح البحث"
+                        aria-label={t('common.scan_search_3')}
                         className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                       >
                         <XCircle className="h-4 w-4" />
@@ -624,22 +626,22 @@ export default function AdminPage() {
                     data-testid="button-export-users"
                   >
                     <FileSpreadsheet className="h-4 w-4 ml-2" />
-                    تصدير
+                    {t('common.export')}
                   </Button>
                 </div>
               </div>
 
               <div className="grid grid-cols-[2fr_1.3fr_1.2fr_1fr_1fr] gap-4 px-4 py-3 text-xs font-bold tracking-wider text-slate-400 border-b border-white/10">
-                <div>المستخدم</div>
-                <div>المسمى الوظيفي</div>
-                <div>المنطقة</div>
-                <div className="text-center">الحالة</div>
-                <div className="text-center">الإجراءات</div>
+                <div>{t('common.user')}</div>
+                <div>{t('common.item_20817')}</div>
+                <div>{t('common.region')}</div>
+                <div className="text-center">{t('common.status')}</div>
+                <div className="text-center">{t('common.item_14214')}</div>
               </div>
 
               <div className="flex-1 overflow-y-auto pr-1 py-3 space-y-2">
                 {filteredUsers.map((user) => {
-                  const regionName = user.regionId ? regions.find((region) => region.id === user.regionId)?.name || "غير محدد" : "بدون منطقة";
+                  const regionName = user.regionId ? regions.find((region) => region.id === user.regionId)?.name || t('common.item_11173') : t('common.region_9');
 
                   return (
                     <div
@@ -668,7 +670,7 @@ export default function AdminPage() {
                       <div className="flex items-center justify-center gap-2">
                         <span className={user.isActive ? "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" : "w-2.5 h-2.5 rounded-full bg-slate-500"} />
                         <span className={user.isActive ? "text-xs text-green-400 font-bold" : "text-xs text-slate-400 font-bold"}>
-                          {user.isActive ? "متصل" : "غير متصل"}
+                          {user.isActive ? t('common.item_6376') : t('common.item_11197')}
                         </span>
                       </div>
 
@@ -679,7 +681,7 @@ export default function AdminPage() {
                             variant="ghost"
                             size="icon"
                             className="text-slate-400 hover:text-sky-300 hover:bg-sky-400/10"
-                            title="عرض تفاصيل الموظف"
+                            title={t('common.view_details')}
                             data-testid={`button-user-details-${user.id}`}
                           >
                             <Link href={`/employee-detailed-profile-template?userId=${user.id}`}>
@@ -692,7 +694,7 @@ export default function AdminPage() {
                           size="icon"
                           className="text-slate-400 hover:text-cyan-300 hover:bg-cyan-400/10"
                           onClick={() => handleEditUser(user)}
-                          title="تعديل الصلاحيات"
+                          title={t('common.edit_4')}
                         >
                           <KeyRound className="h-4 w-4" />
                         </Button>
@@ -719,7 +721,7 @@ export default function AdminPage() {
                           size="icon"
                           className="text-slate-400 hover:text-red-300 hover:bg-red-400/10"
                           onClick={() => {
-                            if (window.confirm(`هل أنت متأكد من حذف المستخدم \"${user.fullName}\"؟`)) {
+                            if (window.confirm(t('common.delete_user', { var_0: user.fullName }))) {
                               deleteUserMutation.mutate(user.id);
                             }
                           }}
@@ -734,22 +736,22 @@ export default function AdminPage() {
 
                 {filteredUsers.length === 0 && (
                   <div className="text-center text-sm text-slate-500 py-10 border border-dashed border-white/10 rounded-xl">
-                    لا توجد نتائج مستخدمين مطابقة للفلاتر الحالية
+                    {t('common.no_results')}
                   </div>
                 )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-white/10 flex flex-col items-center gap-3">
-                <span className="text-xs text-slate-500">عرض {arNumber(displayedFrom)} - {arNumber(displayedTo)} من أصل {arNumber(totalUsers)} مستخدم</span>
+                <span className="text-xs text-slate-500">{t('common.view')}{arNumber(displayedFrom)} - {arNumber(displayedTo)}{t('common.item_8007')}{arNumber(totalUsers)}{t('common.item_9540')}</span>
                 <div className="flex items-center gap-1 bg-black/30 border border-white/10 rounded-2xl p-1">
                   <button type="button" className="w-9 h-9 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center">
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   <button type="button" className="w-9 h-9 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-500 text-[#061113] font-bold">
-                    ١
+                    {t('common.item_1633')}
                   </button>
-                  <button type="button" className="w-9 h-9 rounded-xl text-slate-500">٢</button>
-                  <button type="button" className="w-9 h-9 rounded-xl text-slate-500">٣</button>
+                  <button type="button" className="w-9 h-9 rounded-xl text-slate-500">{t('common.item_1634')}</button>
+                  <button type="button" className="w-9 h-9 rounded-xl text-slate-500">{t('common.item_1635')}</button>
                   <button type="button" className="w-9 h-9 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center">
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -771,8 +773,8 @@ export default function AdminPage() {
         >
           <DialogContent className="max-w-md bg-[#0a1314] border border-cyan-400/20 text-white">
             <DialogHeader>
-              <DialogTitle>{editingRegion ? "تحديث المنطقة" : "إضافة منطقة جديدة"}</DialogTitle>
-              <DialogDescription className="text-slate-400">أدخل بيانات المنطقة</DialogDescription>
+              <DialogTitle>{editingRegion ? t('common.update_region') : t('common.add_region')}</DialogTitle>
+              <DialogDescription className="text-slate-400">{t('common.data_region')}</DialogDescription>
             </DialogHeader>
             <Form {...regionForm}>
               <form onSubmit={regionForm.handleSubmit(handleRegionSubmit)} className="space-y-4">
@@ -781,9 +783,9 @@ export default function AdminPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>اسم المنطقة</FormLabel>
+                      <FormLabel>{t('common.name_region')}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="أدخل اسم المنطقة" className="bg-black/30 border-white/15" />
+                        <Input {...field} placeholder={t('common.name_region_1')} className="bg-black/30 border-white/15" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -794,9 +796,9 @@ export default function AdminPage() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الوصف (اختياري)</FormLabel>
+                      <FormLabel>{t('common.item_19205')}</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="أدخل وصف المنطقة" className="bg-black/30 border-white/15" />
+                        <Textarea {...field} placeholder={t('common.region_4')} className="bg-black/30 border-white/15" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -807,7 +809,7 @@ export default function AdminPage() {
                   name="isActive"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border border-white/10 p-3 bg-black/20">
-                      <FormLabel>منطقة نشطة</FormLabel>
+                      <FormLabel>{t('common.region_2')}</FormLabel>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
@@ -816,10 +818,10 @@ export default function AdminPage() {
                 />
                 <div className="flex gap-2 pt-2">
                   <Button type="submit" disabled={createRegionMutation.isPending || updateRegionMutation.isPending}>
-                    {editingRegion ? "تحديث" : "إضافة"}
+                    {editingRegion ? t('common.update') : t('common.add')}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleCloseRegionModal}>
-                    إلغاء
+                    {t('common.cancel')}
                   </Button>
                 </div>
               </form>
@@ -839,8 +841,8 @@ export default function AdminPage() {
         >
           <DialogContent className="max-w-md bg-[#0a1314] border border-cyan-400/20 text-white">
             <DialogHeader>
-              <DialogTitle>{editingUser ? "تحديث بيانات المستخدم" : "إضافة مستخدم جديد"}</DialogTitle>
-              <DialogDescription className="text-slate-400">أدخل بيانات المستخدم</DialogDescription>
+              <DialogTitle>{editingUser ? t('common.update_data_user') : t('common.add_new')}</DialogTitle>
+              <DialogDescription className="text-slate-400">{t('common.data_user')}</DialogDescription>
             </DialogHeader>
             <Form {...userForm}>
               <form onSubmit={userForm.handleSubmit(handleUserSubmit)} className="space-y-4">
@@ -849,9 +851,9 @@ export default function AdminPage() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>اسم المستخدم</FormLabel>
+                      <FormLabel>{t('common.name_user')}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="اسم المستخدم" className="bg-black/30 border-white/15" />
+                        <Input {...field} placeholder={t('common.name_user')} className="bg-black/30 border-white/15" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -862,9 +864,9 @@ export default function AdminPage() {
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الاسم الكامل</FormLabel>
+                      <FormLabel>{t('common.name')}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="الاسم الكامل" className="bg-black/30 border-white/15" />
+                        <Input {...field} placeholder={t('common.name')} className="bg-black/30 border-white/15" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -875,9 +877,9 @@ export default function AdminPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>البريد الإلكتروني</FormLabel>
+                      <FormLabel>{t('common.item_25511')}</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" placeholder="البريد الإلكتروني" className="bg-black/30 border-white/15" />
+                        <Input {...field} type="email" placeholder={t('common.item_25511')} className="bg-black/30 border-white/15" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -888,9 +890,9 @@ export default function AdminPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>كلمة المرور {editingUser ? "(اختياري عند التعديل)" : ""}</FormLabel>
+                      <FormLabel>{t('common.item_15983')}{editingUser ? t('common.edit_2') : ""}</FormLabel>
                       <FormControl>
-                        <Input {...field} type="password" placeholder="كلمة المرور" className="bg-black/30 border-white/15" />
+                        <Input {...field} type="password" placeholder={t('common.item_15983')} className="bg-black/30 border-white/15" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -901,11 +903,11 @@ export default function AdminPage() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الدور</FormLabel>
+                      <FormLabel>{t('common.item_7955')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-black/30 border-white/15">
-                            <SelectValue placeholder="اختر الدور" />
+                            <SelectValue placeholder={t('common.item_14307')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -923,11 +925,11 @@ export default function AdminPage() {
                   name="regionId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>المنطقة</FormLabel>
+                      <FormLabel>{t('common.region')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-black/30 border-white/15">
-                            <SelectValue placeholder="اختر المنطقة" />
+                            <SelectValue placeholder={t('common.region_5')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -947,7 +949,7 @@ export default function AdminPage() {
                   name="isActive"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border border-white/10 p-3 bg-black/20">
-                      <FormLabel>حساب نشط</FormLabel>
+                      <FormLabel>{t('common.active')}</FormLabel>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
@@ -956,10 +958,10 @@ export default function AdminPage() {
                 />
                 <div className="flex gap-2 pt-2">
                   <Button type="submit" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
-                    {editingUser ? "تحديث" : "إضافة"}
+                    {editingUser ? t('common.update') : t('common.add')}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleCloseUserModal}>
-                    إلغاء
+                    {t('common.cancel')}
                   </Button>
                 </div>
               </form>

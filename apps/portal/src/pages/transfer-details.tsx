@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
@@ -73,6 +74,8 @@ interface TransferDetail {
 }
 
 export default function TransferDetailsPage() {
+
+  const { t, dir } = useTranslation();
   const [, params] = useRoute("/transfer-details/:id");
   const transferId = params?.id || "";
 
@@ -86,14 +89,14 @@ export default function TransferDetailsPage() {
       n950: "N950",
       i9000s: "I9000s",
       i9100: "I9100",
-      rollPaper: "ورق الطباعة",
-      stickers: "ملصقات",
-      newBatteries: "بطاريات جديدة",
-      mobilySim: "شرائح موبايلي",
-      stcSim: "شرائح STC",
-      zainSim: "شرائح زين",
-      lebara: "شرائح ليبارا",
-      lebaraSim: "شرائح ليبارا",
+      rollPaper: t('common.paper_print'),
+      stickers: t('common.stickers'),
+      newBatteries: t('common.batteries'),
+      mobilySim: t('common.sims_mobily'),
+      stcSim: t('common.sims_2'),
+      zainSim: t('common.sims_zain'),
+      lebara: t('common.sims_lebara'),
+      lebaraSim: t('common.sims_lebara'),
     };
     return itemNames[itemType] || itemType;
   };
@@ -149,7 +152,7 @@ export default function TransferDetailsPage() {
     if (!transferDetail) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('تفاصيل عملية النقل');
+    const worksheet = workbook.addWorksheet(t('common.details_operation_3'));
     worksheet.views = [{ rightToLeft: true }];
 
     const currentDate = new Date();
@@ -163,7 +166,7 @@ export default function TransferDetailsPage() {
 
     worksheet.mergeCells('A1:E1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = 'تقرير عملية النقل';
+    titleCell.value = t('common.report_operation');
     titleCell.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     titleCell.fill = {
@@ -175,7 +178,7 @@ export default function TransferDetailsPage() {
 
     worksheet.mergeCells('A2:E2');
     const dateCell = worksheet.getCell('A2');
-    dateCell.value = `تاريخ التقرير: ${arabicDate} | ${time}`;
+    dateCell.value = t('common.date_report', { var_0: arabicDate, var_1: time });
     dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
     dateCell.font = { bold: true, size: 10 };
     worksheet.getRow(2).height = 20;
@@ -196,9 +199,9 @@ export default function TransferDetailsPage() {
     });
 
     const infoSection = [
-      ['المستودع:', transferDetail.warehouseName, 'المندوب:', transferDetail.technicianName],
-      ['المنفذ:', transferDetail.performedByName, 'الحالة:', transferDetail.status === 'accepted' ? 'مقبول' : transferDetail.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'],
-      ['تاريخ العملية:', `${arabicOperationDate} - ${operationTime}`, '', ''],
+      [t('common.warehouse'), transferDetail.warehouseName, t('common.technician_1'), transferDetail.technicianName],
+      [t('common.item_9633'), transferDetail.performedByName, t('common.status_1'), transferDetail.status === 'accepted' ? t('common.approved') : transferDetail.status === 'rejected' ? t('common.rejected') : t('common.pending_waiting')],
+      [t('common.date_operation_1'), `${arabicOperationDate} - ${operationTime}`, '', ''],
     ];
 
     infoSection.forEach(rowData => {
@@ -226,7 +229,7 @@ export default function TransferDetailsPage() {
     worksheet.addRow([]);
     worksheet.addRow([]);
 
-    const headerRow = worksheet.addRow(['#', 'اسم الصنف', 'نوع التغليف', 'الكمية']);
+    const headerRow = worksheet.addRow(['#', t('common.name_8'), t('common.type_1'), t('common.quantity_3')]);
     headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
     headerRow.height = 25;
@@ -249,7 +252,7 @@ export default function TransferDetailsPage() {
       const row = worksheet.addRow([
         index + 1,
         item.itemNameAr,
-        item.packagingType === 'box' ? 'كرتونة' : 'قطعة',
+        item.packagingType === 'box' ? t('common.item_9557') : t('common.unit'),
         item.quantity
       ]);
       row.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -265,7 +268,7 @@ export default function TransferDetailsPage() {
       totalQuantity += item.quantity;
     });
 
-    const totalRow = worksheet.addRow(['', '', 'الإجمالي', totalQuantity]);
+    const totalRow = worksheet.addRow(['', '', t('common.total_2'), totalQuantity]);
     totalRow.font = { bold: true, size: 11 };
     totalRow.alignment = { horizontal: 'center', vertical: 'middle' };
     totalRow.height = 25;
@@ -286,7 +289,7 @@ export default function TransferDetailsPage() {
     if (transferDetail.notes) {
       worksheet.addRow([]);
       worksheet.addRow([]);
-      const notesRow = worksheet.addRow(['ملاحظات:', transferDetail.notes]);
+      const notesRow = worksheet.addRow([t('common.notes'), transferDetail.notes]);
       worksheet.mergeCells(notesRow.number, 2, notesRow.number, 4);
       notesRow.alignment = { horizontal: 'right', vertical: 'middle' };
       notesRow.getCell(1).font = { bold: true };
@@ -307,7 +310,7 @@ export default function TransferDetailsPage() {
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `عملية_نقل_${transferDetail.technicianName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, t('common.operation_transfer_var_0_var_1_xlsx', { var_0: transferDetail.technicianName, var_1: new Date().toISOString().split('T')[0] }));
   };
 
   if (isLoading) {
@@ -315,7 +318,7 @@ export default function TransferDetailsPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-[#18B2B0]"></div>
-          <p className="text-gray-500 mt-4 text-lg">جارٍ التحميل...</p>
+          <p className="text-gray-500 mt-4 text-lg">{t('common.loading_2')}</p>
         </div>
       </div>
     );
@@ -327,12 +330,12 @@ export default function TransferDetailsPage() {
         <Card className="max-w-md mx-auto shadow-xl">
           <CardContent className="pt-6 text-center">
             <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">العملية غير موجودة</h2>
-            <p className="text-gray-600 mb-6">لم يتم العثور على تفاصيل هذه العملية</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('common.operation_1')}</h2>
+            <p className="text-gray-600 mb-6">{t('common.details_operation')}</p>
             <Link href="/warehouses">
               <Button className="bg-gradient-to-r from-[#18B2B0] to-teal-500">
                 <ArrowRight className="h-4 w-4 ml-2" />
-                العودة للمستودعات
+                {t('common.item_25487')}
               </Button>
             </Link>
           </CardContent>
@@ -347,21 +350,21 @@ export default function TransferDetailsPage() {
         return {
           badge: 'bg-gradient-to-r from-green-500 to-emerald-600',
           icon: CheckCircle,
-          text: 'مقبول',
+          text: t('common.approved'),
           bgColor: 'from-green-50 to-emerald-50'
         };
       case 'rejected':
         return {
           badge: 'bg-gradient-to-r from-red-500 to-rose-600',
           icon: XCircle,
-          text: 'مرفوض',
+          text: t('common.rejected'),
           bgColor: 'from-red-50 to-rose-50'
         };
       default:
         return {
           badge: 'bg-gradient-to-r from-yellow-500 to-amber-600',
           icon: Clock,
-          text: 'قيد الانتظار',
+          text: t('common.pending_waiting'),
           bgColor: 'from-yellow-50 to-amber-50'
         };
     }
@@ -372,7 +375,7 @@ export default function TransferDetailsPage() {
   const totalQuantity = transferDetail.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50" dir={dir}>
       <div className={`relative overflow-hidden bg-gradient-to-r ${statusInfo.bgColor} shadow-xl border-b-4 border-[#18B2B0]`}>
         <motion.div
           className="absolute top-0 right-0 w-96 h-96 bg-white/30 rounded-full blur-3xl"
@@ -400,7 +403,7 @@ export default function TransferDetailsPage() {
                 data-testid="button-back"
               >
                 <ArrowRight className="h-4 w-4 ml-2" />
-                العودة للمستودع
+                {t('common.item_22334')}
               </Button>
             </motion.div>
           </Link>
@@ -412,25 +415,25 @@ export default function TransferDetailsPage() {
             </Badge>
             
             <h1 className="text-4xl font-black text-gray-800 mb-3">
-              تفاصيل عملية النقل
+              {t('common.details_operation_3')}
             </h1>
             
             <div className="flex flex-col items-center gap-2">
               <p className="text-lg text-gray-600 flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                التاريخ: {new Date(transferDetail.createdAt).toLocaleDateString('en-US', { 
+                {t('common.date_label', { date: new Date(transferDetail.createdAt).toLocaleDateString('en-US', { 
                   year: 'numeric', 
                   month: 'long', 
                   day: 'numeric'
-                })}
+                }) })}
               </p>
               <p className="text-lg text-gray-600 flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                الوقت: {new Date(transferDetail.createdAt).toLocaleTimeString('en-US', { 
+                {t('common.time_label', { time: new Date(transferDetail.createdAt).toLocaleTimeString('en-US', { 
                   hour: '2-digit', 
                   minute: '2-digit',
                   hour12: true
-                })}
+                }) })}
               </p>
               <p className="text-sm text-gray-500">
                 ({formatDistanceToNow(new Date(transferDetail.createdAt), { addSuffix: true, locale: ar })})
@@ -450,7 +453,7 @@ export default function TransferDetailsPage() {
               data-testid="button-export-excel"
             >
               <Download className="h-5 w-5 ml-2" />
-              تصدير إلى Excel
+              {t('common.export_2')}
             </Button>
           </motion.div>
         </div>
@@ -463,7 +466,7 @@ export default function TransferDetailsPage() {
                   <Warehouse className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 font-semibold">المستودع</p>
+                  <p className="text-sm text-gray-500 font-semibold">{t('common.warehouse_1')}</p>
                   <h3 className="text-xl font-bold text-gray-800">{transferDetail.warehouseName}</h3>
                 </div>
               </div>
@@ -477,7 +480,7 @@ export default function TransferDetailsPage() {
                   <User className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 font-semibold">المندوب</p>
+                  <p className="text-sm text-gray-500 font-semibold">{t('common.technician')}</p>
                   <h3 className="text-xl font-bold text-gray-800">{transferDetail.technicianName}</h3>
                 </div>
               </div>
@@ -491,7 +494,7 @@ export default function TransferDetailsPage() {
                   <Send className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 font-semibold">منفذ العملية</p>
+                  <p className="text-sm text-gray-500 font-semibold">{t('common.operation_8')}</p>
                   <h3 className="text-xl font-bold text-gray-800">{transferDetail.performedByName}</h3>
                 </div>
               </div>
@@ -505,7 +508,7 @@ export default function TransferDetailsPage() {
                   <Package className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 font-semibold">إجمالي الكمية</p>
+                  <p className="text-sm text-gray-500 font-semibold">{t('common.total_quantity')}</p>
                   <h3 className="text-3xl font-black text-[#18B2B0]">{totalQuantity}</h3>
                 </div>
               </div>
@@ -519,7 +522,7 @@ export default function TransferDetailsPage() {
               <div className="p-2 rounded-lg bg-gradient-to-r from-[#18B2B0] to-teal-500 text-white">
                 <Package className="h-6 w-6" />
               </div>
-              تفاصيل الأصناف المنقولة
+              {t('common.details_6')}
             </h2>
           </div>
           <CardContent className="p-6">
@@ -528,9 +531,9 @@ export default function TransferDetailsPage() {
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-[#18B2B0]/5 to-teal-50/50">
                     <TableHead className="text-right font-bold text-[#18B2B0]">#</TableHead>
-                    <TableHead className="text-right font-bold text-[#18B2B0]">اسم الصنف</TableHead>
-                    <TableHead className="text-right font-bold text-[#18B2B0]">نوع التغليف</TableHead>
-                    <TableHead className="text-right font-bold text-[#18B2B0]">الكمية</TableHead>
+                    <TableHead className="text-right font-bold text-[#18B2B0]">{t('common.name_8')}</TableHead>
+                    <TableHead className="text-right font-bold text-[#18B2B0]">{t('common.type_1')}</TableHead>
+                    <TableHead className="text-right font-bold text-[#18B2B0]">{t('common.quantity_3')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -540,7 +543,7 @@ export default function TransferDetailsPage() {
                       <TableCell className="font-medium text-gray-800">{item.itemNameAr}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="border-[#18B2B0]">
-                          {item.packagingType === 'box' ? 'كرتونة' : 'قطعة'}
+                          {item.packagingType === 'box' ? t('common.item_9557') : t('common.unit')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -557,8 +560,8 @@ export default function TransferDetailsPage() {
 
             <div className="mt-6 bg-gradient-to-r from-[#18B2B0]/10 to-teal-50/50 rounded-xl p-4 border-2 border-[#18B2B0]/20">
               <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-gray-700">الإجمالي الكلي:</span>
-                <span className="text-3xl font-black text-[#18B2B0]">{totalQuantity} قطعة</span>
+                <span className="text-lg font-bold text-gray-700">{t('common.total_4')}</span>
+                <span className="text-3xl font-black text-[#18B2B0]">{totalQuantity}{t('common.unit')}</span>
               </div>
             </div>
           </CardContent>
@@ -572,7 +575,7 @@ export default function TransferDetailsPage() {
                   <Info className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-blue-600 mb-1">ملاحظات</p>
+                  <p className="text-sm font-semibold text-blue-600 mb-1">{t('common.notes_2')}</p>
                   <p className="text-gray-700 leading-relaxed">{transferDetail.notes}</p>
                 </div>
               </div>
@@ -588,7 +591,7 @@ export default function TransferDetailsPage() {
                   <XCircle className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-red-600 mb-1">سبب الرفض</p>
+                  <p className="text-sm font-semibold text-red-600 mb-1">{t('common.reason_reject_1')}</p>
                   <p className="text-gray-700 leading-relaxed">{transferDetail.rejectionReason}</p>
                 </div>
               </div>

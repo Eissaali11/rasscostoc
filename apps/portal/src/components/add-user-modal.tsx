@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,6 +51,7 @@ export function AddUserModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -74,13 +76,14 @@ export function AddUserModal({
   });
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+
     const file = event.target.files?.[0];
     if (file) {
       // Check file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
         toast({
-          title: "حجم الصورة كبير جداً",
-          description: "يجب أن تكون الصورة أقل من 2 ميجابايت",
+          title: t('users.size_image'),
+          description: t('users.image'),
           variant: "destructive",
         });
         return;
@@ -89,8 +92,8 @@ export function AddUserModal({
       // Check file type
       if (!file.type.startsWith('image/')) {
         toast({
-          title: "نوع الملف غير صحيح",
-          description: "يرجى اختيار صورة",
+          title: t('users.type_file'),
+          description: t('users.image_1'),
           variant: "destructive",
         });
         return;
@@ -143,8 +146,8 @@ export function AddUserModal({
       await queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       await queryClient.refetchQueries({ queryKey: ["/api/users"] });
       toast({
-        title: "تم الإضافة بنجاح",
-        description: "تم إضافة المستخدم الجديد",
+        title: t('users.completed_add_successfully'),
+        description: t('users.completed_add_user_new'),
       });
       form.reset();
       setProfileImage(null);
@@ -152,8 +155,8 @@ export function AddUserModal({
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل في إضافة المستخدم",
+        title: t('users.error'),
+        description: error?.message || t('users.fail_add_user'),
         variant: "destructive",
       });
     },
@@ -173,10 +176,10 @@ export function AddUserModal({
       <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            إضافة مستخدم جديد
+            {t('users.add_new')}
           </DialogTitle>
           <DialogDescription className="text-base">
-            قم بملء البيانات التالية لإضافة مستخدم جديد للنظام
+            {t('users.data_new')}
           </DialogDescription>
         </DialogHeader>
 
@@ -219,10 +222,10 @@ export function AddUserModal({
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg cursor-pointer shadow-lg transition-all font-semibold"
                 >
                   <Upload className="h-4 w-4" />
-                  {profileImage ? 'تغيير الصورة' : 'رفع صورة شخصية'}
+                  {profileImage ? t('users.image_2') : t('users.image_3')}
                 </label>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                  اختياري - بحد أقصى 2 ميجابايت
+                  {t('users.phrase_02b1fb67')}
                 </p>
               </div>
             </div>
@@ -233,11 +236,11 @@ export function AddUserModal({
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">الاسم الكامل</FormLabel>
+                    <FormLabel className="font-bold">{t('users.name')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل الاسم الكامل"
+                        placeholder={t('users.name_3')}
                         className="h-11"
                         data-testid="input-fullname"
                       />
@@ -252,11 +255,11 @@ export function AddUserModal({
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">اسم المستخدم</FormLabel>
+                    <FormLabel className="font-bold">{t('users.name_user')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل اسم المستخدم"
+                        placeholder={t('users.name_user_1')}
                         className="h-11"
                         data-testid="input-username"
                       />
@@ -271,7 +274,7 @@ export function AddUserModal({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">البريد الإلكتروني</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_25511')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -291,12 +294,12 @@ export function AddUserModal({
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">كلمة السر</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_12772')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type={showPassword ? "text" : "password"}
-                        placeholder="أدخل كلمة السر"
+                        placeholder={t('users.item_19144')}
                         className="h-11"
                         data-testid="input-password"
                       />
@@ -311,11 +314,11 @@ export function AddUserModal({
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">المدينة (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.city_1')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل المدينة"
+                        placeholder={t('users.city_2')}
                         className="h-11"
                         data-testid="input-city"
                       />
@@ -330,7 +333,7 @@ export function AddUserModal({
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">الصلاحية</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_12715')}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
@@ -338,16 +341,16 @@ export function AddUserModal({
                     >
                       <FormControl>
                         <SelectTrigger className="h-11">
-                          <SelectValue placeholder="اختر الصلاحية" />
+                          <SelectValue placeholder={t('users.item_19067')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="admin">👑 إدمن (Admin)</SelectItem>
-                        <SelectItem value="supervisor">💼 مشرف عام (Supervisor)</SelectItem>
-                        <SelectItem value="courier_supervisor">🚚 مشرف عمليات التوصيل (Courier Supervisor)</SelectItem>
-                        <SelectItem value="warehouse">📦 أمين مستودع (Warehouse Keeper)</SelectItem>
-                        <SelectItem value="technician">👨‍💼 مندوب (Technician)</SelectItem>
-                        <SelectItem value="viewer">👁️ مراقب (Viewer)</SelectItem>
+                        <SelectItem value="admin">{t('users.item_118759')}</SelectItem>
+                        <SelectItem value="supervisor">{t('users.supervisor_1')}</SelectItem>
+                        <SelectItem value="courier_supervisor">{t('users.supervisor_delivery')}</SelectItem>
+                        <SelectItem value="warehouse">{t('users.warehouse_1')}</SelectItem>
+                        <SelectItem value="technician">{t('users.item_240988')}</SelectItem>
+                        <SelectItem value="viewer">{t('users.item_185495')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -360,11 +363,11 @@ export function AddUserModal({
                 name="department"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">القسم (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_19201')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل اسم القسم"
+                        placeholder={t('users.name_4')}
                         className="h-11"
                         data-testid="input-department"
                       />
@@ -379,11 +382,11 @@ export function AddUserModal({
                 name="employeeCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">رقم الموظف (Employee Code) (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.number_8')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل رقم الموظف"
+                        placeholder={t('users.number_9')}
                         className="h-11"
                         data-testid="input-employee-code"
                       />
@@ -399,11 +402,11 @@ export function AddUserModal({
                   name="technicianCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold">رقم الفني (Technician Code)</FormLabel>
+                      <FormLabel className="font-bold">{t('users.number_technician_1')}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="أدخل رقم الفني"
+                          placeholder={t('users.number_technician_2')}
                           className="h-11"
                           data-testid="input-technician-code"
                         />
@@ -419,11 +422,11 @@ export function AddUserModal({
                 name="permissions"
                 render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel className="font-bold">الصلاحيات المخصصة (تفصل بينها فاصلة ,)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_47989')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="مثال: read:reports, write:requests, approve:all"
+                        placeholder={t('users.item_10499')}
                         className="h-11"
                         data-testid="input-permissions"
                       />
@@ -446,7 +449,7 @@ export function AddUserModal({
                 className="px-6"
                 data-testid="button-cancel"
               >
-                إلغاء
+                {t('users.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -454,7 +457,7 @@ export function AddUserModal({
                 className="px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 data-testid="button-submit"
               >
-                {addUserMutation.isPending ? "جاري الإضافة..." : "إضافة المستخدم"}
+                {addUserMutation.isPending ? t('users.add_2') : t('users.add_user')}
               </Button>
             </div>
           </form>

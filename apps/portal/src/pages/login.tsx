@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,7 @@ import { useLocation } from "wouter";
 import stockLogo from "@assets/logl1.png";
 
 export default function Login() {
+  const { t, dir } = useTranslation();
   const { login, isLoading } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -32,25 +34,25 @@ export default function Login() {
 
       if (result.success) {
         toast({
-          title: "تم تسجيل الدخول بنجاح",
-          description: `مرحباً ${result.user?.fullName}`,
+          title: t('reports.completed_successfully'),
+          description: t('reports.item_10533', { var_0: result.user?.fullName }),
         });
         setLocation("/home");
       } else {
-        const message = result.message || "خطأ في بيانات الدخول، يرجى المحاولة مرة أخرى.";
+        const message = result.message || t('reports.error_data_other');
         setErrorMessage(message);
         toast({
           variant: "destructive",
-          title: "خطأ في تسجيل الدخول",
+          title: t('reports.error'),
           description: message,
         });
       }
     } catch (error: any) {
-      const message = error?.message || "حدث خطأ غير متوقع";
+      const message = error?.message || t('reports.error_1');
       setErrorMessage(message);
       toast({
         variant: "destructive",
-        title: "خطأ في تسجيل الدخول",
+        title: t('reports.error'),
         description: message,
       });
     } finally {
@@ -60,10 +62,10 @@ export default function Login() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617]" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-[#020617]" dir={dir}>
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-teal-400 mx-auto mb-4" />
-          <p className="text-white text-lg font-semibold">جاري التحميل...</p>
+          <p className="text-white text-lg font-semibold">{t('reports.loading')}</p>
         </div>
       </div>
     );
@@ -75,13 +77,11 @@ export default function Login() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-
         .login-root {
           --obsidian: #020617;
           --glass-border: rgba(255, 255, 255, 0.05);
           --glass-bg: rgba(15, 23, 42, 0.6);
-          font-family: 'Inter', 'IBM Plex Sans Arabic', sans-serif;
+          font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
           background: var(--obsidian);
         }
 
@@ -350,7 +350,7 @@ export default function Login() {
         }
       `}</style>
 
-      <div className="login-root min-h-screen text-slate-100 relative overflow-hidden" dir="rtl">
+      <div className="login-root min-h-screen text-slate-100 relative overflow-hidden" dir={dir}>
         {/* Background Video with 1.15x scale to crop Gemini watermark and overlay */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <video
@@ -396,7 +396,7 @@ export default function Login() {
               </div>
 
               <div className="brand-content text-center space-y-4 px-10 max-w-md">
-                <h1 className="text-5xl font-light tracking-widest text-white">ستوك</h1>
+                <h1 className="text-5xl font-light tracking-widest text-white">{t('reports.item_6376')}</h1>
                 <div className="w-12 h-0.5 bg-teal-500/30 mx-auto my-4" />
 
               </div>
@@ -408,7 +408,7 @@ export default function Login() {
 
             <div className="lg:hidden absolute top-12 left-1/2 -translate-x-1/2 text-center">
               <img src={stockLogo} alt="Stock Enterprise" className="mobile-brand-logo h-20 w-auto object-contain mx-auto mb-3" />
-              <h1 className="text-3xl font-bold text-white">ستوك</h1>
+              <h1 className="text-3xl font-bold text-white">{t('reports.item_6376')}</h1>
             </div>
 
             <div className="glass-panel w-full max-w-[440px] p-8 md:p-12 rounded-[2rem] relative z-10 mt-16 lg:mt-0">
@@ -422,19 +422,19 @@ export default function Login() {
               </div>
 
               <div className="mb-8 text-right">
-                <h2 className="text-2xl font-light text-white mb-2 tracking-tight">مرحباً بك مجدداً</h2>
-                <p className="text-slate-400 text-sm font-light">الرجاء إدخال بيانات الاعتماد للوصول إلى لوحة التحكم</p>
+                <h2 className="text-2xl font-light text-white mb-2 tracking-tight">{t('reports.item_22313')}</h2>
+                <p className="text-slate-400 text-sm font-light">{t('reports.submit_data_dashboard_control')}</p>
               </div>
 
               <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
                 <div className="space-y-1.5">
-                  <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-[0.2em] mr-1">اسم المستخدم</label>
+                  <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-[0.2em] mr-1">{t('reports.name_user')}</label>
                   <div className="input-container-elite group relative flex items-center">
                     <User className="absolute right-4 text-slate-500 group-focus-within:text-teal-400 transition-colors h-4 w-4" />
                     <input
                       {...form.register("username")}
                       className="w-full bg-transparent border-none text-white pr-12 pl-4 py-3.5 rounded-xl focus:outline-none placeholder:text-slate-700 text-sm"
-                      placeholder="اسم المستخدم الخاص بك"
+                      placeholder={t('reports.name_user_1')}
                       type="text"
                       disabled={isSubmitting}
                       data-testid="input-username"
@@ -445,12 +445,12 @@ export default function Login() {
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center px-1">
-                    <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-[0.2em]">كلمة المرور</label>
+                    <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-[0.2em]">{t('reports.item_15983')}</label>
                     <button
                       type="button"
                       className="text-[11px] text-teal-500/60 hover:text-teal-400 transition-colors"
                     >
-                      نسيت كلمة المرور؟
+                      {t('reports.item_23963')}
                     </button>
                   </div>
                   <div className="input-container-elite group relative flex items-center">
@@ -474,7 +474,7 @@ export default function Login() {
                     type="checkbox"
                   />
                   <label className="mr-3 text-xs text-slate-500 cursor-pointer hover:text-slate-300 transition-colors" htmlFor="remember">
-                    تذكر هذا الجهاز للجلسات القادمة
+                    {t('reports.device')}
                   </label>
                 </div>
 
@@ -487,11 +487,11 @@ export default function Login() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="text-lg animate-spin h-4 w-4" />
-                      <span>جاري تسجيل الدخول...</span>
+                      <span>{t('reports.item_24067')}</span>
                     </>
                   ) : (
                     <>
-                      <span>دخول النظام الآمن</span>
+                      <span>{t('reports.system')}</span>
                       <ArrowLeft className="text-lg h-4 w-4 group-hover:-translate-x-1 transition-transform" />
                     </>
                   )}
@@ -501,14 +501,14 @@ export default function Login() {
               <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-6">
                 <p className="text-[10px] text-slate-600 flex items-center gap-2">
                   <Lock className="h-3 w-3" />
-                  نظام مشفر بمعيار <span className="text-teal-500/40 font-mono">AES-256 BIT</span>
+                  {t('users.system_1')} <span className="text-teal-500/40 font-mono">AES-256 BIT</span>
                 </p>
                 <div className="flex gap-8">
                   <button className="text-slate-500 hover:text-white transition-colors text-[11px] font-medium tracking-wide" type="button">
                     ENGLISH
                   </button>
                   <button className="text-slate-500 hover:text-white transition-colors text-[11px] font-medium" type="button">
-                    مركز الدعم
+                    {t('reports.item_14371')}
                   </button>
                 </div>
               </div>

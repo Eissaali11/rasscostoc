@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "@/lib/language";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,28 +27,30 @@ import { useToast } from "@/hooks/use-toast";
 import { insertTechnicianInventorySchema } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
 
-const formSchema = insertTechnicianInventorySchema.extend({
-  n950Boxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  n950Units: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  i9000sBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  i9000sUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  i9100Boxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  i9100Units: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  rollPaperBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  rollPaperUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  stickersBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  stickersUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  newBatteriesBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  newBatteriesUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  mobilySimBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  mobilySimUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  stcSimBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  stcSimUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  zainSimBoxes: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  zainSimUnits: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-}).omit({ technicianName: true, city: true });
+const getFormSchema = (t: (key: string) => string) => insertTechnicianInventorySchema.extend(
+{
+  n950Boxes: z.number().min(0, t('common.quantity_6')),
+  n950Units: z.number().min(0, t('common.quantity_6')),
+  i9000sBoxes: z.number().min(0, t('common.quantity_6')),
+  i9000sUnits: z.number().min(0, t('common.quantity_6')),
+  i9100Boxes: z.number().min(0, t('common.quantity_6')),
+  i9100Units: z.number().min(0, t('common.quantity_6')),
+  rollPaperBoxes: z.number().min(0, t('common.quantity_6')),
+  rollPaperUnits: z.number().min(0, t('common.quantity_6')),
+  stickersBoxes: z.number().min(0, t('common.quantity_6')),
+  stickersUnits: z.number().min(0, t('common.quantity_6')),
+  newBatteriesBoxes: z.number().min(0, t('common.quantity_6')),
+  newBatteriesUnits: z.number().min(0, t('common.quantity_6')),
+  mobilySimBoxes: z.number().min(0, t('common.quantity_6')),
+  mobilySimUnits: z.number().min(0, t('common.quantity_6')),
+  stcSimBoxes: z.number().min(0, t('common.quantity_6')),
+  stcSimUnits: z.number().min(0, t('common.quantity_6')),
+  zainSimBoxes: z.number().min(0, t('common.quantity_6')),
+  zainSimUnits: z.number().min(0, t('common.quantity_6')),
+}).omit({ technicianName: true, city: true }
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface AddTechnicianModalProps {
   open: boolean;
@@ -54,6 +58,8 @@ interface AddTechnicianModalProps {
 }
 
 export default function AddTechnicianModal({ open, onOpenChange }: AddTechnicianModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -96,16 +102,16 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians"] });
       toast({
-        title: "تم إضافة بيانات المندوب بنجاح",
-        description: "تم إضافة البيانات الجديدة للمندوب",
+        title: t('common.completed_add_data_technician_'),
+        description: t('common.completed_add_data'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في إضافة البيانات",
-        description: error.message || "حدث خطأ أثناء إضافة البيانات",
+        title: t('common.error_add_data'),
+        description: error.message || t('common.error_add_data_1'),
         variant: "destructive",
       });
     },
@@ -119,9 +125,9 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">إضافة بيانات مندوب</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{t('common.add_data')}</DialogTitle>
           <DialogDescription className="text-sm">
-            أدخل بيانات المندوب الجديد وتجهيزاته
+            {t('common.data_technician_new')}
           </DialogDescription>
         </DialogHeader>
         
@@ -131,27 +137,27 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-blue-600 dark:text-blue-400 font-bold">اسم المندوب:</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-white">{user?.fullName || "غير محدد"}</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">{t('common.name_technician_1')}</span>
+                  <span className="text-lg font-bold text-slate-800 dark:text-white">{user?.fullName || t('common.item_11173')}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-blue-600 dark:text-blue-400 font-bold">المدينة:</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-white">{user?.city || "غير محدد"}</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">{t('common.city_2')}</span>
+                  <span className="text-lg font-bold text-slate-800 dark:text-white">{user?.city || t('common.item_11173')}</span>
                 </div>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-3">سيتم إضافة البيانات باسمك ومدينتك تلقائياً</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-3">{t('common.add_data_1')}</p>
             </div>
 
             {/* N950 Devices */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">أجهزة N950</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.devices_4')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="n950Boxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -171,7 +177,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="n950Units"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -191,14 +197,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* I9000s Devices */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">أجهزة I9000s</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.devices_5')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="i9000sBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -218,7 +224,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="i9000sUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -238,14 +244,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* I9100 Devices */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">أجهزة I9100</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.devices_6')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="i9100Boxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -265,7 +271,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="i9100Units"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -285,14 +291,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* Roll Paper */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">أوراق رول</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.item_12770')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="rollPaperBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -312,7 +318,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="rollPaperUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -332,14 +338,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* Stickers */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">ملصقات مدى</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.stickers_2')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="stickersBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -359,7 +365,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="stickersUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -379,14 +385,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* New Batteries */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">بطاريات جديدة</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.batteries')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="newBatteriesBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -406,7 +412,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="newBatteriesUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -426,14 +432,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* Mobily SIM */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">شرائح موبايلي</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.sims_mobily')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="mobilySimBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -453,7 +459,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="mobilySimUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -473,14 +479,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* STC SIM */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">شرائح STC</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.sims_2')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="stcSimBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -500,7 +506,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="stcSimUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -520,14 +526,14 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
 
             {/* Zain SIM */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">شرائح زين</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('common.sims_zain')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="zainSimBoxes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">كراتين</FormLabel>
+                      <FormLabel className="text-xs">{t('common.boxes_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -547,7 +553,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                   name="zainSimUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">وحدات</FormLabel>
+                      <FormLabel className="text-xs">{t('common.units_2')}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -570,10 +576,10 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ملاحظات</FormLabel>
+                  <FormLabel>{t('common.notes_2')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="أضف ملاحظات إضافية..."
+                      placeholder={t('common.notes_3')}
                       {...field}
                       value={field.value || ""}
                       data-testid="input-notes"
@@ -592,7 +598,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                 className="flex-1 text-sm sm:text-base"
                 data-testid="button-cancel"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -600,7 +606,7 @@ export default function AddTechnicianModal({ open, onOpenChange }: AddTechnician
                 className="flex-1 text-sm sm:text-base"
                 data-testid="button-submit"
               >
-                {addTechMutation.isPending ? "جاري الإضافة..." : "إضافة البيانات"}
+                {addTechMutation.isPending ? t('common.add_8') : t('common.add_data_2')}
               </Button>
             </div>
           </form>

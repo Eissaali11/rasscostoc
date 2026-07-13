@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -98,13 +99,14 @@ const postScanReceive = async (body: any) => {
   }
 
   if (!response.ok) {
-    throw new Error(payload?.message || "تعذر تنفيذ حركة المسح.");
+    throw new Error(payload?.message || t('common.transaction_scan'));
   }
 
   return payload;
 };
 
 export default function ProductsManagementPage() {
+  const { t, language } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -169,7 +171,7 @@ export default function ProductsManagementPage() {
         technicians: [
           {
             technicianId: user.id,
-            technicianName: user.fullName || user.username || "المندوب الحالي",
+            technicianName: user.fullName || user.username || t('common.technician_2'),
             fixedInventory,
             movingInventory,
           },
@@ -181,9 +183,9 @@ export default function ProductsManagementPage() {
   const productMasters = useMemo<ProductMaster[]>(
     () =>
       (productsQuery.data ?? [])
-        .map(normalizeProductMaster)
+        .map((raw) => normalizeProductMaster(raw, language))
         .filter((product) => !!product.id),
-    [productsQuery.data]
+    [productsQuery.data, language]
   );
 
   const warehouses = useMemo(() => (Array.isArray(warehousesQuery.data) ? warehousesQuery.data : []), [warehousesQuery.data]);
@@ -214,7 +216,7 @@ export default function ProductsManagementPage() {
       }
 
       const warehouseName =
-        String(warehouse?.nameAr ?? warehouse?.name ?? warehouse?.name_ar ?? warehouse?.location ?? "").trim() || "مستودع";
+        String(warehouse?.nameAr ?? warehouse?.name ?? warehouse?.name_ar ?? warehouse?.location ?? "").trim() || t('common.warehouse_2');
       const legacyInventory = warehouse?.inventory ?? null;
       const entries = Array.isArray(legacyInventory?.entries) ? (legacyInventory.entries as InventoryEntry[]) : [];
 
@@ -253,7 +255,7 @@ export default function ProductsManagementPage() {
       }
 
       const technicianName =
-        String(technician?.technicianName ?? technician?.fullName ?? technician?.name ?? "").trim() || "مندوب";
+        String(technician?.technicianName ?? technician?.fullName ?? technician?.name ?? "").trim() || t('common.item_7978');
 
       const fixedInventory = technician?.fixedInventory ?? null;
       const movingInventory = technician?.movingInventory ?? null;
@@ -297,16 +299,16 @@ export default function ProductsManagementPage() {
       technicianRecords
         .map((record) => ({
           id: String(record?.technicianId ?? record?.id ?? ""),
-          fullName: String(record?.technicianName ?? record?.fullName ?? record?.name ?? "مندوب"),
+          fullName: String(record?.technicianName ?? record?.fullName ?? record?.name ?? t('common.item_7978')),
         }))
         .filter((record) => record.id.length > 0),
     [technicianRecords]
   );
 
-  const warehouseOptions = useMemo(() => toStorageOptions(warehouses, "warehouse"), [warehouses]);
+  const warehouseOptions = useMemo(() => toStorageOptions(warehouses, "warehouse", language), [warehouses, language]);
   const technicianOptions = useMemo(
-    () => toStorageOptions(normalizedTechniciansForOptions, "technician"),
-    [normalizedTechniciansForOptions]
+    () => toStorageOptions(normalizedTechniciansForOptions, "technician", language),
+    [normalizedTechniciansForOptions, language]
   );
 
   useEffect(() => {
@@ -349,8 +351,8 @@ export default function ProductsManagementPage() {
   }, [technicianOptions, transferTechnicianId, user?.id, user?.role]);
 
   const rows = useMemo(
-    () => buildProductDistributionRows(productMasters, warehouseInventoryRows, technicianInventoryRows),
-    [productMasters, warehouseInventoryRows, technicianInventoryRows]
+    () => buildProductDistributionRows(productMasters, warehouseInventoryRows, technicianInventoryRows, language),
+    [productMasters, warehouseInventoryRows, technicianInventoryRows, language]
   );
 
   const filteredRows = useMemo(() => {
@@ -383,7 +385,7 @@ export default function ProductsManagementPage() {
   const handleReceive = async () => {
     const trimmedValue = scannedValue.trim();
     if (!trimmedValue) {
-      setReceiveMessage("يرجى مسح الباركود أو إدخال SKU/اسم المنتج.");
+      setReceiveMessage(t('common.scan_submit_name'));
       return;
     }
 
@@ -391,15 +393,15 @@ export default function ProductsManagementPage() {
 
     if (isTransferMode) {
       if (!transferWarehouseId) {
-        setReceiveMessage("يرجى اختيار المستودع قبل تنفيذ التحويل.");
+        setReceiveMessage(t('common.warehouse_transfer'));
         return;
       }
       if (!transferTechnicianId) {
-        setReceiveMessage("يرجى اختيار المندوب قبل تنفيذ التحويل.");
+        setReceiveMessage(t('common.technician_transfer'));
         return;
       }
     } else if (!storageId) {
-      setReceiveMessage("يرجى اختيار موقع التخزين قبل التنفيذ.");
+      setReceiveMessage(t('common.signed_1'));
       return;
     }
 
@@ -410,7 +412,7 @@ export default function ProductsManagementPage() {
       productMasters.find((product) => product.nameAr.toLowerCase().includes(normalized));
 
     if (!matchedProduct) {
-      setReceiveMessage("لم يتم العثور على المنتج. جرّب الباركود أو SKU الصحيح.");
+      setReceiveMessage(t('common.item_64309'));
       return;
     }
 
@@ -441,10 +443,10 @@ export default function ProductsManagementPage() {
 
       await receiveMutation.mutateAsync(payload);
 
-      const selectedWarehouse = warehouseOptions.find((option) => option.id === transferWarehouseId)?.label ?? "مستودع";
-      const selectedTechnician = technicianOptions.find((option) => option.id === transferTechnicianId)?.label ?? "مندوب";
+      const selectedWarehouse = warehouseOptions.find((option) => option.id === transferWarehouseId)?.label ?? t('common.warehouse_2');
+      const selectedTechnician = technicianOptions.find((option) => option.id === transferTechnicianId)?.label ?? t('common.item_7978');
       const options = storageType === "warehouse" ? warehouseOptions : technicianOptions;
-      const directStorageName = options.find((option) => option.id === storageId)?.label ?? "موقع تخزين";
+      const directStorageName = options.find((option) => option.id === storageId)?.label ?? t('common.signed_2');
       const storageName =
         operationType === "TRANSFER_TO_TECHNICIAN"
           ? `${selectedWarehouse} → ${selectedTechnician}`
@@ -470,16 +472,16 @@ export default function ProductsManagementPage() {
       setQuantity(1);
       const operationText =
         operationType === "ADD_STOCK"
-          ? "إضافة"
+          ? t('common.add')
           : operationType === "DEDUCT_STOCK"
-            ? "إنقاص"
+            ? t('common.item_7945_1')
             : operationType === "TRANSFER_TO_TECHNICIAN"
-              ? "تحويل"
-              : "سحب";
-      const packagingText = packagingType === "box" ? "كرتون" : "وحدة";
-      setReceiveMessage(`تم ${operationText} ${quantity} ${packagingText} من ${matchedProduct.nameAr} بنجاح.`);
+              ? t('common.transfer')
+              : t('common.withdraw');
+      const packagingText = packagingType === "box" ? t('common.box') : t('common.unit_1');
+      setReceiveMessage(t('common.completed_successfully_4', { var_0: operationText, var_1: quantity, var_2: packagingText, var_3: matchedProduct.nameAr }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "حدث خطأ أثناء تسجيل الاستلام.";
+      const message = error instanceof Error ? error.message : t('common.error_receive');
       setReceiveMessage(message);
     }
   };
@@ -488,14 +490,14 @@ export default function ProductsManagementPage() {
   const loadError = productsQuery.error || warehousesQuery.error || techniciansInventoriesQuery.error;
 
   if (loadError) {
-    const message = loadError instanceof Error ? loadError.message : "تعذر تحميل بيانات المنتجات.";
+    const message = loadError instanceof Error ? loadError.message : t('common.loading_data_2');
     return (
       <div className="px-4 md:px-6 py-6">
         <div className="rounded-xl border border-orange-400/30 bg-orange-500/10 p-5 text-center">
           <AlertTriangle className="h-8 w-8 text-orange-300 mx-auto mb-2" />
-          <p className="text-orange-200 font-bold mb-1">تعذر تحميل بيانات الصفحة</p>
+          <p className="text-orange-200 font-bold mb-1">{t('common.loading_data_page')}</p>
           <p className="text-orange-100/80 text-sm">{message}</p>
-          <p className="text-orange-100/70 text-xs mt-2">إذا كانت الجلسة منتهية، أعد تسجيل الدخول ثم حدّث الصفحة.</p>
+          <p className="text-orange-100/70 text-xs mt-2">{t('common.page')}</p>
         </div>
       </div>
     );
@@ -503,7 +505,7 @@ export default function ProductsManagementPage() {
 
   const handleExportExcel = () => {
     const lines = [
-      ["المنتج", "SKU", "المستودعات", "المندوبون", "الإجمالي"].join(","),
+      [t('common.item_9548'), "SKU", t('common.warehouses'), t('common.item_14371'), t('common.total_2')].join(","),
       ...filteredRows.map((row) =>
         [row.itemNameAr, row.itemCode, row.warehouseQuantity, row.technicianQuantity, row.totalQuantity].join(",")
       ),

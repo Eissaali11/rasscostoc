@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -14,6 +15,7 @@ import ExcelJS from 'exceljs';
 import { useAuth } from "@/lib/auth";
 
 export default function TechniciansTable() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -36,14 +38,14 @@ export default function TechniciansTable() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians"] });
       toast({
-        title: "تم الحذف بنجاح",
-        description: "تم حذف بيانات المندوب",
+        title: t('common.completed_delete_successfully'),
+        description: t('common.completed_delete_data_technici'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في الحذف",
-        description: "حدث خطأ أثناء حذف البيانات",
+        title: t('common.error_delete'),
+        description: t('common.error_delete_data'),
         variant: "destructive",
       });
     },
@@ -61,7 +63,7 @@ export default function TechniciansTable() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف بيانات هذا المندوب؟")) {
+    if (confirm(t('common.delete_data'))) {
       deleteMutation.mutate(id);
     }
   };
@@ -69,15 +71,15 @@ export default function TechniciansTable() {
   const handleExport = async () => {
     if (!filteredTechnicians || filteredTechnicians.length === 0) {
       toast({
-        title: "لا توجد بيانات للتصدير",
-        description: "يجب أن يكون هناك بيانات لتصديرها",
+        title: t('common.no_data'),
+        description: t('common.data_6'),
         variant: "destructive",
       });
       return;
     }
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('تقرير المندوبين');
+    const worksheet = workbook.addWorksheet(t('common.report_couriers_1'));
     
     const currentDate = new Date().toLocaleDateString('ar-EG', {
       weekday: 'long',
@@ -102,7 +104,7 @@ export default function TechniciansTable() {
     // Add title row
     worksheet.mergeCells('A1:M1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = 'نظام إدارة مخزون المندوبين';
+    titleCell.value = t('common.system_management_couriers');
     titleCell.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -111,7 +113,7 @@ export default function TechniciansTable() {
     // Add date row
     worksheet.mergeCells('A2:M2');
     const dateCell = worksheet.getCell('A2');
-    dateCell.value = `تاريخ التقرير: ${currentDate}`;
+    dateCell.value = t('common.date_report_1', { var_0: currentDate });
     dateCell.font = { size: 12, bold: true };
     dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
     dateCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
@@ -119,7 +121,7 @@ export default function TechniciansTable() {
     
     // Add header row
     const headerRow = worksheet.getRow(4);
-    headerRow.values = ['#', 'اسم المندوب', 'المدينة', 'أجهزة N950', 'أجهزة I9000s', 'أجهزة I9100', 'أوراق رول', 'ملصقات مداى', 'بطاريات جديدة', 'شرائح موبايلي', 'شرائح STC', 'شرائح زين', 'ملاحظات'];
+    headerRow.values = ['#', t('common.name_technician'), t('common.city_1'), t('common.devices_4'), t('common.devices_5'), t('common.devices_6'), t('common.item_12770'), t('common.stickers_3'), t('common.batteries'), t('common.sims_mobily'), t('common.sims_2'), t('common.sims_zain'), t('common.notes_2')];
     headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -183,7 +185,7 @@ export default function TechniciansTable() {
     // Stats title
     worksheet.mergeCells(`A${statsStartRow}:M${statsStartRow}`);
     const statsTitle = worksheet.getCell(`A${statsStartRow}`);
-    statsTitle.value = 'الإحصائيات الإجمالية';
+    statsTitle.value = t('common.item_30169');
     statsTitle.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
     statsTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
     statsTitle.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -191,10 +193,10 @@ export default function TechniciansTable() {
     
     // Stats data
     const statsData = [
-      ['عدد المندوبين', filteredTechnicians.length, 'أجهزة N950', totalN950, 'أجهزة I9000s', totalI9000s],
-      ['أجهزة I9100', totalI9100, 'أوراق رول', totalRoll, 'ملصقات مداى', totalStickers],
-      ['بطاريات جديدة', totalNewBatteries, 'شرائح موبايلي', totalMobily, 'شرائح STC', totalSTC],
-      ['شرائح زين', totalZain, '', '', '', '']
+      [t('common.couriers_3'), filteredTechnicians.length, t('common.devices_4'), totalN950, t('common.devices_5'), totalI9000s],
+      [t('common.devices_6'), totalI9100, t('common.item_12770'), totalRoll, t('common.stickers_3'), totalStickers],
+      [t('common.batteries'), totalNewBatteries, t('common.sims_mobily'), totalMobily, t('common.sims_2'), totalSTC],
+      [t('common.sims_zain'), totalZain, '', '', '', '']
     ];
     
     statsData.forEach((data, idx) => {
@@ -233,18 +235,18 @@ export default function TechniciansTable() {
     // Set column widths
     worksheet.columns = [
       { width: 6 },   // #
-      { width: 25 },  // اسم المندوب
-      { width: 18 },  // المدينة
+      { width: 25 },  // technician name
+      { width: 18 },  // city
       { width: 14 },  // N950
       { width: 14 },  // I9000s
       { width: 14 },  // I9100
-      { width: 14 },  // أوراق رول
-      { width: 16 },  // ملصقات مداى
-      { width: 16 },  // بطاريات جديدة
-      { width: 16 },  // موبايلي
+      { width: 14 },  // roll paper
+      { width: 16 },  // mada stickers
+      { width: 16 },  // new batteries
+      { width: 16 },  // mobily
       { width: 14 },  // STC
-      { width: 14 },  // زين
-      { width: 35 },  // ملاحظات
+      { width: 14 },  // zain
+      { width: 35 },  // notes
     ];
     
     // Write file
@@ -253,18 +255,18 @@ export default function TechniciansTable() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `تقرير_المندوبين_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.download = t('inventory.report_technician_var_0_xlsx', { var_0: new Date().toISOString().split('T')[0] });
     link.click();
     window.URL.revokeObjectURL(url);
     
     toast({
-      title: "تم تصدير التقرير بنجاح",
-      description: `تم تصدير ${filteredTechnicians.length} سجل بتنسيق احترافي`,
+      title: t('common.completed_export_report_succes'),
+      description: t('common.completed_export_log_1', { var_0: filteredTechnicians.length }),
     });
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">جاري التحميل...</div>;
+    return <div className="text-center py-8">{t('common.loading_3')}</div>;
   }
 
   return (
@@ -272,12 +274,12 @@ export default function TechniciansTable() {
       <Card className="shadow-lg">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">بيانات المندوبين</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('common.data_couriers')}</h2>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <div className="relative flex-1 sm:flex-initial">
                 <Input
                   type="text"
-                  placeholder="ابحث..."
+                  placeholder={t('common.item_6449')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full sm:w-64 bg-white dark:bg-gray-900 text-sm"
@@ -294,7 +296,7 @@ export default function TechniciansTable() {
                 >
                   <Link href="/withdrawn-devices" data-testid="button-withdrawn-devices">
                     <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-600 dark:text-orange-400" />
-                    <span className="text-orange-700 dark:text-orange-300">الأجهزة</span>
+                    <span className="text-orange-700 dark:text-orange-300">{t('common.devices')}</span>
                   </Link>
                 </Button>
 
@@ -306,7 +308,7 @@ export default function TechniciansTable() {
                   >
                     <Link href="/users" data-testid="button-users">
                       <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
-                      <span className="text-blue-700 dark:text-blue-300">المستخدمين</span>
+                      <span className="text-blue-700 dark:text-blue-300">{t('common.users_4')}</span>
                     </Link>
                   </Button>
                 )}
@@ -318,7 +320,7 @@ export default function TechniciansTable() {
                   data-testid="button-export-excel"
                 >
                   <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-emerald-700 dark:text-emerald-300">تصدير</span>
+                  <span className="text-emerald-700 dark:text-emerald-300">{t('common.export')}</span>
                 </Button>
                 
                 <Button
@@ -327,7 +329,7 @@ export default function TechniciansTable() {
                   data-testid="button-add-technician"
                 >
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span>إضافة</span>
+                  <span>{t('common.add')}</span>
                 </Button>
               </div>
             </div>
@@ -337,7 +339,7 @@ export default function TechniciansTable() {
         <CardContent>
           {!filteredTechnicians || filteredTechnicians.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              {searchTerm ? "لا توجد نتائج للبحث" : "لا توجد بيانات"}
+              {searchTerm ? t('common.no_results_2') : t('common.no_data_1')}
             </div>
           ) : (
             <>
@@ -388,19 +390,19 @@ export default function TechniciansTable() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">رول: </span>
+                        <span className="text-muted-foreground">{t('common.item_4855')}</span>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100 text-[10px] font-semibold">
                           {getTotalForItem(tech.rollPaperBoxes, tech.rollPaperUnits)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">ملصقات: </span>
+                        <span className="text-muted-foreground">{t('common.stickers_4')}</span>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-100 text-[10px] font-semibold">
                           {getTotalForItem(tech.stickersBoxes, tech.stickersUnits)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">موبايلي: </span>
+                        <span className="text-muted-foreground">{t('common.mobily_1')}</span>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 text-[10px] font-semibold">
                           {getTotalForItem(tech.mobilySimBoxes, tech.mobilySimUnits)}
                         </span>
@@ -415,7 +417,7 @@ export default function TechniciansTable() {
                     
                     {tech.notes && (
                       <div className="mt-3 pt-3 border-t border-border space-y-1 text-xs">
-                        <p><span className="text-muted-foreground">ملاحظات:</span> {tech.notes}</p>
+                        <p><span className="text-muted-foreground">{t('common.notes')}</span> {tech.notes}</p>
                       </div>
                     )}
                   </div>
@@ -428,15 +430,15 @@ export default function TechniciansTable() {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
                       <tr>
-                        <th className="whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-right text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">المندوب</th>
-                        <th className="hidden md:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-right text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">المدينة</th>
+                        <th className="whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-right text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{t('common.technician')}</th>
+                        <th className="hidden md:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-right text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{t('common.city_1')}</th>
                         <th className="whitespace-nowrap px-1 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">N950</th>
                         <th className="whitespace-nowrap px-1 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">I9000s</th>
-                        <th className="hidden lg:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">رول</th>
-                        <th className="hidden lg:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">ملصقات</th>
-                        <th className="hidden xl:table-cell whitespace-nowrap px-1 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">موبايلي</th>
+                        <th className="hidden lg:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{t('common.item_4797')}</th>
+                        <th className="hidden lg:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{t('common.stickers')}</th>
+                        <th className="hidden xl:table-cell whitespace-nowrap px-1 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{t('common.mobily')}</th>
                         <th className="hidden xl:table-cell whitespace-nowrap px-1 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">STC</th>
-                        <th className="hidden xl:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-right text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">ملاحظات</th>
+                        <th className="hidden xl:table-cell whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3 text-right text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{t('common.notes_2')}</th>
                         <th className="whitespace-nowrap px-1 py-2 sm:px-4 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300"></th>
                       </tr>
                     </thead>
@@ -489,7 +491,7 @@ export default function TechniciansTable() {
                                 size="icon"
                                 onClick={() => handleEdit(tech)}
                                 className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-accent"
-                                title="تعديل"
+                                title={t('common.edit')}
                                 data-testid={`button-edit-${tech.id}`}
                               >
                                 <Edit className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
@@ -499,7 +501,7 @@ export default function TechniciansTable() {
                                 size="icon"
                                 onClick={() => handleDelete(tech.id)}
                                 className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-destructive/10"
-                                title="حذف"
+                                title={t('common.delete')}
                                 data-testid={`button-delete-${tech.id}`}
                               >
                                 <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
@@ -518,7 +520,7 @@ export default function TechniciansTable() {
           {filteredTechnicians && filteredTechnicians.length > 0 && (
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-sm text-muted-foreground text-center">
-                إجمالي المندوبين: <span className="font-semibold text-foreground">{filteredTechnicians.length}</span>
+                {t('inventory.total_couriers')} <span className="font-semibold text-foreground">{filteredTechnicians.length}</span>
               </p>
             </div>
           )}

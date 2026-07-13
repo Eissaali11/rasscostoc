@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -64,6 +65,7 @@ interface WarehouseData {
 
 
 export default function WarehousesPage() {
+  const { t } = useTranslation();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseData | null>(null);
@@ -96,19 +98,19 @@ export default function WarehousesPage() {
         const latestItemTypes = fresh.data ?? itemTypes;
         await exportWarehousesToExcel({ warehouses, itemTypes: latestItemTypes });
         toast({ 
-          title: "تم تصدير التقرير بنجاح", 
-          description: "تم حفظ ملف Excel في جهازك" 
+          title: t('warehouse.completed_export_report_succes'), 
+          description: t('warehouse.excel_saved_device') 
         });
       } catch (error) {
         toast({ 
-          title: "حدث خطأ أثناء التصدير", 
-          description: "يرجى المحاولة مرة أخرى",
+          title: t('warehouse.error_export'), 
+          description: t('warehouse.other'),
           variant: "destructive" 
         });
       }
     } else {
       toast({ 
-        title: "لا توجد مستودعات للتصدير", 
+        title: t('warehouse.no_warehouses_1'), 
         variant: "destructive" 
       });
     }
@@ -206,10 +208,10 @@ export default function WarehousesPage() {
                 </div>
                 <div>
                   <h1 className="text-3xl sm:text-4xl font-bold text-white mb-1">
-                    إدارة المستودعات
+                    {t('warehouse.management_warehouses')}
                   </h1>
                   <p className="text-gray-400 text-sm">
-                    نظام متكامل لإدارة المخزون
+                    {t('warehouse.system_inventory')}
                   </p>
                 </div>
               </div>
@@ -222,7 +224,7 @@ export default function WarehousesPage() {
                   type="button"
                 >
                   <Download className="h-4 w-4" />
-                  <span>تصدير إلى Excel</span>
+                  <span>{t('warehouse.export_1')}</span>
                 </button>
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -231,7 +233,7 @@ export default function WarehousesPage() {
                   type="button"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>إضافة مستودع جديد</span>
+                  <span>{t('warehouse.add_warehouse_new')}</span>
                 </button>
               </div>
             </div>
@@ -241,7 +243,7 @@ export default function WarehousesPage() {
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 type="text"
-                placeholder="ابحث عن مستودع بالاسم أو الموقع..."
+                placeholder={t('warehouse.warehouse_signed')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pr-10 bg-white/10 backdrop-blur-xl border border-white/20 text-white placeholder:text-gray-400 focus:border-[#18B2B0] focus:ring-[#18B2B0] rounded-xl shadow-sm text-right"
@@ -276,10 +278,10 @@ export default function WarehousesPage() {
               <Warehouse className="h-12 w-12" />
             </div>
             <h3 className="text-3xl font-bold text-white mb-3">
-              لا توجد مستودعات
+              {t('warehouse.no_warehouses')}
             </h3>
             <p className="text-lg text-white/70 mb-6 max-w-md mx-auto">
-              ابدأ بإضافة أول مستودع لإدارة المخزون بكفاءة
+              {t('warehouse.warehouse_inventory')}
             </p>
             <Button 
               onClick={() => setShowCreateModal(true)}
@@ -288,7 +290,7 @@ export default function WarehousesPage() {
               data-testid="button-create-warehouse-empty"
             >
               <Plus className="h-5 w-5 ml-2" />
-              إضافة مستودع جديد
+              {t('warehouse.add_warehouse_new')}
             </Button>
           </motion.div>
         ) : (
@@ -346,7 +348,7 @@ export default function WarehousesPage() {
                               <Package className="h-5 w-5 text-emerald-400" />
                             </div>
                             <p className="text-3xl font-black text-emerald-400" data-testid={`text-total-items-${warehouse.id}`}>{totalItems}</p>
-                            <p className="text-xs text-gray-300 font-semibold mt-1">إجمالي القطع</p>
+                            <p className="text-xs text-gray-300 font-semibold mt-1">{t('warehouse.total_units')}</p>
                           </motion.div>
                           <motion.div 
                             className="text-center p-4 rounded-xl bg-white/5 border border-orange-500/30"
@@ -356,7 +358,7 @@ export default function WarehousesPage() {
                               <AlertTriangle className="h-5 w-5 text-orange-400" />
                             </div>
                             <p className="text-3xl font-black text-orange-400" data-testid={`text-low-stock-${warehouse.id}`}>{lowStockCount}</p>
-                            <p className="text-xs text-gray-300 font-semibold mt-1">مخزون منخفض</p>
+                            <p className="text-xs text-gray-300 font-semibold mt-1">{t('warehouse.item_16003')}</p>
                           </motion.div>
                         </div>
 
@@ -367,7 +369,7 @@ export default function WarehousesPage() {
                               className={warehouse.isActive ? "bg-gradient-to-r from-[#18B2B0] to-teal-500 shadow-md text-white" : ""}
                               data-testid={`badge-status-${warehouse.id}`}
                             >
-                              {warehouse.isActive ? "● نشط" : "○ غير نشط"}
+                              {warehouse.isActive ? t('warehouse.status_active_dot') : t('warehouse.status_inactive_dot')}
                             </Badge>
                             <Button
                               size="sm"
@@ -382,11 +384,11 @@ export default function WarehousesPage() {
                               data-testid={`button-edit-warehouse-${warehouse.id}`}
                             >
                               <Edit className="h-3 w-3 ml-1" />
-                              تعديل
+                              {t('warehouse.edit')}
                             </Button>
                           </div>
                           <span className="text-sm text-[#18B2B0] font-bold group-hover:translate-x-[-4px] transition-transform flex items-center gap-2">
-                            عرض التفاصيل
+                            {t('warehouse.view_details')}
                             <Sparkles className="h-4 w-4" />
                           </span>
                         </div>

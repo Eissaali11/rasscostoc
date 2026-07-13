@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { motion } from "framer-motion";
 import { Package, Box } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ icon, title, boxes, units, color, gradient, index }: ProductCardProps) => {
+  const { t } = useTranslation();
   const total = boxes + units;
   
   return (
@@ -54,7 +56,7 @@ export const ProductCard = ({ icon, title, boxes, units, color, gradient, index 
                 className="bg-white/20 backdrop-blur-sm text-white border-white/30 font-bold px-2 py-0.5 md:px-3 md:py-1 text-xs md:text-sm"
                 style={{ borderColor: color }}
               >
-                {total} وحدة
+                {t('common.unit_4', { count: total })}
               </Badge>
             )}
           </div>
@@ -70,7 +72,7 @@ export const ProductCard = ({ icon, title, boxes, units, color, gradient, index 
                 <div className="p-1.5 md:p-2 rounded-md md:rounded-lg bg-white/10">
                   <Package className="h-3 w-3 md:h-4 md:w-4 text-white" />
                 </div>
-                <span className="text-gray-300 text-xs md:text-sm">صناديق</span>
+                <span className="text-gray-300 text-xs md:text-sm">{t('common.item_9565')}</span>
               </div>
               <motion.span 
                 key={boxes}
@@ -88,7 +90,7 @@ export const ProductCard = ({ icon, title, boxes, units, color, gradient, index 
                 <div className="p-1.5 md:p-2 rounded-md md:rounded-lg bg-white/10">
                   <Box className="h-3 w-3 md:h-4 md:w-4 text-white" />
                 </div>
-                <span className="text-gray-300 text-xs md:text-sm">وحدات</span>
+                <span className="text-gray-300 text-xs md:text-sm">{t('common.units_2')}</span>
               </div>
               <motion.span
                 key={units}
@@ -104,8 +106,8 @@ export const ProductCard = ({ icon, title, boxes, units, color, gradient, index 
           {/* Progress Indicator */}
           <div className="mt-3 md:mt-4">
             <div className="flex items-center justify-between text-[10px] md:text-xs text-gray-400 mb-1">
-              <span>مستوى المخزون</span>
-              <span>{total > 50 ? 'ممتاز' : total > 20 ? 'جيد' : total > 0 ? 'منخفض' : 'فارغ'}</span>
+              <span>{t('common.level_inventory')}</span>
+              <span>{total > 50 ? t('common.item_7949') : total > 20 ? t('common.item_4773') : total > 0 ? t('common.item_7984') : t('common.item_6355_1')}</span>
             </div>
             <div className="h-1.5 md:h-2 bg-white/10 rounded-full overflow-hidden">
               <motion.div

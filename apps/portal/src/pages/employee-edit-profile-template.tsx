@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -62,7 +63,7 @@ const INITIAL_FORM_DATA: EditFormData = {
   licenseExpiryDate: "",
   passportNumber: "",
   passportExpiryDate: "",
-  nationality: "سعودي",
+  nationality: "",
   absherNumber: "",
   qualification: "",
   jobTitle: "",
@@ -87,12 +88,12 @@ function employeeCode(userId?: string | null): string {
 const MAX_ATTACHMENT_SIZE_BYTES = 1.5 * 1024 * 1024;
 const MAX_OTHER_FILES = 5;
 
-function fileToStoredFile(file: File): Promise<EmployeeStoredFile> {
+function fileToStoredFile(file: File, t: (key: string) => string): Promise<EmployeeStoredFile> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result !== "string") {
-        reject(new Error("تعذر قراءة الملف"));
+        reject(new Error(t('users.file_2')));
         return;
       }
 
@@ -104,16 +105,20 @@ function fileToStoredFile(file: File): Promise<EmployeeStoredFile> {
         uploadedAt: new Date().toISOString(),
       });
     };
-    reader.onerror = () => reject(new Error("تعذر قراءة الملف"));
+    reader.onerror = () => reject(new Error(t('users.file_2')));
     reader.readAsDataURL(file);
   });
 }
 
 export default function EmployeeEditProfileTemplatePage() {
+  const { t, dir } = useTranslation();
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
-  const [formData, setFormData] = useState<EditFormData>(INITIAL_FORM_DATA);
+  const [formData, setFormData] = useState<EditFormData>(() => ({
+    ...INITIAL_FORM_DATA,
+    nationality: t('users.item_7981')
+  }));
   const [jobOfferFile, setJobOfferFile] = useState<EmployeeStoredFile | null>(null);
   const [promissoryNoteFile, setPromissoryNoteFile] = useState<EmployeeStoredFile | null>(null);
   const [carHandoverFile, setCarHandoverFile] = useState<EmployeeStoredFile | null>(null);
@@ -165,7 +170,7 @@ export default function EmployeeEditProfileTemplatePage() {
       city: shownUser.city || "",
       employeeNumber: employeeCode(shownUser.id),
       jobTitle: getRoleLabel(shownUser.role || ""),
-      projectName: regionName ? `مشروع ${regionName}` : extra.projectName || prev.projectName,
+      projectName: regionName ? t('users.item_8979', { var_0: regionName }) : extra.projectName || prev.projectName,
     }));
   }, [regionName, shownUser]);
 
@@ -177,8 +182,8 @@ export default function EmployeeEditProfileTemplatePage() {
     if (file.size <= MAX_ATTACHMENT_SIZE_BYTES) return true;
 
     toast({
-      title: "حجم الملف كبير",
-      description: `الحد الأقصى لكل ملف هو ${Math.floor(MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024))}MB`,
+      title: t('users.size_file'),
+      description: t('users.file_4', { var_0: Math.floor(MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024)) }),
       variant: "destructive",
     });
     return false;
@@ -193,12 +198,12 @@ export default function EmployeeEditProfileTemplatePage() {
     if (!validateFileSize(file)) return;
 
     try {
-      const stored = await fileToStoredFile(file);
+      const stored = await fileToStoredFile(file, t);
       setFile(stored);
     } catch {
       toast({
-        title: "فشل رفع الملف",
-        description: "تعذر قراءة الملف. حاول مرة أخرى.",
+        title: t('users.fail_file'),
+        description: t('users.file_other'),
         variant: "destructive",
       });
     }
@@ -212,12 +217,12 @@ export default function EmployeeEditProfileTemplatePage() {
     if (validFiles.length === 0) return;
 
     try {
-      const storedFiles = await Promise.all(validFiles.map(fileToStoredFile));
+      const storedFiles = await Promise.all(validFiles.map((f) => fileToStoredFile(f, t)));
       setOtherFiles(storedFiles);
     } catch {
       toast({
-        title: "فشل رفع المرفقات",
-        description: "تعذر قراءة بعض الملفات. حاول بملفات أصغر أو أقل عددًا.",
+        title: t('users.fail'),
+        description: t('users.files'),
         variant: "destructive",
       });
     }
@@ -226,7 +231,7 @@ export default function EmployeeEditProfileTemplatePage() {
   const updateEmployeeMutation = useMutation({
     mutationFn: async () => {
       if (!shownUser?.id) {
-        throw new Error("لا يمكن تحديد الموظف المطلوب تحديثه");
+        throw new Error(t('users.no_2'));
       }
 
       const payload = {
@@ -275,8 +280,8 @@ export default function EmployeeEditProfileTemplatePage() {
 
       if (!extraSaved) {
         toast({
-          title: "تم حفظ البيانات الأساسية فقط",
-          description: "تعذر حفظ بعض المرفقات محليًا. قلل حجم الملفات ثم حاول مرة أخرى.",
+          title: t('users.completed_save_data'),
+          description: t('users.save_size_files_other'),
           variant: "destructive",
         });
       }
@@ -292,16 +297,16 @@ export default function EmployeeEditProfileTemplatePage() {
       }
 
       toast({
-        title: "تم الحفظ بنجاح",
-        description: "تم تحديث بيانات الموظف.",
+        title: t('users.completed_save_successfully'),
+        description: t('users.completed_update_data'),
       });
 
       setLocation(`/employee-detailed-profile-template?userId=${updatedUser.id}`);
     },
     onError: (error: any) => {
       toast({
-        title: "تعذر حفظ البيانات",
-        description: error?.message || "حدث خطأ أثناء حفظ بيانات الموظف.",
+        title: t('users.save_data'),
+        description: error?.message || t('users.error_save_data'),
         variant: "destructive",
       });
     },
@@ -310,8 +315,8 @@ export default function EmployeeEditProfileTemplatePage() {
   const handleSave = () => {
     if (!formData.fullName.trim()) {
       toast({
-        title: "الاسم الكامل مطلوب",
-        description: "يرجى إدخال الاسم الكامل قبل الحفظ.",
+        title: t('users.name_2'),
+        description: t('users.submit_name_save'),
         variant: "destructive",
       });
       return;
@@ -327,22 +332,22 @@ export default function EmployeeEditProfileTemplatePage() {
 
   if (isEditingAnotherUser && isLoadingSelectedUser) {
     return (
-      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir="rtl">
-        <p className="text-sm text-slate-300">جاري تحميل بيانات الموظف للتعديل...</p>
+      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir={dir}>
+        <p className="text-sm text-slate-300">{t('users.loading_data_1')}</p>
       </div>
     );
   }
 
   if (isEditingAnotherUser && selectedUserError) {
     return (
-      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir={dir}>
         <div className="text-center space-y-4">
-          <p className="text-sm text-rose-300">تعذر تحميل بيانات الموظف المطلوب للتعديل.</p>
+          <p className="text-sm text-rose-300">{t('users.loading_data_2')}</p>
           <button
             onClick={handleCancel}
             className="px-4 py-2 rounded-lg bg-cyan-400 text-[#0f2323] font-bold"
           >
-            العودة لصفحة الملف
+            {t('users.file_1')}
           </button>
         </div>
       </div>
@@ -351,19 +356,19 @@ export default function EmployeeEditProfileTemplatePage() {
 
   if (!shownUser) {
     return (
-      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir="rtl">
-        <p className="text-sm text-slate-300">لا يمكن العثور على بيانات موظف للتعديل.</p>
+      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir={dir}>
+        <p className="text-sm text-slate-300">{t('users.no_data_1')}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0f2323] text-slate-100 min-h-full" dir="rtl">
+    <div className="bg-[#0f2323] text-slate-100 min-h-full" dir={dir}>
       <div className="border-b border-slate-700/50 bg-[#0f2323]/80 backdrop-blur-md px-8 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          <h2 className="text-lg font-bold">تعديل بينات الموظف</h2>
+          <h2 className="text-lg font-bold">{t('users.edit')}</h2>
           <span className="text-slate-500">/</span>
-          <span className="text-sm text-cyan-300">الموارد البشرية</span>
+          <span className="text-sm text-cyan-300">{t('users.item_22282')}</span>
         </div>
         <div className="flex items-center gap-4">
           <button className="size-8 rounded-full flex items-center justify-center bg-slate-800 text-slate-300 hover:text-cyan-300 transition-colors">
@@ -379,36 +384,36 @@ export default function EmployeeEditProfileTemplatePage() {
               <UserRound className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">1. المعلومات الشخصية</h3>
-              <p className="text-slate-400 text-sm">يرجى إدخال البيانات الشخصية الرسمية للموظف</p>
+              <h3 className="text-xl font-bold">{t('users.info_2')}</h3>
+              <p className="text-slate-400 text-sm">{t('users.submit_data')}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Field label="الاسم الكامل" value={formData.fullName} onChange={(v) => handleChange("fullName", v)} placeholder="مثال: محمد أحمد علي" />
-            <Field label="رقم الهوية / الإقامة" value={formData.nationalId} onChange={(v) => handleChange("nationalId", v)} placeholder="10XXXXXXXX" />
-            <Field label="رقم التواصل" value={formData.phoneNumber} onChange={(v) => handleChange("phoneNumber", v)} placeholder="05XXXXXXXX" type="tel" />
+            <Field label={t('users.name')} value={formData.fullName} onChange={(v) => handleChange("fullName", v)} placeholder={t('users.item_24038')} />
+            <Field label={t('users.number_10')} value={formData.nationalId} onChange={(v) => handleChange("nationalId", v)} placeholder="10XXXXXXXX" />
+            <Field label={t('users.number_3')} value={formData.phoneNumber} onChange={(v) => handleChange("phoneNumber", v)} placeholder="05XXXXXXXX" type="tel" />
 
-            <Field label="تاريخ الميلاد" value={formData.birthDate} onChange={(v) => handleChange("birthDate", v)} type="date" />
-            <Field label="تاريخ انتهاء الهوية" value={formData.nationalIdExpiryDate} onChange={(v) => handleChange("nationalIdExpiryDate", v)} type="date" />
-            <Field label="اسم الكفيل" value={formData.sponsorName} onChange={(v) => handleChange("sponsorName", v)} />
+            <Field label={t('users.date')} value={formData.birthDate} onChange={(v) => handleChange("birthDate", v)} type="date" />
+            <Field label={t('users.date_1')} value={formData.nationalIdExpiryDate} onChange={(v) => handleChange("nationalIdExpiryDate", v)} type="date" />
+            <Field label={t('users.name_1')} value={formData.sponsorName} onChange={(v) => handleChange("sponsorName", v)} />
 
-            <Field label="تاريخ انتهاء الرخصة" value={formData.licenseExpiryDate} onChange={(v) => handleChange("licenseExpiryDate", v)} type="date" />
-            <Field label="رقم الجواز" value={formData.passportNumber} onChange={(v) => handleChange("passportNumber", v)} />
-            <Field label="تاريخ انتهاء الجواز" value={formData.passportExpiryDate} onChange={(v) => handleChange("passportExpiryDate", v)} type="date" />
+            <Field label={t('users.date_2')} value={formData.licenseExpiryDate} onChange={(v) => handleChange("licenseExpiryDate", v)} type="date" />
+            <Field label={t('users.number_1')} value={formData.passportNumber} onChange={(v) => handleChange("passportNumber", v)} />
+            <Field label={t('users.date_3')} value={formData.passportExpiryDate} onChange={(v) => handleChange("passportExpiryDate", v)} type="date" />
 
             <SelectField
-              label="الجنسية"
+              label={t('users.item_11139')}
               value={formData.nationality}
               onChange={(v) => handleChange("nationality", v)}
-              options={["سعودي", "مصري", "باكستاني", "آخر"]}
+              options={[t('users.item_7981'), t('users.item_6389'), t('users.item_12710'), t('users.item_4737')]}
             />
-            <Field label="رقم خدمات أبشر" value={formData.absherNumber} onChange={(v) => handleChange("absherNumber", v)} />
+            <Field label={t('users.number_4')} value={formData.absherNumber} onChange={(v) => handleChange("absherNumber", v)} />
             <Field
-              label="المؤهلات العلمية"
+              label={t('users.item_23920')}
               value={formData.qualification}
               onChange={(v) => handleChange("qualification", v)}
-              placeholder="بكالوريوس، ماجستير..."
+              placeholder={t('users.item_27194')}
             />
           </div>
         </div>
@@ -419,22 +424,22 @@ export default function EmployeeEditProfileTemplatePage() {
               <BriefcaseBusiness className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">2. المعلومات الوظيفية</h3>
-              <p className="text-slate-400 text-sm">بيانات التعاقد والموقع الوظيفي والمرفقات</p>
+              <h3 className="text-xl font-bold">{t('users.info_3')}</h3>
+              <p className="text-slate-400 text-sm">{t('users.data_2')}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Field label="المسمى الوظيفي" value={formData.jobTitle} onChange={(v) => handleChange("jobTitle", v)} />
-            <Field label="الرقم الوظيفي" value={formData.employeeNumber} onChange={(v) => handleChange("employeeNumber", v)} />
-            <Field label="المشروع" value={formData.projectName} onChange={(v) => handleChange("projectName", v)} />
-            <Field label="المدينة" value={formData.city} onChange={(v) => handleChange("city", v)} />
+            <Field label={t('users.item_20817')} value={formData.jobTitle} onChange={(v) => handleChange("jobTitle", v)} />
+            <Field label={t('users.number_5')} value={formData.employeeNumber} onChange={(v) => handleChange("employeeNumber", v)} />
+            <Field label={t('users.item_11158')} value={formData.projectName} onChange={(v) => handleChange("projectName", v)} />
+            <Field label={t('users.city')} value={formData.city} onChange={(v) => handleChange("city", v)} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <UploadCard
-              title="صورة العرض الوظيفي"
-              subtitle="اختر صورة أو PDF"
+              title={t('users.image_view')}
+              subtitle={t('users.image_4')}
               icon={FileImage}
               selectedFiles={jobOfferFile ? [jobOfferFile.name] : []}
               onFilesSelected={(files) => {
@@ -444,8 +449,8 @@ export default function EmployeeEditProfileTemplatePage() {
               accept="image/*,.pdf"
             />
             <UploadCard
-              title="صورة السند لأمر"
-              subtitle="اختر صورة أو PDF"
+              title={t('users.image_voucher')}
+              subtitle={t('users.image_4')}
               icon={FileText}
               selectedFiles={promissoryNoteFile ? [promissoryNoteFile.name] : []}
               onFilesSelected={(files) => {
@@ -455,8 +460,8 @@ export default function EmployeeEditProfileTemplatePage() {
               accept="image/*,.pdf"
             />
             <UploadCard
-              title="صور أخرى"
-              subtitle="حتى 5 مرفقات"
+              title={t('users.images_other')}
+              subtitle={t('users.item_14431')}
               icon={ImagePlus}
               multiple
               selectedFiles={otherFiles.map((file) => file.name)}
@@ -475,8 +480,8 @@ export default function EmployeeEditProfileTemplatePage() {
               <IdCard className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">3. قسم العهد</h3>
-              <p className="text-slate-400 text-sm">تفاصيل الأصول والعهد المسلمة للموظف</p>
+              <h3 className="text-xl font-bold">{t('users.item_12917')}</h3>
+              <p className="text-slate-400 text-sm">{t('users.details')}</p>
             </div>
           </div>
 
@@ -484,20 +489,20 @@ export default function EmployeeEditProfileTemplatePage() {
             <div className="p-6 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-4">
               <div className="flex items-center gap-3 border-b border-slate-700/60 pb-4">
                 <Car className="h-5 w-5 text-cyan-300" />
-                <h4 className="font-bold">عهدة السيارة</h4>
+                <h4 className="font-bold">{t('users.item_17505')}</h4>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <SmallField label="رقم اللوحة" value={formData.carPlateNumber} onChange={(v) => handleChange("carPlateNumber", v)} />
-                <SmallField label="نوع السيارة" value={formData.carType} onChange={(v) => handleChange("carType", v)} />
-                <SmallField label="الموديل" value={formData.carModel} onChange={(v) => handleChange("carModel", v)} />
-                <SmallField label="إصدار السيارة" value={formData.carYear} onChange={(v) => handleChange("carYear", v)} />
+                <SmallField label={t('users.number_dashboard')} value={formData.carPlateNumber} onChange={(v) => handleChange("carPlateNumber", v)} />
+                <SmallField label={t('users.type')} value={formData.carType} onChange={(v) => handleChange("carType", v)} />
+                <SmallField label={t('users.item_11189')} value={formData.carModel} onChange={(v) => handleChange("carModel", v)} />
+                <SmallField label={t('users.item_19050')} value={formData.carYear} onChange={(v) => handleChange("carYear", v)} />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">نموذج الاستلام والتسليم</label>
+                <label className="text-xs text-slate-400">{t('users.receive')}</label>
                 <label className="flex items-center gap-3 w-full p-2 border border-dashed border-slate-700 rounded-lg cursor-pointer hover:bg-slate-700/30 transition-all">
                   <FileText className="h-4 w-4 text-slate-500" />
                   <span className="text-xs text-slate-400 truncate">
-                    {carHandoverFile?.name || "تحميل المستند"}
+                    {carHandoverFile?.name || t('users.loading_document')}
                   </span>
                   <input
                     className="hidden"
@@ -515,7 +520,7 @@ export default function EmployeeEditProfileTemplatePage() {
                     onClick={() => setCarHandoverFile(null)}
                     className="text-[11px] text-rose-300 hover:text-rose-200"
                   >
-                    حذف المرفق
+                    {t('users.delete_3')}
                   </button>
                 )}
               </div>
@@ -524,14 +529,14 @@ export default function EmployeeEditProfileTemplatePage() {
             <div className="p-6 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-4">
               <div className="flex items-center gap-3 border-b border-slate-700/60 pb-4">
                 <Smartphone className="h-5 w-5 text-cyan-300" />
-                <h4 className="font-bold">عهدة الجوال</h4>
+                <h4 className="font-bold">{t('users.mobile')}</h4>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <SmallField label="نوع الجوال" value={formData.phoneType} onChange={(v) => handleChange("phoneType", v)} />
-                <SmallField label="السيريال (IMEI)" value={formData.phoneSerial} onChange={(v) => handleChange("phoneSerial", v)} />
-                <SmallField label="رقم العمل" value={formData.businessPhoneNumber} onChange={(v) => handleChange("businessPhoneNumber", v)} type="tel" />
+                <SmallField label={t('users.type_mobile')} value={formData.phoneType} onChange={(v) => handleChange("phoneType", v)} />
+                <SmallField label={t('users.serial')} value={formData.phoneSerial} onChange={(v) => handleChange("phoneSerial", v)} />
+                <SmallField label={t('users.number_6')} value={formData.businessPhoneNumber} onChange={(v) => handleChange("businessPhoneNumber", v)} type="tel" />
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-400">نوع الشريحة</label>
+                  <label className="text-xs text-slate-400">{t('users.type_sim')}</label>
                   <select
                     value={formData.simType}
                     onChange={(event) => handleChange("simType", event.target.value)}
@@ -555,7 +560,7 @@ export default function EmployeeEditProfileTemplatePage() {
           className="px-8 py-3 rounded-xl border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all font-bold text-sm tracking-wide inline-flex items-center gap-2"
         >
           <X className="h-4 w-4" />
-          إلغاء العملية
+          {t('users.cancel_operation')}
         </button>
         <button
           onClick={handleSave}
@@ -564,7 +569,7 @@ export default function EmployeeEditProfileTemplatePage() {
           className="px-12 py-3 rounded-xl bg-cyan-300 text-slate-900 font-bold text-sm tracking-wide shadow-[0_0_20px_rgba(6,249,249,0.4)] hover:shadow-[0_0_30px_rgba(6,249,249,0.6)] active:scale-95 transition-all inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Save className="h-4 w-4" />
-          {updateEmployeeMutation.isPending ? "جاري الحفظ..." : "حفظ بيانات الموظف"}
+          {updateEmployeeMutation.isPending ? t('users.save') : t('users.save_data_1')}
         </button>
       </div>
     </div>
@@ -670,6 +675,7 @@ function UploadCard({
   accept?: string;
   multiple?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="relative group">
       <p className="text-sm font-medium text-slate-300 mb-3">{title}</p>
@@ -678,7 +684,7 @@ function UploadCard({
         <span className="text-xs text-slate-400 mt-2">{subtitle}</span>
         {selectedFiles.length > 0 && (
           <span className="mt-2 text-[11px] text-emerald-300 max-w-[90%] truncate">
-            {multiple ? `${selectedFiles.length} مرفق` : selectedFiles[0]}
+            {multiple ? t('users.item_7393', { var_0: selectedFiles.length }) : selectedFiles[0]}
           </span>
         )}
         <input
@@ -698,7 +704,7 @@ function UploadCard({
           onClick={onClear}
           className="mt-2 text-[11px] text-rose-300 hover:text-rose-200"
         >
-          حذف المرفقات
+          {t('users.delete_1')}
         </button>
       )}
     </div>

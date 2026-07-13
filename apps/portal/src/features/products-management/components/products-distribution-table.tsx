@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { ChevronDown, Eye, Package, Repeat2, UserCog, Warehouse } from "lucide-react";
 import type { ProductDistributionRow } from "../types";
@@ -14,6 +15,7 @@ export function ProductsDistributionTable({ rows, isLoading = false, onViewDetai
   const displayedRows = useMemo(() => rows.slice(0, 50), [rows]);
 
   const trendPath = (row: ProductDistributionRow) => {
+  const { t } = useTranslation();
     const ratio = row.totalQuantity > 0 ? Math.round((row.technicianQuantity / row.totalQuantity) * 100) : 0;
     if (ratio >= 60) {
       return "M0 14 Q 10 8, 20 11 T 40 6 T 60 9 T 80 4";
@@ -33,18 +35,18 @@ export function ProductsDistributionTable({ rows, isLoading = false, onViewDetai
   return (
     <section className="flex flex-col gap-4 mt-5">
       <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-700/80 mb-2">
-        <div className="col-span-3">المنتج</div>
-        <div className="col-span-2 text-center">المستودعات الرئيسية</div>
-        <div className="col-span-2 text-center">بعهد المندوبين</div>
-        <div className="col-span-2 text-center">الإجمالي الكلي</div>
-        <div className="col-span-2 text-center">الحركة (7 أيام)</div>
-        <div className="col-span-1 text-center">إجراءات</div>
+        <div className="col-span-3">{t('common.item_9548')}</div>
+        <div className="col-span-2 text-center">{t('common.warehouses_home')}</div>
+        <div className="col-span-2 text-center">{t('common.couriers_5')}</div>
+        <div className="col-span-2 text-center">{t('common.total_6')}</div>
+        <div className="col-span-2 text-center">{t('common.transaction_2')}</div>
+        <div className="col-span-1 text-center">{t('common.item_11035')}</div>
       </div>
 
       {isLoading ? (
-        <div className="py-10 text-center text-slate-500 bg-slate-900/60 border border-slate-700 rounded-xl">جاري تحميل بيانات المنتجات...</div>
+        <div className="py-10 text-center text-slate-500 bg-slate-900/60 border border-slate-700 rounded-xl">{t('common.loading_data_3')}</div>
       ) : displayedRows.length === 0 ? (
-        <div className="py-10 text-center text-slate-500 bg-slate-900/60 border border-slate-700 rounded-xl">لا توجد بيانات منتجات متاحة.</div>
+        <div className="py-10 text-center text-slate-500 bg-slate-900/60 border border-slate-700 rounded-xl">{t('common.no_data_6')}</div>
       ) : (
         displayedRows.map((row) => {
           const isExpanded = expandedItemTypeId === row.itemTypeId;
@@ -97,14 +99,14 @@ export function ProductsDistributionTable({ rows, isLoading = false, onViewDetai
                     type="button"
                     onClick={() => onViewDetails?.(row.itemTypeId)}
                     className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-colors"
-                    title="التفاصيل"
+                    title={t('common.details_4')}
                   >
                     <Eye className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
                     className="w-8 h-8 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 flex items-center justify-center text-cyan-400 transition-colors"
-                    title="تحويل"
+                    title={t('common.transfer')}
                   >
                     <Repeat2 className="h-4 w-4" />
                   </button>
@@ -112,7 +114,7 @@ export function ProductsDistributionTable({ rows, isLoading = false, onViewDetai
                     type="button"
                     onClick={() => setExpandedItemTypeId(isExpanded ? null : row.itemTypeId)}
                     className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white transition-colors"
-                    title={isExpanded ? "طي" : "عرض التفاصيل"}
+                    title={isExpanded ? t('common.item_3201') : t('common.view_details_5')}
                   >
                     <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                   </button>
@@ -124,11 +126,11 @@ export function ProductsDistributionTable({ rows, isLoading = false, onViewDetai
                   <div>
                     <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                       <Warehouse className="h-4 w-4 text-purple-400" />
-                      تفاصيل المستودعات ({row.warehouseQuantity.toLocaleString("en-US")})
+                      {t('inventory.details_warehouses_count', { count: row.warehouseQuantity.toLocaleString("en-US") })}
                     </h5>
                     <div className="space-y-2">
                       {warehouses.length === 0 ? (
-                        <div className="text-xs text-slate-500 bg-black/30 px-3 py-2 rounded">لا يوجد مخزون بالمستودعات.</div>
+                        <div className="text-xs text-slate-500 bg-black/30 px-3 py-2 rounded">{t('common.no_16')}</div>
                       ) : (
                         warehouses.map((location, index) => (
                           <div key={`${location.storageType}-${location.storageId}-${index}`} className="flex justify-between items-center text-sm bg-black/30 px-3 py-2 rounded">
@@ -143,11 +145,11 @@ export function ProductsDistributionTable({ rows, isLoading = false, onViewDetai
                   <div>
                     <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                       <UserCog className="h-4 w-4 text-orange-400" />
-                      أعلى المندوبين عهدة ({row.technicianQuantity.toLocaleString("en-US")})
+                      {t('inventory.technician_count', { count: row.technicianQuantity.toLocaleString("en-US") })}
                     </h5>
                     <div className="space-y-2">
                       {technicians.length === 0 ? (
-                        <div className="text-xs text-slate-500 bg-black/30 px-3 py-2 rounded">لا توجد عهدة مندوبين لهذا المنتج.</div>
+                        <div className="text-xs text-slate-500 bg-black/30 px-3 py-2 rounded">{t('common.no_17')}</div>
                       ) : (
                         technicians
                           .slice()

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,24 +61,25 @@ export function ProductsScanReceiver({
   onReceive,
   latestScans,
 }: ProductsScanReceiverProps) {
+  const { t } = useTranslation();
   const storageOptions = storageType === "warehouse" ? warehouseOptions : technicianOptions;
   const isTransferMode = operationType === "TRANSFER_TO_TECHNICIAN" || operationType === "WITHDRAW_FROM_TECHNICIAN";
   const operationLabel =
     operationType === "ADD_STOCK"
-      ? "إضافة"
+      ? t('common.add')
       : operationType === "DEDUCT_STOCK"
-        ? "إنقاص"
+        ? t('common.item_7945_1')
         : operationType === "TRANSFER_TO_TECHNICIAN"
-          ? "تحويل للمخزون المتحرك"
-          : "سحب من مخزون المندوب";
+          ? t('common.transfer_5')
+          : t('common.withdraw_technician_1');
 
   return (
     <section className="bg-slate-900/60 border border-slate-700/60 rounded-xl p-5 mt-8">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white text-lg font-bold">استقبال المنتجات عبر الماسح</h3>
+        <h3 className="text-white text-lg font-bold">{t('common.scanner')}</h3>
         <div className="inline-flex items-center gap-2 text-cyan-300 text-sm">
           <ScanLine className="h-4 w-4" />
-          التنفيذ الحالي عبر الماسح/الويب - تطبيق الجوال Flutter لاحقاً
+          {t('inventory.flutter_no')}
         </div>
       </div>
 
@@ -86,12 +88,13 @@ export function ProductsScanReceiver({
           value={scannedValue}
           onChange={(event) => onScannedValueChange(event.target.value)}
           onKeyDown={(event) => {
+  const { t } = useTranslation();
             if (event.key === "Enter") {
               event.preventDefault();
               onReceive();
             }
           }}
-          placeholder="امسح الكود أو اكتب SKU/اسم المنتج"
+          placeholder={t('common.code_name')}
           className="md:col-span-2 bg-black/30 border-slate-700 text-white"
         />
 
@@ -102,23 +105,23 @@ export function ProductsScanReceiver({
           }
         >
           <SelectTrigger className="bg-black/30 border-slate-700 text-white">
-            <SelectValue placeholder="نوع الحركة" />
+            <SelectValue placeholder={t('common.type_transaction')} />
           </SelectTrigger>
           <SelectContent className="bg-slate-900 border-slate-700 text-white">
-            <SelectItem value="ADD_STOCK">إضافة رصيد</SelectItem>
-            <SelectItem value="DEDUCT_STOCK">إنقاص رصيد</SelectItem>
-            <SelectItem value="TRANSFER_TO_TECHNICIAN">تحويل من مستودع إلى مندوب</SelectItem>
-            <SelectItem value="WITHDRAW_FROM_TECHNICIAN">سحب من مندوب إلى مستودع</SelectItem>
+            <SelectItem value="ADD_STOCK">{t('common.add_11')}</SelectItem>
+            <SelectItem value="DEDUCT_STOCK">{t('common.item_14344')}</SelectItem>
+            <SelectItem value="TRANSFER_TO_TECHNICIAN">{t('common.transfer_warehouse')}</SelectItem>
+            <SelectItem value="WITHDRAW_FROM_TECHNICIAN">{t('common.withdraw_warehouse')}</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={packagingType} onValueChange={(value) => onPackagingTypeChange(value as "box" | "unit")}>
           <SelectTrigger className="bg-black/30 border-slate-700 text-white">
-            <SelectValue placeholder="نوع العبوة" />
+            <SelectValue placeholder={t('common.type_10')} />
           </SelectTrigger>
           <SelectContent className="bg-slate-900 border-slate-700 text-white">
-            <SelectItem value="box">كرتون</SelectItem>
-            <SelectItem value="unit">وحدة</SelectItem>
+            <SelectItem value="box">{t('common.box')}</SelectItem>
+            <SelectItem value="unit">{t('common.unit_1')}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -126,7 +129,7 @@ export function ProductsScanReceiver({
           <>
             <Select value={transferWarehouseId} onValueChange={onTransferWarehouseIdChange}>
               <SelectTrigger className="bg-black/30 border-slate-700 text-white">
-                <SelectValue placeholder="اختر المستودع" />
+                <SelectValue placeholder={t('common.warehouse_10')} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-700 text-white">
                 {warehouseOptions.map((option) => (
@@ -139,7 +142,7 @@ export function ProductsScanReceiver({
 
             <Select value={transferTechnicianId} onValueChange={onTransferTechnicianIdChange}>
               <SelectTrigger className="bg-black/30 border-slate-700 text-white">
-                <SelectValue placeholder="اختر المندوب" />
+                <SelectValue placeholder={t('common.technician_11')} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-700 text-white">
                 {technicianOptions.map((option) => (
@@ -154,17 +157,17 @@ export function ProductsScanReceiver({
           <>
             <Select value={storageType} onValueChange={(value) => onStorageTypeChange(value as StorageBucketType)}>
               <SelectTrigger className="bg-black/30 border-slate-700 text-white">
-                <SelectValue placeholder="اختر نوع التخزين" />
+                <SelectValue placeholder={t('common.type_11')} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-700 text-white">
-                <SelectItem value="warehouse">المستودعات</SelectItem>
-                <SelectItem value="technician">عهدة المندوبين</SelectItem>
+                <SelectItem value="warehouse">{t('common.warehouses')}</SelectItem>
+                <SelectItem value="technician">{t('common.couriers_6')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={storageId} onValueChange={onStorageIdChange}>
               <SelectTrigger className="bg-black/30 border-slate-700 text-white">
-                <SelectValue placeholder="اختر موقع التخزين" />
+                <SelectValue placeholder={t('common.signed_4')} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-700 text-white">
                 {storageOptions.map((option) => (
@@ -186,23 +189,23 @@ export function ProductsScanReceiver({
             className="w-24 bg-black/30 border-slate-700 text-white"
           />
           <Button onClick={onReceive} className="bg-cyan-500/20 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/30">
-            استقبال
+            {t('common.item_11097')}
           </Button>
         </div>
       </div>
 
-      <p className="text-[11px] text-slate-400 mt-2">الوضع الحالي: {operationLabel}</p>
+      <p className="text-[11px] text-slate-400 mt-2">{t('common.item_17609')}{operationLabel}</p>
 
       <div className="mt-4 border-t border-slate-700/60 pt-4">
-        <p className="text-xs text-slate-400 mb-2">آخر المنتجات المستقبلة عبر المسح</p>
+        <p className="text-xs text-slate-400 mb-2">{t('common.scan_3')}</p>
         <div className="max-h-36 overflow-y-auto space-y-2">
           {latestScans.length === 0 ? (
-            <div className="text-xs text-slate-500">لا توجد عمليات مسح بعد.</div>
+            <div className="text-xs text-slate-500">{t('common.no_scan')}</div>
           ) : (
             latestScans.slice(0, 8).map((scan) => (
               <div key={scan.id} className="text-xs bg-black/30 border border-slate-700/60 rounded px-3 py-2 flex items-center justify-between">
                 <span className="text-slate-300">
-                  {scan.itemNameAr} • {scan.storageName} • {scan.packagingType === "box" ? "كرتون" : "وحدة"}
+                  {scan.itemNameAr} • {scan.storageName} • {scan.packagingType === "box" ? t('common.box') : t('common.unit_1')}
                 </span>
                 <span className={`font-mono ${scan.operationType === "ADD_STOCK" ? "text-emerald-300" : "text-rose-300"}`}>
                   {scan.operationType === "ADD_STOCK" || scan.operationType === "TRANSFER_TO_TECHNICIAN" ? "+" : "-"}

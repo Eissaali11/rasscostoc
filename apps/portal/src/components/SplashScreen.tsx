@@ -82,7 +82,8 @@ export function SplashScreen() {
           <h1
             className="splash-text text-5xl md:text-6xl font-bold text-gray-800 dark:text-white text-center"
             style={{
-              fontFamily: "'Poppins', sans-serif",
+              fontFamily: '"Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif',
+              fontWeight: 800,
             }}
             data-testid="splash-title"
           >

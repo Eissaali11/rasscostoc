@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -73,6 +74,7 @@ export function UpdateMovingInventoryModal({
   const [productSearchQuery, setProductSearchQuery] = useState("");
 
   useEffect(() => {
+  const { t } = useTranslation();
     if (!itemTypes) return;
 
     const initial: Record<string, { boxes: number; units: number }> = {};
@@ -149,16 +151,16 @@ export function UpdateMovingInventoryModal({
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technicianId}/moving-inventory-entries`] });
       queryClient.invalidateQueries({ queryKey: ['/api/my-moving-inventory'] });
       toast({
-        title: "تم التحديث بنجاح",
-        description: "تم تحديث المخزون المتحرك",
+        title: t('inventory.completed_update_successfully'),
+        description: t('inventory.completed_update_inventory'),
       });
       onClose();
     },
     onError: () => {
       toast({
         variant: "destructive",
-        title: "خطأ في التحديث",
-        description: "حدث خطأ أثناء تحديث المخزون",
+        title: t('inventory.error_update'),
+        description: t('inventory.error_update_inventory'),
       });
     },
   });
@@ -204,41 +206,41 @@ export function UpdateMovingInventoryModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <PlusCircle className="h-5 w-5" />
-            تحديث المخزون المتحرك
+            {t('inventory.update_inventory')}
           </DialogTitle>
           <DialogDescription>
-            أدخل الكميات الجديدة للمخزون المتحرك
+            {t('inventory.item_51056')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label>البحث عن المنتج</Label>
+            <Label>{t('inventory.search')}</Label>
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={productSearchQuery}
                 onChange={(event) => setProductSearchQuery(event.target.value)}
-                placeholder="ابحث بالاسم أو الفئة"
+                placeholder={t('inventory.item_27039')}
                 className="pr-10 pl-10"
               />
               {productSearchQuery.trim().length > 0 && (
                 <button
                   type="button"
                   onClick={() => setProductSearchQuery("")}
-                  aria-label="مسح البحث"
+                  aria-label={t('inventory.scan_search_1')}
                   className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <XCircle className="h-4 w-4" />
                 </button>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">عرض {filteredItemTypes.length} من {visibleItemTypes.length} صنف</p>
+            <p className="text-xs text-muted-foreground">{t('inventory.view_2')}{filteredItemTypes.length}{t('inventory.item_3211')}{visibleItemTypes.length}{t('inventory.item_4796')}</p>
           </div>
 
           {filteredItemTypes.length === 0 ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              لا توجد منتجات مطابقة لبحثك
+              {t('inventory.no_2')}
             </div>
           ) : filteredItemTypes.map((itemType) => {
             const currentValues = getCurrentValue(itemType.id);
@@ -250,9 +252,9 @@ export function UpdateMovingInventoryModal({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label htmlFor={`${itemType.id}-boxes`} className="text-sm">كراتين</Label>
+                      <Label htmlFor={`${itemType.id}-boxes`} className="text-sm">{t('inventory.boxes')}</Label>
                       <span className="text-xs text-muted-foreground">
-                        الحالي: {currentValues.boxes}
+                        {t('inventory.count_1', { count: currentValues.boxes })}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -288,15 +290,15 @@ export function UpdateMovingInventoryModal({
                         onClick={() => handleBoxesChange(itemType.id, 0)}
                         disabled={updateValues.boxes === 0}
                       >
-                        تصفير
+                        {t('inventory.item_7963')}
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label htmlFor={`${itemType.id}-units`} className="text-sm">وحدات</Label>
+                      <Label htmlFor={`${itemType.id}-units`} className="text-sm">{t('inventory.units_1')}</Label>
                       <span className="text-xs text-muted-foreground">
-                        الحالي: {currentValues.units}
+                        {t('inventory.count_1', { count: currentValues.units })}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -332,7 +334,7 @@ export function UpdateMovingInventoryModal({
                         onClick={() => handleUnitsChange(itemType.id, 0)}
                         disabled={updateValues.units === 0}
                       >
-                        تصفير
+                        {t('inventory.item_7963')}
                       </Button>
                     </div>
                   </div>
@@ -349,7 +351,7 @@ export function UpdateMovingInventoryModal({
             disabled={updateMutation.isPending}
             data-testid="button-cancel-update"
           >
-            إلغاء
+            {t('inventory.cancel_1')}
           </Button>
           <Button
             onClick={handleUpdate}
@@ -357,7 +359,7 @@ export function UpdateMovingInventoryModal({
             data-testid="button-confirm-update"
           >
             <PlusCircle className="w-4 h-4 ml-2" />
-            حفظ التغييرات
+            {t('inventory.save_1')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { motion } from "framer-motion";
@@ -15,6 +16,7 @@ export function RegionsBarChart({
   data, 
   height = 300 
 }: RegionsBarChartProps) {
+  const { t } = useTranslation();
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -55,8 +57,8 @@ export function RegionsBarChart({
                 itemStyle={{ color: '#fff' }}
               />
               <Legend />
-              <Bar dataKey="users" fill="#18B2B0" name="المستخدمين" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="items" fill="#10B981" name="الأصناف" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="users" fill="#18B2B0" name={t('common.users_4')} radius={[8, 8, 0, 0]} />
+              <Bar dataKey="items" fill="#10B981" name={t('common.item_11121')} radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

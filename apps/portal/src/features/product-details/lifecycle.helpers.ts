@@ -26,6 +26,8 @@ export type SerialLifecycleRecord = RawSerialTrackingRecord & {
   badgeClass: string;
 };
 
+type TranslateFn = (key: string, options?: Record<string, any>) => string;
+
 export const resolveLifecycleCategory = (row: RawSerialTrackingRecord): SerialLifecycleCategory => {
   if (row.status === "rejected") {
     return "rejected";
@@ -37,6 +39,7 @@ export const resolveLifecycleCategory = (row: RawSerialTrackingRecord): SerialLi
 
   const warehouseName = String(row.warehouseName || "").toLowerCase();
   if (warehouseName) {
+    // Keep Arabic "رئيس" matcher for main-warehouse data classification.
     if (warehouseName.includes("رئيس") || warehouseName.includes("main")) {
       return "main-warehouse";
     }
@@ -56,36 +59,51 @@ export const resolveLifecycleCategory = (row: RawSerialTrackingRecord): SerialLi
 
 const lifecycleStyleByCategory: Record<
   SerialLifecycleCategory,
-  { label: string; className: string; locationBuilder: (row: RawSerialTrackingRecord) => string }
+  {
+    labelKey: string;
+    className: string;
+    locationBuilder: (row: RawSerialTrackingRecord, t: TranslateFn) => string;
+  }
 > = {
   "main-warehouse": {
-    label: "في المستودع الرئيسي",
+    labelKey: "inventory.lifecycle_main_warehouse",
     className: "bg-purple-700/60 text-white border border-slate-600",
-    locationBuilder: (row) => row.warehouseName || "المستودع الرئيسي",
+    locationBuilder: (row, t) => row.warehouseName || t("inventory.main_warehouse_fallback"),
   },
   "regional-warehouse": {
-    label: "في مستودع المنطقة",
+    labelKey: "inventory.lifecycle_regional_warehouse",
     className: "bg-indigo-700/60 text-white border border-slate-600",
-    locationBuilder: (row) => row.warehouseName || `مستودع المنطقة${row.regionId ? ` (${row.regionId})` : ""}`,
+    locationBuilder: (row, t) =>
+      row.warehouseName ||
+      `${t("inventory.regional_warehouse_fallback")}${row.regionId ? ` (${row.regionId})` : ""}`,
   },
   "technician-stock": {
-    label: "في مخزون المندوب",
+    labelKey: "inventory.lifecycle_technician_stock",
     className: "bg-orange-700/60 text-white border border-slate-600",
-    locationBuilder: (row) => `عهدة المندوب (${row.technicianName || row.technicianId || "غير محدد"})`,
+    locationBuilder: (row, t) =>
+      t("inventory.technician_custody", {
+        name: row.technicianName || row.technicianId || t("inventory.unspecified"),
+      }),
   },
   delivered: {
-    label: "تم التسليم للعميل",
+    labelKey: "inventory.lifecycle_delivered",
     className: "bg-emerald-700/70 text-white border border-slate-600",
-    locationBuilder: () => "تم التسليم للعميل",
+    locationBuilder: (_row, t) => t("inventory.lifecycle_delivered"),
   },
   rejected: {
-    label: "التسليم مرفوض",
+    labelKey: "inventory.lifecycle_rejected",
     className: "bg-rose-800/80 text-white border border-slate-600 shadow-[0_0_12px_rgba(159,18,57,0.45)]",
-    locationBuilder: (row) => `مرتجع (${row.technicianName || row.technicianId || "غير محدد"})`,
+    locationBuilder: (row, t) =>
+      t("inventory.returned_item", {
+        name: row.technicianName || row.technicianId || t("inventory.unspecified"),
+      }),
   },
 };
 
-export const toSerialLifecycleRows = (rows: RawSerialTrackingRecord[]): SerialLifecycleRecord[] => {
+export const toSerialLifecycleRows = (
+  rows: RawSerialTrackingRecord[],
+  t: TranslateFn,
+): SerialLifecycleRecord[] => {
   return rows.map((row) => {
     const lifecycleCategory = resolveLifecycleCategory(row);
     const style = lifecycleStyleByCategory[lifecycleCategory];
@@ -93,21 +111,25 @@ export const toSerialLifecycleRows = (rows: RawSerialTrackingRecord[]): SerialLi
     return {
       ...row,
       lifecycleCategory,
-      currentLocation: style.locationBuilder(row),
-      lifecycleLabel: style.label,
+      currentLocation: style.locationBuilder(row, t),
+      lifecycleLabel: t(style.labelKey),
       badgeClass: style.className,
     };
   });
 };
 
-export const formatArabicDateTime = (value: string): string => {
+export const formatLocalizedDateTime = (
+  value: string,
+  language: "ar" | "en" = "ar",
+): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
 
-  const datePart = date.toLocaleDateString("ar-SA");
-  const timePart = date.toLocaleTimeString("ar-SA", {
+  const locale = language === "en" ? "en-US" : "ar-SA";
+  const datePart = date.toLocaleDateString(locale);
+  const timePart = date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -115,3 +137,5 @@ export const formatArabicDateTime = (value: string): string => {
   return `${datePart} | ${timePart}`;
 };
 
+/** @deprecated Use formatLocalizedDateTime */
+export const formatArabicDateTime = (value: string): string => formatLocalizedDateTime(value, "ar");

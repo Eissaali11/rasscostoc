@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -42,6 +43,7 @@ import { exportSystemLogsToExcel } from "@/lib/exportToExcel";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SystemLogsPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAction, setFilterAction] = useState<string>("all");
@@ -72,40 +74,40 @@ export default function SystemLogsPage() {
     if (rows.length === 0) {
       toast({
         variant: "destructive",
-        title: "لا توجد بيانات",
-        description: "لا توجد سجلات لتصديرها",
+        title: t('reports.no_data'),
+        description: t('reports.no_logs_1'),
       });
       return;
     }
 
     await exportSystemLogsToExcel({ logs: rows });
     toast({
-      title: "تم التصدير بنجاح",
-      description: "تم تصدير سجل عمليات النظام إلى ملف Excel",
+      title: t('reports.completed_export_successfully'),
+      description: t('reports.completed_export_log_system_fi'),
     });
   };
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case "error":
-        return <Badge variant="destructive" className="flex items-center gap-1" data-testid="badge-severity-error"><AlertCircle className="h-3 w-3" />خطأ</Badge>;
+        return <Badge variant="destructive" className="flex items-center gap-1" data-testid="badge-severity-error"><AlertCircle className="h-3 w-3" />{t('reports.error_2')}</Badge>;
       case "warn":
-        return <Badge variant="outline" className="flex items-center gap-1 border-yellow-500/50 text-yellow-400 bg-yellow-500/10" data-testid="badge-severity-warn"><AlertTriangle className="h-3 w-3" />تحذير</Badge>;
+        return <Badge variant="outline" className="flex items-center gap-1 border-yellow-500/50 text-yellow-400 bg-yellow-500/10" data-testid="badge-severity-warn"><AlertTriangle className="h-3 w-3" />{t('reports.warning')}</Badge>;
       default:
-        return <Badge variant="outline" className="flex items-center gap-1 border-[#18B2B0]/50 text-[#18B2B0] bg-[#18B2B0]/10" data-testid="badge-severity-info"><Info className="h-3 w-3" />معلومة</Badge>;
+        return <Badge variant="outline" className="flex items-center gap-1 border-[#18B2B0]/50 text-[#18B2B0] bg-[#18B2B0]/10" data-testid="badge-severity-info"><Info className="h-3 w-3" />{t('reports.item_9592')}</Badge>;
     }
   };
 
   const getActionBadge = (action: string) => {
     const badges: Record<string, { label: string; color: string }> = {
-      create: { label: "إنشاء", color: "bg-green-500/10 text-green-400 border-green-500/30" },
-      update: { label: "تحديث", color: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
-      delete: { label: "حذف", color: "bg-red-500/10 text-red-400 border-red-500/30" },
-      approve: { label: "موافقة", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
-      reject: { label: "رفض", color: "bg-orange-500/10 text-orange-400 border-orange-500/30" },
-      transfer: { label: "نقل", color: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
-      login: { label: "تسجيل دخول", color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30" },
-      logout: { label: "تسجيل خروج", color: "bg-gray-500/10 text-gray-400 border-gray-500/30" },
+      create: { label: t('reports.item_7911'), color: "bg-green-500/10 text-green-400 border-green-500/30" },
+      update: { label: t('reports.update'), color: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
+      delete: { label: t('reports.delete'), color: "bg-red-500/10 text-red-400 border-red-500/30" },
+      approve: { label: t('reports.item_9568'), color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
+      reject: { label: t('reports.reject'), color: "bg-orange-500/10 text-orange-400 border-orange-500/30" },
+      transfer: { label: t('reports.item_4812'), color: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
+      login: { label: t('reports.item_14368'), color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30" },
+      logout: { label: t('reports.item_14346'), color: "bg-gray-500/10 text-gray-400 border-gray-500/30" },
     };
 
     const badge = badges[action] || { label: action, color: "bg-gray-500/10 text-gray-400 border-gray-500/30" };
@@ -114,14 +116,14 @@ export default function SystemLogsPage() {
 
   const getEntityTypeBadge = (entityType: string) => {
     const types: Record<string, string> = {
-      region: "منطقة",
-      user: "مستخدم",
-      inventory: "مخزون",
-      warehouse: "مستودع",
-      request: "طلب",
-      transfer: "نقل",
-      auth: "مصادقة",
-      device: "جهاز",
+      region: t('reports.region'),
+      user: t('reports.item_9540_1'),
+      inventory: t('reports.item_7987'),
+      warehouse: t('reports.warehouse'),
+      request: t('reports.request'),
+      transfer: t('reports.item_4812'),
+      auth: t('reports.item_9531'),
+      device: t('reports.device_1'),
     };
 
     return types[entityType] || entityType;
@@ -144,15 +146,15 @@ export default function SystemLogsPage() {
                 data-testid="button-back"
               >
                 <ArrowLeft className="ml-2 h-4 w-4" />
-                العودة
+                {t('reports.item_9540')}
               </Button>
             </Link>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
                 <Activity className="h-8 w-8 text-[#18B2B0]" />
-                سجل عمليات النظام
+                {t('reports.log_system')}
               </h1>
-              <p className="text-gray-400 text-sm">متابعة جميع العمليات والأحداث في النظام</p>
+              <p className="text-gray-400 text-sm">{t('reports.followup_operations_system')}</p>
             </div>
           </div>
 
@@ -163,7 +165,7 @@ export default function SystemLogsPage() {
             data-testid="button-export-system-logs-excel"
           >
             <Download className="ml-2 h-4 w-4" />
-            تصدير Excel
+            {t('reports.export_excel')}
           </Button>
         </motion.div>
 
@@ -177,7 +179,7 @@ export default function SystemLogsPage() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Filter className="h-5 w-5 text-[#18B2B0]" />
-                البحث والتصفية
+                {t('reports.search')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -185,7 +187,7 @@ export default function SystemLogsPage() {
                 <div className="relative">
                   <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="ابحث في السجلات..."
+                    placeholder={t('reports.logs_1')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pr-10 bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
@@ -195,47 +197,47 @@ export default function SystemLogsPage() {
 
                 <Select value={filterAction} onValueChange={setFilterAction}>
                   <SelectTrigger className="bg-gray-900/50 border-gray-700 text-white" data-testid="select-action">
-                    <SelectValue placeholder="نوع العملية" />
+                    <SelectValue placeholder={t('reports.type_operation')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">جميع العمليات</SelectItem>
-                    <SelectItem value="create">إنشاء</SelectItem>
-                    <SelectItem value="update">تحديث</SelectItem>
-                    <SelectItem value="delete">حذف</SelectItem>
-                    <SelectItem value="approve">موافقة</SelectItem>
-                    <SelectItem value="reject">رفض</SelectItem>
-                    <SelectItem value="transfer">نقل</SelectItem>
-                    <SelectItem value="login">تسجيل دخول</SelectItem>
-                    <SelectItem value="logout">تسجيل خروج</SelectItem>
+                    <SelectItem value="all">{t('reports.operations')}</SelectItem>
+                    <SelectItem value="create">{t('reports.item_7911')}</SelectItem>
+                    <SelectItem value="update">{t('reports.update')}</SelectItem>
+                    <SelectItem value="delete">{t('reports.delete')}</SelectItem>
+                    <SelectItem value="approve">{t('reports.item_9568')}</SelectItem>
+                    <SelectItem value="reject">{t('reports.reject')}</SelectItem>
+                    <SelectItem value="transfer">{t('reports.item_4812')}</SelectItem>
+                    <SelectItem value="login">{t('reports.item_14368')}</SelectItem>
+                    <SelectItem value="logout">{t('reports.item_14346')}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={filterEntityType} onValueChange={setFilterEntityType}>
                   <SelectTrigger className="bg-gray-900/50 border-gray-700 text-white" data-testid="select-entity">
-                    <SelectValue placeholder="نوع الكيان" />
+                    <SelectValue placeholder={t('reports.type')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">جميع الكيانات</SelectItem>
-                    <SelectItem value="region">منطقة</SelectItem>
-                    <SelectItem value="user">مستخدم</SelectItem>
-                    <SelectItem value="inventory">مخزون</SelectItem>
-                    <SelectItem value="warehouse">مستودع</SelectItem>
-                    <SelectItem value="request">طلب</SelectItem>
-                    <SelectItem value="transfer">نقل</SelectItem>
-                    <SelectItem value="auth">مصادقة</SelectItem>
-                    <SelectItem value="device">جهاز</SelectItem>
+                    <SelectItem value="all">{t('reports.item_19146')}</SelectItem>
+                    <SelectItem value="region">{t('reports.region')}</SelectItem>
+                    <SelectItem value="user">{t('reports.item_9540_1')}</SelectItem>
+                    <SelectItem value="inventory">{t('reports.item_7987')}</SelectItem>
+                    <SelectItem value="warehouse">{t('reports.warehouse')}</SelectItem>
+                    <SelectItem value="request">{t('reports.request')}</SelectItem>
+                    <SelectItem value="transfer">{t('reports.item_4812')}</SelectItem>
+                    <SelectItem value="auth">{t('reports.item_9531')}</SelectItem>
+                    <SelectItem value="device">{t('reports.device_1')}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={filterSeverity} onValueChange={setFilterSeverity}>
                   <SelectTrigger className="bg-gray-900/50 border-gray-700 text-white" data-testid="select-severity">
-                    <SelectValue placeholder="المستوى" />
+                    <SelectValue placeholder={t('reports.level')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">جميع المستويات</SelectItem>
-                    <SelectItem value="info">معلومة</SelectItem>
-                    <SelectItem value="warn">تحذير</SelectItem>
-                    <SelectItem value="error">خطأ</SelectItem>
+                    <SelectItem value="all">{t('reports.item_20740')}</SelectItem>
+                    <SelectItem value="info">{t('reports.item_9592')}</SelectItem>
+                    <SelectItem value="warn">{t('reports.warning')}</SelectItem>
+                    <SelectItem value="error">{t('reports.error_2')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -253,7 +255,7 @@ export default function SystemLogsPage() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <FileText className="h-5 w-5 text-[#18B2B0]" />
-                السجلات ({filteredLogs?.length || 0})
+                {t('reports.count', { count: filteredLogs?.length || 0 })}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -268,13 +270,13 @@ export default function SystemLogsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-gray-700 hover:bg-gray-800/50">
-                        <TableHead className="text-gray-300 text-right">التاريخ</TableHead>
-                        <TableHead className="text-gray-300 text-right">المستخدم</TableHead>
-                        <TableHead className="text-gray-300 text-right">العملية</TableHead>
-                        <TableHead className="text-gray-300 text-right">الكيان</TableHead>
-                        <TableHead className="text-gray-300 text-right">الوصف</TableHead>
-                        <TableHead className="text-gray-300 text-right">المستوى</TableHead>
-                        <TableHead className="text-gray-300 text-right">الحالة</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.date')}</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.user')}</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.operation')}</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.item_9573')}</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.item_7977')}</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.level')}</TableHead>
+                        <TableHead className="text-gray-300 text-right">{t('reports.status')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -320,8 +322,8 @@ export default function SystemLogsPage() {
               ) : (
                 <div className="text-center py-12">
                   <FileText className="h-16 w-16 mx-auto text-gray-600 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-400">لا توجد سجلات</h3>
-                  <p className="text-gray-500 mt-2">لم يتم العثور على أي سجلات تطابق المعايير المحددة</p>
+                  <h3 className="text-lg font-semibold text-gray-400">{t('reports.no_logs')}</h3>
+                  <p className="text-gray-500 mt-2">{t('reports.logs')}</p>
                 </div>
               )}
             </CardContent>

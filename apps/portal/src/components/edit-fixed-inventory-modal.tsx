@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -55,6 +56,7 @@ export function EditFixedInventoryModal({
   const [formData, setFormData] = useState<InventoryFormData>({});
 
   const entryMap = useMemo(() => {
+  const { t } = useTranslation();
     return new Map(inventoryEntries.map((e) => [e.itemTypeId, e]));
   }, [inventoryEntries]);
 
@@ -106,16 +108,16 @@ export function EditFixedInventoryModal({
       queryClient.invalidateQueries({ queryKey: ["/api/technicians", user?.id, "fixed-inventory-entries"] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/fixed-inventory-dashboard'] });
       toast({
-        title: "تم الحفظ بنجاح",
-        description: "تم حفظ المخزون الثابت",
+        title: t('inventory.completed_save_successfully'),
+        description: t('inventory.completed_save_inventory'),
       });
       onClose();
     },
     onError: () => {
       toast({
         variant: "destructive",
-        title: "فشل الحفظ",
-        description: "حدث خطأ أثناء حفظ البيانات",
+        title: t('inventory.fail_save'),
+        description: t('inventory.error_save_data'),
       });
     },
   });
@@ -152,9 +154,9 @@ export function EditFixedInventoryModal({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>تعديل المخزون الثابت</DialogTitle>
+          <DialogTitle>{t('inventory.edit_inventory_1')}</DialogTitle>
           <DialogDescription>
-            قم بتعديل كميات المخزون الثابت الخاص بك
+            {t('inventory.inventory_3')}
           </DialogDescription>
         </DialogHeader>
 
@@ -180,7 +182,7 @@ export function EditFixedInventoryModal({
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>الكراتين</Label>
+                          <Label>{t('inventory.boxes_1')}</Label>
                           <Input
                             type="number"
                             min="0"
@@ -189,7 +191,7 @@ export function EditFixedInventoryModal({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>الوحدات</Label>
+                          <Label>{t('inventory.units_2')}</Label>
                           <Input
                             type="number"
                             min="0"
@@ -206,11 +208,11 @@ export function EditFixedInventoryModal({
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={onClose}>
-                إلغاء
+                {t('inventory.cancel_1')}
               </Button>
               <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
                 <Save className="h-4 w-4 ml-2" />
-                {saveMutation.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
+                {saveMutation.isPending ? t('inventory.save') : t('inventory.save_1')}
               </Button>
             </DialogFooter>
           </>

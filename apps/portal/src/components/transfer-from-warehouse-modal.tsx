@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -38,12 +39,14 @@ import type { UserSafe } from "@shared/schema";
 import { useActiveItemTypes, getItemTypeVisuals, type ItemType, type InventoryEntry } from "@/hooks/use-item-types";
 import { Loader2, Search, XCircle, Plus, Minus, AlertTriangle } from "lucide-react";
 
-const formSchema = z.object({
-  technicianId: z.string().min(1, "يجب اختيار مندوب"),
+const getFormSchema = (t: (key: string) => string) => z.object(
+{
+  technicianId: z.string().min(1, t('warehouse.item_22313')),
   notes: z.string().optional(),
-});
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface ItemTransfer {
   selected: boolean;
@@ -84,6 +87,8 @@ export default function TransferFromWarehouseModal({
   currentEntries = [],
   warehouseTechnicians = [],
 }: TransferFromWarehouseModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
   const { data: itemTypes, isLoading: itemTypesLoading } = useActiveItemTypes();
 
@@ -201,15 +206,15 @@ export default function TransferFromWarehouseModal({
       queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] });
       toast({
-        title: "تم النقل بنجاح",
-        description: "تم نقل الأصناف إلى المندوب المحدد",
+        title: t('warehouse.completed_successfully'),
+        description: t('warehouse.completed_technician'),
       });
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في النقل",
-        description: error.message || "حدث خطأ أثناء نقل الأصناف",
+        title: t('warehouse.error'),
+        description: error.message || t('warehouse.error_1'),
         variant: "destructive",
       });
     },
@@ -220,8 +225,8 @@ export default function TransferFromWarehouseModal({
     
     if (!hasSelectedItems) {
       toast({
-        title: "لا توجد أصناف محددة",
-        description: "يرجى اختيار صنف واحد على الأقل للنقل",
+        title: t('warehouse.no_1'),
+        description: t('warehouse.item_48006'),
         variant: "destructive",
       });
       return;
@@ -234,14 +239,14 @@ export default function TransferFromWarehouseModal({
         if (transfer.quantity > available) {
           const itemType = itemTypes?.find(t => t.id === itemKey);
           const itemName = itemType?.nameAr || itemKey;
-          errors.push(`${itemName}: الكمية المطلوبة (${transfer.quantity}) أكبر من المتاح (${available})`);
+          errors.push(t('warehouse.quantity_1', { var_0: itemName, var_1: transfer.quantity, var_2: available }));
         }
       }
     });
 
     if (errors.length > 0) {
       toast({
-        title: "خطأ في الكميات",
+        title: t('warehouse.error_2'),
         description: errors.join("\n"),
         variant: "destructive",
       });
@@ -305,9 +310,9 @@ export default function TransferFromWarehouseModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>نقل من المستودع إلى مندوب</DialogTitle>
+          <DialogTitle>{t('warehouse.warehouse_3')}</DialogTitle>
           <DialogDescription>
-            نقل أصناف من {warehouseName} إلى مندوب
+            {t('warehouse.transfer_items_from', { name: warehouseName })}
           </DialogDescription>
         </DialogHeader>
         
@@ -323,20 +328,20 @@ export default function TransferFromWarehouseModal({
                 name="technicianId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اختر المندوب</FormLabel>
+                    <FormLabel>{t('warehouse.technician_3')}</FormLabel>
                     <div className="relative mb-2">
                       <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         value={technicianSearchQuery}
                         onChange={(event) => setTechnicianSearchQuery(event.target.value)}
-                        placeholder="ابحث عن مندوب بالاسم أو المدينة"
+                        placeholder={t('warehouse.city')}
                         className="pr-10 pl-10"
                       />
                       {technicianSearchQuery.trim().length > 0 && (
                         <button
                           type="button"
                           onClick={() => setTechnicianSearchQuery("")}
-                          aria-label="مسح البحث"
+                          aria-label={t('warehouse.scan_search_3')}
                           className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         >
                           <XCircle className="h-4 w-4" />
@@ -347,7 +352,7 @@ export default function TransferFromWarehouseModal({
                     <Select onValueChange={field.onChange} value={field.value} disabled={employees.length === 0}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={employees.length === 0 ? "لا يوجد مندوبون متاحون" : "اختر المندوب"} />
+                          <SelectValue placeholder={employees.length === 0 ? t('warehouse.no_2') : t('warehouse.technician_3')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -357,13 +362,13 @@ export default function TransferFromWarehouseModal({
                           </SelectItem>
                         ))}
                         {filteredEmployees.length === 0 && (
-                          <div className="px-2 py-1.5 text-sm text-muted-foreground">لا توجد نتائج مطابقة</div>
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('warehouse.no_results')}</div>
                         )}
                       </SelectContent>
                     </Select>
                     {selectedTechnician && (
                       <div className="mt-2 rounded-md border bg-muted/20 px-3 py-1.5 text-xs sm:text-sm">
-                        المندوب المختار: <span className="font-semibold">{selectedTechnician.fullName}</span>
+                        {t('warehouse.technician_1')} <span className="font-semibold">{selectedTechnician.fullName}</span>
                         {selectedTechnician.city ? <span className="text-muted-foreground"> - {selectedTechnician.city}</span> : null}
                       </div>
                     )}
@@ -378,14 +383,14 @@ export default function TransferFromWarehouseModal({
                   <Input
                     value={itemSearchQuery}
                     onChange={(event) => setItemSearchQuery(event.target.value)}
-                    placeholder="ابحث عن صنف داخل القائمة"
+                    placeholder={t('warehouse.item_31890')}
                     className="pr-10 pl-10"
                   />
                   {itemSearchQuery.trim().length > 0 && (
                     <button
                       type="button"
                       onClick={() => setItemSearchQuery("")}
-                      aria-label="مسح بحث الأصناف"
+                      aria-label={t('warehouse.scan_search_4')}
                       className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
                       <XCircle className="h-4 w-4" />
@@ -399,16 +404,16 @@ export default function TransferFromWarehouseModal({
                       checked={showAvailableOnly}
                       onCheckedChange={(checked) => setShowAvailableOnly(checked === true)}
                     />
-                    عرض الأصناف المتاحة فقط
+                    {t('warehouse.view_1')}
                   </label>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">{filteredVisibleItems.length} صنف</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">{filteredVisibleItems.length}{t('warehouse.item_4796')}</span>
                 </div>
               </div>
 
               <div className="h-[220px] sm:h-[350px] overflow-y-auto pr-2 space-y-3 border rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/50">
                 {filteredVisibleItems.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                    لا توجد أصناف مطابقة للبحث أو الفلتر الحالي
+                    {t('warehouse.no')}
                   </div>
                 ) : filteredVisibleItems.map((item) => {
                   const Icon = item.icon;
@@ -438,16 +443,16 @@ export default function TransferFromWarehouseModal({
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-sm sm:text-base truncate">{item.nameAr}</h4>
                           <p className="text-xs text-muted-foreground">
-                            متاح: {availableBoxes} كرتون، {availableUnits} وحدة
+                            {t('warehouse.available_boxes_units', { boxes: availableBoxes, units: availableUnits })}
                           </p>
-                          {isUnavailable && <p className="text-xs text-red-500 mt-1">غير متاح حاليًا</p>}
+                          {isUnavailable && <p className="text-xs text-red-500 mt-1">{t('warehouse.item_20748')}</p>}
                         </div>
                       </div>
 
                       {transfer.selected && (
                         <div className="space-y-3 mr-8 border-t pt-2 mt-2">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <Label className="text-xs font-medium">نوع التغليف:</Label>
+                            <Label className="text-xs font-medium">{t('warehouse.type')}</Label>
                             <RadioGroup
                               value={transfer.packagingType}
                               onValueChange={(value) => updateItemTransfer(item.id, "packagingType", value as "box" | "unit")}
@@ -455,16 +460,16 @@ export default function TransferFromWarehouseModal({
                             >
                               <div className="flex items-center space-x-2 space-x-reverse">
                                 <RadioGroupItem value="box" id={`${item.id}-box`} />
-                                <Label htmlFor={`${item.id}-box`} className="text-xs cursor-pointer">كرتون ({availableBoxes})</Label>
+                                <Label htmlFor={`${item.id}-box`} className="text-xs cursor-pointer">{t('warehouse.box_2')}{availableBoxes})</Label>
                               </div>
                               <div className="flex items-center space-x-2 space-x-reverse">
                                 <RadioGroupItem value="unit" id={`${item.id}-unit`} />
-                                <Label htmlFor={`${item.id}-unit`} className="text-xs cursor-pointer">وحدة ({availableUnits})</Label>
+                                <Label htmlFor={`${item.id}-unit`} className="text-xs cursor-pointer">{t('warehouse.unit_3')}{availableUnits})</Label>
                               </div>
                             </RadioGroup>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Label className="text-xs font-medium">الكمية:</Label>
+                            <Label className="text-xs font-medium">{t('warehouse.quantity')}</Label>
                             <div className="flex items-center gap-1.5 sm:gap-2">
                               <Button
                                 type="button"
@@ -502,14 +507,14 @@ export default function TransferFromWarehouseModal({
                                 onClick={() => updateItemTransfer(item.id, "quantity", selectedPackagingAvailable)}
                                 disabled={selectedPackagingAvailable === 0}
                               >
-                                الحد الأقصى
+                                {t('warehouse.item_15925')}
                               </Button>
                             </div>
                           </div>
                           {hasQuantityError && (
                             <div className="inline-flex items-center gap-1 text-xs text-red-500">
                               <AlertTriangle className="h-3.5 w-3.5" />
-                              الكمية المدخلة أكبر من المتاح ({selectedPackagingAvailable})
+                              {t('warehouse.quantity_count', { count: selectedPackagingAvailable })}
                             </div>
                           )}
                         </div>
@@ -524,10 +529,10 @@ export default function TransferFromWarehouseModal({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ملاحظات (اختياري)</FormLabel>
+                    <FormLabel>{t('warehouse.notes')}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="أضف ملاحظات حول عملية النقل..."
+                        placeholder={t('warehouse.notes_operation')}
                         className="resize-none h-16 text-xs sm:text-sm"
                         {...field}
                       />
@@ -539,17 +544,17 @@ export default function TransferFromWarehouseModal({
 
               <div className="rounded-lg border bg-muted/20 px-3 py-1.5 text-xs sm:text-sm space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">الأصناف المختارة</span>
+                  <span className="text-muted-foreground">{t('warehouse.item_23834')}</span>
                   <span className="font-semibold">{selectedItemsCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">إجمالي الكمية</span>
+                  <span className="text-muted-foreground">{t('warehouse.total_quantity')}</span>
                   <span className="font-semibold">{totalSelectedQuantity}</span>
                 </div>
                 {overflowItemsCount > 0 && (
                   <div className="inline-flex items-center gap-1 text-xs text-red-500">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    يوجد {overflowItemsCount} صنف بكميات أعلى من المخزون المتاح
+                    {t('warehouse.overflow_items_count', { count: overflowItemsCount })}
                   </div>
                 )}
               </div>
@@ -560,7 +565,7 @@ export default function TransferFromWarehouseModal({
                   disabled={transferMutation.isPending || selectedItemsCount === 0 || overflowItemsCount > 0}
                   className="flex-1"
                 >
-                  {transferMutation.isPending ? "جاري النقل..." : "تأكيد النقل"}
+                  {transferMutation.isPending ? t('warehouse.item_14511') : t('warehouse.confirm')}
                 </Button>
                 <Button
                   type="button"
@@ -568,7 +573,7 @@ export default function TransferFromWarehouseModal({
                   onClick={() => onOpenChange(false)}
                   className="flex-1"
                 >
-                  إلغاء
+                  {t('warehouse.cancel')}
                 </Button>
               </div>
             </form>

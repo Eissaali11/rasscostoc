@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -79,6 +80,7 @@ const COLORS = {
 };
 
 export default function CourierDashboardPage() {
+  const { t, dir } = useTranslation();
   const [, setLocation] = useLocation();
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
@@ -95,7 +97,7 @@ export default function CourierDashboardPage() {
     return (
       <div className="flex items-center justify-center h-64 text-slate-400">
         <Loader2 className="animate-spin w-6 h-6 mr-2" />
-        <span>جاري التحميل...</span>
+        <span>{t('courier.loading')}</span>
       </div>
     );
   }
@@ -114,9 +116,9 @@ export default function CourierDashboardPage() {
 
   // Data for Donut Chart (Pie Chart)
   const donutData = [
-    { name: "مكتمل", value: completed, color: COLORS.completed, statusKey: "Installation Completed" },
-    { name: "غير مكتمل", value: notCompleted, color: COLORS.notCompleted, statusKey: "Not Completed" },
-    { name: "قيد المعالجة", value: inProgress > 0 ? inProgress : 0, color: COLORS.inProgress, statusKey: "pending" },
+    { name: t('courier.completed_5'), value: completed, color: COLORS.completed, statusKey: "Installation Completed" },
+    { name: t('courier.completed_6'), value: notCompleted, color: COLORS.notCompleted, statusKey: "Not Completed" },
+    { name: t('courier.pending_1'), value: inProgress > 0 ? inProgress : 0, color: COLORS.inProgress, statusKey: "pending" },
   ].filter(d => d.value > 0);
 
   // Data for Failures Bar Chart
@@ -138,10 +140,10 @@ export default function CourierDashboardPage() {
   };
 
   return (
-    <div dir="rtl" className="space-y-6 p-1 text-slate-200">
+    <div dir={dir} className="space-y-6 p-1 text-slate-200">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-slate-100">لوحة تحكم التوصيل</h1>
+        <h1 className="text-2xl font-bold text-slate-100">{t('courier.dashboard_delivery')}</h1>
         <span className="bg-emerald-500/20 text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-500/30">
           Courier Module
         </span>
@@ -150,15 +152,15 @@ export default function CourierDashboardPage() {
       {/* Quick Access Shortcuts */}
       <div className="bg-[#1a3636]/60 border border-slate-700/40 rounded-2xl p-4 shadow-lg space-y-3">
         <h2 className="text-xs font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
-          ⚡ روابط الوصول السريع
+          {t('courier.text')}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[
-            { label: "البيانات الخام", path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30 text-slate-300" },
-            { label: "التحقق", path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-slate-350" },
-            { label: "تقارير PDF", path: "/courier/pdf", icon: FileText, color: "hover:bg-purple-500/10 hover:border-purple-500/30 text-slate-300" },
-            { label: "التقارير", path: "/courier/reports", icon: BarChart3, color: "hover:bg-indigo-500/10 hover:border-indigo-500/30 text-slate-350" },
-            { label: "تصدير Excel", path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30 text-slate-300" },
+            { label: t('courier.raw_data'), path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30 text-slate-300" },
+            { label: t('courier.requests'), path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30 text-slate-350" },
+            { label: t('courier.pdf_reports'), path: "/courier/pdf", icon: FileText, color: "hover:bg-purple-500/10 hover:border-purple-500/30 text-slate-300" },
+            { label: t('courier.reports'), path: "/courier/reports", icon: BarChart3, color: "hover:bg-indigo-500/10 hover:border-indigo-500/30 text-slate-350" },
+            { label: t('courier.export_excel'), path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30 text-slate-300" },
           ].map((btn) => {
             const Icon = btn.icon;
             return (
@@ -178,53 +180,53 @@ export default function CourierDashboardPage() {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         <StatCard
-          label="إجمالي الطلبات (اضغط للاستعراض)"
+          label={t('courier.total_requests_1')}
           value={stats?.totalRequests ?? "—"}
           icon={BarChart2}
           color="bg-blue-600"
           onClick={() => setLocation("/courier/requests")}
         />
         <StatCard
-          label="مكتمل (اضغط للاستعراض)"
+          label={t('courier.completed_3')}
           value={completed}
           icon={PackageCheck}
           color="bg-emerald-600"
           onClick={() => setLocation("/courier/requests?status=Installation Completed")}
         />
         <StatCard
-          label="غير مكتمل (اضغط للاستعراض)"
+          label={t('courier.completed_4')}
           value={notCompleted}
           icon={XCircle}
           color="bg-red-600"
           onClick={() => setLocation("/courier/requests?status=Not Completed")}
         />
         <StatCard
-          label="قيد المعالجة (اضغط للاستعراض)"
+          label={t('courier.pending')}
           value={inProgress}
           icon={Timer}
           color="bg-amber-600"
           onClick={() => setLocation("/courier/requests?status=pending")}
         />
         <StatCard
-          label="تقارير PDF معالجة"
+          label={t('courier.item_19351')}
           value={aiStats?.totalProcessed ?? "—"}
           icon={FileText}
           color="bg-purple-600"
         />
         <StatCard
-          label="تقارير مُطبَّقة"
+          label={t('courier.item_22364')}
           value={aiStats?.totalApplied ?? "—"}
           icon={PackageCheck}
           color="bg-cyan-600"
         />
         <StatCard
-          label="متوسط دقة الاستخراج"
+          label={t('courier.item_27036')}
           value={aiStats?.averageConfidence ? `${aiStats.averageConfidence}%` : "—"}
           icon={TrendingUp}
           color="bg-indigo-600"
         />
         <StatCard
-          label="معدل الإتمام"
+          label={t('courier.rate')}
           value={`${completionRate}%`}
           icon={TrendingUp}
           color="bg-teal-600"
@@ -237,8 +239,8 @@ export default function CourierDashboardPage() {
         {/* Donut Chart: Completion Status */}
         <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-100">نسبة توزيع الطلبات وإتمامها</h2>
-            <p className="text-xs text-slate-400 mt-1">توزيع نسبي لحالات المعالجة والتركيب الحالية (اضغط على الفئات للاستعراض)</p>
+            <h2 className="text-base font-bold text-slate-100">{t('courier.requests_1')}</h2>
+            <p className="text-xs text-slate-400 mt-1">{t('courier.item_95772')}</p>
           </div>
           
           <div className="h-64 mt-4 flex items-center justify-center relative">
@@ -262,14 +264,14 @@ export default function CourierDashboardPage() {
                 <Tooltip
                   contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right" }}
                   itemStyle={{ color: "#e2e8f0" }}
-                  formatter={(value: any, name: any) => [`${value} طلب`, name]}
+                  formatter={(value: any, name: any) => [t('courier.request_6', { var_0: value }), name]}
                 />
               </PieChart>
             </ResponsiveContainer>
             
             {/* Center Label inside Donut */}
             <div className="absolute text-center pointer-events-none">
-              <span className="text-[10px] text-slate-400 block font-semibold">إجمالي الطلبات</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">{t('courier.total_requests')}</span>
               <span className="text-2xl font-black text-white block mt-0.5">{stats?.totalRequests || 0}</span>
             </div>
           </div>
@@ -293,15 +295,15 @@ export default function CourierDashboardPage() {
         {/* Bar Chart: Failure Reasons */}
         <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-100 font-sans">أسباب الفشل الأكثر شيوعاً</h2>
-            <p className="text-xs text-slate-400 mt-1">المعوقات والمبررات التشغيلية الأكثر تكراراً في الميدان (اضغط للاستعراض)</p>
+            <h2 className="text-base font-bold text-slate-100 font-sans">{t('courier.fail_2')}</h2>
+            <p className="text-xs text-slate-400 mt-1">{t('courier.item_97347')}</p>
           </div>
 
           <div className="h-64 mt-4">
             {barData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
                 <AlertCircle className="w-8 h-8 text-slate-600" />
-                <span className="text-xs">لا توجد حالات فشل أو مبررات مسجلة حتى الآن</span>
+                <span className="text-xs">{t('courier.no_fail')}</span>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -325,7 +327,7 @@ export default function CourierDashboardPage() {
                   <Tooltip
                     contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right" }}
                     itemStyle={{ color: "#e2e8f0" }}
-                    formatter={(value: any) => [`${value} تكرار`, "عدد الحالات"]}
+                    formatter={(value: any) => [t('courier.duplicate_1', { var_0: value }), t('courier.item_15883')]}
                   />
                   <Bar dataKey="count" fill="#ef4444" radius={[0, 6, 6, 0]} cursor="pointer">
                     {barData.map((entry, index) => (
@@ -343,9 +345,9 @@ export default function CourierDashboardPage() {
 
           {/* Simple list info */}
           <div className="mt-4 pt-4 border-t border-slate-700/40 text-xs text-slate-400 flex items-center justify-between">
-            <span>إجمالي أسباب الفشل المصنفة</span>
+            <span>{t('courier.total_fail')}</span>
             <span className="text-slate-200 font-bold">
-              {Object.values(stats?.failures || {}).reduce((s, v) => s + v, 0)} حالة
+              {t('courier.count_status', { count: Object.values(stats?.failures || {}).reduce((s, v) => s + v, 0) })}
             </span>
           </div>
         </div>

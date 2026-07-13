@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { motion } from "framer-motion";
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from "recharts";
 import { TrendingUp, Package, TruckIcon, Warehouse } from "lucide-react";
@@ -19,18 +20,19 @@ interface ProductData {
 }
 
 export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventoryChartProps) => {
+  const { t } = useTranslation();
   // Aggregate data from all sources
   const aggregateInventory = (): ProductData[] => {
     const products = [
       { name: "N950", nameAr: "N950", color: "#3b82f6" },
       { name: "I9000S", nameAr: "I9000S", color: "#8b5cf6" },
       { name: "I9100", nameAr: "I9100", color: "#ec4899" },
-      { name: "RollPaper", nameAr: "ورق حراري", color: "#10b981" },
-      { name: "Stickers", nameAr: "ملصقات", color: "#f59e0b" },
-      { name: "Batteries", nameAr: "بطاريات", color: "#eab308" },
-      { name: "MobilySIM", nameAr: "موبايلي", color: "#22c55e" },
+      { name: "RollPaper", nameAr: t('inventory.paper'), color: "#10b981" },
+      { name: "Stickers", nameAr: t('inventory.stickers'), color: "#f59e0b" },
+      { name: "Batteries", nameAr: t('inventory.batteries_1'), color: "#eab308" },
+      { name: "MobilySIM", nameAr: t('inventory.mobily'), color: "#22c55e" },
       { name: "STCSIM", nameAr: "STC", color: "#a855f7" },
-      { name: "ZainSIM", nameAr: "زين", color: "#f97316" },
+      { name: "ZainSIM", nameAr: t('inventory.zain'), color: "#f97316" },
     ];
 
     return products.map(product => {
@@ -144,19 +146,19 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
           <div className="space-y-1 text-sm">
             <p className="flex items-center gap-2 text-purple-400">
               <Package className="h-3 w-3" />
-              <span>مخزون ثابت: {payload[0]?.value || 0}</span>
+              <span>{t('inventory.item_14385')}{payload[0]?.value || 0}</span>
             </p>
             <p className="flex items-center gap-2 text-emerald-400">
               <TruckIcon className="h-3 w-3" />
-              <span>مخزون متحرك: {payload[1]?.value || 0}</span>
+              <span>{t('inventory.item_16029')}{payload[1]?.value || 0}</span>
             </p>
             <p className="flex items-center gap-2 text-orange-400">
               <Warehouse className="h-3 w-3" />
-              <span>مستودعات: {payload[2]?.value || 0}</span>
+              <span>{t('inventory.warehouses_1')}{payload[2]?.value || 0}</span>
             </p>
             <div className="border-t border-white/20 mt-2 pt-2">
               <p className="text-white font-bold">
-                المجموع: {(payload[0]?.value || 0) + (payload[1]?.value || 0) + (payload[2]?.value || 0)}
+                {t('common.total_label', { total: (payload[0]?.value || 0) + (payload[1]?.value || 0) + (payload[2]?.value || 0) })}
               </p>
             </div>
           </div>
@@ -201,14 +203,14 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
               <TrendingUp className="h-8 w-8 text-white" />
             </motion.div>
             <div>
-              <h2 className="text-3xl font-bold text-white">إجمالي المخزون في النظام</h2>
-              <p className="text-gray-400 text-sm">عرض شامل للمخزون في المندوبين والمستودعات</p>
+              <h2 className="text-3xl font-bold text-white">{t('inventory.total_inventory_system')}</h2>
+              <p className="text-gray-400 text-sm">{t('inventory.view_couriers')}</p>
             </div>
           </div>
           <div className="bg-[#18B2B0]/20 backdrop-blur-sm border border-[#18B2B0]/30 rounded-2xl px-6 py-4">
-            <p className="text-gray-400 text-sm">الإجمالي الكلي</p>
+            <p className="text-gray-400 text-sm">{t('inventory.total_2')}</p>
             <p className="text-4xl font-bold text-white">{grandTotal.toLocaleString()}</p>
-            <p className="text-[#18B2B0] text-sm">وحدة</p>
+            <p className="text-[#18B2B0] text-sm">{t('inventory.unit')}</p>
           </div>
         </div>
 
@@ -245,9 +247,9 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
                 wrapperStyle={{ paddingTop: '20px' }}
                 formatter={(value) => {
                   const labels: Record<string, string> = {
-                    techniciansFixed: 'مخزون المندوبين الثابت',
-                    techniciansMoving: 'مخزون المندوبين المتحرك',
-                    warehouses: 'مخزون المستودعات'
+                    techniciansFixed: t('inventory.couriers_1'),
+                    techniciansMoving: t('inventory.couriers_3'),
+                    warehouses: t('inventory.warehouses_3')
                   };
                   return <span className="text-gray-300">{labels[value] || value}</span>;
                 }}
@@ -293,7 +295,7 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
                 <Package className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <p className="text-gray-400 text-sm">مخزون المندوبين الثابت</p>
+                <p className="text-gray-400 text-sm">{t('inventory.couriers_1')}</p>
                 <p className="text-2xl font-bold text-white">
                   {data.reduce((sum, item) => sum + item.techniciansFixed, 0).toLocaleString()}
                 </p>
@@ -310,7 +312,7 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
                 <TruckIcon className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-gray-400 text-sm">مخزون المندوبين المتحرك</p>
+                <p className="text-gray-400 text-sm">{t('inventory.couriers_3')}</p>
                 <p className="text-2xl font-bold text-white">
                   {data.reduce((sum, item) => sum + item.techniciansMoving, 0).toLocaleString()}
                 </p>
@@ -327,7 +329,7 @@ export const GlobalInventoryChart = ({ technicians, warehouses }: GlobalInventor
                 <Warehouse className="h-5 w-5 text-orange-400" />
               </div>
               <div>
-                <p className="text-gray-400 text-sm">مخزون المستودعات</p>
+                <p className="text-gray-400 text-sm">{t('inventory.warehouses_3')}</p>
                 <p className="text-2xl font-bold text-white">
                   {data.reduce((sum, item) => sum + item.warehouses, 0).toLocaleString()}
                 </p>

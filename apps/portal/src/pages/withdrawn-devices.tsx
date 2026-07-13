@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -26,36 +27,7 @@ import { WithdrawnDevice } from "@shared/schema";
 type DeviceReviewStatus = "pending" | "approved" | "rejected";
 type ReasonKey = "damaged" | "mismatch" | "warranty";
 
-const statusConfig: Record<
-  DeviceReviewStatus,
-  {
-    text: string;
-    badgeClass: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }
-> = {
-  pending: {
-    text: "قيد المراجعة",
-    badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-    icon: TriangleAlert,
-  },
-  approved: {
-    text: "موافق عليها",
-    badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-    icon: CheckCircle2,
-  },
-  rejected: {
-    text: "مرفوضة",
-    badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-    icon: XCircle,
-  },
-};
 
-const reasonLabels: Record<ReasonKey, string> = {
-  damaged: "منتج تالف",
-  mismatch: "عدم تطابق",
-  warranty: "ضمان وكفالة",
-};
 
 const normalize = (value?: string | null): string => (value || "").trim().toLowerCase();
 
@@ -87,11 +59,11 @@ const inferReasonKey = (device: WithdrawnDevice): ReasonKey => {
   return "warranty";
 };
 
-const getDeviceFamily = (terminalId: string): string => {
+const getDeviceFamily = (terminalId: string, t: any): string => {
   const value = String(terminalId || "").trim();
-  if (!value) return "غير مصنف";
+  if (!value) return t('reports.item_11222');
   const family = value.split(/[-_\s]/)[0]?.trim();
-  return family ? family.toUpperCase() : "غير مصنف";
+  return family ? family.toUpperCase() : t('reports.item_11222');
 };
 
 const formatCardDate = (value?: unknown): string => {
@@ -117,6 +89,38 @@ const formatCardTime = (value?: unknown): string => {
 };
 
 export default function WithdrawnDevicesPage() {
+  const { t } = useTranslation();
+
+  const statusConfig: Record<
+    DeviceReviewStatus,
+    {
+      text: string;
+      badgeClass: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }
+  > = {
+    pending: {
+      text: t('reports.pending_review_1'),
+      badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+      icon: TriangleAlert,
+    },
+    approved: {
+      text: t('reports.ok_1'),
+      badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+      icon: CheckCircle2,
+    },
+    rejected: {
+      text: t('reports.item_9566'),
+      badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      icon: XCircle,
+    },
+  };
+
+  const reasonLabels: Record<ReasonKey, string> = {
+    damaged: t('reports.item_12759'),
+    mismatch: t('reports.item_12735'),
+    warranty: t('reports.item_15976'),
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [hoveredMonthKey, setHoveredMonthKey] = useState<string | null>(null);
 
@@ -205,7 +209,7 @@ export default function WithdrawnDevicesPage() {
         : Math.round(((currentMonth - previousMonth) / previousMonth) * 100);
 
     const topFamiliesMap = allDevices.reduce<Record<string, number>>((acc, device) => {
-      const family = getDeviceFamily(device.terminalId);
+      const family = getDeviceFamily(device.terminalId, t);
       acc[family] = (acc[family] || 0) + 1;
       return acc;
     }, {});
@@ -270,7 +274,7 @@ export default function WithdrawnDevicesPage() {
   }, [analytics.monthlyTrend]);
 
   if (isLoading) {
-    return <div className="text-center py-8 text-slate-300">جاري التحميل...</div>;
+    return <div className="text-center py-8 text-slate-300">{t('reports.loading')}</div>;
   }
 
   return (
@@ -281,7 +285,7 @@ export default function WithdrawnDevicesPage() {
             <Button asChild variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800/70 hover:text-white w-fit">
               <Link href="/home" data-testid="button-back-home">
                 <ArrowRight className="h-4 w-4 ml-2" />
-                <span>العودة للرئيسية</span>
+                <span>{t('reports.item_22323')}</span>
               </Link>
             </Button>
             <div className="flex items-center gap-3">
@@ -290,9 +294,9 @@ export default function WithdrawnDevicesPage() {
               </div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                  تحليلات المسحوبة <span className="text-cyan-300">Returns Analytics</span>
+                  {t('reports.text')} <span className="text-cyan-300">Returns Analytics</span>
                 </h2>
-                <p className="text-sm text-slate-400">نظرة عامة على أداء المرتجعات والخسائر المالية للمخزون</p>
+                <p className="text-sm text-slate-400">{t('reports.finance')}</p>
               </div>
             </div>
           </div>
@@ -301,13 +305,13 @@ export default function WithdrawnDevicesPage() {
             <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20">
               <Link href="/withdrawn-devices/all">
                 <FileClock className="h-4 w-4 ml-2" />
-                سجل العمليات المرتجعة
+                {t('reports.log_operations_returned')}
               </Link>
             </Button>
             <Button asChild className="bg-cyan-600 hover:bg-cyan-500 text-white">
               <Link href="/withdrawn-devices/management" data-testid="button-open-management">
                 <Settings2 className="h-4 w-4 ml-2" />
-                إدارة الأصناف المرتجعة
+                {t('reports.management_returned')}
               </Link>
             </Button>
           </div>
@@ -318,11 +322,11 @@ export default function WithdrawnDevicesPage() {
         <Card className="border-cyan-500/25 bg-slate-900/50">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">إجمالي المرتجعات</p>
+              <p className="text-sm text-slate-400 mb-1">{t('reports.total')}</p>
               <h3 className="text-3xl font-bold text-white">{analytics.total}</h3>
               <p className={`text-xs mt-2 flex items-center gap-1 ${analytics.monthlyDelta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                 {analytics.monthlyDelta >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                {analytics.monthlyDelta >= 0 ? "+" : ""}{analytics.monthlyDelta}% عن الشهر السابق
+                {t('common.vs_previous_month', { delta: `${analytics.monthlyDelta >= 0 ? "+" : ""}${analytics.monthlyDelta}` })}
               </p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-cyan-500/15 text-cyan-300 flex items-center justify-center">
@@ -334,11 +338,11 @@ export default function WithdrawnDevicesPage() {
         <Card className="border-emerald-500/25 bg-slate-900/50">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">معدل الموافقة</p>
+              <p className="text-sm text-slate-400 mb-1">{t('reports.rate')}</p>
               <h3 className="text-3xl font-bold text-white">{analytics.approvalRate}%</h3>
               <p className="text-xs text-emerald-300 mt-2 flex items-center gap-1">
                 <ClipboardCheck className="h-3.5 w-3.5" />
-                اعتماد مباشر من رحلة الفحص
+                {t('reports.journey')}
               </p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
@@ -350,9 +354,9 @@ export default function WithdrawnDevicesPage() {
         <Card className="border-amber-500/25 bg-slate-900/50">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">في انتظار الفحص</p>
+              <p className="text-sm text-slate-400 mb-1">{t('reports.item_20736')}</p>
               <h3 className="text-3xl font-bold text-white">{analytics.pending}</h3>
-              <p className="text-xs text-amber-300 mt-2">حالات تحتاج متابعة المشرف</p>
+              <p className="text-xs text-amber-300 mt-2">{t('reports.followup_supervisor')}</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center">
               <TriangleAlert className="h-5 w-5" />
@@ -363,11 +367,11 @@ export default function WithdrawnDevicesPage() {
         <Card className="border-rose-500/25 bg-slate-900/50">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">خسائر التلفيات</p>
+              <p className="text-sm text-slate-400 mb-1">{t('reports.item_20660')}</p>
               <h3 className="text-3xl font-bold text-rose-300">
                 {analytics.estimatedLoss.toLocaleString("en-US")} <span className="text-sm text-slate-400">SAR</span>
               </h3>
-              <p className="text-xs text-rose-300 mt-2">تقدير مبدئي مبني على الحالات المرفوضة</p>
+              <p className="text-xs text-rose-300 mt-2">{t('reports.item_51106')}</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-rose-500/15 text-rose-300 flex items-center justify-center">
               <XCircle className="h-5 w-5" />
@@ -379,11 +383,11 @@ export default function WithdrawnDevicesPage() {
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-2 border-white/10 bg-slate-900/50 p-5">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-white font-bold">اتجاهات المسحوبة الشهرية</h3>
+            <h3 className="text-white font-bold">{t('reports.item_34991')}</h3>
             <div className="text-left">
-              <span className="text-xs text-slate-400 block">آخر 6 أشهر</span>
+              <span className="text-xs text-slate-400 block">{t('reports.item_11206')}</span>
               <span className="text-xs text-cyan-300 block mt-1">
-                {activeTrendPoint ? `المؤشر: ${activeTrendPoint.label} • ${activeTrendPoint.count}` : "المؤشر: -"}
+                {activeTrendPoint ? t('reports.item_19846', { var_0: activeTrendPoint.label, var_1: activeTrendPoint.count }) : t('reports.item_9664')}
               </span>
             </div>
           </div>
@@ -406,7 +410,7 @@ export default function WithdrawnDevicesPage() {
                     <div className="relative w-full flex flex-col items-center">
                       {hoveredMonthKey === month.key && (
                         <div className="absolute -top-8 text-[11px] px-2 py-1 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 whitespace-nowrap">
-                          {month.count} عملية
+                          {t('reports.operation_2', { count: month.count })}
                         </div>
                       )}
                       <span className={`text-[11px] font-mono mb-1 ${month.isCurrentMonth ? "text-cyan-200" : "text-slate-400"}`}>{month.count}</span>
@@ -435,7 +439,7 @@ export default function WithdrawnDevicesPage() {
         </Card>
 
         <Card className="border-white/10 bg-slate-900/50 p-5">
-          <h3 className="text-white font-bold mb-5">أسباب المرتجعات</h3>
+          <h3 className="text-white font-bold mb-5">{t('reports.item_22190')}</h3>
           <div className="space-y-4">
             {analytics.reasons.map((reason) => (
               <div key={reason.key}>
@@ -455,7 +459,7 @@ export default function WithdrawnDevicesPage() {
                     style={{ width: `${Math.max(3, reason.percentage)}%` }}
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">عدد الحالات: {reason.count}</p>
+                <p className="text-[11px] text-slate-500 mt-1">{t('reports.item_15941')}{reason.count}</p>
               </div>
             ))}
           </div>
@@ -464,12 +468,12 @@ export default function WithdrawnDevicesPage() {
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-900/45 p-5 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <h3 className="text-xl font-bold text-white">آخر العمليات فقط</h3>
+          <h3 className="text-xl font-bold text-white">{t('reports.operations_1')}</h3>
           <div className="relative w-full sm:w-80">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
             <Input
               type="text"
-              placeholder="ابحث بآخر العمليات..."
+              placeholder={t('reports.operations_2')}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               className="pr-9 bg-slate-950/40 border-white/10 text-white placeholder:text-slate-500"
@@ -527,7 +531,7 @@ export default function WithdrawnDevicesPage() {
                     >
                       <Link href={`/withdrawn-devices/${device.id}`}>
                         <CircleEllipsis className="h-4 w-4 ml-1" />
-                        تفاصيل
+                        {t('reports.details_1')}
                       </Link>
                     </Button>
                   </div>
@@ -538,7 +542,7 @@ export default function WithdrawnDevicesPage() {
         ) : (
           <Card className="bg-slate-900/40 border-white/10">
             <div className="py-10 text-center">
-              <p className="text-slate-300">لا توجد عمليات حديثة مطابقة للبحث.</p>
+              <p className="text-slate-300">{t('reports.no_1')}</p>
             </div>
           </Card>
         )}

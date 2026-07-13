@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -78,6 +79,7 @@ export function EditUserModal({
   });
 
   useEffect(() => {
+  const { t } = useTranslation();
     if (user) {
       let initialPermissions = "";
       if (user.permissions) {
@@ -114,8 +116,8 @@ export function EditUserModal({
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
         toast({
-          title: "حجم الصورة كبير جداً",
-          description: "يجب أن تكون الصورة أقل من 2 ميجابايت",
+          title: t('users.size_image'),
+          description: t('users.image'),
           variant: "destructive",
         });
         return;
@@ -123,8 +125,8 @@ export function EditUserModal({
 
       if (!file.type.startsWith('image/')) {
         toast({
-          title: "نوع الملف غير صحيح",
-          description: "يرجى اختيار صورة",
+          title: t('users.type_file'),
+          description: t('users.image_1'),
           variant: "destructive",
         });
         return;
@@ -179,15 +181,15 @@ export function EditUserModal({
       await queryClient.refetchQueries({ queryKey: ["/api/users"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
-        title: "تم التحديث بنجاح",
-        description: "تم تحديث بيانات المستخدم",
+        title: t('users.completed_update_successfully'),
+        description: t('users.completed_update_data_user'),
       });
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل في تحديث المستخدم",
+        title: t('users.error'),
+        description: error?.message || t('users.fail_update_user'),
         variant: "destructive",
       });
     },
@@ -209,10 +211,10 @@ export function EditUserModal({
       <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            تعديل المستخدم
+            {t('users.edit_user')}
           </DialogTitle>
           <DialogDescription className="text-base">
-            قم بتحديث بيانات المستخدم في النموذج أدناه
+            {t('users.data_user')}
           </DialogDescription>
         </DialogHeader>
 
@@ -255,10 +257,10 @@ export function EditUserModal({
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg cursor-pointer shadow-lg transition-all font-semibold"
                 >
                   <Upload className="h-4 w-4" />
-                  {profileImage ? 'تغيير الصورة' : 'رفع صورة شخصية'}
+                  {profileImage ? t('users.image_2') : t('users.image_3')}
                 </label>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                  اختياري - بحد أقصى 2 ميجابايت
+                  {t('users.phrase_02b1fb67')}
                 </p>
               </div>
             </div>
@@ -269,11 +271,11 @@ export function EditUserModal({
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">الاسم الكامل</FormLabel>
+                    <FormLabel className="font-bold">{t('users.name')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل الاسم الكامل"
+                        placeholder={t('users.name_3')}
                         className="h-11"
                         data-testid="input-fullname"
                       />
@@ -288,11 +290,11 @@ export function EditUserModal({
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">اسم المستخدم</FormLabel>
+                    <FormLabel className="font-bold">{t('users.name_user')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل اسم المستخدم"
+                        placeholder={t('users.name_user_1')}
                         className="h-11"
                         data-testid="input-username"
                       />
@@ -307,7 +309,7 @@ export function EditUserModal({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">البريد الإلكتروني</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_25511')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -327,12 +329,12 @@ export function EditUserModal({
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">كلمة السر الجديدة (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_35144')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="password"
-                        placeholder="اتركها فارغة إذا لم ترد التغيير"
+                        placeholder={t('users.item_41458')}
                         className="h-11"
                         data-testid="input-password"
                       />
@@ -347,11 +349,11 @@ export function EditUserModal({
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">المدينة (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.city_1')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل المدينة"
+                        placeholder={t('users.city_2')}
                         className="h-11"
                         data-testid="input-city"
                       />
@@ -366,7 +368,7 @@ export function EditUserModal({
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">الصلاحية</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_12715')}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -374,16 +376,16 @@ export function EditUserModal({
                     >
                       <FormControl>
                         <SelectTrigger className="h-11">
-                          <SelectValue placeholder="اختر الصلاحية" />
+                          <SelectValue placeholder={t('users.item_19067')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="admin">👑 إدمن (Admin)</SelectItem>
-                        <SelectItem value="supervisor">💼 مشرف عام (Supervisor)</SelectItem>
-                        <SelectItem value="courier_supervisor">🚚 مشرف عمليات التوصيل (Courier Supervisor)</SelectItem>
-                        <SelectItem value="warehouse">📦 أمين مستودع (Warehouse Keeper)</SelectItem>
-                        <SelectItem value="technician">👨‍💼 مندوب (Technician)</SelectItem>
-                        <SelectItem value="viewer">👁️ مراقب (Viewer)</SelectItem>
+                        <SelectItem value="admin">{t('users.item_118759')}</SelectItem>
+                        <SelectItem value="supervisor">{t('users.supervisor_1')}</SelectItem>
+                        <SelectItem value="courier_supervisor">{t('users.supervisor_delivery')}</SelectItem>
+                        <SelectItem value="warehouse">{t('users.warehouse_1')}</SelectItem>
+                        <SelectItem value="technician">{t('users.item_240988')}</SelectItem>
+                        <SelectItem value="viewer">{t('users.item_185495')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -396,11 +398,11 @@ export function EditUserModal({
                 name="department"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">القسم (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_19201')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل اسم القسم"
+                        placeholder={t('users.name_4')}
                         className="h-11"
                         data-testid="input-department"
                       />
@@ -415,11 +417,11 @@ export function EditUserModal({
                 name="employeeCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">رقم الموظف (Employee Code) (اختياري)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.number_8')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل رقم الموظف"
+                        placeholder={t('users.number_9')}
                         className="h-11"
                         data-testid="input-employee-code"
                       />
@@ -435,11 +437,11 @@ export function EditUserModal({
                   name="technicianCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold">رقم الفني (Technician Code)</FormLabel>
+                      <FormLabel className="font-bold">{t('users.number_technician_1')}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="أدخل رقم الفني"
+                          placeholder={t('users.number_technician_2')}
                           className="h-11"
                           data-testid="input-technician-code"
                         />
@@ -455,11 +457,11 @@ export function EditUserModal({
                 name="permissions"
                 render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel className="font-bold">الصلاحيات المخصصة (تفصل بينها فاصلة ,)</FormLabel>
+                    <FormLabel className="font-bold">{t('users.item_47989')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="مثال: read:reports, write:requests, approve:all"
+                        placeholder={t('users.item_10499')}
                         className="h-11"
                         data-testid="input-permissions"
                       />
@@ -475,9 +477,9 @@ export function EditUserModal({
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="font-bold">حالة المستخدم</FormLabel>
+                      <FormLabel className="font-bold">{t('users.status_user')}</FormLabel>
                       <div className="text-sm text-muted-foreground">
-                        {field.value ? 'نشط' : 'غير نشط'}
+                        {field.value ? t('users.active') : t('users.inactive')}
                       </div>
                     </div>
                     <FormControl>
@@ -500,7 +502,7 @@ export function EditUserModal({
                 className="px-6"
                 data-testid="button-cancel"
               >
-                إلغاء
+                {t('users.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -508,7 +510,7 @@ export function EditUserModal({
                 className="px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 data-testid="button-submit"
               >
-                {updateUserMutation.isPending ? "جاري التحديث..." : "حفظ التغييرات"}
+                {updateUserMutation.isPending ? t('users.update_1') : t('users.save_1')}
               </Button>
             </div>
           </form>

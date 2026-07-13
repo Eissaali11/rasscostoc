@@ -1,8 +1,10 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
   Boxes,
@@ -193,10 +195,6 @@ function percentage(value: number, max: number): number {
   return Math.min(100, Math.max(0, (value / max) * 100));
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("ar-SA").format(Math.round(value));
-}
-
 function sumRequestItems(req: InventoryRequest): number {
   return (
     Number(req.n950Boxes || 0) + Number(req.n950Units || 0) +
@@ -214,37 +212,10 @@ function sumRequestItems(req: InventoryRequest): number {
 
 type TrendPeriod = "daily" | "weekly" | "monthly";
 
-const trendPeriodOptions: Array<{ value: TrendPeriod; label: string }> = [
-  { value: "monthly", label: "شهري" },
-  { value: "weekly", label: "أسبوعي" },
-  { value: "daily", label: "يومي" },
-];
-
 function getTrendFactors(period: TrendPeriod): number[] {
   if (period === "daily") return [0.56, 0.72, 0.63, 0.81, 0.68, 0.86];
   if (period === "weekly") return [0.69, 0.8, 0.61, 0.75, 0.88, 0.79];
   return [0.72, 0.89, 0.66, 0.76, 0.92, 0.84];
-}
-
-function getTrendLabels(period: TrendPeriod): string[] {
-  const now = new Date();
-
-  if (period === "daily") {
-    return Array.from({ length: 6 }, (_, index) => {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (5 - index));
-      return d.toLocaleDateString("ar-SA", { day: "2-digit", month: "numeric" });
-    });
-  }
-
-  if (period === "weekly") {
-    return Array.from({ length: 6 }, (_, index) => `أسبوع ${index + 1}`);
-  }
-
-  return Array.from({ length: 6 }, (_, index) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-    return d.toLocaleDateString("ar-SA", { month: "long" });
-  });
 }
 
 // ─── Courier Types ────────────────────────────────────────────────────────────
@@ -298,9 +269,36 @@ function CourierStatCard({
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const { t, dir, language, formatNumber, formatDate } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("monthly");
+  const [dashboardTab, setDashboardTab] = useState("overview");
+  const dateLocale = language === "ar" ? "ar-SA" : "en-US";
+
+  const trendPeriodOptions: Array<{ value: TrendPeriod; label: string }> = [
+    { value: "monthly", label: t("dashboard.item_6390") },
+    { value: "weekly", label: t("dashboard.item_9545") },
+    { value: "daily", label: t("dashboard.item_6433") },
+  ];
+
+  const getTrendLabels = (period: TrendPeriod): string[] => {
+    const now = new Date();
+    if (period === "daily") {
+      return Array.from({ length: 6 }, (_, index) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (5 - index));
+        return d.toLocaleDateString(dateLocale, { day: "2-digit", month: "numeric" });
+      });
+    }
+    if (period === "weekly") {
+      return Array.from({ length: 6 }, (_, index) => t("dashboard.week", { var_0: index + 1 }));
+    }
+    return Array.from({ length: 6 }, (_, index) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      return d.toLocaleDateString(dateLocale, { month: "long" });
+    });
+  };
 
   const canSeeGlobalData = user?.role === "admin" || user?.role === "supervisor";
 
@@ -389,7 +387,7 @@ export default function Dashboard() {
     const list = (techniciansData?.technicians || []).map((tech) => ({
       id: tech.technicianId,
       name: tech.technicianName,
-      city: tech.city || "غير محدد",
+      city: tech.city || t('dashboard.item_11173'),
       fixed: sumInventoryValue(tech.fixedInventory),
       moving: sumInventoryValue(tech.movingInventory),
       total: sumInventoryValue(tech.fixedInventory) + sumInventoryValue(tech.movingInventory),
@@ -419,9 +417,9 @@ export default function Dashboard() {
   // Category chart distribution data
   const categoryData = useMemo(() => {
     return [
-      { name: "أجهزة دفع (POS)", value: Math.round(totals.total * 0.45), color: "#22d3ee" },
-      { name: "شرائح اتصالات (SIM)", value: Math.round(totals.total * 0.30), color: "#fb923c" },
-      { name: "مستهلكات (ورق/ملصقات)", value: Math.round(totals.total * 0.25), color: "#c084fc" },
+      { name: t('dashboard.devices_payment'), value: Math.round(totals.total * 0.45), color: "#22d3ee" },
+      { name: t('dashboard.sims'), value: Math.round(totals.total * 0.30), color: "#fb923c" },
+      { name: t('dashboard.paper_stickers'), value: Math.round(totals.total * 0.25), color: "#c084fc" },
     ];
   }, [totals.total]);
 
@@ -455,9 +453,9 @@ export default function Dashboard() {
   const courierCompletionRate = courierStats?.totalRequests ? Math.round((courierCompleted / courierStats.totalRequests) * 100) : 0;
 
   const courierDonutData = [
-    { name: "مكتمل", value: courierCompleted, color: COURIER_COLORS.completed, statusKey: "Installation Completed" },
-    { name: "غير مكتمل", value: courierNotCompleted, color: COURIER_COLORS.notCompleted, statusKey: "Not Completed" },
-    { name: "قيد المعالجة", value: courierInProgress, color: COURIER_COLORS.inProgress, statusKey: "pending" },
+    { name: t('dashboard.completed'), value: courierCompleted, color: COURIER_COLORS.completed, statusKey: "Installation Completed" },
+    { name: t('dashboard.completed_1'), value: courierNotCompleted, color: COURIER_COLORS.notCompleted, statusKey: "Not Completed" },
+    { name: t('dashboard.pending'), value: courierInProgress, color: COURIER_COLORS.inProgress, statusKey: "pending" },
   ].filter((d) => d.value > 0);
 
   const courierTopFailures = Object.entries(courierStats?.failures || {})
@@ -472,22 +470,22 @@ export default function Dashboard() {
   // Render Admin/Supervisor Dashboard
   if (canSeeGlobalData) {
     return (
-      <div dir="rtl" className="space-y-8 text-slate-100">
+      <div dir={dir} className="space-y-8 text-slate-100">
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#1a3636] border border-slate-700/60 p-6 rounded-2xl relative overflow-hidden shadow-lg">
           <div className="absolute -left-20 -top-20 size-60 bg-cyan-400/10 blur-3xl rounded-full" />
           <div className="relative z-10 space-y-1">
             <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">
-              لوحة التحكم المركزية
+              {t('dashboard.admin_panel')}
             </h2>
             <p className="text-slate-400 font-medium">
-              مرحباً بك مجدداً، {user?.fullName || "المشرف"}. إليك نظرة شاملة على عمليات المخزون ومؤشرات الأداء.
+              {t('dashboard.welcome_back_overview', { name: user?.fullName || t('dashboard.supervisor') })}
             </p>
           </div>
           <div className="relative z-10 flex items-center gap-3">
             <div className="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-semibold text-cyan-300 flex items-center gap-2">
               <CalendarIcon className="size-4" />
-              {new Date().toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              {new Date().toLocaleDateString(dateLocale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </div>
           </div>
         </div>
@@ -498,22 +496,22 @@ export default function Dashboard() {
           <Card className="bg-slate-900/40 border-slate-700/80 hover:border-cyan-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-cyan-400/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1 bg-cyan-400 opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">إجمالي قطع المخزون</span>
+              <span className="text-sm font-medium text-slate-400">{t('dashboard.total_units_inventory')}</span>
               <Boxes className="h-5 w-5 text-cyan-400" />
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-extrabold tracking-tight text-white mb-2">{formatNumber(totals.total)}</div>
               <div className="flex flex-col gap-1 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
                 <div className="flex justify-between">
-                  <span>المستودعات:</span>
+                  <span>{t('dashboard.warehouses_1')}</span>
                   <span className="font-semibold text-purple-300">{formatNumber(totals.central)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>المندوبين (ثابت):</span>
+                  <span>{t('dashboard.couriers')}</span>
                   <span className="font-semibold text-cyan-300">{formatNumber(totals.fixed)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>المندوبين (متحرك):</span>
+                  <span>{t('dashboard.couriers_1')}</span>
                   <span className="font-semibold text-orange-300">{formatNumber(totals.moving)}</span>
                 </div>
               </div>
@@ -524,7 +522,7 @@ export default function Dashboard() {
           <Card className="bg-slate-900/40 border-slate-700/80 hover:border-orange-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-orange-400/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1 bg-orange-400 opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">معاملات اليوم</span>
+              <span className="text-sm font-medium text-slate-400">{t('dashboard.day')}</span>
               <Activity className="h-5 w-5 text-orange-400" />
             </CardHeader>
             <CardContent>
@@ -532,10 +530,10 @@ export default function Dashboard() {
                 {formatNumber(dashboardStats?.todayTransactions ?? 0)}
               </div>
               <div className="flex justify-between items-center text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
-                <span>تحديث فوري للشبكة</span>
+                <span>{t('dashboard.update')}</span>
                 <span className="flex items-center gap-1 text-emerald-400 font-semibold">
                   <TrendingUp className="size-3.5" />
-                  +12% عن أمس
+                  {t('dashboard.phrase_a75ee9f0')}
                 </span>
               </div>
             </CardContent>
@@ -545,7 +543,7 @@ export default function Dashboard() {
           <Card className="bg-slate-900/40 border-slate-700/80 hover:border-purple-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-400/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1 bg-purple-400 opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">طاقم العمل والمناديب</span>
+              <span className="text-sm font-medium text-slate-400">{t('dashboard.item_28760')}</span>
               <Users className="h-5 w-5 text-purple-400" />
             </CardHeader>
             <CardContent>
@@ -553,9 +551,9 @@ export default function Dashboard() {
                 {formatNumber(adminStats?.activeUsers ?? dashboardStats?.totalUsers ?? 0)}
               </div>
               <div className="flex justify-between items-center text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
-                <span>إجمالي المستخدمين في النظام</span>
+                <span>{t('dashboard.total_users_system')}</span>
                 <span className="font-semibold text-purple-300">
-                  {formatNumber(adminStats?.totalUsers ?? dashboardStats?.totalUsers ?? 0)} كلي
+                  {t('dashboard.count', { count: formatNumber(adminStats?.totalUsers ?? dashboardStats?.totalUsers ?? 0) })}
                 </span>
               </div>
             </CardContent>
@@ -565,7 +563,7 @@ export default function Dashboard() {
           <Card className="bg-slate-900/40 border-slate-700/80 hover:border-rose-400/40 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-rose-400/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1 bg-rose-400 opacity-80" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-medium text-slate-400">عمليات تتطلب إجراءً</span>
+              <span className="text-sm font-medium text-slate-400">{t('dashboard.item_27049')}</span>
               <AlertTriangle className="h-5 w-5 text-rose-400 animate-pulse" />
             </CardHeader>
             <CardContent>
@@ -574,15 +572,15 @@ export default function Dashboard() {
               </div>
               <div className="flex flex-col gap-1 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
                 <div className="flex justify-between">
-                  <span>طلبات عهدة معلقة:</span>
+                  <span>{t('dashboard.requests')}</span>
                   <span className={`font-semibold ${pendingRequestsCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}`}>
-                    {pendingRequestsCount} طلبات
+                    {t('dashboard.requests_2', { count: pendingRequestsCount })}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>مناقلات مستودعات معلقة:</span>
+                  <span>{t('dashboard.transfers_warehouses')}</span>
                   <span className={`font-semibold ${pendingTransfersCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}`}>
-                    {pendingTransfersCount} مناقلات
+                    {t('dashboard.transfers_2', { count: pendingTransfersCount })}
                   </span>
                 </div>
               </div>
@@ -591,40 +589,102 @@ export default function Dashboard() {
         </div>
 
         {/* Tabbed content sections */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-slate-900/60 border border-slate-700/60 p-1 rounded-xl flex items-center justify-start overflow-x-auto w-full md:w-max">
-            <TabsTrigger value="overview" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-400/30">
-              <Layers className="size-4" />
-              نظرة عامة والنشاط
+        <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-6">
+          <TabsList className="dashboard-tabs-rail !h-auto !min-h-[4.25rem] !w-full md:!w-max !inline-flex !items-center !justify-start !gap-2 !overflow-x-auto !rounded-full !border-2 !border-[#18B2B0]/40 !bg-[#cfd6dc] !p-2.5 !shadow-[0_10px_28px_rgba(15,23,42,0.12)] !text-[#3d4650]">
+            <TabsTrigger
+              value="overview"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+            >
+              {dashboardTab === "overview" && (
+                <motion.span
+                  layoutId="dashboard-tab-pill"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
+                />
+              )}
+              <Layers className="relative z-10 size-5 shrink-0" />
+              <span className="relative z-10">{t('dashboard.item_23921')}</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-400/30">
-              <TrendingUp className="size-4" />
-              تحليلات الأصناف والمخزون
+            <TabsTrigger
+              value="analytics"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+            >
+              {dashboardTab === "analytics" && (
+                <motion.span
+                  layoutId="dashboard-tab-pill"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
+                />
+              )}
+              <TrendingUp className="relative z-10 size-5 shrink-0" />
+              <span className="relative z-10">{t('dashboard.item_35089')}</span>
             </TabsTrigger>
-            <TabsTrigger value="pending" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-400/30">
-              <Clock className="size-4" />
-              العمليات المعلقة
+            <TabsTrigger
+              value="pending"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+            >
+              {dashboardTab === "pending" && (
+                <motion.span
+                  layoutId="dashboard-tab-pill"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
+                />
+              )}
+              <Clock className="relative z-10 size-5 shrink-0" />
+              <span className="relative z-10">{t('dashboard.operations')}</span>
               {totalPendingActions > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                <span className="relative z-10 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[11px] font-extrabold shadow-sm">
                   {totalPendingActions}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="team" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-400/30">
-              <Users className="size-4" />
-              طاقم العمل والمستودعات
+            <TabsTrigger
+              value="team"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+            >
+              {dashboardTab === "team" && (
+                <motion.span
+                  layoutId="dashboard-tab-pill"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
+                />
+              )}
+              <Users className="relative z-10 size-5 shrink-0" />
+              <span className="relative z-10">{t('dashboard.item_31912')}</span>
             </TabsTrigger>
-            <TabsTrigger value="courier" className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-300 data-[state=active]:border data-[state=active]:border-emerald-400/30">
-              <Truck className="size-4" />
-              التوصيل والتركيب
+            <TabsTrigger
+              value="courier"
+              className="dashboard-tab-trigger group relative isolate !z-0 !flex !h-auto !items-center !gap-2.5 !whitespace-nowrap !rounded-full !px-7 !py-4 !text-base !font-extrabold !text-[#4b5563] !shadow-none !transition-colors !duration-300 hover:!text-[#0f8f8d] data-[state=active]:!bg-transparent data-[state=active]:!text-white data-[state=active]:!shadow-none"
+            >
+              {dashboardTab === "courier" && (
+                <motion.span
+                  layoutId="dashboard-tab-pill"
+                  className="dashboard-tab-pill absolute inset-0 z-0 rounded-full bg-gradient-to-l from-[#18B2B0] to-[#0e9a98] shadow-[0_10px_24px_rgba(24,178,176,0.4)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.65 }}
+                />
+              )}
+              <Truck className="relative z-10 size-5 shrink-0" />
+              <span className="relative z-10">{t('dashboard.delivery')}</span>
               {(courierStats?.totalRequests ?? 0) > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">
+                <span className={`relative z-10 px-2 py-0.5 rounded-full text-[11px] font-extrabold border ${
+                  dashboardTab === "courier"
+                    ? "bg-white/25 text-white border-white/30"
+                    : "bg-emerald-500/15 text-emerald-700 border-emerald-500/25"
+                }`}>
                   {courierStats?.totalRequests}
                 </span>
               )}
             </TabsTrigger>
           </TabsList>
 
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={dashboardTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            >
           {/* TAB 1: OVERVIEW */}
           <TabsContent value="overview" className="space-y-6 outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -632,8 +692,8 @@ export default function Dashboard() {
               <div className="lg:col-span-2 rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-white">منحنى توزيع واتجاهات المخزون</h3>
-                    <p className="text-slate-400 text-xs mt-0.5">مقارنة زمنية بين المخزون الثابت، المتحرك، والمستودعات</p>
+                    <h3 className="text-lg font-bold text-white">{t('dashboard.inventory_1')}</h3>
+                    <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.inventory_2')}</p>
                   </div>
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-1 flex items-center gap-1 shrink-0">
                     {trendPeriodOptions.map((option) => (
@@ -678,9 +738,9 @@ export default function Dashboard() {
                         itemStyle={{ color: "#f8fafc" }}
                       />
                       <Legend verticalAlign="top" height={36} iconType="circle" />
-                      <Area type="monotone" name="مخزون ثابت" dataKey="fixed" stroke="#22d3ee" strokeWidth={2} fillOpacity={1} fill="url(#colorFixed)" />
-                      <Area type="monotone" name="مخزون متحرك" dataKey="moving" stroke="#fb923c" strokeWidth={2} fillOpacity={1} fill="url(#colorMoving)" />
-                      <Area type="monotone" name="مخزون مركزي" dataKey="central" stroke="#c084fc" strokeWidth={2} fillOpacity={1} fill="url(#colorCentral)" />
+                      <Area type="monotone" name={t('dashboard.fixed_inventory_chart')} dataKey="fixed" stroke="#22d3ee" strokeWidth={2} fillOpacity={1} fill="url(#colorFixed)" />
+                      <Area type="monotone" name={t('dashboard.moving_inventory_chart')} dataKey="moving" stroke="#fb923c" strokeWidth={2} fillOpacity={1} fill="url(#colorMoving)" />
+                      <Area type="monotone" name={t('dashboard.item_16008')} dataKey="central" stroke="#c084fc" strokeWidth={2} fillOpacity={1} fill="url(#colorCentral)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -690,10 +750,10 @@ export default function Dashboard() {
               <div className="rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col justify-between shadow-sm">
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center justify-between">
-                    تصنيف عناصر المخزون
+                    {t('dashboard.category_items_inventory')}
                     <Shapes className="h-4 w-4 text-slate-400" />
                   </h3>
-                  <p className="text-slate-400 text-xs mt-0.5">نسب توزيع المنتجات المعتمدة بالنظام</p>
+                  <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.item_49426')}</p>
                 </div>
 
                 <div className="flex-1 flex items-center justify-center min-h-[200px]">
@@ -714,7 +774,7 @@ export default function Dashboard() {
                       </Pie>
                       <Tooltip
                         contentStyle={{ backgroundColor: "#1e293b", borderColor: "#475569", borderRadius: "12px", color: "#f8fafc", direction: "rtl" }}
-                        formatter={(value: any) => [`${formatNumber(Number(value))} قطعة`, "الكمية"]}
+                        formatter={(value: any) => [t('dashboard.unit_2', { var_0: formatNumber(Number(value)) }), t('dashboard.quantity')]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -743,14 +803,14 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                       <History className="size-5 text-cyan-400" />
-                      سجل العمليات الأخيرة بالنظام
+                      {t('dashboard.log_operations')}
                     </CardTitle>
                     <CardDescription className="text-slate-400 text-xs mt-0.5">
-                      آخر 10 معاملات مخزونية مسجلة للعهد والعهدة والواردات
+                      {t('dashboard.phrase_1cb4bbe4')}
                     </CardDescription>
                   </div>
                   <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs px-4" asChild>
-                    <Link href="/operations">سجل العمليات الكامل</Link>
+                    <Link href="/operations">{t('dashboard.log_operations_1')}</Link>
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -758,19 +818,19 @@ export default function Dashboard() {
                     <Table>
                       <TableHeader className="bg-slate-950/40 border-slate-800">
                         <TableRow>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">المستلم/الفني</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">نوع العملية</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">الصنف</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">الكمية</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">السبب / الملاحظات</TableHead>
-                          <TableHead className="text-right text-slate-400 text-xs font-semibold">التاريخ والوقت</TableHead>
+                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.received_technician')}</TableHead>
+                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.type_operation')}</TableHead>
+                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.item_7975')}</TableHead>
+                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.quantity')}</TableHead>
+                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.reason_notes')}</TableHead>
+                          <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.date')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {adminStats.recentTransactions.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} className="text-center text-slate-500 py-6 text-sm">
-                              لا توجد سجلات معاملات حديثة متوفرة.
+                              {t('dashboard.no_logs')}
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -784,11 +844,11 @@ export default function Dashboard() {
                                 <TableCell className="py-3">
                                   <div className="flex items-center gap-2">
                                     <div className="size-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300 text-xs">
-                                      {(tx.userName || "م").substring(0, 1)}
+                                      {(tx.userName || t('dashboard.item_1605')).substring(0, 1)}
                                     </div>
                                     <div>
-                                      <div className="font-semibold text-xs text-white">{tx.userName || "مستخدم غير معرف"}</div>
-                                      <div className="text-[10px] text-slate-500">{tx.userRole === "admin" ? "مدير" : tx.userRole === "supervisor" ? "مشرف" : "فني"}</div>
+                                      <div className="font-semibold text-xs text-white">{tx.userName || t('dashboard.item_20777')}</div>
+                                      <div className="text-[10px] text-slate-500">{tx.userRole === "admin" ? t('dashboard.manager') : tx.userRole === "supervisor" ? t('dashboard.supervisor_1') : t('dashboard.item_4817')}</div>
                                     </div>
                                   </div>
                                 </TableCell>
@@ -802,20 +862,20 @@ export default function Dashboard() {
                                           : "bg-cyan-500/10 text-cyan-400"
                                     }`}
                                   >
-                                    {isTransfer ? "مناقلة عهدة" : isIntake ? "إضافة مخزون" : "سحب/صرف"}
+                                    {isTransfer ? t('dashboard.transfer') : isIntake ? t('dashboard.add') : t('dashboard.withdraw_disbursement')}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="py-3 font-semibold text-xs text-slate-300">
-                                  {tx.itemName || "صنف غير معروف"}
+                                  {tx.itemName || t('dashboard.item_17641')}
                                 </TableCell>
                                 <TableCell className="py-3 font-bold text-xs text-white">
-                                  {tx.quantity} وحدات
+                                  {t('dashboard.units_1', { count: tx.quantity })}
                                 </TableCell>
                                 <TableCell className="py-3 text-slate-400 text-xs max-w-[200px] truncate" title={tx.reason}>
                                   {tx.reason || "-"}
                                 </TableCell>
                                 <TableCell className="py-3 text-slate-500 text-xs">
-                                  {new Date(tx.createdAt).toLocaleDateString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                                  {new Date(tx.createdAt).toLocaleDateString(dateLocale, { hour: "2-digit", minute: "2-digit" })}
                                 </TableCell>
                               </TableRow>
                             );
@@ -837,31 +897,31 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                     <ShieldAlert className="size-5 text-rose-400" />
-                    تحذيرات النقص وحالات العجز
+                    {t('dashboard.item_36622')}
                   </CardTitle>
                   <CardDescription className="text-slate-400 text-xs mt-0.5">
-                    القطع والأجهزة التي تقع تحت الحد الحرج للتنبيه
+                    {t('dashboard.units')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 text-center">
                       <div className="text-3xl font-extrabold text-rose-400">{dashboardStats?.lowStockItems ?? 0}</div>
-                      <div className="text-slate-400 text-xs mt-1">أصناف منخفضة المخزون</div>
+                      <div className="text-slate-400 text-xs mt-1">{t('dashboard.inventory')}</div>
                     </div>
                     <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-center">
                       <div className="text-3xl font-extrabold text-slate-200">{dashboardStats?.outOfStockItems ?? 0}</div>
-                      <div className="text-slate-400 text-xs mt-1">أصناف منتهية تماماً</div>
+                      <div className="text-slate-400 text-xs mt-1">{t('dashboard.item_27138')}</div>
                     </div>
                   </div>
 
                   <div className="pt-4 border-t border-slate-800 space-y-3">
                     <div className="flex items-center justify-between text-xs text-slate-300">
-                      <span>مستوى المخزون الحرج العام</span>
-                      <span className="text-rose-400 font-semibold">حالة منبهة</span>
+                      <span>{t('dashboard.level_inventory')}</span>
+                      <span className="text-rose-400 font-semibold">{t('dashboard.status')}</span>
                     </div>
                     <Progress value={85} className="h-2 bg-slate-800 [&>div]:bg-rose-500" />
-                    <p className="text-[10px] text-slate-500">مبني على متوسط الاستهلاك وتفضيلات الفنيين الأسبوعية</p>
+                    <p className="text-[10px] text-slate-500">{t('dashboard.technicians_1')}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -871,17 +931,17 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                     <Settings className="size-5 text-cyan-400" />
-                    تفاصيل مخزون فروع ومندوبي النظام
+                    {t('dashboard.details_branches_system')}
                   </CardTitle>
                   <CardDescription className="text-slate-400 text-xs mt-0.5">
-                    مقارنة توزيع المخزون بين المندوبين ومستودعات المناطق
+                    {t('dashboard.inventory_couriers')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">مخزون المستودعات المركزي</span>
+                        <span className="text-slate-400">{t('dashboard.warehouses_2')}</span>
                         <span className="font-semibold text-purple-300">{formatNumber(totals.central)} ({percentage(totals.central, totals.total).toFixed(0)}%)</span>
                       </div>
                       <Progress value={percentage(totals.central, totals.total)} className="h-2 bg-slate-800 [&>div]:bg-purple-400" />
@@ -889,7 +949,7 @@ export default function Dashboard() {
 
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">مخزون المندوبين الثابت</span>
+                        <span className="text-slate-400">{t('dashboard.couriers_2')}</span>
                         <span className="font-semibold text-cyan-300">{formatNumber(totals.fixed)} ({percentage(totals.fixed, totals.total).toFixed(0)}%)</span>
                       </div>
                       <Progress value={percentage(totals.fixed, totals.total)} className="h-2 bg-slate-800 [&>div]:bg-cyan-400" />
@@ -897,7 +957,7 @@ export default function Dashboard() {
 
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">مخزون المندوبين المتحرك (مبيعات عهدة)</span>
+                        <span className="text-slate-400">{t('dashboard.couriers_sales')}</span>
                         <span className="font-semibold text-orange-300">{formatNumber(totals.moving)} ({percentage(totals.moving, totals.total).toFixed(0)}%)</span>
                       </div>
                       <Progress value={percentage(totals.moving, totals.total)} className="h-2 bg-slate-800 [&>div]:bg-orange-400" />
@@ -917,22 +977,22 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                       <Inbox className="size-5 text-cyan-300" />
-                      طلبات عهدة المندوبين المعلقة
+                      {t('dashboard.requests_couriers')}
                     </CardTitle>
                     <CardDescription className="text-slate-400 text-xs mt-0.5">
-                      طلبات المخزون التي لم يتم البت فيها بعد من قبل الإدارة
+                      {t('dashboard.requests_inventory_management')}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="text-[10px] text-cyan-300 border-cyan-400/30 bg-cyan-500/5">
-                    {pendingRequestsCount} معلقة
+                    {t('dashboard.item_9062', { count: pendingRequestsCount })}
                   </Badge>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto max-h-[400px]">
                   {allRequests.filter((r) => r.status === "pending").length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <CheckCircle2 className="size-10 text-emerald-400 mb-2" />
-                      <span className="text-sm font-semibold text-slate-300">لا توجد طلبات عهدة معلقة حالياً</span>
-                      <span className="text-xs text-slate-500 mt-1">تمت معالجة كافة طلبات الفنيين بنجاح</span>
+                      <span className="text-sm font-semibold text-slate-300">{t('dashboard.no_requests')}</span>
+                      <span className="text-xs text-slate-500 mt-1">{t('dashboard.requests_technicians_successfu')}</span>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -941,21 +1001,21 @@ export default function Dashboard() {
                         .map((req) => (
                           <div key={req.id} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-white">{req.technicianName || "فني غير معروف"}</span>
+                              <span className="font-semibold text-xs text-white">{req.technicianName || t('dashboard.item_17662')}</span>
                               <span className="text-[10px] text-slate-500">
-                                {new Date(req.createdAt).toLocaleDateString("ar-SA")}
+                                {new Date(req.createdAt).toLocaleDateString(dateLocale)}
                               </span>
                             </div>
                             <div className="text-xs text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                              <span className="font-medium text-cyan-300">الكمية المطلوبة:</span>{" "}
-                              {sumRequestItems(req)} قطع (انقر للتفاصيل)
+                              <span className="font-medium text-cyan-300">{t('dashboard.quantity_1')}</span>{" "}
+                              {t('dashboard.count_1', { count: t('dashboard.units_2', { count: sumRequestItems(req) }) })}
                             </div>
                             {req.notes && (
-                              <p className="text-[11px] text-slate-400 italic">ملاحظة الفني: "{req.notes}"</p>
+                              <p className="text-[11px] text-slate-400 italic">{t('dashboard.technician_3')}{req.notes}"</p>
                             )}
                             <div className="flex justify-end gap-2 pt-2">
                               <Button size="sm" className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 text-[10px] h-7 px-3" asChild>
-                                <Link href="/notifications">مراجعة والبت في الطلب</Link>
+                                <Link href="/notifications">{t('dashboard.review_request')}</Link>
                               </Button>
                             </div>
                           </div>
@@ -971,22 +1031,22 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                       <RefreshCcw className="size-5 text-orange-300 animate-spin-slow" />
-                      مناقلات المستودعات المعلقة
+                      {t('dashboard.transfers_warehouses_1')}
                     </CardTitle>
                     <CardDescription className="text-slate-400 text-xs mt-0.5">
-                      المناقلات والعهدة التي بانتظار استلام أو تأكيد الفني
+                      {t('dashboard.transfers_receive_confirm_tech')}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="text-[10px] text-orange-300 border-orange-400/30 bg-orange-500/5">
-                    {pendingTransfersCount} بانتظار التأكيد
+                    {t('dashboard.confirm', { count: pendingTransfersCount })}
                   </Badge>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto max-h-[400px]">
                   {allTransfers.filter((t) => t.status === "pending").length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <CheckCircle2 className="size-10 text-emerald-400 mb-2" />
-                      <span className="text-sm font-semibold text-slate-300">لا توجد مناقلات معلقة حالياً</span>
-                      <span className="text-xs text-slate-500 mt-1">المخزون والعهدة في حالة توازن كامل</span>
+                      <span className="text-sm font-semibold text-slate-300">{t('dashboard.no_transfers')}</span>
+                      <span className="text-xs text-slate-500 mt-1">{t('dashboard.inventory_status')}</span>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -995,28 +1055,28 @@ export default function Dashboard() {
                         .map((transfer) => (
                           <div key={transfer.id} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-white">إلى الفني: {transfer.technicianName || "فني غير معروف"}</span>
+                              <span className="font-semibold text-xs text-white">{t('dashboard.technician_4')}{transfer.technicianName || t('dashboard.item_17662')}</span>
                               <span className="text-[10px] text-slate-500">
-                                {new Date(transfer.createdAt).toLocaleDateString("ar-SA")}
+                                {new Date(transfer.createdAt).toLocaleDateString(dateLocale)}
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
                               <div className="bg-slate-900/60 p-2 rounded border border-slate-800">
-                                <div className="text-[10px] text-slate-500">المستودع المصدر</div>
-                                <div className="font-medium text-slate-300">{transfer.warehouseName || "المستودع الرئيسي"}</div>
+                                <div className="text-[10px] text-slate-500">{t('dashboard.warehouse_source')}</div>
+                                <div className="font-medium text-slate-300">{transfer.warehouseName || t('dashboard.warehouse_primary')}</div>
                               </div>
                               <div className="bg-slate-900/60 p-2 rounded border border-slate-800">
-                                <div className="text-[10px] text-slate-500">الكمية والصنف</div>
-                                <div className="font-bold text-orange-300">{transfer.quantity} وحدة ({transfer.itemNameAr || transfer.itemType})</div>
+                                <div className="text-[10px] text-slate-500">{t('dashboard.quantity_2')}</div>
+                                <div className="font-bold text-orange-300">{transfer.quantity}{t('dashboard.unit_3')}{transfer.itemNameAr || transfer.itemType})</div>
                               </div>
                             </div>
                             {transfer.notes && (
-                              <p className="text-[11px] text-slate-400 italic">ملاحظة: "{transfer.notes}"</p>
+                              <p className="text-[11px] text-slate-400 italic">{t('dashboard.item_9658')}{transfer.notes}"</p>
                             )}
                             <div className="flex justify-between items-center pt-2">
-                              <Badge className="bg-amber-500/10 text-amber-400 border-0 text-[10px]">بانتظار مسح الفني</Badge>
+                              <Badge className="bg-amber-500/10 text-amber-400 border-0 text-[10px]">{t('dashboard.scan_technician')}</Badge>
                               <Button size="sm" className="bg-orange-500/10 text-orange-300 border border-orange-500/20 hover:bg-orange-500/20 text-[10px] h-7 px-3" asChild>
-                                <Link href="/operations">مراجعة المعاملة</Link>
+                                <Link href="/operations">{t('dashboard.review')}</Link>
                               </Button>
                             </div>
                           </div>
@@ -1035,26 +1095,26 @@ export default function Dashboard() {
               <div className="lg:col-span-2 rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <UserCheck className="size-5 text-cyan-400" />
-                  قائمة العهد الإجمالية للفنيين
+                  {t('dashboard.item_41535')}
                 </h3>
-                <p className="text-slate-400 text-xs mt-0.5">تفصيل كميات العهدة الثابتة والمتحركة لكل مندوب</p>
+                <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.item_63853')}</p>
 
                 <div className="mt-6 overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-slate-950/40 border-slate-800">
                       <TableRow>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">اسم المندوب</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">المدينة</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">العهدة الثابتة</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">العهدة المتحركة</TableHead>
-                        <TableHead className="text-right text-slate-400 text-xs font-semibold">الإجمالي</TableHead>
+                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.name_technician')}</TableHead>
+                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.city')}</TableHead>
+                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.item_20635')}</TableHead>
+                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.item_22279')}</TableHead>
+                        <TableHead className="text-right text-slate-400 text-xs font-semibold">{t('dashboard.total')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {topTechniciansList.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center text-slate-500 py-6 text-sm">
-                            لا توجد بيانات عهدة للفنيين حالياً.
+                            {t('dashboard.no_data')}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1067,13 +1127,13 @@ export default function Dashboard() {
                               {tech.city}
                             </TableCell>
                             <TableCell className="py-3 font-semibold text-xs text-cyan-300">
-                              {formatNumber(tech.fixed)} قطعة
+                              {t('dashboard.unit_1', { count: formatNumber(tech.fixed) })}
                             </TableCell>
                             <TableCell className="py-3 font-semibold text-xs text-orange-300">
-                              {formatNumber(tech.moving)} قطعة
+                              {t('dashboard.unit_1', { count: formatNumber(tech.moving) })}
                             </TableCell>
                             <TableCell className="py-3 font-bold text-xs text-white">
-                              {formatNumber(tech.total)} قطعة
+                              {t('dashboard.unit_1', { count: formatNumber(tech.total) })}
                             </TableCell>
                           </TableRow>
                         ))
@@ -1087,13 +1147,13 @@ export default function Dashboard() {
               <div className="rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Warehouse className="size-5 text-purple-400" />
-                  مستودعات المخزون النشطة
+                  {t('dashboard.warehouses_inventory_active')}
                 </h3>
-                <p className="text-slate-400 text-xs mt-0.5">تفصيل مخزون المستودعات الرئيسي والفرعي</p>
+                <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.warehouses_primary')}</p>
 
                 <div className="mt-6 space-y-4 flex-1 overflow-y-auto max-h-[350px]">
                   {warehousesData.length === 0 ? (
-                    <div className="text-center text-slate-500 py-12 text-sm">لا توجد مستودعات مسجلة في النظام.</div>
+                    <div className="text-center text-slate-500 py-12 text-sm">{t('dashboard.no_warehouses_system')}</div>
                   ) : (
                     warehousesData.map((wh) => (
                       <div key={wh.id} className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors">
@@ -1102,11 +1162,11 @@ export default function Dashboard() {
                             <span className="font-bold text-xs text-white">{wh.name}</span>
                             <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
                               <MapPin className="size-3" />
-                              {wh.location || "موقع افتراضي"}
+                              {wh.location || t('dashboard.signed')}
                             </div>
                           </div>
                           <Badge variant="outline" className="text-[10px] text-purple-300 border-purple-400/30 bg-purple-500/5 shrink-0">
-                            {formatNumber(wh.totalItems)} قطعة
+                            {t('dashboard.unit_1', { count: formatNumber(wh.totalItems) })}
                           </Badge>
                         </div>
                       </div>
@@ -1122,15 +1182,15 @@ export default function Dashboard() {
             {/* Quick Access Shortcuts */}
             <div className="bg-[#1a3636]/60 border border-slate-700/40 rounded-2xl p-4 shadow-lg space-y-3">
               <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
-                ⚡ روابط الوصول السريع — وحدة التوصيل والتركيب
+                {t('dashboard.unit_delivery')}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {[
-                  { label: "البيانات الخام", path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30" },
-                  { label: "التحقق والطلبات", path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30" },
-                  { label: "تقارير PDF", path: "/courier/pdf", icon: FileText, color: "hover:bg-purple-500/10 hover:border-purple-500/30" },
-                  { label: "التقارير الإجمالية", path: "/courier/reports", icon: BarChart3, color: "hover:bg-indigo-500/10 hover:border-indigo-500/30" },
-                  { label: "تصدير Excel", path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30" },
+                  { label: t('dashboard.data'), path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30" },
+                  { label: t('dashboard.verification'), path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30" },
+                  { label: t('dashboard.item_9785'), path: "/courier/pdf", icon: FileText, color: "hover:bg-purple-500/10 hover:border-purple-500/30" },
+                  { label: t('dashboard.reports'), path: "/courier/reports", icon: BarChart3, color: "hover:bg-indigo-500/10 hover:border-indigo-500/30" },
+                  { label: t('dashboard.export'), path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30" },
                 ].map((btn) => {
                   const BtnIcon = btn.icon;
                   return (
@@ -1149,14 +1209,14 @@ export default function Dashboard() {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <CourierStatCard label="إجمالي طلبات التركيب" value={courierStats?.totalRequests ?? "—"} icon={BarChart2} color="bg-blue-600" onClick={() => setLocation("/courier/requests")} />
-              <CourierStatCard label="مكتملة بنجاح" value={courierCompleted} icon={PackageCheck} color="bg-emerald-600" onClick={() => setLocation("/courier/requests?status=Installation Completed")} />
-              <CourierStatCard label="غير مكتملة" value={courierNotCompleted} icon={XCircle} color="bg-red-600" onClick={() => setLocation("/courier/requests?status=Not Completed")} />
-              <CourierStatCard label="قيد المعالجة" value={courierInProgress} icon={Timer} color="bg-amber-600" onClick={() => setLocation("/courier/requests?status=pending")} />
-              <CourierStatCard label="تقارير PDF معالجة" value={courierAiStats?.totalProcessed ?? "—"} icon={FileText} color="bg-purple-600" />
-              <CourierStatCard label="تقارير مُطبَّقة" value={courierAiStats?.totalApplied ?? "—"} icon={PackageCheck} color="bg-cyan-600" />
-              <CourierStatCard label="متوسط دقة الاستخراج" value={courierAiStats?.averageConfidence ? `${courierAiStats.averageConfidence}%` : "—"} icon={TrendingUp} color="bg-indigo-600" />
-              <CourierStatCard label="معدل الإتمام الكلي" value={`${courierCompletionRate}%`} icon={TrendingUp} color="bg-teal-600" />
+              <CourierStatCard label={t('dashboard.total_requests_1')} value={courierStats?.totalRequests ?? "—"} icon={BarChart2} color="bg-blue-600" onClick={() => setLocation("/courier/requests")} />
+              <CourierStatCard label={t('dashboard.successfully')} value={courierCompleted} icon={PackageCheck} color="bg-emerald-600" onClick={() => setLocation("/courier/requests?status=Installation Completed")} />
+              <CourierStatCard label={t('dashboard.item_14393')} value={courierNotCompleted} icon={XCircle} color="bg-red-600" onClick={() => setLocation("/courier/requests?status=Not Completed")} />
+              <CourierStatCard label={t('dashboard.pending')} value={courierInProgress} icon={Timer} color="bg-amber-600" onClick={() => setLocation("/courier/requests?status=pending")} />
+              <CourierStatCard label={t('dashboard.item_19351')} value={courierAiStats?.totalProcessed ?? "—"} icon={FileText} color="bg-purple-600" />
+              <CourierStatCard label={t('dashboard.item_22364')} value={courierAiStats?.totalApplied ?? "—"} icon={PackageCheck} color="bg-cyan-600" />
+              <CourierStatCard label={t('dashboard.item_27036')} value={courierAiStats?.averageConfidence ? `${courierAiStats.averageConfidence}%` : "—"} icon={TrendingUp} color="bg-indigo-600" />
+              <CourierStatCard label={t('dashboard.rate')} value={`${courierCompletionRate}%`} icon={TrendingUp} color="bg-teal-600" />
             </div>
 
             {/* Charts Row */}
@@ -1164,8 +1224,8 @@ export default function Dashboard() {
               {/* Donut Chart: Completion Status */}
               <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-slate-100">نسبة توزيع الطلبات وإتمامها</h2>
-                  <p className="text-xs text-slate-400 mt-1">توزيع نسبي لحالات التركيب والمعالجة الحالية</p>
+                  <h2 className="text-base font-bold text-slate-100">{t('dashboard.requests_1')}</h2>
+                  <p className="text-xs text-slate-400 mt-1">{t('dashboard.item_60609')}</p>
                 </div>
 
                 <div className="h-64 mt-4 flex items-center justify-center relative">
@@ -1189,13 +1249,13 @@ export default function Dashboard() {
                       <Tooltip
                         contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right", direction: "rtl" }}
                         itemStyle={{ color: "#e2e8f0" }}
-                        formatter={(value: any, name: any) => [`${value} طلب`, name]}
+                        formatter={(value: any, name: any) => [t('dashboard.request', { var_0: value }), name]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
 
                   <div className="absolute text-center pointer-events-none">
-                    <span className="text-[10px] text-slate-400 block font-semibold">إجمالي الطلبات</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">{t('dashboard.total_requests')}</span>
                     <span className="text-2xl font-black text-white block mt-0.5">{courierStats?.totalRequests || 0}</span>
                   </div>
                 </div>
@@ -1218,15 +1278,15 @@ export default function Dashboard() {
               {/* Bar Chart: Failure Reasons */}
               <div className="bg-[#1a3636] border border-slate-700/50 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-slate-100">أسباب الفشل الأكثر شيوعاً</h2>
-                  <p className="text-xs text-slate-400 mt-1">المعوقات التشغيلية الأكثر تكراراً في الميدان</p>
+                  <h2 className="text-base font-bold text-slate-100">{t('dashboard.fail')}</h2>
+                  <p className="text-xs text-slate-400 mt-1">{t('dashboard.item_62238')}</p>
                 </div>
 
                 <div className="h-64 mt-4">
                   {courierBarData.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
                       <AlertCircle className="w-8 h-8 text-slate-600" />
-                      <span className="text-xs">لا توجد حالات فشل مسجلة حتى الآن</span>
+                      <span className="text-xs">{t('dashboard.no_fail')}</span>
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
@@ -1254,7 +1314,7 @@ export default function Dashboard() {
                         <Tooltip
                           contentStyle={{ backgroundColor: "#142d2d", borderColor: "#334155", borderRadius: "10px", textAlign: "right", direction: "rtl" }}
                           itemStyle={{ color: "#e2e8f0" }}
-                          formatter={(value: any) => [`${value} تكرار`, "عدد الحالات"]}
+                          formatter={(value: any) => [t('dashboard.duplicate', { var_0: value }), t('dashboard.item_15883')]}
                         />
                         <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer">
                           {courierBarData.map((_, index) => (
@@ -1267,14 +1327,16 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-slate-700/40 text-xs text-slate-400 flex items-center justify-between">
-                  <span>إجمالي حالات الفشل المصنفة</span>
+                  <span>{t('dashboard.total_fail')}</span>
                   <span className="text-slate-200 font-bold">
-                    {Object.values(courierStats?.failures || {}).reduce((s, v) => s + v, 0)} حالة
+                    {t('dashboard.count_status', { count: Object.values(courierStats?.failures || {}).reduce((s, v) => s + v, 0) })}
                   </span>
                 </div>
               </div>
             </div>
           </TabsContent>
+            </motion.div>
+          </AnimatePresence>
         </Tabs>
       </div>
     );
@@ -1282,22 +1344,22 @@ export default function Dashboard() {
 
   // Render Technician-Specific Dashboard
   return (
-    <div dir="rtl" className="space-y-8 text-slate-100">
+    <div dir={dir} className="space-y-8 text-slate-100">
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#1a3636] border border-slate-700/60 p-6 rounded-2xl relative overflow-hidden shadow-lg">
         <div className="absolute -left-20 -top-20 size-60 bg-cyan-400/10 blur-3xl rounded-full" />
         <div className="relative z-10 space-y-1">
           <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">
-            حقيبة عهدتي الشخصية
+            {t('dashboard.item_27106')}
           </h2>
           <p className="text-slate-400 font-medium">
-            أهلاً بك، {user?.fullName || "المندوب"}. تابع عهدتك الثابتة والمتحركة وقدم طلبات المخزون الجديدة.
+            {t('dashboard.welcome_tech_custody', { name: user?.fullName || t('dashboard.technician') })}
           </p>
         </div>
         <div className="relative z-10 flex items-center gap-3">
           <div className="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-semibold text-cyan-300 flex items-center gap-2">
             <CalendarIcon className="size-4" />
-            {new Date().toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            {new Date().toLocaleDateString(dateLocale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </div>
         </div>
       </div>
@@ -1306,49 +1368,49 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-slate-900/40 border-slate-700/80 hover:border-cyan-400/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">العهدة الثابتة (أجهزة/راوترات)</span>
+            <span className="text-sm font-medium text-slate-400">{t('dashboard.devices')}</span>
             <Boxes className="h-5 w-5 text-cyan-300" />
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-extrabold text-white mb-1">{formatNumber(totals.fixed)}</div>
-            <p className="text-xs text-slate-500 mt-2">الأجهزة المسلسلة في عهدتك النشطة</p>
+            <p className="text-xs text-slate-500 mt-2">{t('dashboard.devices_active')}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-900/40 border-slate-700/80 hover:border-orange-400/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">العهدة المتحركة (مبيعات/شرائح)</span>
+            <span className="text-sm font-medium text-slate-400">{t('dashboard.sales_sims')}</span>
             <Activity className="h-5 w-5 text-orange-300" />
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-extrabold text-white mb-1">{formatNumber(totals.moving)}</div>
-            <p className="text-xs text-slate-500 mt-2">الكميات والمستهلكات القابلة للاستهلاك والصرف</p>
+            <p className="text-xs text-slate-500 mt-2">{t('dashboard.item_63814')}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-900/40 border-slate-700/80 hover:border-purple-400/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">طلباتي بانتظار الموافقة</span>
+            <span className="text-sm font-medium text-slate-400">{t('dashboard.item_33432')}</span>
             <Clock className="h-5 w-5 text-purple-300" />
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-extrabold text-white mb-1">
               {formatNumber(allRequests.filter((r) => r.status === "pending").length)}
             </div>
-            <p className="text-xs text-slate-500 mt-2">طلبات صرف مخزون معلقة حالياً</p>
+            <p className="text-xs text-slate-500 mt-2">{t('dashboard.requests_disbursement')}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-900/40 border-slate-700/80 hover:border-rose-400/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <span className="text-sm font-medium text-slate-400">مناقلات بانتظار استلامي</span>
+            <span className="text-sm font-medium text-slate-400">{t('dashboard.transfers_1')}</span>
             <AlertTriangle className="h-5 w-5 text-rose-300 animate-pulse" />
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-extrabold text-rose-400 mb-1">
               {formatNumber(allTransfers.filter((t) => t.status === "pending").length)}
             </div>
-            <p className="text-xs text-slate-500 mt-2">يرجى فحص ومسح السيريال للتأكيد</p>
+            <p className="text-xs text-slate-500 mt-2">{t('dashboard.serial')}</p>
           </CardContent>
         </Card>
       </div>
@@ -1361,20 +1423,20 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="text-base font-bold text-white flex items-center gap-2">
                 <Zap className="size-5 text-yellow-400" />
-                إجراءات سريعة
+                {t('dashboard.item_19019')}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <Button className="w-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/30 flex items-center justify-center gap-2" asChild>
                 <Link href="/my-fixed-inventory">
                   <Boxes className="size-4" />
-                  تفاصيل العهدة الثابتة
+                  {t('dashboard.details')}
                 </Link>
               </Button>
               <Button className="w-full bg-orange-500/20 text-orange-300 border border-orange-400/30 hover:bg-orange-500/30 flex items-center justify-center gap-2" asChild>
                 <Link href="/my-moving-inventory">
                   <Activity className="size-4" />
-                  تفاصيل العهدة المتحركة
+                  {t('dashboard.details_1')}
                 </Link>
               </Button>
             </CardContent>
@@ -1385,24 +1447,24 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="text-base font-bold text-white flex items-center gap-2">
                 <Clock className="size-5 text-rose-400" />
-                مناقلات جديدة بانتظار مسحك
+                {t('dashboard.transfers')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {allTransfers.filter((t) => t.status === "pending").length === 0 ? (
-                <div className="text-center text-slate-500 py-6 text-xs">لا توجد مناقلات معلقة بانتظار التأكيد.</div>
+                <div className="text-center text-slate-500 py-6 text-xs">{t('dashboard.no_transfers_confirm')}</div>
               ) : (
                 allTransfers
-                  .filter((t) => t.status === "pending")
-                  .map((t) => (
-                    <div key={t.id} className="p-3 rounded-lg bg-slate-950/40 border border-slate-800 flex flex-col gap-1">
+                  .filter((transfer) => transfer.status === "pending")
+                  .map((transfer) => (
+                    <div key={transfer.id} className="p-3 rounded-lg bg-slate-950/40 border border-slate-800 flex flex-col gap-1">
                       <div className="flex justify-between text-xs">
-                        <span className="font-semibold text-white">{t.itemNameAr || t.itemType}</span>
-                        <span className="font-bold text-orange-300">{t.quantity} وحدة</span>
+                        <span className="font-semibold text-white">{transfer.itemNameAr || transfer.itemType}</span>
+                        <span className="font-bold text-orange-300">{transfer.quantity}{t('dashboard.unit_4')}</span>
                       </div>
-                      <span className="text-[10px] text-slate-500">من مستودع: {t.warehouseName || "المستودع الرئيسي"}</span>
+                      <span className="text-[10px] text-slate-500">{t('dashboard.warehouse_1')}{transfer.warehouseName || t('dashboard.warehouse_primary')}</span>
                       <Button size="sm" className="w-full bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 text-[10px] h-7 mt-2" asChild>
-                        <Link href="/my-moving-inventory">ابدأ مسح الرقم التسلسلي والاستلام</Link>
+                        <Link href="/my-moving-inventory">{t('dashboard.scan_number_serial')}</Link>
                       </Button>
                     </div>
                   ))
@@ -1413,14 +1475,14 @@ export default function Dashboard() {
 
         {/* Technician specific inventory distribution chart (Right & Center) */}
         <div className="lg:col-span-2 rounded-2xl bg-slate-900/40 border border-slate-700/80 p-6 flex flex-col shadow-sm">
-          <h3 className="text-lg font-bold text-white">توزيع عهدتي الحالية</h3>
-          <p className="text-slate-400 text-xs mt-0.5">تفصيل بياني لمجموع العهد بمنتجاتها</p>
+          <h3 className="text-lg font-bold text-white">{t('dashboard.item_27136')}</h3>
+          <p className="text-slate-400 text-xs mt-0.5">{t('dashboard.item_47924')}</p>
 
           <div className="flex-1 min-h-[250px] mt-6">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={[
-                { name: "العهدة الثابتة", quantity: totals.fixed, fill: "#22d3ee" },
-                { name: "العهدة المتحركة", quantity: totals.moving, fill: "#fb923c" }
+                { name: t('dashboard.item_20635'), quantity: totals.fixed, fill: "#22d3ee" },
+                { name: t('dashboard.item_22279'), quantity: totals.moving, fill: "#fb923c" }
               ]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />

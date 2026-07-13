@@ -1,0 +1,256 @@
+/**
+ * StockPro / RASSCO — system-wide readability & card chrome
+ * Fixes faint/white-on-white text and coordinates cards with brand teal.
+ */
+
+:root {
+  --rassco-text: #1a1d21;
+  --rassco-text-secondary: #4a5056;
+  --foreground: #1a1d21;
+  --muted-foreground: #4a5056;
+  --card-foreground: #1a1d21;
+  --shadow-card: 0 10px 28px rgba(24, 178, 176, 0.14), 0 2px 8px rgba(24, 178, 176, 0.08);
+  --enterprise-card-shadow: 0 10px 28px rgba(24, 178, 176, 0.14), 0 2px 8px rgba(24, 178, 176, 0.08);
+  --enterprise-card-shadow-hover: 0 16px 40px rgba(24, 178, 176, 0.22), 0 6px 16px rgba(24, 178, 176, 0.12);
+}
+
+/* Base type scale — clearer, heavier */
+.rassco-light-surface,
+.enterprise-atmosphere {
+  color: var(--rassco-text);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.rassco-light-surface h1,
+.enterprise-atmosphere h1 {
+  color: var(--rassco-text) !important;
+  font-size: clamp(1.75rem, 2.2vw, 2.35rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.rassco-light-surface h2,
+.enterprise-atmosphere h2 {
+  color: var(--rassco-text) !important;
+  font-size: clamp(1.35rem, 1.8vw, 1.75rem) !important;
+  font-weight: 700 !important;
+  line-height: 1.3;
+}
+
+.rassco-light-surface h3,
+.enterprise-atmosphere h3,
+.rassco-light-surface h4,
+.enterprise-atmosphere h4 {
+  color: var(--rassco-text) !important;
+  font-size: clamp(1.1rem, 1.4vw, 1.35rem) !important;
+  font-weight: 700 !important;
+  line-height: 1.35;
+}
+
+/* Remap pale / white text classes → readable dark (light shell only) */
+.rassco-light-surface :where(
+  .text-white,
+  .text-slate-50,
+  .text-slate-100,
+  .text-slate-200,
+  .text-gray-50,
+  .text-gray-100,
+  .text-gray-200,
+  .text-zinc-50,
+  .text-zinc-100,
+  .text-zinc-200,
+  .text-neutral-50,
+  .text-neutral-100,
+  .text-neutral-200
+) {
+  color: var(--rassco-text) !important;
+}
+
+.rassco-light-surface :where(
+  .text-slate-300,
+  .text-slate-400,
+  .text-gray-300,
+  .text-gray-400,
+  .text-zinc-300,
+  .text-zinc-400,
+  .text-muted-foreground,
+  .text-rassco-muted
+) {
+  color: var(--rassco-text-secondary) !important;
+  font-weight: 600;
+}
+
+.rassco-light-surface :where(
+  .text-slate-500,
+  .text-slate-600,
+  .text-gray-500,
+  .text-gray-600
+) {
+  color: #3d4349 !important;
+  font-weight: 600;
+}
+
+.rassco-light-surface :where(.font-light, .font-normal) {
+  font-weight: 500 !important;
+}
+
+.rassco-light-surface :where(.font-medium) {
+  font-weight: 600 !important;
+}
+
+.rassco-light-surface :where(.font-semibold, .font-bold, .font-extrabold) {
+  font-weight: 700 !important;
+}
+
+/* Transparent gradient titles → solid dark */
+.rassco-light-surface :where(.bg-clip-text).text-transparent {
+  background-image: none !important;
+  -webkit-text-fill-color: var(--rassco-text) !important;
+  color: var(--rassco-text) !important;
+}
+
+/* Keep white text on solid brand / status fills */
+.rassco-light-surface :is(
+  .bg-rassco,
+  .bg-rassco-hover,
+  .bg-primary,
+  .bg-destructive,
+  .bg-rassco-danger,
+  .bg-rassco-gray,
+  .bg-rassco-warning,
+  [class*="bg-emerald-5"],
+  [class*="bg-emerald-6"],
+  [class*="bg-emerald-7"],
+  [class*="bg-red-5"],
+  [class*="bg-red-6"],
+  [class*="bg-rose-5"],
+  [class*="bg-rose-6"],
+  [class*="bg-orange-5"],
+  [class*="bg-amber-5"],
+  [class*="bg-blue-5"],
+  [class*="bg-blue-6"],
+  [class*="bg-indigo-5"],
+  [class*="bg-teal-5"],
+  [class*="bg-cyan-5"],
+  [class*="bg-cyan-6"]
+):where(.text-white, .text-slate-50, .text-slate-100, .text-primary-foreground),
+.rassco-light-surface :is(
+  .bg-rassco,
+  .bg-rassco-hover,
+  .bg-primary,
+  .bg-destructive,
+  .bg-rassco-danger,
+  .bg-rassco-gray,
+  .bg-rassco-warning,
+  [class*="bg-emerald-5"],
+  [class*="bg-emerald-6"],
+  [class*="bg-red-5"],
+  [class*="bg-red-6"],
+  [class*="bg-rose-5"],
+  [class*="bg-orange-5"],
+  [class*="bg-amber-5"],
+  [class*="bg-blue-5"],
+  [class*="bg-teal-5"],
+  [class*="bg-cyan-5"]
+) :where(.text-white, .text-slate-50, .text-slate-100, .text-primary-foreground) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.rassco-light-surface [data-state="active"][class*="bg-rassco"],
+.rassco-light-surface .bg-rassco .text-primary-foreground,
+.rassco-light-surface button.bg-rassco,
+.rassco-light-surface a.bg-rassco {
+  color: #ffffff !important;
+}
+
+/* Dark nested panels (legacy courier blocks) keep light text */
+.rassco-light-surface :is(
+  [class*="bg-slate-9"],
+  [class*="bg-slate-8"],
+  [class*="bg-zinc-9"],
+  [class*="bg-zinc-8"],
+  [class*="bg-gray-9"],
+  [class*="bg-neutral-9"],
+  [class*="bg-[#0"],
+  [class*="bg-[#1"]
+) :where(.text-white, .text-slate-50, .text-slate-100, .text-slate-200) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Card chrome — brand border + teal shadow */
+.rassco-light-surface :is(
+  .em-card,
+  .em-kpi,
+  .enterprise-glass-card,
+  .rassco-card,
+  [data-slot="card"]
+),
+.rassco-light-surface .rounded-2xl.border.bg-white,
+.rassco-light-surface .rounded-\[22px\].border,
+.rassco-light-surface .rounded-2xl.bg-white\/90,
+.rassco-light-surface .rounded-2xl.bg-white\/85 {
+  border: 2px solid #18b2b0 !important;
+  border-radius: 22px !important;
+  box-shadow: var(--shadow-card) !important;
+  background: #ffffff !important;
+  color: var(--rassco-text) !important;
+}
+
+.rassco-light-surface :is(.em-card, .em-kpi, .enterprise-glass-card):hover {
+  border-color: #149d9b !important;
+  box-shadow: var(--enterprise-card-shadow-hover) !important;
+}
+
+/* Tables — readable headers & cells */
+.rassco-light-surface table th {
+  color: var(--rassco-text) !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+}
+
+.rassco-light-surface table td {
+  color: var(--rassco-text) !important;
+  font-weight: 500 !important;
+  font-size: 0.95rem !important;
+}
+
+/* Inputs */
+.rassco-light-surface input,
+.rassco-light-surface select,
+.rassco-light-surface textarea {
+  color: var(--rassco-text) !important;
+  font-weight: 500 !important;
+  font-size: 1rem !important;
+}
+
+.rassco-light-surface input::placeholder,
+.rassco-light-surface textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+  font-weight: 500;
+}
+
+/* Header title */
+.rassco-light-surface header h2 {
+  color: var(--rassco-text) !important;
+  font-weight: 700 !important;
+  font-size: clamp(1.25rem, 1.6vw, 1.6rem) !important;
+}
+
+/* Labels / small captions still readable */
+.rassco-light-surface :where(.text-xs) {
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  color: var(--rassco-text-secondary);
+}
+
+.rassco-light-surface :where(.text-sm) {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+}

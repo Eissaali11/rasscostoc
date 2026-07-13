@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { motion } from "framer-motion";
 import { WarehouseWithStats } from "@shared/schema";
 import { Warehouse as WarehouseIcon, MapPin, AlertTriangle, CheckCircle, XCircle, Package, Smartphone, Box } from "lucide-react";
@@ -23,6 +24,7 @@ interface ProductStatus {
 }
 
 export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardCardProps) => {
+  const { t } = useTranslation();
   const inv = warehouse.inventory;
   
   const getAlertLevel = (total: number): 'good' | 'warning' | 'critical' => {
@@ -64,7 +66,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
     },
     {
       name: "Roll Paper",
-      nameAr: "أوراق رول",
+      nameAr: t('warehouse.item_12770'),
       boxes: inv?.rollPaperBoxes || 0,
       units: inv?.rollPaperUnits || 0,
       total: (inv?.rollPaperBoxes || 0) + (inv?.rollPaperUnits || 0),
@@ -74,7 +76,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
     },
     {
       name: "Stickers",
-      nameAr: "ملصقات",
+      nameAr: t('warehouse.stickers'),
       boxes: inv?.stickersBoxes || 0,
       units: inv?.stickersUnits || 0,
       total: (inv?.stickersBoxes || 0) + (inv?.stickersUnits || 0),
@@ -84,7 +86,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
     },
     {
       name: "Batteries",
-      nameAr: "بطاريات",
+      nameAr: t('warehouse.batteries'),
       boxes: inv?.newBatteriesBoxes || 0,
       units: inv?.newBatteriesUnits || 0,
       total: (inv?.newBatteriesBoxes || 0) + (inv?.newBatteriesUnits || 0),
@@ -94,7 +96,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
     },
     {
       name: "Mobily SIM",
-      nameAr: "موبايلي",
+      nameAr: t('warehouse.mobily'),
       boxes: inv?.mobilySimBoxes || 0,
       units: inv?.mobilySimUnits || 0,
       total: (inv?.mobilySimBoxes || 0) + (inv?.mobilySimUnits || 0),
@@ -114,7 +116,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
     },
     {
       name: "Zain SIM",
-      nameAr: "زين",
+      nameAr: t('warehouse.zain'),
       boxes: inv?.zainSimBoxes || 0,
       units: inv?.zainSimUnits || 0,
       total: (inv?.zainSimBoxes || 0) + (inv?.zainSimUnits || 0),
@@ -198,7 +200,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
               <div className="flex justify-center mb-6">
                 <CircularProgress
                   percentage={Math.min(100, (totalInventory / 1000) * 100)}
-                  label="إجمالي المخزون"
+                  label={t('warehouse.total_inventory')}
                   value={totalInventory.toString()}
                   color={circularColor}
                   size={160}
@@ -208,7 +210,7 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
               {/* Total Badge */}
               <div className="flex justify-center mb-6">
                 <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2 text-base">
-                  {totalInventory} وحدة إجمالي
+                  {t('warehouse.unit_total', { count: totalInventory })}
                 </Badge>
               </div>
 
@@ -257,11 +259,11 @@ export const WarehouseDashboardCard = ({ warehouse, index }: WarehouseDashboardC
                             <div className="text-xs space-y-1">
                               <p className="flex items-center gap-1">
                                 <Box className="h-3 w-3" />
-                                كراتين: {product.boxes}
+                                {t('warehouse.cartons_count', { count: product.boxes })}
                               </p>
                               <p className="flex items-center gap-1">
                                 <Package className="h-3 w-3" />
-                                مفرد: {product.units}
+                                {t('warehouse.count', { count: product.units })}
                               </p>
                             </div>
                           </TooltipContent>

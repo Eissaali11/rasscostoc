@@ -21,7 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ inventory }: SidebarProps) {
   const { toast } = useToast();
   const { user, logout } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, changeLanguage, t } = useLanguage();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -43,14 +43,14 @@ export default function Sidebar({ inventory }: SidebarProps) {
     try {
       await logout();
       toast({
-        title: "تم تسجيل الخروج بنجاح",
-        description: "شكراً لك على استخدام النظام",
+        title: t('common.completed_successfully_3'),
+        description: t('common.system_5'),
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "خطأ في تسجيل الخروج",
-        description: "حدث خطأ غير متوقع",
+        title: t('common.error_3'),
+        description: t('common.error_2'),
       });
     } finally {
       setIsLoggingOut(false);
@@ -60,8 +60,8 @@ export default function Sidebar({ inventory }: SidebarProps) {
   const handleQuickWithdraw = () => {
     if (!inventory || inventory.length === 0) {
       toast({
-        title: "لا توجد أصناف في المخزون",
-        description: "يجب إضافة أصناف أولاً قبل السحب",
+        title: t('common.no_inventory'),
+        description: t('common.add_withdraw'),
         variant: "destructive",
       });
       return;
@@ -70,8 +70,8 @@ export default function Sidebar({ inventory }: SidebarProps) {
     const availableItems = inventory.filter(item => item.quantity > 0);
     if (availableItems.length === 0) {
       toast({
-        title: "جميع الأصناف نافدة",
-        description: `يوجد ${inventory.length} صنف ولكن جميعها بكمية صفر`,
+        title: t('common.item_25515'),
+        description: t('common.item_41074', { var_0: inventory.length }),
         variant: "destructive",
       });
       return;
@@ -83,8 +83,8 @@ export default function Sidebar({ inventory }: SidebarProps) {
   const handleGenerateReport = () => {
     if (!inventory || inventory.length === 0) {
       toast({
-        title: "لا يمكن إنشاء التقرير",
-        description: "لا توجد أصناف في المخزون لإنشاء تقرير",
+        title: t('common.no_report'),
+        description: t('common.no_inventory_report'),
         variant: "destructive",
       });
       return;
@@ -97,16 +97,16 @@ export default function Sidebar({ inventory }: SidebarProps) {
     const outOfStockCount = inventory.filter(item => item.status === 'out').length;
     
     const reportContent = `
-تقرير المخزون - ${new Date().toLocaleDateString('ar-SA')}
+${t('inventory.inventory_report_dated', { date: new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US') })}
 
-إجمالي الأصناف: ${totalItems}
-إجمالي الكميات: ${totalQuantity}
-أصناف منخفضة المخزون: ${lowStockCount}
-أصناف نافدة: ${outOfStockCount}
+${t('common.total_items_count', { count: totalItems })}
+${t('common.total_qty_count', { count: totalQuantity })}
+${t('common.low_stock_count', { count: lowStockCount })}
+${t('common.out_stock_count', { count: outOfStockCount })}
 
-تفاصيل الأصناف:
+${t('common.item_details_header')}
 ${inventory.map(item => 
-  `- ${item.name}: ${item.quantity} ${item.unit} (${item.status === 'available' ? 'متوفر' : item.status === 'low' ? 'منخفض' : 'نافد'})`
+  t('common.item_4190', { var_0: item.name, var_1: item.quantity, var_2: item.unit, var_3: item.status === 'available' ? t('common.item_7977_1') : item.status === 'low' ? t('common.item_7984') : t('common.item_6365') })
 ).join('\n')}
     `.trim();
 
@@ -115,15 +115,15 @@ ${inventory.map(item =>
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `تقرير_المخزون_${new Date().toISOString().split('T')[0]}.txt`;
+    link.download = `${t('dashboard.report_filename')}${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
     toast({
-      title: "تم إنشاء التقرير",
-      description: "تم تحميل تقرير المخزون بنجاح",
+      title: t('common.completed_report'),
+      description: t('common.completed_loading_report_inven'),
     });
   };
 
@@ -182,7 +182,7 @@ ${inventory.map(item =>
               <Button
                 variant={language === 'ar' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setLanguage('ar')}
+                onClick={() => changeLanguage('ar')}
                 data-testid="button-lang-ar"
                 className="text-xs"
               >
@@ -191,7 +191,7 @@ ${inventory.map(item =>
               <Button
                 variant={language === 'en' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setLanguage('en')}
+                onClick={() => changeLanguage('en')}
                 data-testid="button-lang-en"
                 className="text-xs"
               >
@@ -255,7 +255,7 @@ ${inventory.map(item =>
               data-testid="button-system-logs"
             >
               <Activity className="h-4 w-4" />
-              <span>سجل العمليات</span>
+              <span>{t('common.log_operations')}</span>
             </Button>
           </Link>
           
@@ -267,7 +267,7 @@ ${inventory.map(item =>
                 data-testid="button-item-types-main"
               >
                 <Package className="h-4 w-4 text-[#18B2B0]" />
-                <span className="text-[#18B2B0]">إدارة الأصناف</span>
+                <span className="text-[#18B2B0]">{t('common.management_1')}</span>
               </Button>
             </Link>
           )}
@@ -279,7 +279,7 @@ ${inventory.map(item =>
               data-testid="button-withdrawn-devices"
             >
               <Smartphone className="h-4 w-4" />
-              <span>الأجهزة المسحوبة</span>
+              <span>{t('common.devices_8')}</span>
             </Button>
           </Link>
           
@@ -292,7 +292,7 @@ ${inventory.map(item =>
                   data-testid="button-my-fixed-inventory"
                 >
                   <Package className="h-4 w-4" />
-                  <span>مخزوني الثابت</span>
+                  <span>{t('common.item_19116')}</span>
                 </Button>
               </Link>
 
@@ -303,7 +303,7 @@ ${inventory.map(item =>
                   data-testid="button-my-moving-inventory"
                 >
                   <TruckIcon className="h-4 w-4" />
-                  <span>مخزوني المتحرك</span>
+                  <span>{t('common.item_20760')}</span>
                 </Button>
               </Link>
             </>
@@ -318,7 +318,7 @@ ${inventory.map(item =>
                   data-testid="button-fixed-inventory"
                 >
                   <Package className="h-4 w-4" />
-                  <span>المخزون الثابت</span>
+                  <span>{t('common.inventory_1')}</span>
                 </Button>
               </Link>
               
@@ -329,7 +329,7 @@ ${inventory.map(item =>
                   data-testid="button-admin-panel"
                 >
                   <Settings className="h-4 w-4" />
-                  <span>لوحة الإدارة</span>
+                  <span>{t('common.dashboard_management')}</span>
                 </Button>
               </Link>
               
@@ -340,7 +340,7 @@ ${inventory.map(item =>
                   data-testid="button-backup-management"
                 >
                   <Database className="h-4 w-4" />
-                  <span>النسخ الاحتياطية</span>
+                  <span>{t('common.backup_backup_2')}</span>
                 </Button>
               </Link>
               
@@ -351,7 +351,7 @@ ${inventory.map(item =>
                   data-testid="button-item-types"
                 >
                   <Package className="h-4 w-4" />
-                  <span>إدارة الأصناف</span>
+                  <span>{t('common.management_1')}</span>
                 </Button>
               </Link>
             </>
@@ -362,7 +362,7 @@ ${inventory.map(item =>
       {/* Recent Activities */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">العمليات الأخيرة</CardTitle>
+          <CardTitle className="text-lg font-semibold">{t('common.operations_4')}</CardTitle>
         </CardHeader>
         <CardContent>
           {transactionsLoading ? (
@@ -376,7 +376,7 @@ ${inventory.map(item =>
             </div>
           ) : !transactions || !Array.isArray(transactions) || transactions.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
-              لا توجد عمليات حديثة
+              {t('common.no_12')}
             </div>
           ) : (
             <div className="space-y-3">
@@ -404,7 +404,7 @@ ${inventory.map(item =>
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">
-                          {transaction.type === 'withdraw' ? 'سحب' : 'إضافة'} {item?.name || 'صنف محذوف'}
+                          {transaction.type === 'withdraw' ? t('common.withdraw') : t('common.add')} {item?.name || t('common.item_12807')}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(transaction.createdAt!).toLocaleString('ar')}
@@ -429,13 +429,13 @@ ${inventory.map(item =>
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center space-x-2 space-x-reverse">
             <TriangleAlert className="h-5 w-5 text-warning" />
-            <span>تنبيهات المخزون</span>
+            <span>{t('common.inventory_10')}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {alertItems.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
-              لا توجد تنبيهات حالياً
+              {t('common.no_13')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -456,8 +456,8 @@ ${inventory.map(item =>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {item.status === 'out' 
-                      ? 'نافد تماماً - يحتاج تجديد فوري'
-                      : `الكمية: ${item.quantity} ${item.unit} (أقل من الحد الأدنى)`
+                      ? t('common.item_38381')
+                      : t('common.quantity_15', { var_0: item.quantity, var_1: item.unit })
                     }
                   </p>
                 </div>
@@ -471,47 +471,47 @@ ${inventory.map(item =>
       <Dialog open={!!selectedTransaction} onOpenChange={(open) => !open && setSelectedTransaction(null)}>
         <DialogContent dir="rtl">
           <DialogHeader>
-            <DialogTitle>تفاصيل العملية</DialogTitle>
+            <DialogTitle>{t('common.details_operation_1')}</DialogTitle>
             <DialogDescription>
-              عرض كامل لبيانات العملية المختارة من سجل العمليات الأخيرة
+              {t('common.view_operation_log_operations')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedTransaction && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">نوع العملية</span>
+                <span className="text-sm text-muted-foreground">{t('common.type_operation')}</span>
                 <Badge variant={selectedTransaction.type === 'withdraw' ? 'destructive' : 'default'}>
-                  {selectedTransaction.type === 'withdraw' ? 'سحب' : 'إضافة'}
+                  {selectedTransaction.type === 'withdraw' ? t('common.withdraw') : t('common.add')}
                 </Badge>
               </div>
 
               <div className="grid grid-cols-1 gap-3 text-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">الصنف</span>
-                  <span className="font-medium text-right">{selectedTransactionItem?.name || 'صنف محذوف'}</span>
+                  <span className="text-muted-foreground">{t('common.item_7975')}</span>
+                  <span className="font-medium text-right">{selectedTransactionItem?.name || t('common.item_12807')}</span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">الكمية</span>
+                  <span className="text-muted-foreground">{t('common.quantity_3')}</span>
                   <span className="font-medium">
                     {selectedTransaction.type === 'withdraw' ? '-' : '+'}{selectedTransaction.quantity}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">السبب</span>
-                  <span className="font-medium text-right">{selectedTransaction.reason || 'غير محدد'}</span>
+                  <span className="text-muted-foreground">{t('common.reason')}</span>
+                  <span className="font-medium text-right">{selectedTransaction.reason || t('common.item_11173')}</span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">رقم العملية</span>
+                  <span className="text-muted-foreground">{t('common.number_operation')}</span>
                   <span className="font-medium text-xs">{selectedTransaction.id}</span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">وقت التنفيذ</span>
-                  <span className="font-medium">{selectedTransaction.createdAt ? new Date(selectedTransaction.createdAt).toLocaleString('ar-SA') : 'غير متوفر'}</span>
+                  <span className="text-muted-foreground">{t('common.time_2')}</span>
+                  <span className="font-medium">{selectedTransaction.createdAt ? new Date(selectedTransaction.createdAt).toLocaleString('ar-SA') : t('common.item_12798')}</span>
                 </div>
               </div>
             </div>

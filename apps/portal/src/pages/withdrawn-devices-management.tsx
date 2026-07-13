@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -25,42 +26,7 @@ import EditWithdrawnDeviceModal from "@/components/edit-withdrawn-device-modal";
 
 type DeviceReviewStatus = "pending" | "approved" | "rejected";
 
-const statusConfig: Record<
-  DeviceReviewStatus,
-  {
-    text: string;
-    borderClass: string;
-    badgeClass: string;
-    icon: React.ComponentType<{ className?: string }>;
-    progressClass: string;
-    progressWidth: string;
-  }
-> = {
-  pending: {
-    text: "قيد المراجعة",
-    borderClass: "border-r-4 border-r-amber-400",
-    badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-    icon: TriangleAlert,
-    progressClass: "bg-amber-400",
-    progressWidth: "w-1/3",
-  },
-  approved: {
-    text: "موافق عليها",
-    borderClass: "border-r-4 border-r-emerald-400",
-    badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-    icon: CheckCircle2,
-    progressClass: "bg-emerald-400",
-    progressWidth: "w-2/3",
-  },
-  rejected: {
-    text: "مرفوضة",
-    borderClass: "border-r-4 border-r-rose-400",
-    badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-    icon: XCircle,
-    progressClass: "bg-rose-400",
-    progressWidth: "w-full",
-  },
-};
+
 
 const normalize = (value?: string | null): string => (value || "").trim().toLowerCase();
 
@@ -109,6 +75,44 @@ const formatCardDate = (value?: unknown): string => {
 };
 
 export default function WithdrawnDevicesManagementPage() {
+  const { t } = useTranslation();
+
+  const statusConfig: Record<
+    DeviceReviewStatus,
+    {
+      text: string;
+      borderClass: string;
+      badgeClass: string;
+      icon: React.ComponentType<{ className?: string }>;
+      progressClass: string;
+      progressWidth: string;
+    }
+  > = {
+    pending: {
+      text: t('reports.pending_review_1'),
+      borderClass: "border-r-4 border-r-amber-400",
+      badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+      icon: TriangleAlert,
+      progressClass: "bg-amber-400",
+      progressWidth: "w-1/3",
+    },
+    approved: {
+      text: t('reports.ok_1'),
+      borderClass: "border-r-4 border-r-emerald-400",
+      badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+      icon: CheckCircle2,
+      progressClass: "bg-emerald-400",
+      progressWidth: "w-2/3",
+    },
+    rejected: {
+      text: t('reports.item_9566'),
+      borderClass: "border-r-4 border-r-rose-400",
+      badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      icon: XCircle,
+      progressClass: "bg-rose-400",
+      progressWidth: "w-full",
+    },
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,14 +133,14 @@ export default function WithdrawnDevicesManagementPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawn-devices"] });
       toast({
-        title: "تم الحذف بنجاح",
-        description: "تم حذف الجهاز المسحوب",
+        title: t('reports.completed_delete_successfully'),
+        description: t('reports.completed_delete_device'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في الحذف",
-        description: error.message || "حدث خطأ أثناء حذف الجهاز",
+        title: t('reports.error_delete'),
+        description: error.message || t('reports.error_delete_device'),
         variant: "destructive",
       });
     },
@@ -182,13 +186,13 @@ export default function WithdrawnDevicesManagementPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف بيانات هذا الجهاز؟")) {
+    if (confirm(t('reports.delete_data'))) {
       deleteMutation.mutate(id);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center py-8 text-slate-300">جاري التحميل...</div>;
+    return <div className="text-center py-8 text-slate-300">{t('reports.loading')}</div>;
   }
 
   return (
@@ -197,8 +201,8 @@ export default function WithdrawnDevicesManagementPage() {
         <section className="rounded-2xl border border-cyan-500/10 bg-slate-900/55 backdrop-blur-md p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-black text-slate-100 tracking-tight">إدارة الأجهزة المسحوبة</h2>
-              <p className="text-slate-400 text-sm mt-1">تتبع وإدارة عمليات استرجاع الأجهزة من الفروع والموظفين</p>
+              <h2 className="text-3xl font-black text-slate-100 tracking-tight">{t('reports.management_devices')}</h2>
+              <p className="text-slate-400 text-sm mt-1">{t('reports.track_devices_branches')}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -208,16 +212,16 @@ export default function WithdrawnDevicesManagementPage() {
                 data-testid="button-add-top"
               >
                 <Plus className="h-4 w-4 ml-2" />
-                إضافة جهاز جديد
+                {t('reports.add_device_new')}
               </Button>
               <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20">
                 <Link href="/withdrawn-devices/all">
                   <FileClock className="h-4 w-4 ml-2" />
-                  سجل العمليات المرتجعة
+                  {t('reports.log_operations_returned')}
                 </Link>
               </Button>
               <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20">
-                <Link href="/withdrawn-devices">العودة للملخص</Link>
+                <Link href="/withdrawn-devices">{t('reports.item_19160')}</Link>
               </Button>
             </div>
           </div>
@@ -226,7 +230,7 @@ export default function WithdrawnDevicesManagementPage() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
             <Input
               type="text"
-              placeholder="بحث سريع..."
+              placeholder={t('reports.search_1')}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               className="pr-9 bg-slate-950/40 border-cyan-500/15 text-white placeholder:text-slate-500"
@@ -239,7 +243,7 @@ export default function WithdrawnDevicesManagementPage() {
           <Card className="bg-slate-900/55 border border-amber-500/20 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">قيد المراجعة</p>
+                <p className="text-slate-400 text-sm font-medium">{t('reports.pending_review_1')}</p>
                 <p className="text-3xl font-black text-slate-100 mt-1">{stats.pending}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
@@ -251,7 +255,7 @@ export default function WithdrawnDevicesManagementPage() {
           <Card className="bg-slate-900/55 border border-emerald-500/20 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">موافق عليها</p>
+                <p className="text-slate-400 text-sm font-medium">{t('reports.ok_1')}</p>
                 <p className="text-3xl font-black text-slate-100 mt-1">{stats.approved}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
@@ -263,7 +267,7 @@ export default function WithdrawnDevicesManagementPage() {
           <Card className="bg-slate-900/55 border border-rose-500/20 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">مرفوضة</p>
+                <p className="text-slate-400 text-sm font-medium">{t('reports.item_9566')}</p>
                 <p className="text-3xl font-black text-slate-100 mt-1">{stats.rejected}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400">
@@ -275,9 +279,9 @@ export default function WithdrawnDevicesManagementPage() {
 
         <section className="flex items-center gap-2 border-b border-cyan-500/10 overflow-x-auto">
           {([
-            { key: "pending", label: "قيد المراجعة" },
-            { key: "approved", label: "موافق" },
-            { key: "rejected", label: "مرفوض" },
+            { key: "pending", label: t('reports.pending_review_1') },
+            { key: "approved", label: t('reports.ok_2') },
+            { key: "rejected", label: t('reports.rejected') },
           ] as const).map((tab) => (
             <button
               key={tab.key}
@@ -365,7 +369,7 @@ export default function WithdrawnDevicesManagementPage() {
                         >
                           <Link href={`/withdrawn-devices/${device.id}`}>
                             <CircleEllipsis className="h-4 w-4 ml-1" />
-                            تفاصيل
+                            {t('reports.details_1')}
                           </Link>
                         </Button>
                       </div>
@@ -373,19 +377,19 @@ export default function WithdrawnDevicesManagementPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div>
-                        <p className="text-xs font-bold text-slate-500 mb-3">الملحقات المرفقة</p>
+                        <p className="text-xs font-bold text-slate-500 mb-3">{t('reports.item_23905')}</p>
                         <div className="flex flex-wrap gap-2">
                           <div className="flex items-center gap-2 bg-slate-950/45 px-3 py-2 rounded-lg border border-cyan-500/10 text-slate-300 text-xs">
                             {hasBattery ? <CheckCircle2 className="h-4 w-4 text-cyan-300" /> : <XCircle className="h-4 w-4 text-rose-400" />}
-                            بطارية
+                            {t('reports.battery_1')}
                           </div>
                           <div className="flex items-center gap-2 bg-slate-950/45 px-3 py-2 rounded-lg border border-cyan-500/10 text-slate-300 text-xs">
                             {hasCable ? <CheckCircle2 className="h-4 w-4 text-cyan-300" /> : <XCircle className="h-4 w-4 text-rose-400" />}
-                            كابل
+                            {t('reports.item_6358_1')}
                           </div>
                           <div className="flex items-center gap-2 bg-slate-950/45 px-3 py-2 rounded-lg border border-cyan-500/10 text-slate-300 text-xs">
                             {hasHead ? <CheckCircle2 className="h-4 w-4 text-cyan-300" /> : <XCircle className="h-4 w-4 text-rose-400" />}
-                            رأس
+                            {t('reports.item_4743')}
                           </div>
                           <div className="flex items-center gap-2 bg-slate-950/45 px-3 py-2 rounded-lg border border-cyan-500/10 text-slate-300 text-xs">
                             {hasSim ? <CheckCircle2 className="h-4 w-4 text-cyan-300" /> : <XCircle className="h-4 w-4 text-rose-400" />}
@@ -395,22 +399,22 @@ export default function WithdrawnDevicesManagementPage() {
                         {device.simCardType && (
                           <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
                             <Smartphone className="h-3.5 w-3.5" />
-                            نوع الشريحة: {device.simCardType}
+                            {t('reports.sim_type_label', { type: device.simCardType })}
                           </div>
                         )}
                       </div>
 
                       <div className="space-y-4">
                         <div>
-                          <p className="text-xs font-bold text-slate-500 mb-2">حالة التلف</p>
+                          <p className="text-xs font-bold text-slate-500 mb-2">{t('reports.status_damage_1')}</p>
                           <div className="flex items-center gap-2 text-sm text-slate-300 bg-rose-500/5 p-2.5 rounded-lg border border-rose-500/15">
                             <TriangleAlert className="h-4 w-4 text-rose-400" />
-                            <span>{device.damagePart || "لا توجد ملاحظات تلف"}</span>
+                            <span>{device.damagePart || t('reports.no_notes_damage')}</span>
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-500 mb-2">ملاحظات عامة</p>
-                          <p className="text-sm text-slate-400 italic">{device.notes || "لا توجد ملاحظات إضافية."}</p>
+                          <p className="text-xs font-bold text-slate-500 mb-2">{t('reports.notes')}</p>
+                          <p className="text-sm text-slate-400 italic">{device.notes || t('reports.no_notes_1')}</p>
                         </div>
                       </div>
                     </div>
@@ -427,11 +431,11 @@ export default function WithdrawnDevicesManagementPage() {
               <div className="w-16 h-16 rounded-full bg-slate-800/70 flex items-center justify-center text-slate-500 mx-auto mb-4">
                 <Smartphone className="h-8 w-8" />
               </div>
-              <h4 className="text-slate-300 font-bold">لا يوجد أجهزة ضمن هذا التصنيف حالياً</h4>
-              <p className="text-slate-500 text-sm max-w-xs mt-2 mx-auto">سيتم إظهار الأجهزة عند تغيير حالتها من قبل المشرفين.</p>
+              <h4 className="text-slate-300 font-bold">{t('reports.no_devices_category')}</h4>
+              <p className="text-slate-500 text-sm max-w-xs mt-2 mx-auto">{t('reports.devices')}</p>
               <Button onClick={() => setShowAddModal(true)} className="mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold">
                 <Plus className="h-4 w-4 ml-2" />
-                إضافة جهاز جديد
+                {t('reports.add_device_new')}
               </Button>
             </Card>
           )}

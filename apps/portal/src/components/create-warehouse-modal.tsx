@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useTranslation } from "@/lib/language";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,14 +33,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Region } from "@shared/schema";
 
-const formSchema = z.object({
-  name: z.string().min(1, "اسم المستودع مطلوب"),
-  location: z.string().min(1, "الموقع مطلوب"),
+const getFormSchema = (t: (key: string) => string) => z.object(
+{
+  name: z.string().min(1, t('warehouse.name_warehouse_1')),
+  location: z.string().min(1, t('warehouse.signed_1')),
   description: z.string().optional(),
   regionId: z.string().optional(),
-});
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface CreateWarehouseModalProps {
   open: boolean;
@@ -50,6 +53,8 @@ export default function CreateWarehouseModal({
   open, 
   onOpenChange,
 }: CreateWarehouseModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
 
   const { data: regions = [] } = useQuery<Region[]>({
@@ -79,16 +84,16 @@ export default function CreateWarehouseModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
       toast({
-        title: "تم إنشاء المستودع بنجاح",
-        description: "تم إضافة المستودع الجديد إلى النظام",
+        title: t('warehouse.completed_warehouse_successful'),
+        description: t('warehouse.completed_add_warehouse_new_sy'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في إنشاء المستودع",
-        description: error.message || "حدث خطأ أثناء إنشاء المستودع",
+        title: t('warehouse.error_warehouse'),
+        description: error.message || t('warehouse.error_warehouse_1'),
         variant: "destructive",
       });
     },
@@ -102,9 +107,9 @@ export default function CreateWarehouseModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>إضافة مستودع جديد</DialogTitle>
+          <DialogTitle>{t('warehouse.add_warehouse_new')}</DialogTitle>
           <DialogDescription>
-            أدخل بيانات المستودع الجديد
+            {t('warehouse.data_warehouse_new')}
           </DialogDescription>
         </DialogHeader>
         
@@ -115,10 +120,10 @@ export default function CreateWarehouseModal({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>اسم المستودع</FormLabel>
+                  <FormLabel>{t('warehouse.name_warehouse')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: مستودع الرياض الرئيسي"
+                      placeholder={t('warehouse.warehouse_primary')}
                       {...field}
                       data-testid="input-warehouse-name"
                     />
@@ -133,10 +138,10 @@ export default function CreateWarehouseModal({
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الموقع</FormLabel>
+                  <FormLabel>{t('warehouse.signed')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: الرياض - حي الملك فهد"
+                      placeholder={t('warehouse.item_30563')}
                       {...field}
                       data-testid="input-warehouse-location"
                     />
@@ -151,10 +156,10 @@ export default function CreateWarehouseModal({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الوصف (اختياري)</FormLabel>
+                  <FormLabel>{t('warehouse.item_19205')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="وصف المستودع..."
+                      placeholder={t('warehouse.warehouse_1')}
                       className="resize-none"
                       {...field}
                       data-testid="textarea-warehouse-description"
@@ -170,11 +175,11 @@ export default function CreateWarehouseModal({
               name="regionId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>المنطقة (اختياري)</FormLabel>
+                  <FormLabel>{t('warehouse.region')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-warehouse-region">
-                        <SelectValue placeholder="اختر المنطقة" />
+                        <SelectValue placeholder={t('warehouse.region_1')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -197,7 +202,7 @@ export default function CreateWarehouseModal({
                 className="flex-1"
                 data-testid="button-submit-warehouse"
               >
-                {createWarehouseMutation.isPending ? "جاري الإنشاء..." : "إنشاء المستودع"}
+                {createWarehouseMutation.isPending ? t('warehouse.item_17610') : t('warehouse.warehouse_2')}
               </Button>
               <Button
                 type="button"
@@ -206,7 +211,7 @@ export default function CreateWarehouseModal({
                 className="flex-1"
                 data-testid="button-cancel-warehouse"
               >
-                إلغاء
+                {t('warehouse.cancel')}
               </Button>
             </div>
           </form>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 import { getInventoryValueForItemType, type InventoryEntry } from "@/hooks/use-item-types";
 import {
-  formatArabicDateTime,
+  formatLocalizedDateTime,
   toSerialLifecycleRows,
   type RawSerialTrackingRecord,
 } from "@/features/product-details/lifecycle.helpers";
@@ -127,6 +128,7 @@ const normalizeTechniciansPayload = (payload: any): TechnicianInventoryRecord[] 
 };
 
 export default function ProductDetailsPage() {
+  const { t, language } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -204,7 +206,7 @@ export default function ProductDetailsPage() {
         technicians: [
           {
             technicianId: user.id,
-            technicianName: user.fullName || user.username || "المندوب الحالي",
+            technicianName: user.fullName || user.username || t('common.technician_2'),
             fixedInventory,
             movingInventory,
           },
@@ -227,8 +229,8 @@ export default function ProductDetailsPage() {
 
   const itemType = itemTypeQuery.data;
   const serialRows = useMemo(
-    () => toSerialLifecycleRows([...(serialTrackingQuery.data ?? []), ...localSerialRows]),
-    [serialTrackingQuery.data, localSerialRows]
+    () => toSerialLifecycleRows([...(serialTrackingQuery.data ?? []), ...localSerialRows], t),
+    [serialTrackingQuery.data, localSerialRows, t]
   );
 
   const warehouseStockSummary = useMemo(() => {
@@ -255,7 +257,7 @@ export default function ProductDetailsPage() {
 
     const mainIndex = warehouseStocks.findIndex((item) => {
       const name = String(item.warehouse?.nameAr ?? item.warehouse?.name ?? "").toLowerCase();
-      return name.includes("رئيس") || name.includes("main");
+      return name.includes(t('common.item_6356')) || name.includes("main");
     });
 
     const pickedMainIndex = mainIndex >= 0 ? mainIndex : 0;
@@ -345,7 +347,7 @@ export default function ProductDetailsPage() {
       warehouseId: string;
     }) => {
       if (!user?.id || !itemType?.id) {
-        throw new Error("بيانات المستخدم أو المنتج غير متوفرة.");
+        throw new Error(t('common.data_user_1'));
       }
 
       const serial = payload.serialNumber.trim();
@@ -379,7 +381,7 @@ export default function ProductDetailsPage() {
           terminalId: result.terminalId,
           serialNumber: variables.serialNumber.trim(),
           status: "pending",
-          warehouseName: selectedWarehouse ? String(selectedWarehouse.nameAr ?? selectedWarehouse.name ?? "المستودع المحدد") : "المستودع المحدد",
+          warehouseName: selectedWarehouse ? String(selectedWarehouse.nameAr ?? selectedWarehouse.name ?? t('common.warehouse_8')) : t('common.warehouse_8'),
           technicianId: null,
           technicianName: null,
           regionId: variables.regionId || user?.regionId || null,
@@ -391,8 +393,8 @@ export default function ProductDetailsPage() {
       queryClient.invalidateQueries({ queryKey: [`/api/item-types/${id}/serial-tracking`] });
 
       toast({
-        title: "تمت الإضافة بنجاح",
-        description: "تمت إضافة السيريال الجديد إلى سجل المنتج.",
+        title: t('common.add_successfully'),
+        description: t('common.add_serial_new_log'),
       });
 
       setIsAddModalOpen(false);
@@ -401,8 +403,8 @@ export default function ProductDetailsPage() {
     },
     onError: (error: any) => {
       toast({
-        title: "تعذر إضافة السيريال",
-        description: error?.message || "حدث خطأ أثناء الحفظ، حاول مرة أخرى.",
+        title: t('common.add_serial_1'),
+        description: error?.message || t('common.error_other'),
         variant: "destructive",
       });
     },
@@ -415,8 +417,8 @@ export default function ProductDetailsPage() {
 
     if (!addSerialForm.serialNumber.trim()) {
       toast({
-        title: "بيانات ناقصة",
-        description: isScanMode ? "يرجى مسح الرقم التسلسلي أولًا." : "يرجى إدخال الرقم التسلسلي.",
+        title: t('common.data_2'),
+        description: isScanMode ? t('common.scan_number_serial') : t('common.submit_number_serial'),
         variant: "destructive",
       });
       return;
@@ -424,8 +426,8 @@ export default function ProductDetailsPage() {
 
     if (requireWarehouseSelection && !addSerialForm.warehouseId) {
       toast({
-        title: "بيانات ناقصة",
-        description: "يرجى اختيار المستودع الوجهة.",
+        title: t('common.data_2'),
+        description: t('common.warehouse_9'),
         variant: "destructive",
       });
       return;
@@ -451,20 +453,20 @@ export default function ProductDetailsPage() {
   if (!itemType) {
     return (
       <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-8 text-center">
-        <p className="text-white text-lg font-bold">المنتج غير موجود</p>
-        <p className="text-slate-400 mt-2">تعذر العثور على تفاصيل هذا المنتج.</p>
+        <p className="text-white text-lg font-bold">{t('common.item_22385')}</p>
+        <p className="text-slate-400 mt-2">{t('common.details_2')}</p>
         <Button asChild variant="outline" className="mt-4 border-slate-700 bg-slate-800/60 text-white">
-          <Link href="/products-management">العودة لإدارة المنتجات</Link>
+          <Link href="/products-management">{t('common.item_31802')}</Link>
         </Button>
       </div>
     );
   }
 
   if (loadError) {
-    const message = loadError instanceof Error ? loadError.message : "تعذر تحميل بيانات المنتج.";
+    const message = loadError instanceof Error ? loadError.message : t('common.loading_data_1');
     return (
       <div className="rounded-xl border border-orange-400/30 bg-orange-500/10 p-6 text-center">
-        <p className="text-orange-200 font-bold">تعذر تحميل البيانات</p>
+        <p className="text-orange-200 font-bold">{t('common.loading_data')}</p>
         <p className="text-orange-100/80 text-sm mt-2">{message}</p>
       </div>
     );
@@ -475,10 +477,10 @@ export default function ProductDetailsPage() {
   const to = Math.min(currentPage * PAGE_SIZE, filteredRows.length);
 
   const filterButtons: Array<{ value: LocationFilter; label: string }> = [
-    { value: "all", label: "الكل" },
-    { value: "main-warehouse", label: "المستودع الرئيسي" },
-    { value: "regional-warehouse", label: "مستودعات المناطق" },
-    { value: "technician-stock", label: "مخزون المندوبين" },
+    { value: "all", label: t('common.all') },
+    { value: "main-warehouse", label: t('common.warehouse_primary') },
+    { value: "regional-warehouse", label: t('common.warehouses_2') },
+    { value: "technician-stock", label: t('common.couriers_2') },
   ];
 
   const badgeColorByCard: Record<string, string> = {
@@ -499,7 +501,7 @@ export default function ProductDetailsPage() {
                 <div className="size-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-300">
                   <QrCode className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-bold text-white">إضافة سيريال جديد</h3>
+                <h3 className="text-xl font-bold text-white">{t('common.add_new_2')}</h3>
               </div>
 
               <button
@@ -513,14 +515,14 @@ export default function ProductDetailsPage() {
 
             <form className="px-8 pb-8 pt-6 space-y-6" onSubmit={handleSubmitAddSerial}>
               <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-300">المنتج المستهدف</span>
+                <span className="text-sm font-medium text-slate-300">{t('common.item_22320')}</span>
                 <span className="px-4 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-300 font-bold text-sm border border-cyan-500/20">
-                  اسم المنتج: {itemType.nameAr}
+                  {t('inventory.product_name_count', { count: itemType.nameAr })}
                 </span>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-300 px-1">طريقة إضافة السيريال</label>
+                <label className="block text-sm font-medium text-slate-300 px-1">{t('common.add_serial')}</label>
                 <select
                   value={addSerialForm.method}
                   onChange={(event) =>
@@ -531,35 +533,35 @@ export default function ProductDetailsPage() {
                   }
                   className="w-full bg-slate-900/70 border border-slate-700 rounded-2xl px-5 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400"
                 >
-                  <option value="scan">مسح أجهزة</option>
-                  <option value="manual">إضافة يدوي</option>
+                  <option value="scan">{t('common.scan_devices')}</option>
+                  <option value="manual">{t('common.add_3')}</option>
                 </select>
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-slate-300 px-1">
-                  {isScanMode ? "مسح الرقم التسلسلي" : "الرقم التسلسلي (Serial Number)"}
+                  {isScanMode ? t('common.scan_number_serial_1') : t('common.number_serial_4')}
                 </label>
                 <div className="relative group">
                   <Input
                     dir="ltr"
                     value={addSerialForm.serialNumber}
                     onChange={(event) => setAddSerialForm((prev) => ({ ...prev, serialNumber: event.target.value }))}
-                    placeholder={isScanMode ? "امسح باركود السيريال هنا" : "SN-000000"}
+                    placeholder={isScanMode ? t('common.serial_1') : "SN-000000"}
                     className="bg-slate-950 border-slate-700 rounded-2xl px-5 py-6 text-white font-mono text-lg focus-visible:ring-cyan-500/40 focus-visible:border-cyan-400"
                   />
                   <QrCode className="h-5 w-5 absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-300 transition-colors" />
                 </div>
                 <p className="text-[11px] text-slate-500 px-1">
                   {isScanMode
-                    ? "قم بتركيز المؤشر داخل الحقل ثم امسح الباركود عبر جهاز المسح."
-                    : "يرجى إدخال الرقم التسلسلي الفريد المطبوع على ملصق الجهاز."}
+                    ? t('common.device_scan')
+                    : t('common.submit_number_serial_sticker_d')}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-300 px-1">المنطقة</label>
+                  <label className="block text-sm font-medium text-slate-300 px-1">{t('common.region')}</label>
                   <select
                     value={addSerialForm.regionId}
                     onChange={(event) =>
@@ -572,7 +574,7 @@ export default function ProductDetailsPage() {
                     className="w-full bg-slate-900/70 border border-slate-700 rounded-2xl px-5 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400"
                   >
                     <option value="" disabled>
-                      اختر المنطقة...
+                      {t('inventory.region_7')}
                     </option>
                     {(regionsQuery.data ?? []).map((region) => (
                       <option key={region.id} value={region.id}>
@@ -583,18 +585,18 @@ export default function ProductDetailsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-300 px-1">المستودع الوجهة</label>
+                  <label className="block text-sm font-medium text-slate-300 px-1">{t('common.warehouse_6')}</label>
                   <select
                     value={addSerialForm.warehouseId}
                     onChange={(event) => setAddSerialForm((prev) => ({ ...prev, warehouseId: event.target.value }))}
                     className="w-full bg-slate-900/70 border border-slate-700 rounded-2xl px-5 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400"
                   >
                     <option value="" disabled>
-                      اختر المستودع...
+                      {t('inventory.warehouse_7')}
                     </option>
                     {availableWarehouses.map((warehouse) => (
                       <option key={warehouse.id} value={warehouse.id}>
-                        {warehouse.nameAr || warehouse.name || "مستودع"}
+                        {warehouse.nameAr || warehouse.name || t('common.warehouse_2')}
                       </option>
                     ))}
                   </select>
@@ -607,7 +609,7 @@ export default function ProductDetailsPage() {
                   disabled={addSerialMutation.isPending}
                   className="flex-[2] bg-gradient-to-br from-cyan-400 to-blue-700 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-60"
                 >
-                  <span>{addSerialMutation.isPending ? "جاري الحفظ..." : "إضافة للسجل"}</span>
+                  <span>{addSerialMutation.isPending ? t('common.save_2') : t('common.add_5')}</span>
                   <Plus className="h-4 w-4" />
                 </button>
 
@@ -616,7 +618,7 @@ export default function ProductDetailsPage() {
                   className="flex-1 border border-slate-700 text-slate-300 font-medium py-4 rounded-2xl hover:bg-slate-800 hover:text-white transition-all"
                   onClick={() => setIsAddModalOpen(false)}
                 >
-                  إلغاء
+                  {t('common.cancel')}
                 </button>
               </div>
             </form>
@@ -628,7 +630,7 @@ export default function ProductDetailsPage() {
         <section className="h-20 flex items-center justify-between px-6 rounded-xl bg-slate-900/70 border border-slate-700/70">
           <div className="flex items-center gap-8">
             <h2 className="text-2xl font-bold text-white">
-              تفاصيل المنتج : <span className="text-cyan-400">{itemType.nameAr}</span>
+              {t('inventory.details_3')} <span className="text-cyan-400">{itemType.nameAr}</span>
             </h2>
             <div className="relative w-[340px] max-w-[45vw]">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -638,7 +640,7 @@ export default function ProductDetailsPage() {
                   setSearchTerm(event.target.value);
                   setPage(1);
                 }}
-                placeholder="البحث برقم السيريال..."
+                placeholder={t('common.search_serial')}
                 className="pr-10 bg-slate-950 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
@@ -649,7 +651,7 @@ export default function ProductDetailsPage() {
               <Link href={`/products-management/${id}/smart-add`}>
                 <span className="inline-flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                  الإضافة الذكية
+                  {t('common.add_4')}
                 </span>
               </Link>
             </Button>
@@ -660,11 +662,11 @@ export default function ProductDetailsPage() {
               className="bg-gradient-to-br from-cyan-400 to-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-bold transition-all hover:scale-[1.02]"
             >
               <Plus className="h-4 w-4" />
-              <span>إضافة سيريال جديد</span>
+              <span>{t('common.add_new_2')}</span>
             </button>
 
             <Button asChild variant="outline" className="border-slate-700 bg-slate-800/60 text-slate-100 hover:bg-slate-700">
-              <Link href="/products-management">العودة لإدارة المنتجات</Link>
+              <Link href="/products-management">{t('common.item_31802')}</Link>
             </Button>
           </div>
         </section>
@@ -673,7 +675,7 @@ export default function ProductDetailsPage() {
           <article className="bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-xl p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">المستودع الرئيسي</p>
+                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">{t('common.warehouse_primary')}</p>
                 <h3 className="text-4xl font-bold text-white">{warehouseStockSummary.mainWarehouseStock.toLocaleString("en-US")}</h3>
               </div>
               <div className={`size-12 rounded-lg ${badgeColorByCard.main} text-white flex items-center justify-center border border-slate-600`}>
@@ -685,7 +687,7 @@ export default function ProductDetailsPage() {
           <article className="bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-xl p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">مستودعات المناطق</p>
+                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">{t('common.warehouses_2')}</p>
                 <h3 className="text-4xl font-bold text-white">{warehouseStockSummary.regionalWarehouseStock.toLocaleString("en-US")}</h3>
               </div>
               <div className={`size-12 rounded-lg ${badgeColorByCard.regional} text-white flex items-center justify-center border border-slate-600`}>
@@ -697,7 +699,7 @@ export default function ProductDetailsPage() {
           <article className="bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-xl p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">مخزون المندوبين</p>
+                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">{t('common.couriers_2')}</p>
                 <h3 className="text-4xl font-bold text-white">{technicianStock.toLocaleString("en-US")}</h3>
               </div>
               <div className={`size-12 rounded-lg ${badgeColorByCard.technician} text-white flex items-center justify-center border border-slate-600`}>
@@ -709,7 +711,7 @@ export default function ProductDetailsPage() {
           <article className="bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-xl p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">تم التسليم / مرفوض</p>
+                <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">{t('common.completed_rejected')}</p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-4xl font-bold text-white">{deliveredCount.toLocaleString("en-US")}</h3>
                   <span className="text-sm font-medium text-slate-400">/ {rejectedCount.toLocaleString("en-US")}</span>
@@ -748,16 +750,16 @@ export default function ProductDetailsPage() {
 
           <div className="space-y-3">
             <div className="grid grid-cols-5 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">
-              <div>السيريال نمبر</div>
-              <div>الموقع الحالي</div>
-              <div>حالة دورة الحياة</div>
-              <div>آخر تحديث</div>
-              <div className="text-left">الإجراءات</div>
+              <div>{t('common.serial')}</div>
+              <div>{t('common.signed')}</div>
+              <div>{t('common.status_3')}</div>
+              <div>{t('common.update_1')}</div>
+              <div className="text-left">{t('common.item_14214')}</div>
             </div>
 
             {pagedRows.length === 0 ? (
               <div className="grid grid-cols-1 items-center px-6 py-12 rounded-xl text-center text-slate-400 bg-slate-900/70 border border-slate-700">
-                لا توجد بيانات سيريال مطابقة للبحث أو الفلتر الحالي.
+                {t('inventory.no_data_2')}
               </div>
             ) : (
               pagedRows.map((row) => (
@@ -769,7 +771,7 @@ export default function ProductDetailsPage() {
                       {row.lifecycleLabel}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-300 font-medium">{formatArabicDateTime(row.createdAt)}</div>
+                  <div className="text-xs text-slate-300 font-medium">{formatLocalizedDateTime(row.createdAt, language)}</div>
                   <div className="flex gap-2 justify-end">
                     <Button
                       asChild
@@ -777,7 +779,7 @@ export default function ProductDetailsPage() {
                       size="icon"
                       className="size-8 rounded-md bg-transparent text-slate-400 hover:text-cyan-300"
                     >
-                      <Link href={`/received-devices/${row.id}`} title="عرض دورة الحياة">
+                      <Link href={`/received-devices/${row.id}`} title={t('common.view_2')}>
                         <Eye className="h-4 w-4" />
                       </Link>
                     </Button>

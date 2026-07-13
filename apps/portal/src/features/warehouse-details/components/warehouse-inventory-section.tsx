@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Input } from "@/components/ui/input";
 import { Package, Search, XCircle } from "lucide-react";
 
@@ -29,17 +30,18 @@ export function WarehouseInventorySection({
   filteredInventoryItems,
   getGaugeStyle,
 }: WarehouseInventorySectionProps) {
+  const { t } = useTranslation();
   return (
     <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h3 className="text-white text-xl font-bold flex items-center gap-2">
           <Package className="h-5 w-5 text-purple-300" />
-          المخزون الحالي
+          {t('warehouse.inventory_5')}
         </h3>
         <div className="relative w-full sm:w-80">
           <Input
             className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-white/40 focus:border-purple-400/50 focus:ring-1 focus:ring-purple-400/50"
-            placeholder="البحث في المخزون..."
+            placeholder={t('warehouse.search_inventory')}
             value={inventorySearchQuery}
             onChange={(event) => onInventorySearchChange(event.target.value)}
           />
@@ -48,7 +50,7 @@ export function WarehouseInventorySection({
             <button
               type="button"
               onClick={onClearInventorySearch}
-              aria-label="مسح البحث"
+              aria-label={t('warehouse.scan_search_3')}
               className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
             >
               <XCircle className="h-4 w-4" />
@@ -58,7 +60,7 @@ export function WarehouseInventorySection({
       </div>
 
       {filteredInventoryItems.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">لا توجد أصناف مطابقة للبحث.</div>
+        <div className="text-center py-12 text-slate-400">{t('warehouse.none')}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
           {filteredInventoryItems.map((item, index) => {
@@ -95,17 +97,17 @@ export function WarehouseInventorySection({
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/50">كراتين:</span>
+                    <span className="text-white/50">{t('warehouse.boxes_3')}</span>
                     <span className="text-white" data-testid={`boxes-${index}`}>{item.boxes}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/50">وحدات:</span>
+                    <span className="text-white/50">{t('warehouse.units_3')}</span>
                     <span className="text-white" data-testid={`units-${index}`}>{item.units}</span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-white/10 flex justify-between items-center">
-                  <span className="text-white/70 text-sm">الإجمالي:</span>
+                  <span className="text-white/70 text-sm">{t('warehouse.total_3')}</span>
                   <span className={`${gauge.text} font-bold text-lg`} data-testid={`total-${index}`}>{total}</span>
                 </div>
               </div>

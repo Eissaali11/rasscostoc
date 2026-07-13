@@ -4,29 +4,22 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { getRoleLabel } from "@shared/roles";
 import { getAuthorizedNavigation } from "@/lib/navigation";
+import { useTranslation } from "@/lib/language";
 import logo from "@/assets/logo.png";
 import {
   Bell,
-  Boxes,
   CircleHelp,
-  ClipboardList,
-  Home,
-  Settings,
-  Shapes,
-  ShieldCheck,
-  Undo2,
+  Languages,
   LogOut,
-  ScrollText,
-  Search,
-  Users,
-  Warehouse,
-  Calculator,
   Menu,
+  Settings,
+  Users,
   X,
 } from "lucide-react";
 
 type NeoShellLayoutProps = {
-  title: string;
+  /** i18n key under common (e.g. "titles.home") */
+  titleKey: string;
   children: ReactNode;
 };
 
@@ -55,12 +48,14 @@ interface GroupedTransfer {
 }
 
 function initials(fullName?: string | null): string {
-  if (!fullName) return "م";
+  if (!fullName) return "U";
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  return (parts[0]?.[0] || "م") + (parts[1]?.[0] || "");
+  return (parts[0]?.[0] || "U") + (parts[1]?.[0] || "");
 }
 
-export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
+export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
+  const { t, dir, language, changeLanguage } = useTranslation();
+  const title = t(titleKey);
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -91,22 +86,15 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
 
   const groupedTransfers = useMemo(() => {
     if (!isTechnician) return [] as GroupedTransfer[];
-
     const groupMap = new Map<string, GroupedTransfer>();
-
     transfers.forEach((transfer) => {
       const key =
         transfer.requestId ||
         `${transfer.technicianId}-${transfer.warehouseId}-${new Date(transfer.createdAt).getTime()}-${transfer.status}`;
-
       if (!groupMap.has(key)) {
-        groupMap.set(key, {
-          requestId: key,
-          status: transfer.status,
-        });
+        groupMap.set(key, { requestId: key, status: transfer.status });
       }
     });
-
     return Array.from(groupMap.values());
   }, [isTechnician, transfers]);
 
@@ -135,32 +123,29 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
     let token = localStorage.getItem("auth-token");
     const refreshToken = localStorage.getItem("refresh-token");
 
-    // Check if token is expired or close to expiring (less than 10 seconds remaining)
     let isExpired = true;
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
         const exp = payload.exp * 1000;
-        if (Date.now() < exp - 10000) {
-          isExpired = false;
-        }
-      } catch (err) {
-        // Invalid token format
+        if (Date.now() < exp - 10000) isExpired = false;
+      } catch {
+        // ignore
       }
     }
 
     if (isExpired && refreshToken) {
       try {
-        const res = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
         });
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.token && data.refreshToken) {
-            localStorage.setItem('auth-token', data.token);
-            localStorage.setItem('refresh-token', data.refreshToken);
+            localStorage.setItem("auth-token", data.token);
+            localStorage.setItem("refresh-token", data.refreshToken);
             token = data.token;
           }
         }
@@ -172,16 +157,23 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
     const ssoUrl = token
       ? `${href}/api/auth/sso?token=${encodeURIComponent(token)}`
       : href;
-
     window.open(ssoUrl, "_blank", "noopener,noreferrer");
   };
 
-
   const navItems = getAuthorizedNavigation(user?.role || "technician");
+  const sidebarSideClass = dir === "rtl" ? "right-0 border-l" : "left-0 border-r";
+  const sidebarHiddenClass =
+    dir === "rtl"
+      ? isSidebarOpen
+        ? "translate-x-0"
+        : "translate-x-full"
+      : isSidebarOpen
+        ? "translate-x-0"
+        : "-translate-x-full";
+  const submenuPadClass = dir === "rtl" ? "mr-6 border-r pr-4" : "ml-6 border-l pl-4";
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#102222] text-slate-100 flex overflow-x-hidden">
-      {/* Backdrop overlay — closes drawer on click (all screen sizes) */}
+    <div dir={dir} className="min-h-screen bg-[#102222] text-slate-100 flex overflow-x-hidden">
       <div
         className={`fixed inset-0 z-40 transition-all duration-300 ${
           isSidebarOpen
@@ -191,23 +183,20 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
         onClick={() => setIsSidebarOpen(false)}
       />
 
-      {/* Sidebar / Overlay Drawer */}
       <aside
-        className={`fixed top-0 bottom-0 right-0 z-50 w-72 border-l border-slate-700/60 bg-[#1a3636] flex flex-col h-screen transition-transform duration-300 ease-in-out shadow-2xl ${
-          isSidebarOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 bottom-0 z-50 w-72 ${sidebarSideClass} border-slate-700/60 bg-[#1a3636] flex flex-col h-screen transition-transform duration-300 ease-in-out shadow-2xl ${sidebarHiddenClass}`}
       >
         <div className="p-6 flex items-center justify-between gap-3 border-b border-slate-700/60">
           <div className="flex items-center gap-3">
             <div className="h-16 w-16 rounded-xl bg-cyan-400/20 text-cyan-300 flex items-center justify-center overflow-hidden shrink-0">
-              <img src={logo} alt="ستوك" className="h-14 w-14 object-contain" />
+              <img src={logo} alt={t("app.name")} className="h-14 w-14 object-contain" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight">إدارة المخزون</h1>
+            <h1 className="text-lg font-bold tracking-tight">{t("app.name")}</h1>
           </div>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-            aria-label="إغلاق القائمة الجانبية"
+            aria-label={t("close_sidebar")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -219,8 +208,10 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
               {initials(user?.fullName)}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">{user?.fullName || "المستخدم"}</span>
-              <span className="text-xs text-slate-400">{getRoleLabel(user?.role || "technician")}</span>
+              <span className="text-sm font-semibold">{user?.fullName || t("user")}</span>
+              <span className="text-xs text-slate-400">
+                {getRoleLabel(user?.role || "technician", language)}
+              </span>
             </div>
           </div>
 
@@ -228,6 +219,7 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isExternal = item.href.startsWith("http");
+              const label = t(item.labelKey);
               const active =
                 !isExternal &&
                 (location === item.href ||
@@ -236,21 +228,24 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
               if (isExternal) {
                 return (
                   <a
-                    key={`${item.href}-${item.label}`}
+                    key={`${item.href}-${item.labelKey}`}
                     href={item.href}
                     onClick={(e) => handleExternalClick(e, item.href)}
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium"
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    {label}
                   </a>
                 );
               }
 
-              const showChildren = item.children && (location === item.href || (item.href !== "/home" && location.startsWith(item.href)));
+              const showChildren =
+                item.children &&
+                (location === item.href ||
+                  (item.href !== "/home" && location.startsWith(item.href)));
 
               return (
-                <div key={`${item.href}-${item.label}`} className="flex flex-col gap-1">
+                <div key={`${item.href}-${item.labelKey}`} className="flex flex-col gap-1">
                   <Link
                     href={item.href}
                     onClick={() => setIsSidebarOpen(false)}
@@ -261,31 +256,31 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
                     }
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    {label}
                   </Link>
                   {showChildren && item.children && (
-                    <div className="mr-6 border-r border-slate-700/60 pr-4 py-1 flex flex-col gap-1.5">
+                    <div className={`${submenuPadClass} border-slate-700/60 py-1 flex flex-col gap-1.5`}>
                       {item.children
                         .filter((child) => !child.roles || child.roles.includes(user?.role || ""))
                         .map((child) => {
                           const ChildIcon = child.icon;
                           const childActive = location === child.href;
-                        return (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            onClick={() => setIsSidebarOpen(false)}
-                            className={
-                              childActive
-                                ? "flex items-center gap-2.5 px-3 py-2 rounded-lg bg-cyan-400/10 text-cyan-300 text-xs font-semibold"
-                                : "flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-colors text-xs font-medium"
-                            }
-                          >
-                            <ChildIcon className="h-3.5 w-3.5" />
-                            {child.label}
-                          </Link>
-                        );
-                      })}
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => setIsSidebarOpen(false)}
+                              className={
+                                childActive
+                                  ? "flex items-center gap-2.5 px-3 py-2 rounded-lg bg-cyan-400/10 text-cyan-300 text-xs font-semibold"
+                                  : "flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-colors text-xs font-medium"
+                              }
+                            >
+                              <ChildIcon className="h-3.5 w-3.5" />
+                              {t(child.labelKey)}
+                            </Link>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -302,12 +297,15 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium mb-1"
             >
               <Users className="h-4 w-4 text-cyan-400" />
-              إدارة المستخدمين
+              {t("manage_users")}
             </Link>
           )}
-          <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium" href="#">
+          <a
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 transition-colors font-medium"
+            href="#"
+          >
             <CircleHelp className="h-4 w-4" />
-            المساعدة
+            {t("help")}
           </a>
           <button
             type="button"
@@ -316,30 +314,41 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
             className="mt-2 w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-300 hover:bg-rose-500/10 transition-colors font-medium disabled:opacity-60"
           >
             <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "جاري الخروج..." : "تسجيل الخروج"}
+            {isLoggingOut
+              ? t("messages.logging_out", { ar: "جاري الخروج...", en: "Signing out..." })
+              : t("logout")}
           </button>
         </div>
       </aside>
 
-      {/* Main content — full width now */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
         <header className="h-20 border-b border-slate-700/60 bg-[#143030]/90 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
-              aria-label="فتح القائمة الجانبية"
+              aria-label={t("open_sidebar")}
             >
               <Menu className="h-6 w-6" />
             </button>
             <h2 className="text-xl lg:text-2xl font-bold">{title}</h2>
           </div>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => changeLanguage(language === "ar" ? "en" : "ar")}
+              className="px-3 py-1.5 rounded-xl border border-slate-600 text-xs font-bold bg-slate-900/40 text-slate-100 hover:bg-slate-800 transition-all uppercase tracking-wide flex items-center gap-1.5"
+              title={language === "ar" ? "Switch to English" : t("arabic")}
+              data-testid="button-language-toggle"
+            >
+              <Languages className="h-3.5 w-3.5" />
+              <span>{language === "ar" ? "EN" : "AR"}</span>
+            </button>
             <button
               className="relative p-2 rounded-full hover:bg-slate-800 transition-colors text-slate-300"
               type="button"
               onClick={() => setLocation("/notifications")}
-              aria-label="فتح الإشعارات"
+              aria-label={t("notifications")}
             >
               <Bell className="h-5 w-5" />
               {pendingNotificationsCount > 0 && (
@@ -348,9 +357,14 @@ export function NeoShellLayout({ title, children }: NeoShellLayoutProps) {
                 </span>
               )}
             </button>
-            <div className="text-slate-300">
+            <button
+              type="button"
+              className="p-2 rounded-full hover:bg-slate-800 transition-colors text-slate-300"
+              onClick={() => setLocation("/profile")}
+              aria-label={t("settings")}
+            >
               <Settings className="h-5 w-5" />
-            </div>
+            </button>
           </div>
         </header>
 

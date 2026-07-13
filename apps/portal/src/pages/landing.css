@@ -1,8 +1,7 @@
 /* Custom styling for StockPro Landing Page */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Cairo:wght@400;600;700;900&display=swap');
 
 .landing-body {
-  font-family: 'Cairo', 'Outfit', sans-serif;
+  font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
   background: radial-gradient(circle at 50% 0%, #111e25 0%, #070c0e 50%, #030506 100%) !important;
   color: #ffffff !important;
   min-height: 100vh;

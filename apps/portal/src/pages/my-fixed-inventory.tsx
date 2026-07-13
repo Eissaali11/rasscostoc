@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ interface FixedInventory {
 }
 
 export default function MyFixedInventory() {
+  const { t, dir } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,15 +78,15 @@ export default function MyFixedInventory() {
       queryClient.invalidateQueries({ queryKey: [`/api/technician-fixed-inventory/${user?.id}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/fixed-inventory-dashboard'] });
       toast({
-        title: "✓ تم الحذف بنجاح",
-        description: "تم حذف المخزون الثابت",
+        title: t('inventory.completed_delete_successfully_1'),
+        description: t('inventory.completed_delete_inventory'),
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
-        title: "✗ فشل الحذف",
-        description: "حدث خطأ أثناء حذف البيانات",
+        title: t('inventory.fail_delete_1'),
+        description: t('inventory.error_delete_data'),
       });
     },
   });
@@ -97,13 +99,13 @@ export default function MyFixedInventory() {
     if (!existingInventory) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('المخزون الثابت');
+    const worksheet = workbook.addWorksheet(t('inventory.fixed'));
 
     worksheet.views = [{ rightToLeft: true }];
 
     worksheet.mergeCells('A1:D1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = 'تقرير المخزون الثابت';
+    titleCell.value = t('inventory.report_inventory');
     titleCell.font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -111,14 +113,14 @@ export default function MyFixedInventory() {
     
     worksheet.mergeCells('A2:D2');
     const dateCell = worksheet.getCell('A2');
-    dateCell.value = `التاريخ: ${new Date().toLocaleDateString('ar-SA')}`;
+    dateCell.value = t('inventory.date_1', { var_0: new Date().toLocaleDateString('ar-SA') });
     dateCell.font = { size: 12, italic: true };
     dateCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
     dateCell.alignment = { horizontal: 'center' };
     worksheet.getRow(2).height = 25;
 
     worksheet.addRow([]);
-    const headerRow = worksheet.addRow(['الصنف', 'كراتين', 'وحدات', 'الإجمالي']);
+    const headerRow = worksheet.addRow([t('inventory.item_7975'), t('inventory.boxes'), t('inventory.units_1'), t('inventory.total')]);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -133,16 +135,16 @@ export default function MyFixedInventory() {
     });
 
     const data = [
-      ['أجهزة N950', existingInventory.n950Boxes, existingInventory.n950Units, getTotalForItem(existingInventory.n950Boxes, existingInventory.n950Units)],
-      ['أجهزة I9000s', existingInventory.i9000sBoxes, existingInventory.i9000sUnits, getTotalForItem(existingInventory.i9000sBoxes, existingInventory.i9000sUnits)],
-      ['أجهزة I9100', existingInventory.i9100Boxes, existingInventory.i9100Units, getTotalForItem(existingInventory.i9100Boxes, existingInventory.i9100Units)],
-      ['أوراق رول', existingInventory.rollPaperBoxes, existingInventory.rollPaperUnits, getTotalForItem(existingInventory.rollPaperBoxes, existingInventory.rollPaperUnits)],
-      ['ملصقات مدى', existingInventory.stickersBoxes, existingInventory.stickersUnits, getTotalForItem(existingInventory.stickersBoxes, existingInventory.stickersUnits)],
-      ['بطاريات جديدة', existingInventory.newBatteriesBoxes, existingInventory.newBatteriesUnits, getTotalForItem(existingInventory.newBatteriesBoxes, existingInventory.newBatteriesUnits)],
-      ['شرائح موبايلي', existingInventory.mobilySimBoxes, existingInventory.mobilySimUnits, getTotalForItem(existingInventory.mobilySimBoxes, existingInventory.mobilySimUnits)],
-      ['شرائح STC', existingInventory.stcSimBoxes, existingInventory.stcSimUnits, getTotalForItem(existingInventory.stcSimBoxes, existingInventory.stcSimUnits)],
-      ['شرائح زين', existingInventory.zainSimBoxes, existingInventory.zainSimUnits, getTotalForItem(existingInventory.zainSimBoxes, existingInventory.zainSimUnits)],
-      ['شرائح ليبارا', existingInventory.lebaraBoxes, existingInventory.lebaraUnits, getTotalForItem(existingInventory.lebaraBoxes, existingInventory.lebaraUnits)],
+      [t('inventory.n950_devices'), existingInventory.n950Boxes, existingInventory.n950Units, getTotalForItem(existingInventory.n950Boxes, existingInventory.n950Units)],
+      [t('inventory.i9000s_devices'), existingInventory.i9000sBoxes, existingInventory.i9000sUnits, getTotalForItem(existingInventory.i9000sBoxes, existingInventory.i9000sUnits)],
+      [t('inventory.i9100_devices'), existingInventory.i9100Boxes, existingInventory.i9100Units, getTotalForItem(existingInventory.i9100Boxes, existingInventory.i9100Units)],
+      [t('inventory.item_12770'), existingInventory.rollPaperBoxes, existingInventory.rollPaperUnits, getTotalForItem(existingInventory.rollPaperBoxes, existingInventory.rollPaperUnits)],
+      [t('inventory.stickers_3'), existingInventory.stickersBoxes, existingInventory.stickersUnits, getTotalForItem(existingInventory.stickersBoxes, existingInventory.stickersUnits)],
+      [t('inventory.batteries'), existingInventory.newBatteriesBoxes, existingInventory.newBatteriesUnits, getTotalForItem(existingInventory.newBatteriesBoxes, existingInventory.newBatteriesUnits)],
+      [t('inventory.sims_mobily'), existingInventory.mobilySimBoxes, existingInventory.mobilySimUnits, getTotalForItem(existingInventory.mobilySimBoxes, existingInventory.mobilySimUnits)],
+      [t('inventory.stc_sims'), existingInventory.stcSimBoxes, existingInventory.stcSimUnits, getTotalForItem(existingInventory.stcSimBoxes, existingInventory.stcSimUnits)],
+      [t('inventory.sims_zain'), existingInventory.zainSimBoxes, existingInventory.zainSimUnits, getTotalForItem(existingInventory.zainSimBoxes, existingInventory.zainSimUnits)],
+      [t('inventory.sims_lebara'), existingInventory.lebaraBoxes, existingInventory.lebaraUnits, getTotalForItem(existingInventory.lebaraBoxes, existingInventory.lebaraUnits)],
     ];
 
     data.forEach((rowData) => {
@@ -160,7 +162,7 @@ export default function MyFixedInventory() {
     });
 
     const grandTotal = data.reduce((sum, row) => sum + (row[3] as number), 0);
-    const totalRow = worksheet.addRow(['الإجمالي الكلي', '', '', grandTotal]);
+    const totalRow = worksheet.addRow([t('inventory.total_2'), '', '', grandTotal]);
     totalRow.font = { bold: true, size: 14 };
     totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } };
     totalRow.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -183,11 +185,11 @@ export default function MyFixedInventory() {
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `المخزون_الثابت_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.xlsx`);
+    saveAs(blob, t('inventory.inventory_6', { var_0: new Date().toLocaleDateString('ar-SA').replace(/\//g, '-') }));
 
     toast({
-      title: "✓ تم التصدير بنجاح",
-      description: "تم تصدير البيانات إلى ملف Excel",
+      title: t('inventory.completed_export_successfully'),
+      description: t('inventory.completed_export_data_file'),
     });
   };
 
@@ -225,20 +227,20 @@ export default function MyFixedInventory() {
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-purple-500"></div>
             <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-pink-500 border-l-cyan-500"></div>
           </motion.div>
-          <p className="text-white text-lg font-semibold">جاري التحميل...</p>
+          <p className="text-white text-lg font-semibold">{t('inventory.loading')}</p>
         </motion.div>
       </div>
     );
   }
 
   const handleDeleteClick = () => {
-    if (window.confirm('هل أنت متأكد من حذف المخزون الثابت؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+    if (window.confirm(t('inventory.delete_inventory_no_undo'))) {
       deleteMutation.mutate();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir={dir}>
       {/* Animated Banner */}
       <div className="relative overflow-hidden bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 shadow-2xl">
         <div className="absolute inset-0 bg-grid-white/5"></div>
@@ -284,7 +286,7 @@ export default function MyFixedInventory() {
                 data-testid="button-back-home"
               >
                 <Home className="w-5 h-5 ml-2" />
-                الصفحة الرئيسية
+                {t('inventory.page_home')}
                 <ArrowRight className="w-5 h-5 mr-2" />
               </Button>
             </motion.div>
@@ -338,10 +340,10 @@ export default function MyFixedInventory() {
               >
                 <h1 className="text-4xl lg:text-5xl font-black text-white mb-2 drop-shadow-2xl flex items-center justify-center gap-3">
                   <Sparkles className="h-10 w-10 text-yellow-300 animate-pulse" />
-                  المخزون الثابت
+                  {t('inventory.fixed')}
                   <Sparkles className="h-10 w-10 text-yellow-300 animate-pulse" />
                 </h1>
-                <p className="text-white/90 text-lg font-semibold">نظام إدارة المخزون الاحترافي</p>
+                <p className="text-white/90 text-lg font-semibold">{t('inventory.system_management_inventory')}</p>
               </motion.div>
             </motion.div>
 
@@ -391,14 +393,14 @@ export default function MyFixedInventory() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <StatsKpiCard
-                title="إجمالي الأصناف"
+                title={t('inventory.total_1')}
                 value={grandTotal}
                 icon={Package}
                 color="primary"
                 delay={0}
               />
               <StatsKpiCard
-                title="الأجهزة"
+                title={t('inventory.devices')}
                 value={
                   getTotalForItem(existingInventory.n950Boxes, existingInventory.n950Units) +
                   getTotalForItem(existingInventory.i9000sBoxes, existingInventory.i9000sUnits) +
@@ -409,7 +411,7 @@ export default function MyFixedInventory() {
                 delay={0.1}
               />
               <StatsKpiCard
-                title="الشرائح"
+                title={t('inventory.sims')}
                 value={
                   getTotalForItem(existingInventory.mobilySimBoxes, existingInventory.mobilySimUnits) +
                   getTotalForItem(existingInventory.stcSimBoxes, existingInventory.stcSimUnits) +
@@ -423,28 +425,28 @@ export default function MyFixedInventory() {
 
             {/* Pie Chart */}
             <StockCompositionPie
-              title="توزيع المخزون الثابت"
-              description="تقسيم الأصناف حسب الفئات"
+              title={t('inventory.inventory_1')}
+              description={t('inventory.item_33450')}
               data={[
                 {
-                  name: 'أجهزة',
+                  name: t('inventory.devices_1'),
                   value: getTotalForItem(existingInventory.n950Boxes, existingInventory.n950Units) +
                         getTotalForItem(existingInventory.i9000sBoxes, existingInventory.i9000sUnits) +
                         getTotalForItem(existingInventory.i9100Boxes, existingInventory.i9100Units)
                 },
                 {
-                  name: 'شرائح',
+                  name: t('inventory.sims_1'),
                   value: getTotalForItem(existingInventory.mobilySimBoxes, existingInventory.mobilySimUnits) +
                         getTotalForItem(existingInventory.stcSimBoxes, existingInventory.stcSimUnits) +
                         getTotalForItem(existingInventory.zainSimBoxes, existingInventory.zainSimUnits)
                 },
                 {
-                  name: 'أوراق',
+                  name: t('inventory.item_7941'),
                   value: getTotalForItem(existingInventory.rollPaperBoxes, existingInventory.rollPaperUnits) +
                         getTotalForItem(existingInventory.stickersBoxes, existingInventory.stickersUnits)
                 },
                 {
-                  name: 'بطاريات',
+                  name: t('inventory.batteries_1'),
                   value: getTotalForItem(existingInventory.newBatteriesBoxes, existingInventory.newBatteriesUnits)
                 },
               ]}
@@ -472,7 +474,7 @@ export default function MyFixedInventory() {
                       data-testid="button-edit-inventory"
                     >
                       <Edit className="w-5 h-5 ml-2" />
-                      تعديل المخزون
+                      {t('inventory.edit_inventory')}
                     </Button>
                   </motion.div>
                   
@@ -483,7 +485,7 @@ export default function MyFixedInventory() {
                       data-testid="button-transfer-to-moving"
                     >
                       <ArrowRightLeft className="w-5 h-5 ml-2" />
-                      نقل للمتحرك
+                      {t('inventory.item_16004')}
                     </Button>
                   </motion.div>
                   
@@ -494,7 +496,7 @@ export default function MyFixedInventory() {
                       data-testid="button-export-excel"
                     >
                       <FileDown className="w-5 h-5 ml-2" />
-                      تصدير Excel
+                      {t('inventory.export_excel')}
                     </Button>
                   </motion.div>
                   
@@ -505,7 +507,7 @@ export default function MyFixedInventory() {
                       data-testid="button-delete-inventory"
                     >
                       <Trash2 className="w-5 h-5 ml-2" />
-                      حذف
+                      {t('inventory.delete')}
                     </Button>
                   </motion.div>
                 </div>
@@ -529,7 +531,7 @@ export default function MyFixedInventory() {
                     <div>
                       <p className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                         <Sparkles className="h-4 w-4 animate-pulse" />
-                        إجمالي الأصناف
+                        {t('inventory.total_1')}
                       </p>
                       <motion.p 
                         className="text-6xl font-black bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent"
@@ -596,11 +598,11 @@ export default function MyFixedInventory() {
                       <CardContent className="relative">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 text-center shadow-md border border-slate-200/50">
-                            <p className="text-xs font-semibold text-slate-600 mb-1">كراتين</p>
+                            <p className="text-xs font-semibold text-slate-600 mb-1">{t('inventory.boxes')}</p>
                             <p className="text-2xl font-black text-slate-800">{item.boxes.toLocaleString('ar-SA')}</p>
                           </div>
                           <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 text-center shadow-md border border-slate-200/50">
-                            <p className="text-xs font-semibold text-slate-600 mb-1">وحدات</p>
+                            <p className="text-xs font-semibold text-slate-600 mb-1">{t('inventory.units_1')}</p>
                             <p className="text-2xl font-black text-slate-800">{item.units.toLocaleString('ar-SA')}</p>
                           </div>
                         </div>
@@ -626,8 +628,8 @@ export default function MyFixedInventory() {
                 >
                   <Package className="h-10 w-10 text-white" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-white mb-3">لا يوجد مخزون ثابت</h3>
-                <p className="text-slate-300 mb-6 text-lg">ابدأ بإضافة مخزونك الثابت الآن</p>
+                <h3 className="text-2xl font-bold text-white mb-3">{t('inventory.no')}</h3>
+                <p className="text-slate-300 mb-6 text-lg">{t('inventory.item_41357')}</p>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button 
                     onClick={() => setShowEditModal(true)}
@@ -635,7 +637,7 @@ export default function MyFixedInventory() {
                     data-testid="button-add-first-inventory"
                   >
                     <Plus className="w-6 h-6 ml-2" />
-                    إضافة مخزون ثابت
+                    {t('inventory.add_3')}
                   </Button>
                 </motion.div>
               </CardContent>

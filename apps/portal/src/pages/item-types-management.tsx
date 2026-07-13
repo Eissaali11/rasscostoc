@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -61,15 +62,17 @@ import type { ItemType as SchemaItemType } from "@shared/schema";
 type ItemType = SchemaItemType;
 type ItemCategory = "devices" | "papers" | "sim" | "accessories";
 
-const CATEGORIES = [
-  { id: 'devices', nameAr: 'الأجهزة', nameEn: 'Devices', icon: Smartphone },
-  { id: 'papers', nameAr: 'الورقيات', nameEn: 'Papers', icon: FileText },
-  { id: 'sim', nameAr: 'شرائح الاتصال', nameEn: 'SIM Cards', icon: CreditCard },
-  { id: 'accessories', nameAr: 'الإكسسوارات', nameEn: 'Accessories', icon: Battery },
-];
+
 
 export default function ItemTypesManagement() {
+  const { t } = useTranslation();
   const { user } = useAuth();
+  const CATEGORIES = useMemo(() => [
+    { id: 'devices', nameAr: t('common.devices'), nameEn: 'Devices', icon: Smartphone },
+    { id: 'papers', nameAr: t('common.item_12737'), nameEn: 'Papers', icon: FileText },
+    { id: 'sim', nameAr: t('common.sims'), nameEn: 'SIM Cards', icon: CreditCard },
+    { id: 'accessories', nameAr: t('common.item_17450'), nameEn: 'Accessories', icon: Battery },
+  ], [t]);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

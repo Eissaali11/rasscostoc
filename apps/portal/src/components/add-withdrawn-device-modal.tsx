@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "@/lib/language";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,18 +33,20 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertWithdrawnDeviceSchema } from "@shared/schema";
 
-const formSchema = insertWithdrawnDeviceSchema.extend({
-  city: z.string().min(1, "المدينة مطلوبة"),
-  technicianName: z.string().min(1, "اسم المندوب مطلوب"),
-  terminalId: z.string().min(1, "رقم الجهاز مطلوب"),
-  serialNumber: z.string().min(1, "الرقم التسلسلي مطلوب"),
-  battery: z.string().min(1, "حالة البطارية مطلوبة"),
-  chargerCable: z.string().min(1, "كابل الشاحن مطلوب"),
-  chargerHead: z.string().min(1, "رأس الشاحن مطلوب"),
-  hasSim: z.string().min(1, "وجود شريحة مطلوب"),
-});
+const getFormSchema = (t: (key: string) => string) => insertWithdrawnDeviceSchema.extend(
+{
+  city: z.string().min(1, t('reports.city_1')),
+  technicianName: z.string().min(1, t('reports.name_technician_3')),
+  terminalId: z.string().min(1, t('reports.number_device_3')),
+  serialNumber: z.string().min(1, t('reports.number_serial_2')),
+  battery: z.string().min(1, t('reports.status_battery_2')),
+  chargerCable: z.string().min(1, t('reports.item_23935')),
+  chargerHead: z.string().min(1, t('reports.item_22320')),
+  hasSim: z.string().min(1, t('reports.sim_4')),
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface AddWithdrawnDeviceModalProps {
   open: boolean;
@@ -50,6 +54,8 @@ interface AddWithdrawnDeviceModalProps {
 }
 
 export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithdrawnDeviceModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -78,16 +84,16 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawn-devices"] });
       toast({
-        title: "تم الإضافة بنجاح",
-        description: "تم إضافة الجهاز المسحوب بنجاح",
+        title: t('reports.completed_add_successfully'),
+        description: t('reports.completed_add_device_successfu'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في الإضافة",
-        description: error.message || "حدث خطأ أثناء إضافة الجهاز",
+        title: t('reports.error_add'),
+        description: error.message || t('reports.error_add_device'),
         variant: "destructive",
       });
     },
@@ -101,9 +107,9 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">إضافة جهاز مسحوب</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{t('reports.add_device')}</DialogTitle>
           <DialogDescription className="text-sm">
-            قم بإدخال بيانات الجهاز المسحوب من الخدمة
+            {t('reports.data_device_1')}
           </DialogDescription>
         </DialogHeader>
         
@@ -115,10 +121,10 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المدينة</FormLabel>
+                    <FormLabel>{t('reports.city')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل اسم المدينة"
+                        placeholder={t('reports.name_city')}
                         {...field}
                         data-testid="input-city"
                       />
@@ -133,10 +139,10 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="technicianName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اسم المندوب</FormLabel>
+                    <FormLabel>{t('reports.name_technician_1')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل اسم المندوب"
+                        placeholder={t('reports.name_technician_2')}
                         {...field}
                         data-testid="input-technician-name"
                       />
@@ -153,10 +159,10 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="terminalId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم الجهاز (Terminal ID)</FormLabel>
+                    <FormLabel>{t('reports.number_device_1')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل رقم الجهاز"
+                        placeholder={t('reports.number_device_2')}
                         {...field}
                         data-testid="input-terminal-id"
                       />
@@ -171,10 +177,10 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="serialNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الرقم التسلسلي</FormLabel>
+                    <FormLabel>{t('reports.number_serial')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل الرقم التسلسلي"
+                        placeholder={t('reports.number_serial_1')}
                         {...field}
                         data-testid="input-serial-number"
                       />
@@ -191,18 +197,18 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="battery"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>حالة البطارية</FormLabel>
+                    <FormLabel>{t('reports.status_battery')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-battery">
-                          <SelectValue placeholder="اختر حالة البطارية" />
+                          <SelectValue placeholder={t('reports.status_battery_1')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="جيدة">جيدة</SelectItem>
-                        <SelectItem value="متوسطة">متوسطة</SelectItem>
-                        <SelectItem value="سيئة">سيئة</SelectItem>
-                        <SelectItem value="لا توجد">لا توجد</SelectItem>
+                        <SelectItem value={t('reports.item_6350')}>{t('reports.item_6350')}</SelectItem>
+                        <SelectItem value={t('reports.item_9546')}>{t('reports.item_9546')}</SelectItem>
+                        <SelectItem value={t('reports.item_6348')}>{t('reports.item_6348')}</SelectItem>
+                        <SelectItem value={t('reports.no_2')}>{t('reports.no_2')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -215,17 +221,17 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="chargerCable"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>كابل الشاحن</FormLabel>
+                    <FormLabel>{t('reports.item_15919')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-charger-cable">
-                          <SelectValue placeholder="اختر حالة كابل الشاحن" />
+                          <SelectValue placeholder={t('reports.status_2')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="موجود">موجود</SelectItem>
-                        <SelectItem value="غير موجود">غير موجود</SelectItem>
-                        <SelectItem value="تالف">تالف</SelectItem>
+                        <SelectItem value={t('reports.item_7984')}>{t('reports.item_7984')}</SelectItem>
+                        <SelectItem value={t('reports.item_12805')}>{t('reports.item_12805')}</SelectItem>
+                        <SelectItem value={t('reports.item_6358')}>{t('reports.item_6358')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -240,17 +246,17 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="chargerHead"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رأس الشاحن</FormLabel>
+                    <FormLabel>{t('reports.item_14304')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-charger-head">
-                          <SelectValue placeholder="اختر حالة رأس الشاحن" />
+                          <SelectValue placeholder={t('reports.status_3')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="موجود">موجود</SelectItem>
-                        <SelectItem value="غير موجود">غير موجود</SelectItem>
-                        <SelectItem value="تالف">تالف</SelectItem>
+                        <SelectItem value={t('reports.item_7984')}>{t('reports.item_7984')}</SelectItem>
+                        <SelectItem value={t('reports.item_12805')}>{t('reports.item_12805')}</SelectItem>
+                        <SelectItem value={t('reports.item_6358')}>{t('reports.item_6358')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -263,16 +269,16 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 name="hasSim"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>وجود شريحة الاتصال</FormLabel>
+                    <FormLabel>{t('reports.sim_2')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-has-sim">
-                          <SelectValue placeholder="اختر وجود الشريحة" />
+                          <SelectValue placeholder={t('reports.sim_3')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="نعم">نعم</SelectItem>
-                        <SelectItem value="لا">لا</SelectItem>
+                        <SelectItem value={t('reports.yes')}>{t('reports.yes')}</SelectItem>
+                        <SelectItem value={t('reports.no_3')}>{t('reports.no_3')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -286,18 +292,18 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
               name="simCardType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>نوع شريحة الاتصال</FormLabel>
+                  <FormLabel>{t('reports.type_sim_1')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-sim-type">
-                        <SelectValue placeholder="اختر نوع الشريحة" />
+                        <SelectValue placeholder={t('reports.type_sim_2')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="Mobily">Mobily</SelectItem>
                       <SelectItem value="STC">STC</SelectItem>
                       <SelectItem value="Zain">Zain</SelectItem>
-                      <SelectItem value="غير محدد">غير محدد</SelectItem>
+                      <SelectItem value={t('reports.item_11173')}>{t('reports.item_11173')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -310,10 +316,10 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
               name="damagePart"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الضرر في الجهاز</FormLabel>
+                  <FormLabel>{t('reports.device_5')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="صف الضرر الموجود في الجهاز (إن وجد)"
+                      placeholder={t('reports.device_6')}
                       {...field}
                       value={field.value || ""}
                       data-testid="input-damage-part"
@@ -329,10 +335,10 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ملاحظات</FormLabel>
+                  <FormLabel>{t('reports.notes_2')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="أضف ملاحظات إضافية..."
+                      placeholder={t('reports.notes_3')}
                       {...field}
                       value={field.value || ""}
                       data-testid="input-notes"
@@ -351,7 +357,7 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 className="flex-1 text-sm sm:text-base"
                 data-testid="button-cancel"
               >
-                إلغاء
+                {t('reports.cancel_1')}
               </Button>
               <Button
                 type="submit"
@@ -359,7 +365,7 @@ export default function AddWithdrawnDeviceModal({ open, onOpenChange }: AddWithd
                 className="flex-1 text-sm sm:text-base"
                 data-testid="button-submit"
               >
-                {addDeviceMutation.isPending ? "جاري الحفظ..." : "حفظ الجهاز"}
+                {addDeviceMutation.isPending ? t('reports.save') : t('reports.save_device')}
               </Button>
             </div>
           </form>

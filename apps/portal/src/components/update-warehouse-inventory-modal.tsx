@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useEffect, useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -48,6 +49,7 @@ export default function UpdateWarehouseInventoryModal({
   currentInventory,
   currentEntries = [],
 }: UpdateWarehouseInventoryModalProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { data: itemTypes, isLoading: itemTypesLoading } = useActiveItemTypes();
   const [formData, setFormData] = useState<InventoryFormData>({});
@@ -114,15 +116,15 @@ export default function UpdateWarehouseInventoryModal({
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse-inventory", warehouseId] });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
       toast({
-        title: "تم تحديث المخزون بنجاح",
-        description: "تم تحديث كميات المخزون في المستودع",
+        title: t('warehouse.completed_update_inventory_suc'),
+        description: t('warehouse.completed_update_inventory_war'),
       });
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في تحديث المخزون",
-        description: error.message || "حدث خطأ أثناء تحديث المخزون",
+        title: t('warehouse.error_update_inventory'),
+        description: error.message || t('warehouse.error_update_inventory_1'),
         variant: "destructive",
       });
     },
@@ -173,9 +175,9 @@ export default function UpdateWarehouseInventoryModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
         <DialogHeader className="shrink-0">
-          <DialogTitle>تحديث مخزون المستودع</DialogTitle>
+          <DialogTitle>{t('warehouse.update_warehouse')}</DialogTitle>
           <DialogDescription>
-            قم بتحديث كميات جميع الأصناف في المستودع
+            {t('warehouse.warehouse_4')}
           </DialogDescription>
         </DialogHeader>
         
@@ -186,33 +188,33 @@ export default function UpdateWarehouseInventoryModal({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="space-y-2 shrink-0">
-              <Label>البحث عن المنتج</Label>
+              <Label>{t('warehouse.search')}</Label>
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={productSearchQuery}
                   onChange={(event) => setProductSearchQuery(event.target.value)}
-                  placeholder="ابحث بالاسم أو الفئة"
+                  placeholder={t('warehouse.item_27039')}
                   className="pr-10 pl-10"
                 />
                 {productSearchQuery.trim().length > 0 && (
                   <button
                     type="button"
                     onClick={() => setProductSearchQuery("")}
-                    aria-label="مسح البحث"
+                    aria-label={t('warehouse.scan_search_3')}
                     className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
                     <XCircle className="h-4 w-4" />
                   </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">عرض {filteredVisibleItems.length} من {visibleItems.length} صنف</p>
+              <p className="text-xs text-muted-foreground">{t('warehouse.view_2')}{filteredVisibleItems.length}{t('warehouse.item_3211')}{visibleItems.length}{t('warehouse.item_4796')}</p>
             </div>
 
             <div className="flex-1 min-h-0 pr-2 overflow-y-auto max-h-[55vh] sm:max-h-[500px] space-y-4">
               {filteredVisibleItems.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  لا توجد منتجات مطابقة لبحثك
+                  {t('warehouse.no_3')}
                 </div>
               ) : filteredVisibleItems.map((item) => {
                 const Icon = item.icon;
@@ -227,7 +229,7 @@ export default function UpdateWarehouseInventoryModal({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <Label className="text-xs sm:text-sm">الكراتين</Label>
+                        <Label className="text-xs sm:text-sm">{t('warehouse.boxes')}</Label>
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <Button
                             type="button"
@@ -263,12 +265,12 @@ export default function UpdateWarehouseInventoryModal({
                             onClick={() => handleValueChange(item.id, 'boxes', 0)}
                             disabled={values.boxes === 0}
                           >
-                            تصفير
+                            {t('warehouse.item_7963')}
                           </Button>
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs sm:text-sm">الوحدات</Label>
+                        <Label className="text-xs sm:text-sm">{t('warehouse.units')}</Label>
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <Button
                             type="button"
@@ -304,7 +306,7 @@ export default function UpdateWarehouseInventoryModal({
                             onClick={() => handleValueChange(item.id, 'units', 0)}
                             disabled={values.units === 0}
                           >
-                            تصفير
+                            {t('warehouse.item_7963')}
                           </Button>
                         </div>
                       </div>
@@ -320,7 +322,7 @@ export default function UpdateWarehouseInventoryModal({
                 disabled={updateInventoryMutation.isPending}
                 className="flex-1"
               >
-                {updateInventoryMutation.isPending ? "جاري التحديث..." : "تحديث المخزون"}
+                {updateInventoryMutation.isPending ? t('warehouse.update') : t('warehouse.update_inventory')}
               </Button>
               <Button
                 type="button"
@@ -328,7 +330,7 @@ export default function UpdateWarehouseInventoryModal({
                 onClick={() => onOpenChange(false)}
                 className="flex-1"
               >
-                إلغاء
+                {t('warehouse.cancel')}
               </Button>
             </div>
           </form>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -63,6 +64,7 @@ interface User {
 }
 
 export default function ReceivedDevicesReview() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -90,10 +92,10 @@ export default function ReceivedDevicesReview() {
       apiRequest("PATCH", `/api/received-devices/${id}/status`, { status, adminNotes: notes }),
     onSuccess: () => {
       toast({
-        title: actionType === 'approve' ? "✅ تمت الموافقة" : "❌ تم الرفض",
+        title: actionType === 'approve' ? t('verification.item_27561') : t('verification.completed_reject_1'),
         description: actionType === 'approve' 
-          ? "تم قبول الجهاز بنجاح" 
-          : "تم رفض الجهاز",
+          ? t('verification.completed_approve_device_succe') 
+          : t('verification.completed_reject_device'),
       });
       setSelectedDevice(null);
       setActionType(null);
@@ -103,8 +105,8 @@ export default function ReceivedDevicesReview() {
     },
     onError: () => {
       toast({
-        title: "❌ خطأ",
-        description: "فشل تحديث حالة الجهاز",
+        title: t('verification.error_1'),
+        description: t('verification.fail_update_status_device'),
         variant: "destructive",
       });
     },
@@ -128,7 +130,7 @@ export default function ReceivedDevicesReview() {
 
   const getUserName = (userId: string) => {
     const foundUser = users.find(u => u.id === userId);
-    return foundUser?.fullName || foundUser?.username || `مندوب #${userId.slice(0, 8)}`;
+    return foundUser?.fullName || foundUser?.username || t('verification.item_9013', { var_0: userId.slice(0, 8) });
   };
 
   const getItemName = (itemTypeId: string | null, terminalId: string | null) => {
@@ -136,7 +138,7 @@ export default function ReceivedDevicesReview() {
       const it = itemTypes.find(t => t.id === itemTypeId);
       if (it) return it.nameAr;
     }
-    return terminalId || "منتج غير معروف";
+    return terminalId || t('verification.item_19214');
   };
 
   const getCategoryIcon = (itemTypeId: string | null) => {
@@ -161,25 +163,25 @@ export default function ReceivedDevicesReview() {
       pending: { 
         color: "from-yellow-500/20 to-amber-500/20 border-yellow-500/30", 
         icon: Clock, 
-        text: "قيد المراجعة",
+        text: t('verification.pending_review'),
         badgeClass: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
       },
       approved: { 
         color: "from-green-500/20 to-emerald-500/20 border-green-500/30", 
         icon: CheckCircle2, 
-        text: "موافق عليه",
+        text: t('verification.ok'),
         badgeClass: "bg-green-500/20 text-green-300 border-green-500/30"
       },
       rejected: { 
         color: "from-red-500/20 to-rose-500/20 border-red-500/30", 
         icon: XCircle, 
-        text: "مرفوض",
+        text: t('verification.rejected'),
         badgeClass: "bg-red-500/20 text-red-300 border-red-500/30"
       },
       delivered: { 
         color: "from-teal-500/20 to-cyan-500/20 border-teal-500/30", 
         icon: Sparkles, 
-        text: "تم التسليم",
+        text: t('verification.completed'),
         badgeClass: "bg-teal-500/20 text-teal-300 border-teal-500/30"
       },
     };
@@ -222,7 +224,7 @@ export default function ReceivedDevicesReview() {
                     </span>
                   )}
                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${device.inventoryType === 'moving' ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-blue-500/15 text-blue-300 border border-blue-500/20'}`}>
-                    {device.inventoryType === 'moving' ? 'مخزون متحرك' : 'مخزون ثابت'}
+                    {device.inventoryType === 'moving' ? t('verification.item_15971') : t('verification.item_14327')}
                   </span>
                 </div>
               </div>
@@ -251,25 +253,25 @@ export default function ReceivedDevicesReview() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
                   <Package className="w-4 h-4 text-[#18B2B0]" />
-                  الملحقات:
+                  {t('verification.text')}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {device.battery && (
                     <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
                       <Battery className="w-3 h-3 ml-1" />
-                      بطارية
+                      {t('verification.battery_1')}
                     </Badge>
                   )}
                   {device.chargerCable && (
                     <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
                       <Cable className="w-3 h-3 ml-1" />
-                      كابل
+                      {t('verification.item_6358')}
                     </Badge>
                   )}
                   {device.chargerHead && (
                     <Badge variant="outline" className="bg-slate-800/50 border-slate-600 text-slate-300">
                       <Cable className="w-3 h-3 ml-1" />
-                      رأس
+                      {t('verification.item_4743')}
                     </Badge>
                   )}
                   {device.hasSim && (
@@ -288,7 +290,7 @@ export default function ReceivedDevicesReview() {
                 <div className="flex items-start gap-3 text-sm">
                   <AlertCircle className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-orange-300 block mb-1">ملاحظات الأضرار:</span>
+                    <span className="font-medium text-orange-300 block mb-1">{t('verification.notes_1')}</span>
                     <p className="text-orange-200/80">{device.damagePart}</p>
                   </div>
                 </div>
@@ -299,7 +301,7 @@ export default function ReceivedDevicesReview() {
             {device.adminNotes && (
               <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
                 <div className="text-sm">
-                  <span className="font-medium text-slate-300 block mb-1">ملاحظات المشرف:</span>
+                  <span className="font-medium text-slate-300 block mb-1">{t('verification.notes_supervisor_1')}</span>
                   <p className="text-slate-400">{device.adminNotes}</p>
                 </div>
               </div>
@@ -308,7 +310,7 @@ export default function ReceivedDevicesReview() {
             {/* Approval Info */}
             {device.approvedBy && device.approvedAt && (
               <div className="text-xs text-slate-500 flex items-center gap-2 pt-2 border-t border-slate-700/50">
-                <span>تمت المراجعة: {getUserName(device.approvedBy)}</span>
+                <span>{t('verification.review')}{getUserName(device.approvedBy)}</span>
                 <span>•</span>
                 <span>{format(new Date(device.approvedAt), "dd MMM yyyy", { locale: ar })}</span>
               </div>
@@ -326,7 +328,7 @@ export default function ReceivedDevicesReview() {
                   data-testid={`button-approve-${device.id}`}
                 >
                   <CheckCircle2 className="w-4 h-4 ml-2" />
-                  موافقة
+                  {t('verification.item_9568')}
                 </Button>
                 <Button
                   onClick={(e) => {
@@ -338,7 +340,7 @@ export default function ReceivedDevicesReview() {
                   data-testid={`button-reject-${device.id}`}
                 >
                   <XCircle className="w-4 h-4 ml-2" />
-                  رفض
+                  {t('verification.reject_1')}
                 </Button>
               </div>
             )}
@@ -378,12 +380,12 @@ export default function ReceivedDevicesReview() {
               </div>
               <h1 className="text-5xl md:text-6xl font-bold">
                 <span className="bg-gradient-to-r from-[#18B2B0] via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                  مراجعة الأجهزة والمواد
+                  {t('verification.review_devices')}
                 </span>
               </h1>
             </div>
             <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto">
-              راجع الأجهزة والمواد المستلمة في المستودعات واتخذ القرار المناسب
+              {t('verification.devices_warehouses')}
             </p>
             
             {/* Back Button */}
@@ -399,7 +401,7 @@ export default function ReceivedDevicesReview() {
                 data-testid="button-back-home"
               >
                 <Home className="w-4 h-4 ml-2" />
-                العودة للصفحة الرئيسية
+                {t('verification.home')}
               </Button>
             </motion.div>
           </motion.div>
@@ -417,7 +419,7 @@ export default function ReceivedDevicesReview() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-yellow-300 mb-1">قيد المراجعة</p>
+                      <p className="text-sm font-medium text-yellow-300 mb-1">{t('verification.pending_review')}</p>
                       <p className="text-4xl font-bold text-yellow-100">{pendingDevices.length}</p>
                     </div>
                     <div className="p-4 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 rounded-xl">
@@ -434,7 +436,7 @@ export default function ReceivedDevicesReview() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-green-300 mb-1">موافق عليها</p>
+                      <p className="text-sm font-medium text-green-300 mb-1">{t('verification.ok_1')}</p>
                       <p className="text-4xl font-bold text-green-100">{approvedDevices.length}</p>
                     </div>
                     <div className="p-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl">
@@ -451,7 +453,7 @@ export default function ReceivedDevicesReview() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-teal-300 mb-1">تم تسليمها</p>
+                      <p className="text-sm font-medium text-teal-300 mb-1">{t('verification.completed_1')}</p>
                       <p className="text-4xl font-bold text-teal-100">{deliveredDevices.length}</p>
                     </div>
                     <div className="p-4 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-xl">
@@ -468,7 +470,7 @@ export default function ReceivedDevicesReview() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-red-300 mb-1">مرفوضة</p>
+                      <p className="text-sm font-medium text-red-300 mb-1">{t('verification.item_9566')}</p>
                       <p className="text-4xl font-bold text-red-100">{rejectedDevices.length}</p>
                     </div>
                     <div className="p-4 bg-gradient-to-br from-red-500/20 to-rose-500/20 rounded-xl">
@@ -494,7 +496,7 @@ export default function ReceivedDevicesReview() {
                   data-testid="tab-pending"
                 >
                   <Clock className="w-4 h-4 ml-2" />
-                  قيد المراجعة ({pendingDevices.length})
+                  {t('verification.under_review_count', { count: pendingDevices.length })}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="approved" 
@@ -502,7 +504,7 @@ export default function ReceivedDevicesReview() {
                   data-testid="tab-approved"
                 >
                   <CheckCircle2 className="w-4 h-4 ml-2" />
-                  موافق ({approvedDevices.length})
+                  {t('verification.ok_count', { count: approvedDevices.length })}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="delivered" 
@@ -510,7 +512,7 @@ export default function ReceivedDevicesReview() {
                   data-testid="tab-delivered"
                 >
                   <Sparkles className="w-4 h-4 ml-2" />
-                  تم التسليم ({deliveredDevices.length})
+                  {t('verification.delivered_count', { count: deliveredDevices.length })}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="rejected" 
@@ -518,7 +520,7 @@ export default function ReceivedDevicesReview() {
                   data-testid="tab-rejected"
                 >
                   <XCircle className="w-4 h-4 ml-2" />
-                  مرفوضة ({rejectedDevices.length})
+                  {t('verification.rejected_count', { count: rejectedDevices.length })}
                 </TabsTrigger>
               </TabsList>
 
@@ -526,14 +528,14 @@ export default function ReceivedDevicesReview() {
                 {isLoading ? (
                   <div className="text-center py-16">
                     <div className="w-16 h-16 border-4 border-[#18B2B0] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-slate-400 text-lg">جاري التحميل...</p>
+                    <p className="text-slate-400 text-lg">{t('verification.loading')}</p>
                   </div>
                 ) : pendingDevices.length === 0 ? (
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[#18B2B0]/10 to-transparent rounded-2xl blur-xl" />
                     <Card className="relative bg-slate-900/70 backdrop-blur-xl border-slate-700/50 p-16 text-center">
                       <Clock className="w-20 h-20 mx-auto text-slate-600 mb-4" />
-                      <p className="text-2xl text-slate-400">لا توجد أجهزة قيد المراجعة</p>
+                      <p className="text-2xl text-slate-400">{t('verification.no_devices_pending_review')}</p>
                     </Card>
                   </div>
                 ) : (
@@ -551,7 +553,7 @@ export default function ReceivedDevicesReview() {
                     <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-transparent rounded-2xl blur-xl" />
                     <Card className="relative bg-slate-900/70 backdrop-blur-xl border-slate-700/50 p-16 text-center">
                       <CheckCircle2 className="w-20 h-20 mx-auto text-slate-600 mb-4" />
-                      <p className="text-2xl text-slate-400">لا توجد أجهزة موافق عليها</p>
+                      <p className="text-2xl text-slate-400">{t('verification.no_devices_ok')}</p>
                     </Card>
                   </div>
                 ) : (
@@ -569,7 +571,7 @@ export default function ReceivedDevicesReview() {
                     <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-transparent rounded-2xl blur-xl" />
                     <Card className="relative bg-slate-900/70 backdrop-blur-xl border-slate-700/50 p-16 text-center">
                       <Sparkles className="w-20 h-20 mx-auto text-slate-600 mb-4" />
-                      <p className="text-2xl text-slate-400">لا توجد أجهزة مسلّمة بعد</p>
+                      <p className="text-2xl text-slate-400">{t('verification.no_devices')}</p>
                     </Card>
                   </div>
                 ) : (
@@ -587,7 +589,7 @@ export default function ReceivedDevicesReview() {
                     <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent rounded-2xl blur-xl" />
                     <Card className="relative bg-slate-900/70 backdrop-blur-xl border-slate-700/50 p-16 text-center">
                       <XCircle className="w-20 h-20 mx-auto text-slate-600 mb-4" />
-                      <p className="text-2xl text-slate-400">لا توجد أجهزة مرفوضة</p>
+                      <p className="text-2xl text-slate-400">{t('verification.no_devices_1')}</p>
                     </Card>
                   </div>
                 ) : (
@@ -611,18 +613,18 @@ export default function ReceivedDevicesReview() {
               {actionType === 'approve' ? (
                 <>
                   <CheckCircle2 className="w-6 h-6 text-green-400" />
-                  تأكيد الموافقة
+                  {t('verification.confirm')}
                 </>
               ) : (
                 <>
                   <XCircle className="w-6 h-6 text-red-400" />
-                  تأكيد الرفض
+                  {t('verification.confirm_reject')}
                 </>
               )}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               {selectedDevice && (
-                <>مادة: {getItemName(selectedDevice.itemTypeId, selectedDevice.terminalId)} - {selectedDevice.serialNumber}</>
+                <>{t('verification.material_with_serial', { name: getItemName(selectedDevice.itemTypeId, selectedDevice.terminalId), serial: selectedDevice.serialNumber })}</>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -630,13 +632,13 @@ export default function ReceivedDevicesReview() {
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="notes" className="text-base text-slate-300">
-                ملاحظات {actionType === 'reject' ? '(مطلوبة)' : '(اختيارية)'}
+                {t('verification.notes_for_action', { action: actionType === 'reject' ? t('verification.item_9642') : t('verification.item_12773') })}
               </Label>
               <Textarea
                 id="notes"
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="أضف ملاحظات حول قرارك..."
+                placeholder={t('verification.notes_5')}
                 className="mt-2 min-h-[120px] bg-slate-800/50 border-slate-600 text-slate-100 placeholder:text-slate-500"
                 data-testid="textarea-adminNotes"
               />
@@ -650,7 +652,7 @@ export default function ReceivedDevicesReview() {
               className="border-slate-600 text-slate-300 hover:bg-slate-800"
               data-testid="button-cancel"
             >
-              إلغاء
+              {t('verification.cancel_1')}
             </Button>
             <Button
               onClick={confirmAction}
@@ -660,7 +662,7 @@ export default function ReceivedDevicesReview() {
                 : "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500"}
               data-testid="button-confirm"
             >
-              {updateStatusMutation.isPending ? "جاري الحفظ..." : "تأكيد"}
+              {updateStatusMutation.isPending ? t('verification.save') : t('verification.confirm_1')}
             </Button>
           </DialogFooter>
         </DialogContent>

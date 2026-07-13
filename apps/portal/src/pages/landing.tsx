@@ -24,7 +24,7 @@ import { useEffect, useRef, useState } from "react";
 import "./landing.css";
 
 export default function LandingPage() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language, changeLanguage } = useLanguage();
   const [, setLocation] = useLocation();
   const statsRef = useRef<HTMLDivElement>(null);
   const [isStatsInView, setIsStatsInView] = useState(false);
@@ -186,7 +186,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-3">
               <Button 
-                onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+                onClick={() => changeLanguage(language === 'ar' ? 'en' : 'ar')}
                 variant="ghost"
                 size="sm"
                 className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl"
@@ -201,7 +201,7 @@ export default function LandingPage() {
                 className="bg-gradient-to-r from-[#18B2B0] to-cyan-500 hover:from-[#0ea5a3] hover:to-cyan-400 text-white font-bold rounded-xl px-4 py-2 flex items-center gap-1.5 shadow-lg shadow-[#18B2B0]/20"
               >
                 <LogIn size={16} />
-                <span>{language === 'ar' ? 'دخول' : 'Login'}</span>
+                <span>{language === 'ar' ? t('common.item_6377') : 'Login'}</span>
               </Button>
             </div>
           </nav>
@@ -220,7 +220,7 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#18B2B0]/10 border border-[#18B2B0]/30 text-[#18B2B0] text-sm font-semibold mb-6"
               >
                 <Sparkles size={14} className="animate-pulse" />
-                <span>{language === 'ar' ? 'إصدار مؤسسي ذكي 2.0' : 'Enterprise Smart Version 2.0'}</span>
+                <span>{language === 'ar' ? t('common.item_20903') : 'Enterprise Smart Version 2.0'}</span>
               </motion.div>
 
               <motion.h1 
@@ -250,7 +250,7 @@ export default function LandingPage() {
                 className="text-lg text-gray-300 leading-relaxed mb-8 max-w-xl"
               >
                 {language === 'ar' 
-                  ? 'نظام شامل وحل متكامل تم تصميمه خصيصاً لتتبع العهد الفنية والأجهزة الذكية والمسلسلة مع المناديب والمستودعات في الوقت الفعلي بالربط المباشر مع الذكاء الاصطناعي.'
+                  ? t('common.system_completed_time')
                   : 'A comprehensive system and integrated solution specially built to track serialized technical assets, smart devices, and technician custodies in real-time with direct AI integrations.'}
               </motion.p>
 
@@ -265,7 +265,7 @@ export default function LandingPage() {
                   size="lg"
                   className="btn-premium flex items-center gap-2 text-base px-8 py-6"
                 >
-                  <span>{language === 'ar' ? 'تسجيل الدخول للنظام' : 'Login to System'}</span>
+                  <span>{language === 'ar' ? t('common.item_27165') : 'Login to System'}</span>
                   <ArrowRight size={18} className={language === 'ar' ? 'rotate-180' : ''} />
                 </Button>
                 <a href="#features">
@@ -274,7 +274,7 @@ export default function LandingPage() {
                     size="lg"
                     className="border-white/10 hover:border-[#18B2B0]/40 text-white bg-white/5 hover:bg-white/10 rounded-xl px-8 py-6 text-base"
                   >
-                    {language === 'ar' ? 'استعراض الميزات' : 'Explore Features'}
+                    {language === 'ar' ? t('common.item_22248') : 'Explore Features'}
                   </Button>
                 </a>
               </motion.div>
@@ -297,7 +297,7 @@ export default function LandingPage() {
               >
                 <div className="bg-gray-950/90 backdrop-blur-md border border-[#18B2B0]/30 rounded-2xl p-3 flex items-center gap-2 text-white">
                   <Warehouse className="text-[#18B2B0]" size={20} />
-                  <span className="text-xs font-bold">{language === 'ar' ? 'المستودعات' : 'Warehouses'}</span>
+                  <span className="text-xs font-bold">{language === 'ar' ? t('common.warehouses') : 'Warehouses'}</span>
                 </div>
               </motion.div>
 
@@ -308,7 +308,7 @@ export default function LandingPage() {
               >
                 <div className="bg-gray-950/90 backdrop-blur-md border border-[#18B2B0]/30 rounded-2xl p-3 flex items-center gap-2 text-white">
                   <Users className="text-cyan-400" size={20} />
-                  <span className="text-xs font-bold">{language === 'ar' ? 'العهد الفنية' : 'Custody'}</span>
+                  <span className="text-xs font-bold">{language === 'ar' ? t('common.item_17567') : 'Custody'}</span>
                 </div>
               </motion.div>
 
@@ -403,11 +403,11 @@ export default function LandingPage() {
               className="text-center mb-12"
             >
               <h2 className="text-4xl lg:text-5xl font-black mb-4 bg-gradient-to-r from-[#18B2B0] to-cyan-400 bg-clip-text text-transparent">
-                {language === 'ar' ? 'كتالوج المنتجات الفعلي' : 'Live Product Catalog'}
+                {language === 'ar' ? t('common.item_31900') : 'Live Product Catalog'}
               </h2>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto">
                 {language === 'ar' 
-                  ? 'الأصناف والمنتجات المعرفة والنشطة حالياً في قاعدة بيانات النظام والمخازن' 
+                  ? t('common.data_system') 
                   : 'Active product models and categories configured and tracked in the platform database'}
               </p>
             </motion.div>
@@ -435,7 +435,7 @@ export default function LandingPage() {
                     </div>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      {language === 'ar' ? 'نشط' : 'Active'}
+                      {language === 'ar' ? t('common.active_1') : 'Active'}
                     </span>
                   </div>
                 </motion.div>
@@ -618,7 +618,7 @@ export default function LandingPage() {
               <span className="text-lg font-bold text-white">StockPro</span>
             </div>
             <div className="text-sm text-gray-500">
-              StockPro v2.0 &bull; {language === 'ar' ? 'جميع الحقوق محفوظة' : 'All Rights Reserved'}
+              StockPro v2.0 &bull; {language === 'ar' ? t('common.item_25588') : 'All Rights Reserved'}
             </div>
           </div>
         </footer>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -60,6 +61,7 @@ interface LookupsResponse {
 const PAGE_SIZE = 25;
 
 export default function CourierRawDataPage() {
+  const { t, dir } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
@@ -154,18 +156,18 @@ export default function CourierRawDataPage() {
 
       if (editRow) {
         await apiRequest("PUT", `/api/courier/requests/${editRow.id}`, payload);
-        toast({ title: "تم التعديل بنجاح", description: "تم تحديث البيانات الخام للطلب." });
+        toast({ title: t('courier.completed_edit_successfully'), description: t('courier.completed_update_data') });
       } else {
         await apiRequest("POST", "/api/courier/requests", payload);
-        toast({ title: "تم الإضافة بنجاح", description: "تم تسجيل الطلب الجديد بنجاح." });
+        toast({ title: t('courier.completed_add_successfully'), description: t('courier.completed_request_new_successf') });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
       setShowAdd(false);
       setEditRow(null);
     } catch (err: any) {
       toast({
-        title: "خطأ أثناء الحفظ",
-        description: err.message || "حدث خطأ غير متوقع",
+        title: t('courier.error_save'),
+        description: err.message || t('courier.error_1'),
         variant: "destructive"
       });
     } finally {
@@ -174,15 +176,15 @@ export default function CourierRawDataPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("هل أنت متأكد من رغبتك في حذف هذا الطلب نهائياً؟")) return;
+    if (!confirm(t('courier.delete_request'))) return;
     try {
       await apiRequest("DELETE", `/api/courier/requests/${id}`);
-      toast({ title: "تم الحذف بنجاح", description: "تم مسح الطلب من النظام." });
+      toast({ title: t('courier.completed_delete_successfully'), description: t('courier.completed_scan_request_system') });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
     } catch (err: any) {
       toast({
-        title: "فشل الحذف",
-        description: err.message || "حدث خطأ غير متوقع",
+        title: t('courier.fail_delete'),
+        description: err.message || t('courier.error_1'),
         variant: "destructive"
       });
     }
@@ -201,17 +203,17 @@ export default function CourierRawDataPage() {
         body: formData
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message || "فشل الاستيراد");
+      if (!res.ok) throw new Error(result.message || t('courier.fail_import'));
       
       toast({
-        title: "اكتمل الاستيراد",
-        description: `تم إدخال ${result.importedCount} طلب، وتخطي ${result.skippedCount} طلب مكرر.`
+        title: t('courier.import_1'),
+        description: t('courier.completed_submit_request_duplicate', { var_0: result.importedCount, var_1: result.skippedCount })
       });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
     } catch (err: any) {
       toast({
-        title: "خطأ في الاستيراد",
-        description: err.message || "فشل معالجة ملف الإكسل",
+        title: t('courier.error_import'),
+        description: err.message || t('courier.fail_file'),
         variant: "destructive"
       });
     } finally {
@@ -225,16 +227,16 @@ export default function CourierRawDataPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div dir="rtl" className="space-y-6 text-slate-100">
+    <div dir={dir} className="space-y-6 text-slate-100">
       {/* Title block */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-700/60 pb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             <Database className="w-6 h-6 text-cyan-400" />
-            إدارة البيانات الخام
+            {t('courier.management_data')}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            إدخال وتعديل البيانات الأساسية لطلبات التوصيل واستيراد جداول Excel.
+            {t('courier.submit_data_delivery')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -255,14 +257,14 @@ export default function CourierRawDataPage() {
             ) : (
               <Upload className="w-4 h-4 text-cyan-400" />
             )}
-            استيراد Excel
+            {t('courier.import_2')}
           </button>
           <button
             onClick={handleOpenAdd}
             className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-slate-950 rounded-xl text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/10"
           >
             <Plus className="w-4 h-4" />
-            طلب جديد
+            {t('courier.request_new')}
           </button>
         </div>
       </div>
@@ -276,7 +278,7 @@ export default function CourierRawDataPage() {
             setQ(e.target.value);
             setPage(1);
           }}
-          placeholder="ابحث برقم الـ TID، اسم العميل، الفني..."
+          placeholder={t('courier.name_technician_1')}
           className="w-full bg-transparent border-0 text-slate-100 text-sm focus:outline-none focus:ring-0 placeholder:text-slate-500"
         />
       </div>
@@ -287,15 +289,15 @@ export default function CourierRawDataPage() {
           <table className="w-full text-sm text-right">
             <thead className="bg-[#102222] text-slate-300 border-b border-slate-700/60">
               <tr>
-                <th className="p-4 font-semibold">التاريخ</th>
+                <th className="p-4 font-semibold">{t('courier.date_2')}</th>
                 <th className="p-4 font-semibold">TID</th>
                 <th className="p-4 font-semibold">Terminal ID</th>
-                <th className="p-4 font-semibold">نوع التركيب</th>
-                <th className="p-4 font-semibold">المدينة</th>
-                <th className="p-4 font-semibold">العميل</th>
-                <th className="p-4 font-semibold">الجوال</th>
-                <th className="p-4 font-semibold">اسم الفني</th>
-                <th className="p-4 font-semibold">الإجراءات</th>
+                <th className="p-4 font-semibold">{t('courier.type')}</th>
+                <th className="p-4 font-semibold">{t('courier.city')}</th>
+                <th className="p-4 font-semibold">{t('courier.customer_1')}</th>
+                <th className="p-4 font-semibold">{t('courier.mobile')}</th>
+                <th className="p-4 font-semibold">{t('courier.name_technician')}</th>
+                <th className="p-4 font-semibold">{t('courier.item_14214')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -304,14 +306,14 @@ export default function CourierRawDataPage() {
                   <td colSpan={9} className="p-10 text-center text-slate-400">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                      جاري تحميل البيانات...
+                      {t('courier.loading_data')}
                     </div>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-10 text-center text-slate-500">
-                    لا يوجد أي طلبات مطابقة للبحث.
+                    {t('courier.no_requests')}
                   </td>
                 </tr>
               ) : (
@@ -330,14 +332,14 @@ export default function CourierRawDataPage() {
                         <button
                           onClick={() => handleOpenEdit(row)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-                          title="تعديل"
+                          title={t('courier.edit_2')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(row.id)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                          title="حذف"
+                          title={t('courier.delete_3')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -353,7 +355,7 @@ export default function CourierRawDataPage() {
         {/* Pagination footer */}
         <div className="flex items-center justify-between border-t border-slate-700/60 p-4 bg-[#102222]">
           <span className="text-xs text-slate-400">
-            الصفحة {page} من {totalPages} (إجمالي {total} سجل)
+            {t('courier.page_of_with_total', { page, totalPages, total })}
           </span>
           <div className="flex items-center gap-1.5">
             <button
@@ -380,7 +382,7 @@ export default function CourierRawDataPage() {
           <div className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#1a3636] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-700/60 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">
-                {editRow ? `تعديل طلب #${editRow.id}` : "إدخال طلب جديد"}
+                {editRow ? t('courier.edit_request', { var_0: editRow.id }) : t('courier.submit_request_new')}
               </h3>
               <button
                 onClick={() => {
@@ -397,11 +399,11 @@ export default function CourierRawDataPage() {
               {/* Group 1: Request Info */}
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
-                  بيانات الطلب الأساسية
+                  {t('courier.data_request')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">التاريخ</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.date_2')}</label>
                     <input
                       type="date"
                       required
@@ -411,7 +413,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">نوع التركيب</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.type')}</label>
                     <input
                       type="text"
                       value={formValues.installationType || ""}
@@ -420,7 +422,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رقم البلاغ</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number')}</label>
                     <input
                       type="text"
                       value={formValues.incidentNumber || ""}
@@ -429,7 +431,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">تذكرة حلولي</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_15966')}</label>
                     <input
                       type="text"
                       value={formValues.ticketingHolouly || ""}
@@ -443,11 +445,11 @@ export default function CourierRawDataPage() {
               {/* Group 2: Device & SIM */}
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
-                  بيانات الجهاز وشريحة الاتصال
+                  {t('courier.data_device')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رقم المعرف (TID)</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_1')}</label>
                     <input
                       type="text"
                       required
@@ -457,7 +459,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رقم النهاية (Terminal ID)</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_2')}</label>
                     <input
                       type="text"
                       value={formValues.terminalId || ""}
@@ -466,7 +468,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">مشغل الشريحة (SIM)</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.sim')}</label>
                     <input
                       type="text"
                       value={formValues.sim || ""}
@@ -475,7 +477,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">الرقم التسلسلي للشريحة (SIM SN)</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_serial')}</label>
                     <input
                       type="text"
                       value={formValues.simSn || ""}
@@ -493,7 +495,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رمز التحقق (OTP)</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.verification_1')}</label>
                     <input
                       type="text"
                       value={formValues.otp || ""}
@@ -502,7 +504,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رمز PIN</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_5039')}</label>
                     <input
                       type="text"
                       value={formValues.pinCode || ""}
@@ -520,13 +522,13 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">الشركة المصنعة</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_20713')}</label>
                     <select
                       value={formValues.vendorType || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, vendorType: e.target.value }))}
                       className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
                     >
-                      <option value="">اختر الشركة المصنعة</option>
+                      <option value="">{t('courier.item_27065')}</option>
                       {lookups?.vendorTypes.map((v) => (
                         <option key={v.id} value={v.name}>
                           {v.name}
@@ -540,17 +542,17 @@ export default function CourierRawDataPage() {
               {/* Group 3: Location */}
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
-                  الموقع والعنوان
+                  {t('courier.signed')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">المدينة</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.city')}</label>
                     <select
                       value={formValues.city || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, city: e.target.value }))}
                       className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
                     >
-                      <option value="">اختر المدينة</option>
+                      <option value="">{t('courier.city_1')}</option>
                       {lookups?.cities.map((c) => (
                         <option key={c.id} value={c.name_en}>
                           {c.name_en}
@@ -559,7 +561,7 @@ export default function CourierRawDataPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">مدينة الفني</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.city_technician')}</label>
                     <input
                       type="text"
                       value={formValues.cityTec || ""}
@@ -568,7 +570,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-400 mb-1">العنوان بالعربية</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_23895')}</label>
                     <input
                       type="text"
                       value={formValues.addressAr || ""}
@@ -582,11 +584,11 @@ export default function CourierRawDataPage() {
               {/* Group 4: Customer */}
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
-                  بيانات العميل والفني
+                  {t('courier.data_customer')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-400 mb-1">اسم العميل (التاجر)</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.name_customer')}</label>
                     <input
                       type="text"
                       value={formValues.customerName || ""}
@@ -595,7 +597,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">اسم منفذ البيع</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.name')}</label>
                     <input
                       type="text"
                       value={formValues.retailerName || ""}
@@ -604,7 +606,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">اسم فني التوصيل</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.name_delivery')}</label>
                     <input
                       type="text"
                       value={formValues.tecName || ""}
@@ -613,7 +615,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رقم الجوال</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_mobile')}</label>
                     <input
                       type="text"
                       value={formValues.mobile || ""}
@@ -622,7 +624,7 @@ export default function CourierRawDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">رقم الجوال البديل</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_mobile_1')}</label>
                     <input
                       type="text"
                       value={formValues.mobile2 || ""}
@@ -643,7 +645,7 @@ export default function CourierRawDataPage() {
                   }}
                   className="px-4 py-2 border border-slate-700 text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-800/40"
                 >
-                  إلغاء
+                  {t('courier.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -651,7 +653,7 @@ export default function CourierRawDataPage() {
                   className="px-6 py-2 bg-cyan-500 text-slate-950 rounded-xl text-sm font-bold hover:bg-cyan-400 transition-colors flex items-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  حفظ البيانات
+                  {t('courier.save_data_1')}
                 </button>
               </div>
             </form>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
@@ -55,6 +56,7 @@ interface SpanInfo {
 }
 
 export default function CourierObservabilityPage() {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshInterval, setRefreshInterval] = useState<number>(3000); // 3 seconds live poll
 
@@ -138,7 +140,7 @@ export default function CourierObservabilityPage() {
             }}
           >
             <RefreshCw className="w-4 h-4 ml-1.5" />
-            تحديث
+            {t('courier.update')}
           </Button>
         </div>
       </div>
@@ -150,7 +152,7 @@ export default function CourierObservabilityPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
               <Heart className="w-4 h-4 text-rose-500" />
-              حالة الجاهزية (Readiness)
+              {t('courier.status_2')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -175,14 +177,14 @@ export default function CourierObservabilityPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
               <Database className="w-4 h-4 text-blue-400" />
-              قاعدة البيانات
+              {t('courier.data_1')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-450">PostgreSQL Connection</span>
               <Badge className={health?.details?.database ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}>
-                {health?.details?.database ? "مكتمل" : "غير متصل"}
+                {health?.details?.database ? t('courier.completed_5') : t('courier.item_11197')}
               </Badge>
             </div>
           </CardContent>
@@ -193,7 +195,7 @@ export default function CourierObservabilityPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
               <Layers className="w-4 h-4 text-purple-400" />
-              النواقل والعمال (Workers)
+              {t('courier.workers')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -217,14 +219,14 @@ export default function CourierObservabilityPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              التحقق والتكوين
+              {t('courier.verification')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-450">Feature Flags Loaded</span>
               <Badge className={health?.details?.featureFlags ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}>
-                {health?.details?.featureFlags ? "مكتمل" : "قيد التحميل"}
+                {health?.details?.featureFlags ? t('courier.completed_5') : t('courier.pending_loading')}
               </Badge>
             </div>
           </CardContent>
@@ -252,7 +254,7 @@ export default function CourierObservabilityPage() {
                   style={{ width: `${Math.min(100, outboxPending * 5)}%` }}
                 ></div>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1.5">أحداث Outbox قيد الانتظار للنشر</p>
+              <p className="text-[10px] text-slate-500 mt-1.5">{t('courier.pending_waiting')}</p>
             </div>
           </CardContent>
         </Card>
@@ -274,9 +276,9 @@ export default function CourierObservabilityPage() {
             <div className="mt-4">
               <p className="text-xs text-slate-500 flex items-center gap-1">
                 {outboxDead > 0 ? (
-                  <span className="text-rose-450 font-medium">⚠️ توجد أحداث فاشلة بحاجة للتدقيق!</span>
+                  <span className="text-rose-450 font-medium">{t('courier.item_116375')}</span>
                 ) : (
-                  <span className="text-slate-450">لا توجد أحداث Dead حالياً</span>
+                  <span className="text-slate-450">{t('courier.no_1')}</span>
                 )}
               </p>
             </div>
@@ -298,7 +300,7 @@ export default function CourierObservabilityPage() {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-[10px] text-slate-500">معدل التعويض لعمليات الجرد الفاشلة</p>
+              <p className="text-[10px] text-slate-500">{t('courier.rate_1')}</p>
             </div>
           </CardContent>
         </Card>
@@ -318,7 +320,7 @@ export default function CourierObservabilityPage() {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-[10px] text-slate-500">أخطاء معالجة المشتركين للأحداث</p>
+              <p className="text-[10px] text-slate-500">{t('courier.item_42969')}</p>
             </div>
           </CardContent>
         </Card>
@@ -358,7 +360,7 @@ export default function CourierObservabilityPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-64 text-slate-500 text-xs">
-                لا توجد بيانات كافية لرسم المنحنى البياني
+                {t('courier.no_data')}
               </div>
             )}
           </CardContent>
@@ -369,7 +371,7 @@ export default function CourierObservabilityPage() {
           <CardHeader>
             <CardTitle className="text-sm font-medium text-slate-350 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              توزيع تكرار الطلبات (Idempotency)
+              {t('courier.duplicate_requests')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -388,7 +390,7 @@ export default function CourierObservabilityPage() {
             {idempotencyHits + idempotencyMisses > 0 && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">كفاءة منع التكرار</span>
+                  <span className="text-slate-400">{t('courier.duplicate')}</span>
                   <span className="text-emerald-400 font-semibold">
                     {Math.round((idempotencyHits / (idempotencyHits + idempotencyMisses)) * 100)}%
                   </span>
@@ -416,7 +418,7 @@ export default function CourierObservabilityPage() {
           <div className="relative w-full sm:w-72">
             <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-450" />
             <Input
-              placeholder="ابحث بالاسم، ID، أو الكود..."
+              placeholder={t('courier.code')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pr-9 bg-slate-900 border-slate-800 text-slate-200 placeholder:text-slate-500 w-full"
@@ -429,12 +431,12 @@ export default function CourierObservabilityPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 hover:bg-slate-900/30">
-                    <TableHead className="text-slate-400 text-right w-1/4">العملية / Span Name</TableHead>
+                    <TableHead className="text-slate-400 text-right w-1/4">{t('courier.operation_1')}</TableHead>
                     <TableHead className="text-slate-400 text-right">Span ID</TableHead>
                     <TableHead className="text-slate-400 text-right">Parent ID</TableHead>
-                    <TableHead className="text-slate-400 text-right">المستغرق (ms)</TableHead>
-                    <TableHead className="text-slate-400 text-right">الحالة</TableHead>
-                    <TableHead className="text-slate-400 text-right">سمات إضافية (Metadata)</TableHead>
+                    <TableHead className="text-slate-400 text-right">{t('courier.item_13067')}</TableHead>
+                    <TableHead className="text-slate-400 text-right">{t('courier.status')}</TableHead>
+                    <TableHead className="text-slate-400 text-right">{t('courier.item_16817')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -472,7 +474,7 @@ export default function CourierObservabilityPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-slate-500 text-sm">
-              لا توجد Spans نشطة أو مطابقة للبحث في الذاكرة حالياً.
+              {t('courier.no_2')}
             </div>
           )}
         </CardContent>

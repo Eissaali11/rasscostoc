@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface InventoryTableProps {
 }
 
 export default function InventoryTable({ inventory, isLoading }: InventoryTableProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -38,13 +40,13 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
-        return <Badge className="bg-success/10 text-success">متوفر</Badge>;
+        return <Badge className="bg-success/10 text-success">{t('inventory.available')}</Badge>;
       case "low":
-        return <Badge className="bg-warning/10 text-warning">منخفض</Badge>;
+        return <Badge className="bg-warning/10 text-warning">{t('inventory.low')}</Badge>;
       case "out":
-        return <Badge className="bg-destructive/10 text-destructive">نافد</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive">{t('inventory.item_6365')}</Badge>;
       default:
-        return <Badge variant="secondary">غير محدد</Badge>;
+        return <Badge variant="secondary">{t('inventory.item_11173')}</Badge>;
     }
   };
 
@@ -64,13 +66,13 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
   const getTypeName = (type: string) => {
     switch (type) {
       case "devices":
-        return "أجهزة";
+        return t('inventory.devices_1');
       case "sim":
-        return "شرائح";
+        return t('inventory.sims_1');
       case "papers":
-        return "أوراق";
+        return t('inventory.item_7941');
       default:
-        return "غير محدد";
+        return t('inventory.item_11173');
     }
   };
 
@@ -87,10 +89,10 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
       });
       setShowDeleteDialog(false);
       setSelectedItem(null);
-      toast({ title: "تم حذف الصنف بنجاح" });
+      toast({ title: t('inventory.completed_delete_successfully') });
     },
     onError: () => {
-      toast({ title: "فشل في حذف الصنف", variant: "destructive" });
+      toast({ title: t('inventory.fail_delete'), variant: "destructive" });
     },
   });
 
@@ -124,9 +126,9 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
   const handleExport = () => {
     if (inventory && inventory.length > 0) {
       exportInventoryToExcel({ inventory });
-      toast({ title: "تم تصدير التقرير بنجاح", description: "تم حفظ ملف Excel في جهازك" });
+      toast({ title: t('inventory.completed_export_report_succes'), description: t('inventory.completed_save_file') });
     } else {
-      toast({ title: "لا توجد بيانات للتصدير", variant: "destructive" });
+      toast({ title: t('inventory.no_data_5'), variant: "destructive" });
     }
   };
 
@@ -158,12 +160,12 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-foreground">المخزون الحالي</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t('inventory.inventory_5')}</h2>
             <div className="flex items-center space-x-3 space-x-reverse">
               <div className="relative">
                 <Input
                   type="text"
-                  placeholder="البحث في المخزون..."
+                  placeholder={t('inventory.search_inventory')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-64"
@@ -179,7 +181,7 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
                 data-testid="button-export-excel"
               >
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-emerald-700 dark:text-emerald-300">تصدير تقرير Excel</span>
+                <span className="text-emerald-700 dark:text-emerald-300">{t('inventory.export_report')}</span>
               </Button>
               
               <Button
@@ -188,7 +190,7 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
                 data-testid="button-add-item"
               >
                 <Plus className="h-4 w-4" />
-                <span>إضافة صنف</span>
+                <span>{t('inventory.add_1')}</span>
               </Button>
             </div>
           </div>
@@ -197,21 +199,21 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
         <CardContent>
           {!filteredInventory || filteredInventory.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? "لا توجد نتائج للبحث" : "لا توجد أصناف في المخزون"}
+              {searchTerm ? t('inventory.no_results_1') : t('inventory.no_inventory')}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="text-right p-4 font-medium text-foreground">اسم الصنف</th>
-                    <th className="text-right p-4 font-medium text-foreground">النوع</th>
-                    <th className="text-right p-4 font-medium text-foreground">الكمية المتبقية</th>
-                    <th className="text-right p-4 font-medium text-foreground">الوحدة</th>
-                    <th className="text-right p-4 font-medium text-foreground">اسم المندوب</th>
-                    <th className="text-right p-4 font-medium text-foreground">المدينة</th>
-                    <th className="text-right p-4 font-medium text-foreground">الحالة</th>
-                    <th className="text-right p-4 font-medium text-foreground">الإجراءات</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.name')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.type_1')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.quantity_1')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.unit_1')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.name_technician')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.city')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.status')}</th>
+                    <th className="text-right p-4 font-medium text-foreground">{t('inventory.item_14214')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -261,7 +263,7 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
                             onClick={() => handleWithdraw(item)}
                             disabled={item.quantity === 0}
                             className="hover:bg-destructive/10"
-                            title="سحب من المخزون"
+                            title={t('inventory.withdraw')}
                             data-testid={`button-withdraw-${item.id}`}
                           >
                             <Minus className="h-4 w-4 text-destructive" />
@@ -271,7 +273,7 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
                             size="icon"
                             onClick={() => handleAddStock(item)}
                             className="hover:bg-success/10"
-                            title="إضافة للمخزون"
+                            title={t('inventory.add_stock')}
                             data-testid={`button-add-stock-${item.id}`}
                           >
                             <Plus className="h-4 w-4 text-success" />
@@ -281,7 +283,7 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
                             size="icon"
                             onClick={() => handleEdit(item)}
                             className="hover:bg-accent"
-                            title="تعديل"
+                            title={t('inventory.edit')}
                             data-testid={`button-edit-${item.id}`}
                           >
                             <Edit className="h-4 w-4 text-muted-foreground" />
@@ -291,7 +293,7 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
                             size="icon"
                             onClick={() => handleDelete(item)}
                             className="hover:bg-destructive/10"
-                            title="حذف"
+                            title={t('inventory.delete')}
                             data-testid={`button-delete-${item.id}`}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -328,9 +330,9 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد من الحذف؟</AlertDialogTitle>
+            <AlertDialogTitle>{t('inventory.item_28757')}</AlertDialogTitle>
             <AlertDialogDescription>
-              هذا الإجراء لا يمكن التراجع عنه. سيتم حذف "{selectedItem?.name}" من المخزون نهائياً.
+              {t('inventory.delete_item_confirm', { name: selectedItem?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse">
@@ -339,9 +341,9 @@ export default function InventoryTable({ inventory, isLoading }: InventoryTableP
               className="bg-destructive hover:bg-destructive/90"
               disabled={deleteItemMutation.isPending}
             >
-              {deleteItemMutation.isPending ? "جاري الحذف..." : "نعم، احذف"}
+              {deleteItemMutation.isPending ? t('inventory.delete_1') : t('inventory.item_12725')}
             </AlertDialogAction>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{t('inventory.cancel_1')}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

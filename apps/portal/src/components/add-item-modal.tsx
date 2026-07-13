@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useTranslation } from "@/lib/language";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,14 +32,16 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertInventoryItemSchema } from "@shared/schema";
 
-const formSchema = insertInventoryItemSchema.extend({
-  quantity: z.number().min(0, "الكمية يجب أن تكون صفر أو أكثر"),
-  minThreshold: z.number().min(0, "الحد الأدنى يجب أن يكون صفر أو أكثر"),
+const getFormSchema = (t: (key: string) => string) => insertInventoryItemSchema.extend(
+{
+  quantity: z.number().min(0, t('common.quantity_6')),
+  minThreshold: z.number().min(0, t('common.item_44777')),
   technicianName: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
-});
+}
+);
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface AddItemModalProps {
   open: boolean;
@@ -46,6 +49,8 @@ interface AddItemModalProps {
 }
 
 export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -71,16 +76,16 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({
-        title: "تم إضافة الصنف بنجاح",
-        description: "تم إضافة الصنف الجديد إلى المخزون",
+        title: t('common.completed_add_successfully'),
+        description: t('common.completed_add_new_inventory'),
       });
       form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في إضافة الصنف",
-        description: error.message || "حدث خطأ أثناء إضافة الصنف",
+        title: t('common.error_add_1'),
+        description: error.message || t('common.error_add'),
         variant: "destructive",
       });
     },
@@ -94,9 +99,9 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>إضافة صنف جديد</DialogTitle>
+          <DialogTitle>{t('common.add_new_1')}</DialogTitle>
           <DialogDescription>
-            أدخل بيانات الصنف الجديد لإضافته إلى المخزون
+            {t('common.data_new_inventory')}
           </DialogDescription>
         </DialogHeader>
         
@@ -107,10 +112,10 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>اسم الصنف</FormLabel>
+                  <FormLabel>{t('common.name_8')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: كرتون نيولاند N950"
+                      placeholder={t('common.box_2')}
                       {...field}
                       data-testid="input-item-name"
                     />
@@ -125,17 +130,17 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>نوع الصنف</FormLabel>
+                  <FormLabel>{t('common.type_4')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-item-type">
-                        <SelectValue placeholder="اختر النوع" />
+                        <SelectValue placeholder={t('common.type_5')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="devices">أجهزة</SelectItem>
-                      <SelectItem value="sim">شرائح</SelectItem>
-                      <SelectItem value="papers">أوراق</SelectItem>
+                      <SelectItem value="devices">{t('common.devices_3')}</SelectItem>
+                      <SelectItem value="sim">{t('common.sims_1')}</SelectItem>
+                      <SelectItem value="papers">{t('common.item_7941')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -148,10 +153,10 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="unit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الوحدة</FormLabel>
+                  <FormLabel>{t('common.unit_2')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: كرتون، شريحة، رزمة"
+                      placeholder={t('common.item_30312')}
                       {...field}
                       data-testid="input-item-unit"
                     />
@@ -166,7 +171,7 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الكمية الأولية</FormLabel>
+                  <FormLabel>{t('common.quantity_5')}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -186,7 +191,7 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="minThreshold"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الحد الأدنى للتنبيه</FormLabel>
+                  <FormLabel>{t('common.item_27140')}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -206,10 +211,10 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="technicianName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>اسم المندوب</FormLabel>
+                  <FormLabel>{t('common.name_technician')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: محمد أحمد"
+                      placeholder={t('common.item_17624')}
                       {...field}
                       value={field.value || ""}
                       data-testid="input-technician-name"
@@ -225,10 +230,10 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>المدينة</FormLabel>
+                  <FormLabel>{t('common.city_1')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="مثل: الرياض، جدة، الدمام"
+                      placeholder={t('common.item_31864')}
                       {...field}
                       value={field.value || ""}
                       data-testid="input-city"
@@ -246,7 +251,7 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
                 className="flex-1"
                 data-testid="button-submit-add-item"
               >
-                {addItemMutation.isPending ? "جاري الإضافة..." : "إضافة الصنف"}
+                {addItemMutation.isPending ? t('common.add_8') : t('common.add_2')}
               </Button>
               <Button
                 type="button"
@@ -255,7 +260,7 @@ export default function AddItemModal({ open, onOpenChange }: AddItemModalProps) 
                 className="flex-1"
                 data-testid="button-cancel-add-item"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
             </div>
           </form>

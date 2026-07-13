@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Calendar, Filter, TrendingUp, TrendingDown, Users, MapPin, Search, Download, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/language";
 
 type TransactionRow = {
   id: string;
@@ -47,6 +48,8 @@ type RegionOption = { id: string; name: string };
 
 export function TransactionHistoryPage() {
   const { toast } = useToast();
+  const { t, language } = useTranslation();
+  const dateLocale = language === "en" ? "en-US" : "ar-SA";
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
@@ -132,19 +135,24 @@ export function TransactionHistoryPage() {
     if (exportRows.length === 0) {
       toast({
         variant: "destructive",
-        title: "لا توجد بيانات",
-        description: "لا توجد معاملات للتصدير",
+        title: t("reports.no_data"),
+        description: t("reports.no_transactions_to_export"),
       });
       return;
     }
 
     // Convert data to CSV format
-    const headers = ['التاريخ', 'النوع', 'الكمية', 'السبب'];
+    const headers = [
+      t("reports.csv_date"),
+      t("reports.csv_type"),
+      t("reports.csv_quantity"),
+      t("reports.csv_reason"),
+    ];
     const csvContent = [
       headers.join(','),
       ...exportRows.map((tx) => [
-        new Date(tx.createdAt).toLocaleString('ar-SA'),
-        tx.type === 'add' ? 'إضافة' : 'سحب',
+        new Date(tx.createdAt).toLocaleString(dateLocale),
+        tx.type === 'add' ? t("reports.add") : t("reports.withdraw"),
         tx.quantity,
         tx.reason || ''
       ].join(','))
@@ -162,8 +170,8 @@ export function TransactionHistoryPage() {
     document.body.removeChild(link);
 
     toast({
-      title: "تم التصدير بنجاح",
-      description: "تم تصدير سجل المعاملات",
+      title: t("reports.export_success_title"),
+      description: t("reports.export_success_desc"),
     });
   };
 
@@ -171,8 +179,8 @@ export function TransactionHistoryPage() {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">سجل المعاملات</h1>
-          <p className="text-muted-foreground">عرض وتحليل جميع عمليات السحب والإضافة</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("reports.transaction_history_title")}</h1>
+          <p className="text-muted-foreground">{t("reports.transaction_history_subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -184,7 +192,7 @@ export function TransactionHistoryPage() {
             data-testid="button-refresh-transactions"
           >
             <RefreshCw className="h-4 w-4 ml-2" />
-            تحديث
+            {t("reports.refresh")}
           </Button>
           <Button 
             variant="outline" 
@@ -192,15 +200,15 @@ export function TransactionHistoryPage() {
             data-testid="button-export-transactions"
           >
             <Download className="h-4 w-4 ml-2" />
-            تصدير
+            {t("reports.export_button")}
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="transactions">المعاملات</TabsTrigger>
-          <TabsTrigger value="statistics">الإحصائيات</TabsTrigger>
+          <TabsTrigger value="transactions">{t("reports.transactions_tab")}</TabsTrigger>
+          <TabsTrigger value="statistics">{t("reports.statistics_tab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-4">
@@ -209,18 +217,18 @@ export function TransactionHistoryPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="h-5 w-5" />
-                تصفية النتائج
+                {t("reports.filter_results")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Search */}
                 <div className="space-y-2">
-                  <Label>البحث</Label>
+                  <Label>{t("reports.search_field")}</Label>
                   <div className="relative">
                     <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="البحث في الأصناف والموظفين..."
+                      placeholder={t("reports.search_placeholder")}
                       value={filters.search}
                       onChange={(e) => handleFilterChange('search', e.target.value)}
                       className="pr-9"
@@ -231,28 +239,28 @@ export function TransactionHistoryPage() {
 
                 {/* Transaction Type */}
                 <div className="space-y-2">
-                  <Label>نوع العملية</Label>
+                  <Label>{t("reports.operation_type")}</Label>
                   <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
                     <SelectTrigger data-testid="select-transaction-type">
-                      <SelectValue placeholder="جميع العمليات" />
+                      <SelectValue placeholder={t("reports.all_operations")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">جميع العمليات</SelectItem>
-                      <SelectItem value="add">إضافة</SelectItem>
-                      <SelectItem value="withdraw">سحب</SelectItem>
+                      <SelectItem value="all">{t("reports.all_operations")}</SelectItem>
+                      <SelectItem value="add">{t("reports.add")}</SelectItem>
+                      <SelectItem value="withdraw">{t("reports.withdraw")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* User Filter */}
                 <div className="space-y-2">
-                  <Label>الموظف</Label>
+                  <Label>{t("reports.employee")}</Label>
                   <Select value={filters.userId} onValueChange={(value) => handleFilterChange('userId', value)}>
                     <SelectTrigger data-testid="select-user-filter">
-                      <SelectValue placeholder="جميع الموظفين" />
+                      <SelectValue placeholder={t("reports.all_employees")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all-users">جميع الموظفين</SelectItem>
+                      <SelectItem value="all-users">{t("reports.all_employees")}</SelectItem>
                       {users?.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.fullName}
@@ -264,13 +272,13 @@ export function TransactionHistoryPage() {
 
                 {/* Region Filter */}
                 <div className="space-y-2">
-                  <Label>المنطقة</Label>
+                  <Label>{t("reports.region")}</Label>
                   <Select value={filters.regionId} onValueChange={(value) => handleFilterChange('regionId', value)}>
                     <SelectTrigger data-testid="select-region-filter">
-                      <SelectValue placeholder="جميع المناطق" />
+                      <SelectValue placeholder={t("reports.all_regions")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all-regions">جميع المناطق</SelectItem>
+                      <SelectItem value="all-regions">{t("reports.all_regions")}</SelectItem>
                       {regions?.map((region) => (
                         <SelectItem key={region.id} value={region.id}>
                           {region.name}
@@ -282,7 +290,7 @@ export function TransactionHistoryPage() {
 
                 {/* Start Date */}
                 <div className="space-y-2">
-                  <Label>من تاريخ</Label>
+                  <Label>{t("reports.from_date")}</Label>
                   <Input
                     type="date"
                     value={filters.startDate}
@@ -293,7 +301,7 @@ export function TransactionHistoryPage() {
 
                 {/* End Date */}
                 <div className="space-y-2">
-                  <Label>إلى تاريخ</Label>
+                  <Label>{t("reports.to_date")}</Label>
                   <Input
                     type="date"
                     value={filters.endDate}
@@ -309,10 +317,10 @@ export function TransactionHistoryPage() {
                   onClick={clearFilters}
                   data-testid="button-clear-filters"
                 >
-                  مسح التصفية
+                  {t("reports.clear_filters")}
                 </Button>
                 <div className="text-sm text-muted-foreground">
-                  {transactionData?.total ? `${transactionData.total} معاملة` : ''}
+                  {transactionData?.total ? t("reports.transactions_count", { count: transactionData.total }) : ''}
                 </div>
               </div>
             </CardContent>
@@ -321,9 +329,9 @@ export function TransactionHistoryPage() {
           {/* Transactions Table */}
           <Card>
             <CardHeader>
-              <CardTitle>نتائج البحث</CardTitle>
+              <CardTitle>{t("reports.search_results")}</CardTitle>
               <CardDescription>
-                عرض المعاملات مع إمكانية التصفية والبحث
+                {t("reports.search_results_desc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -335,20 +343,20 @@ export function TransactionHistoryPage() {
                 </div>
               ) : !transactionData?.transactions || transactionData.transactions.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">لا توجد معاملات تطابق معايير البحث</p>
+                  <p className="text-muted-foreground">{t("reports.no_matching_transactions")}</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">الصنف</TableHead>
-                        <TableHead className="text-right">نوع العملية</TableHead>
-                        <TableHead className="text-right">الكمية</TableHead>
-                        <TableHead className="text-right">الموظف</TableHead>
-                        <TableHead className="text-right">المنطقة</TableHead>
-                        <TableHead className="text-right">السبب</TableHead>
-                        <TableHead className="text-right">التاريخ</TableHead>
+                        <TableHead className="text-right">{t("reports.item")}</TableHead>
+                        <TableHead className="text-right">{t("reports.operation_type")}</TableHead>
+                        <TableHead className="text-right">{t("reports.quantity")}</TableHead>
+                        <TableHead className="text-right">{t("reports.employee")}</TableHead>
+                        <TableHead className="text-right">{t("reports.region")}</TableHead>
+                        <TableHead className="text-right">{t("reports.reason")}</TableHead>
+                        <TableHead className="text-right">{t("reports.date")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -362,12 +370,12 @@ export function TransactionHistoryPage() {
                               {transaction.type === "add" ? (
                                 <div className="flex items-center gap-1">
                                   <TrendingUp className="h-3 w-3" />
-                                  إضافة
+                                  {t("reports.add")}
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1">
                                   <TrendingDown className="h-3 w-3" />
-                                  سحب
+                                  {t("reports.withdraw")}
                                 </div>
                               )}
                             </Badge>
@@ -381,9 +389,9 @@ export function TransactionHistoryPage() {
                           </TableCell>
                           <TableCell className="text-right">{transaction.userName}</TableCell>
                           <TableCell className="text-right">{transaction.regionName}</TableCell>
-                          <TableCell className="text-right">{transaction.reason || "غير محدد"}</TableCell>
+                          <TableCell className="text-right">{transaction.reason || t("reports.not_specified")}</TableCell>
                           <TableCell className="text-right">
-                            {new Date(transaction.createdAt).toLocaleDateString("ar-SA", {
+                            {new Date(transaction.createdAt).toLocaleDateString(dateLocale, {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric',
@@ -400,7 +408,10 @@ export function TransactionHistoryPage() {
                   {transactionData.totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4">
                       <div className="text-sm text-muted-foreground">
-                        الصفحة {transactionData.page} من {transactionData.totalPages}
+                        {t("reports.page_of", {
+                          page: transactionData.page,
+                          totalPages: transactionData.totalPages,
+                        })}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -410,7 +421,7 @@ export function TransactionHistoryPage() {
                           disabled={transactionData.page <= 1}
                           data-testid="button-previous-page"
                         >
-                          السابق
+                          {t("reports.previous")}
                         </Button>
                         <Button
                           variant="outline"
@@ -419,7 +430,7 @@ export function TransactionHistoryPage() {
                           disabled={transactionData.page >= transactionData.totalPages}
                           data-testid="button-next-page"
                         >
-                          التالي
+                          {t("reports.next")}
                         </Button>
                       </div>
                     </div>
@@ -451,7 +462,7 @@ export function TransactionHistoryPage() {
                       <Calendar className="h-8 w-8 text-blue-600" />
                       <div>
                         <p className="text-2xl font-bold">{statisticsData.totalTransactions}</p>
-                        <p className="text-sm text-muted-foreground">إجمالي المعاملات</p>
+                        <p className="text-sm text-muted-foreground">{t("reports.total_transactions")}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -463,7 +474,7 @@ export function TransactionHistoryPage() {
                       <TrendingUp className="h-8 w-8 text-green-600" />
                       <div>
                         <p className="text-2xl font-bold text-green-600">{totalAdditions}</p>
-                        <p className="text-sm text-muted-foreground">عمليات الإضافة</p>
+                        <p className="text-sm text-muted-foreground">{t("reports.add_operations")}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -475,7 +486,7 @@ export function TransactionHistoryPage() {
                       <TrendingDown className="h-8 w-8 text-red-600" />
                       <div>
                         <p className="text-2xl font-bold text-red-600">{totalWithdrawals}</p>
-                        <p className="text-sm text-muted-foreground">عمليات السحب</p>
+                        <p className="text-sm text-muted-foreground">{t("reports.withdraw_operations")}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -485,13 +496,13 @@ export function TransactionHistoryPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                        <span className="text-purple-600 font-bold text-sm">ص</span>
+                        <span className="text-purple-600 font-bold text-sm">{t("reports.net_short")}</span>
                       </div>
                       <div>
                         <p className="text-2xl font-bold">
                           {totalAddedQuantity - totalWithdrawnQuantity}
                         </p>
-                        <p className="text-sm text-muted-foreground">صافي الحركة</p>
+                        <p className="text-sm text-muted-foreground">{t("reports.net_movement")}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -504,7 +515,7 @@ export function TransactionHistoryPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <MapPin className="h-5 w-5" />
-                      المعاملات حسب المنطقة
+                      {t("reports.transactions_by_region")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -528,7 +539,7 @@ export function TransactionHistoryPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
-                      أكثر الموظفين نشاطاً
+                      {t("reports.most_active_employees")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -551,7 +562,7 @@ export function TransactionHistoryPage() {
             </>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">فشل في تحميل الإحصائيات</p>
+              <p className="text-muted-foreground">{t("reports.stats_load_failed")}</p>
             </div>
           )}
         </TabsContent>

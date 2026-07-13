@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -132,22 +133,22 @@ const withdrawnStatusUi: Record<
   { text: string; className: string; markerClass: string }
 > = {
   pending: {
-    text: "قيد المراجعة",
+    text: t('common.pending_review'),
     className: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
     markerClass: "bg-amber-400",
   },
   approved: {
-    text: "موافق عليها",
+    text: t('common.ok'),
     className: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
     markerClass: "bg-emerald-400",
   },
   rejected: {
-    text: "مرفوضة",
+    text: t('common.item_9566'),
     className: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
     markerClass: "bg-rose-400",
   },
   maintenance: {
-    text: "محولة للصيانة",
+    text: t('common.item_19172'),
     className: "bg-orange-500/15 text-orange-300 border border-orange-500/30",
     markerClass: "bg-orange-400",
   },
@@ -158,17 +159,17 @@ const receivedStatusUi: Record<
   { text: string; className: string; markerClass: string }
 > = {
   pending: {
-    text: "قيد المراجعة",
+    text: t('common.pending_review'),
     className: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
     markerClass: "bg-amber-400",
   },
   approved: {
-    text: "موافق عليه",
+    text: t('common.ok_1'),
     className: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
     markerClass: "bg-emerald-400",
   },
   rejected: {
-    text: "مرفوض",
+    text: t('common.rejected'),
     className: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
     markerClass: "bg-rose-400",
   },
@@ -179,12 +180,12 @@ const transferStatusUi: Record<
   { text: string; className: string; markerClass: string }
 > = {
   accepted: {
-    text: "مكتمل",
+    text: t('common.completed'),
     className: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
     markerClass: "bg-emerald-400",
   },
   rejected: {
-    text: "مرفوض",
+    text: t('common.rejected'),
     className: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
     markerClass: "bg-rose-400",
   },
@@ -250,6 +251,7 @@ function rankSearchResults(results: SearchResultItem[], query: string): SearchRe
 }
 
 export default function OperationsSearchPage() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
 
   const [searchInput, setSearchInput] = useState("");
@@ -305,13 +307,13 @@ export default function OperationsSearchPage() {
       const timeline: TimelineEntry[] = [
         {
           id: `wd-create-${device.id}`,
-          title: "تسجيل الجهاز المرتجع",
-          description: `تم تسجيل الجهاز ${device.serialNumber} كمرتجع في النظام.`,
+          title: t('common.device_returned'),
+          description: t('common.completed_device_system', { var_0: device.serialNumber }),
           timestamp: device.createdAt || new Date(),
           markerClass: "bg-cyan-400",
           tags: [
-            `المدينة: ${device.city || "غير محدد"}`,
-            `المندوب: ${device.technicianName || "غير محدد"}`,
+            t('common.city_3', { var_0: device.city || t('common.item_11173') }),
+            t('common.technician_8', { var_0: device.technicianName || t('common.item_11173') }),
           ],
         },
       ];
@@ -319,8 +321,8 @@ export default function OperationsSearchPage() {
       if (device.updatedAt) {
         timeline.push({
           id: `wd-status-${device.id}`,
-          title: `الحالة الحالية: ${statusUi.text}`,
-          description: device.notes || "تم تحديث بيانات الطلب حسب آخر إجراء.",
+          title: t('common.status_9', { var_0: statusUi.text }),
+          description: device.notes || t('common.completed_update_data_request'),
           timestamp: device.updatedAt,
           markerClass: statusUi.markerClass,
         });
@@ -329,8 +331,8 @@ export default function OperationsSearchPage() {
       results.push({
         id: `withdrawn-${device.id}`,
         source: "withdrawn",
-        sourceLabel: "مرتجع",
-        title: `مرتجع ${device.terminalId || "جهاز"}`,
+        sourceLabel: t('common.returned'),
+        title: t('common.returned_1', { var_0: device.terminalId || t('common.device') }),
         operationNumber,
         operationRefs: [device.id],
         serialNumber: device.serialNumber,
@@ -339,7 +341,7 @@ export default function OperationsSearchPage() {
         statusClass: statusUi.className,
         createdAt: device.createdAt || new Date(),
         route: `/withdrawn-devices/${device.id}`,
-        summary: device.notes || "طلب مرتجع مسجل بانتظار المتابعة.",
+        summary: device.notes || t('common.request_returned_followup'),
         searchable: [
           device.serialNumber,
           device.id,
@@ -365,13 +367,13 @@ export default function OperationsSearchPage() {
       const timeline: TimelineEntry[] = [
         {
           id: `rc-create-${device.id}`,
-          title: "استلام الجهاز في النظام",
-          description: `تم استلام الجهاز ${device.serialNumber} من المندوب وإدخاله للمراجعة.`,
+          title: t('common.receive_device_system'),
+          description: t('common.completed_receive_device_technician', { var_0: device.serialNumber }),
           timestamp: device.createdAt,
           markerClass: "bg-cyan-400",
           tags: [
-            `المندوب: ${device.technicianId}`,
-            `نوع المنتج: ${itemTypeLabel}`,
+            t('common.technician_8', { var_0: device.technicianId }),
+            t('common.type_9', { var_0: itemTypeLabel }),
           ],
         },
       ];
@@ -379,8 +381,8 @@ export default function OperationsSearchPage() {
       if (device.status !== "pending" || device.updatedAt) {
         timeline.push({
           id: `rc-status-${device.id}`,
-          title: `قرار المراجعة: ${statusUi.text}`,
-          description: device.adminNotes || "تم تحديث حالة الجهاز من قبل المشرف.",
+          title: t('common.review_2', { var_0: statusUi.text }),
+          description: device.adminNotes || t('common.completed_update_status_device'),
           timestamp: device.updatedAt || device.createdAt,
           markerClass: statusUi.markerClass,
         });
@@ -389,8 +391,8 @@ export default function OperationsSearchPage() {
       results.push({
         id: `received-${device.id}`,
         source: "received",
-        sourceLabel: "مستلم",
-        title: `استلام ${device.terminalId || "جهاز"}`,
+        sourceLabel: t('common.received'),
+        title: t('common.receive_1', { var_0: device.terminalId || t('common.device') }),
         operationNumber,
         operationRefs: [device.id],
         serialNumber: device.serialNumber,
@@ -399,7 +401,7 @@ export default function OperationsSearchPage() {
         statusClass: statusUi.className,
         createdAt: device.createdAt,
         route: `/received-devices/${device.id}`,
-        summary: device.adminNotes || "عملية استلام جهاز معروضة للتفاصيل.",
+        summary: device.adminNotes || t('common.operation_receive_device'),
         searchable: [
           device.serialNumber,
           device.id,
@@ -452,13 +454,13 @@ export default function OperationsSearchPage() {
       const timeline: TimelineEntry[] = [
         {
           id: `op-create-${group.groupId}`,
-          title: "إنشاء عملية التحويل",
-          description: `تم إنشاء العملية من ${base.warehouseName || "المستودع"} إلى المندوب ${base.technicianName || "غير محدد"}.`,
+          title: t('common.operation_transfer'),
+          description: t('common.completed_operation_technician', { var_0: base.warehouseName || t('common.warehouse_1'), var_1: base.technicianName || t('common.item_11173') }),
           timestamp: base.createdAt,
           markerClass: "bg-cyan-400",
           tags: [
-            `المستودع: ${base.warehouseName || "غير محدد"}`,
-            `المندوب: ${base.technicianName || "غير محدد"}`,
+            t('common.warehouse_12', { var_0: base.warehouseName || t('common.item_11173') }),
+            t('common.technician_8', { var_0: base.technicianName || t('common.item_11173') }),
           ],
         },
       ];
@@ -466,11 +468,11 @@ export default function OperationsSearchPage() {
       if (base.respondedAt) {
         timeline.push({
           id: `op-status-${group.groupId}`,
-          title: `نتيجة العملية: ${statusUi.text}`,
+          title: t('common.operation_9', { var_0: statusUi.text }),
           description:
             normalizedStatus === "rejected"
-              ? base.rejectionReason || "تم رفض العملية."
-              : "تم اعتماد العملية بنجاح.",
+              ? base.rejectionReason || t('common.completed_reject_operation')
+              : t('common.completed_operation_successful_1'),
           timestamp: base.respondedAt,
           markerClass: statusUi.markerClass,
         });
@@ -479,17 +481,17 @@ export default function OperationsSearchPage() {
       results.push({
         id: `transfer-${group.groupId}`,
         source: "warehouse-transfer",
-        sourceLabel: "عملية مستودع",
-        title: `عملية ${base.warehouseName || "مستودع"}`,
+        sourceLabel: t('common.operation_warehouse'),
+        title: t('common.operation_10', { var_0: base.warehouseName || t('common.warehouse_2') }),
         operationNumber,
         operationRefs: [group.groupId, ...transferIds],
         serialNumber: "-",
-        productName: itemNames.slice(0, 2).join(" + ") || "عناصر مستودع",
+        productName: itemNames.slice(0, 2).join(" + ") || t('common.items_warehouse'),
         statusText: statusUi.text,
         statusClass: statusUi.className,
         createdAt: base.createdAt,
         route: `/operation-details/${encodeURIComponent(group.groupId)}`,
-        summary: base.notes || `${group.items.length} عناصر في هذه العملية`,
+        summary: base.notes || t('common.items_operation', { var_0: group.items.length }),
         searchable: [
           group.groupId,
           operationNumber,
@@ -575,24 +577,24 @@ export default function OperationsSearchPage() {
     if (!selectedResult) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("نتيجة البحث");
+    const worksheet = workbook.addWorksheet(t('common.search_5'));
     worksheet.views = [{ rightToLeft: true }];
 
     worksheet.columns = [
-      { header: "الحقل", key: "field", width: 28 },
-      { header: "القيمة", key: "value", width: 60 },
+      { header: t('common.item_7966'), key: "field", width: 28 },
+      { header: t('common.value'), key: "value", width: 60 },
     ];
 
-    worksheet.addRow({ field: "نوع العملية", value: selectedResult.sourceLabel });
-    worksheet.addRow({ field: "رقم العملية", value: selectedResult.operationNumber });
-    worksheet.addRow({ field: "اسم المنتج", value: selectedResult.productName });
-    worksheet.addRow({ field: "الرقم التسلسلي", value: selectedResult.serialNumber });
-    worksheet.addRow({ field: "الحالة", value: selectedResult.statusText });
-    worksheet.addRow({ field: "تاريخ العملية", value: formatDateTime(selectedResult.createdAt) });
-    worksheet.addRow({ field: "ملخص", value: selectedResult.summary });
+    worksheet.addRow({ field: t('common.type_operation'), value: selectedResult.sourceLabel });
+    worksheet.addRow({ field: t('common.number_operation'), value: selectedResult.operationNumber });
+    worksheet.addRow({ field: t('common.name_6'), value: selectedResult.productName });
+    worksheet.addRow({ field: t('common.number_serial_1'), value: selectedResult.serialNumber });
+    worksheet.addRow({ field: t('common.status'), value: selectedResult.statusText });
+    worksheet.addRow({ field: t('common.date_operation'), value: formatDateTime(selectedResult.createdAt) });
+    worksheet.addRow({ field: t('common.item_6380'), value: selectedResult.summary });
 
     worksheet.addRow({ field: "", value: "" });
-    worksheet.addRow({ field: "الجدول الزمني", value: "" });
+    worksheet.addRow({ field: t('common.table'), value: "" });
 
     selectedResult.timeline.forEach((event, index) => {
       worksheet.addRow({
@@ -632,18 +634,18 @@ export default function OperationsSearchPage() {
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               className="h-16 pr-12 pl-36 bg-slate-900/70 border-cyan-400/20 focus-visible:ring-cyan-400/70 text-lg text-slate-100 placeholder:text-slate-400"
-              placeholder="ابحث برقم السيريال أو رقم العملية أو اسم المنتج..."
+              placeholder={t('common.serial_number_operation_name_1')}
             />
 
             <div className="absolute inset-y-0 left-2 flex items-center">
               <Button type="submit" className="bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold px-6">
-                بحث سريع
+                {t('common.search_4')}
               </Button>
             </div>
           </div>
 
           <p className="text-xs text-slate-400">
-            البحث يدعم: الرقم التسلسلي، رقم العملية، واسم المنتج. عند وجود تطابق وحيد سيتم فتح التفاصيل مباشرة.
+            {t('dashboard.search_number_number_details')}
           </p>
         </form>
       </section>
@@ -656,8 +658,8 @@ export default function OperationsSearchPage() {
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-xl font-black text-white">نتائج البحث: {submittedQuery}</h3>
-                <p className="text-xs text-slate-400">عدد النتائج المطابقة: {results.length}</p>
+                <h3 className="text-xl font-black text-white">{t('common.results_search_1')}{submittedQuery}</h3>
+                <p className="text-xs text-slate-400">{t('common.results')}{results.length}</p>
               </div>
             </div>
 
@@ -669,17 +671,17 @@ export default function OperationsSearchPage() {
               className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
             >
               <Download className="h-4 w-4 ml-2" />
-              تصدير إلى Excel
+              {t('dashboard.export_2')}
             </Button>
           </div>
 
           {isLoading ? (
-            <div className="py-10 text-center text-slate-300">جاري تحميل بيانات العمليات...</div>
+            <div className="py-10 text-center text-slate-300">{t('common.loading_data_operations')}</div>
           ) : error ? (
-            <div className="py-10 text-center text-rose-300">حدث خطأ أثناء تحميل البيانات. حاول مرة أخرى.</div>
+            <div className="py-10 text-center text-rose-300">{t('common.error_loading_data_other')}</div>
           ) : !results.length ? (
             <div className="py-10 text-center text-slate-300">
-              لا توجد نتائج مطابقة لعبارة البحث الحالية.
+              {t('dashboard.no_results_search_1')}
             </div>
           ) : (
             <>
@@ -706,24 +708,24 @@ export default function OperationsSearchPage() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">اسم المنتج</p>
+                      <p className="text-xs text-slate-400 mb-1">{t('common.name_6')}</p>
                       <p className="font-bold text-slate-100">{selectedResult.productName || "-"}</p>
                     </div>
 
                     <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">الرقم التسلسلي</p>
+                      <p className="text-xs text-slate-400 mb-1">{t('common.number_serial_1')}</p>
                       <p className="font-mono font-bold text-cyan-300 tracking-wider">{selectedResult.serialNumber || "-"}</p>
                     </div>
 
                     <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">الحالة الحالية</p>
+                      <p className="text-xs text-slate-400 mb-1">{t('common.status_2')}</p>
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${selectedResult.statusClass}`}>
                         {selectedResult.statusText}
                       </span>
                     </div>
 
                     <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">تاريخ العملية</p>
+                      <p className="text-xs text-slate-400 mb-1">{t('common.date_operation')}</p>
                       <p className="font-bold text-slate-100">{formatDate(selectedResult.createdAt)}</p>
                     </div>
                   </div>
@@ -731,7 +733,7 @@ export default function OperationsSearchPage() {
                   <div className="space-y-4">
                     <h4 className="text-lg font-black text-white flex items-center gap-2">
                       <History className="h-5 w-5 text-cyan-300" />
-                      الجدول الزمني لدورة حياة العملية
+                      {t('common.table_operation')}
                     </h4>
 
                     <div className="relative pr-6">
@@ -780,7 +782,7 @@ export default function OperationsSearchPage() {
                       className="bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold"
                       onClick={() => setLocation(selectedResult.route)}
                     >
-                      عرض التفاصيل فوراً
+                      {t('common.view_details_3')}
                     </Button>
                   </div>
                 </>
@@ -793,8 +795,8 @@ export default function OperationsSearchPage() {
           <div className="mx-auto w-fit mb-3 rounded-full bg-cyan-500/10 border border-cyan-500/20 p-3">
             <Search className="h-6 w-6 text-cyan-300" />
           </div>
-          <h3 className="text-lg font-bold text-slate-200 mb-2">ابدأ البحث عن العملية</h3>
-          <p className="text-sm text-slate-400">أدخل رقم السيريال أو رقم العملية أو اسم المنتج ثم اضغط "بحث سريع".</p>
+          <h3 className="text-lg font-bold text-slate-200 mb-2">{t('common.search_operation')}</h3>
+          <p className="text-sm text-slate-400">{t('common.number_serial_number_operation')}</p>
         </section>
       )}
 
@@ -802,31 +804,31 @@ export default function OperationsSearchPage() {
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
           <div className="flex items-center gap-2 mb-1 text-amber-300">
             <TriangleAlert className="h-4 w-4" />
-            <span className="text-xs font-bold">قيد المراجعة</span>
+            <span className="text-xs font-bold">{t('common.pending_review')}</span>
           </div>
-          <p className="text-sm text-slate-300">عمليات تحتاج قرار نهائي أو متابعة.</p>
+          <p className="text-sm text-slate-300">{t('common.followup')}</p>
         </div>
 
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
           <div className="flex items-center gap-2 mb-1 text-emerald-300">
             <CheckCircle2 className="h-4 w-4" />
-            <span className="text-xs font-bold">مكتملة</span>
+            <span className="text-xs font-bold">{t('common.item_9572')}</span>
           </div>
-          <p className="text-sm text-slate-300">عمليات تمت معالجتها بنجاح.</p>
+          <p className="text-sm text-slate-300">{t('common.successfully')}</p>
         </div>
 
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
           <div className="flex items-center gap-2 mb-1 text-rose-300">
             <XCircle className="h-4 w-4" />
-            <span className="text-xs font-bold">مرفوضة</span>
+            <span className="text-xs font-bold">{t('common.item_9566')}</span>
           </div>
-          <p className="text-sm text-slate-300">عمليات مرفوضة وتحتاج مراجعة السبب.</p>
+          <p className="text-sm text-slate-300">{t('common.review_reason')}</p>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-900/40 p-4 text-xs text-slate-500 flex items-center gap-2">
         <Smartphone className="h-4 w-4 text-cyan-300" />
-        البحث الموحد يعرض العمليات من الأجهزة المستلمة، المرتجعة، وعمليات المستودع المعالجة.
+        {t('dashboard.search_operations_devices_ware')}
       </section>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -62,6 +63,7 @@ function StatusPill({ status }: { status: string }) {
 }
 
 export default function CourierPdfUploadPage() {
+  const { t, dir } = useTranslation();
   const [, navigate] = useLocation();
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -96,14 +98,14 @@ export default function CourierPdfUploadPage() {
   }
 
   return (
-    <div dir="rtl" className="space-y-6 max-w-5xl">
+    <div dir={dir} className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
           <FileText className="w-5 h-5 text-purple-400" />
-          رفع المستندات واستخراج البيانات (PDF أو صور WhatsApp)
+          {t('courier.documents_data_images')}
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          ارفع تقرير التسليم بصيغة PDF أو كصورة (PNG، JPG) وسيقوم النظام تلقائياً باستخراج البيانات وربطها بالطلب.
+          {t('courier.report_system_data')}
         </p>
       </div>
 
@@ -134,14 +136,14 @@ export default function CourierPdfUploadPage() {
         {uploading ? (
           <>
             <Loader2 className="w-10 h-10 text-purple-400 animate-spin mb-3" />
-            <p className="text-slate-300 font-medium">جاري رفع الملف ومعالجته...</p>
+            <p className="text-slate-300 font-medium">{t('courier.file_2')}</p>
           </>
         ) : (
           <>
             <UploadCloud className="w-10 h-10 text-slate-500 mb-3" />
-            <p className="text-slate-200 font-medium">اسحب ملف PDF أو صورة هنا أو انقر للاختيار</p>
+            <p className="text-slate-200 font-medium">{t('courier.file_image')}</p>
             <p className="text-xs text-slate-500 mt-1">
-              سيتم استخراج TID، SN، SIM Serial، التاريخ والوقت تلقائياً
+              {t('courier.date_1')}
             </p>
           </>
         )}
@@ -150,13 +152,13 @@ export default function CourierPdfUploadPage() {
       {/* Recent Uploads */}
       <div>
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
-          آخر التقارير المرفوعة
+          {t('courier.reports_2')}
         </h2>
         <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl overflow-hidden shadow">
           <table className="w-full text-sm">
             <thead className="bg-[#142d2d] text-slate-400 border-b border-slate-700/50">
               <tr>
-                {["اسم الملف", "رُفع بواسطة", "التاريخ", "دقة الاستخراج", "الحالة", ""].map((h, i) => (
+                {[t('courier.name_file'), t('courier.item_15940'), t('courier.date_2'), t('courier.item_19035'), t('courier.status'), ""].map((h, i) => (
                   <th key={i} className="px-4 py-3 text-start font-semibold">
                     {h}
                   </th>
@@ -173,7 +175,7 @@ export default function CourierPdfUploadPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-slate-500">
-                    لا توجد تقارير بعد
+                    {t('courier.no_3')}
                   </td>
                 </tr>
               ) : (
@@ -195,7 +197,7 @@ export default function CourierPdfUploadPage() {
                         href={`/courier/pdf/${r.id}`}
                         className="text-xs font-medium text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition-colors"
                       >
-                        مراجعة
+                        {t('courier.review_2')}
                       </Link>
                     </td>
                   </tr>

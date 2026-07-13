@@ -136,10 +136,35 @@ export function extractTransferItems(
   return items;
 }
 
-export function getTransferStatusText(status?: string): string {
-  if (status === "pending") return "معلقة";
-  if (status === "accepted") return "مقبولة";
-  return "مرفوضة";
+type UiLang = "ar" | "en";
+
+const resolveLang = (language?: UiLang): UiLang => {
+  if (language === "ar" || language === "en") return language;
+  if (typeof localStorage !== "undefined" && localStorage.getItem("language") === "en") return "en";
+  return "ar";
+};
+
+const STATUS_TEXT = {
+  pending: { ar: "معلقة", en: "Pending" },
+  accepted: { ar: "مقبولة", en: "Accepted" },
+  rejected: { ar: "مرفوضة", en: "Rejected" },
+} as const;
+
+const UNIT_TEXT = {
+  carton: { ar: "كرتون", en: "Carton" },
+  piece: { ar: "قطعة", en: "Piece" },
+} as const;
+
+export function getTransferStatusText(status?: string, language?: UiLang): string {
+  const lang = resolveLang(language);
+  if (status === "pending") return STATUS_TEXT.pending[lang];
+  if (status === "accepted") return STATUS_TEXT.accepted[lang];
+  return STATUS_TEXT.rejected[lang];
+}
+
+export function getTransferUnitLabel(type?: string, language?: UiLang): string {
+  const lang = resolveLang(language);
+  return type === "box" ? UNIT_TEXT.carton[lang] : UNIT_TEXT.piece[lang];
 }
 
 export function getTransferStatusColor(status?: string): string {
@@ -151,16 +176,18 @@ export function getTransferStatusColor(status?: string): string {
 export function buildTransferExportRows(
   transfers: WarehouseTransfer[],
   itemTypesData?: WarehouseItemTypeLite[],
+  language?: UiLang,
 ) {
+  const lang = resolveLang(language);
   return transfers.map((transfer) => {
     const items = extractTransferItems(transfer, itemTypesData);
 
     return {
       technicianName: transfer.technicianName,
       items: items
-        .map((item) => `${item.nameAr}: ${item.quantity} ${item.type === "box" ? "كرتون" : "قطعة"}`)
+        .map((item) => `${item.nameAr}: ${item.quantity} ${getTransferUnitLabel(item.type, lang)}`)
         .join(" | "),
-      status: getTransferStatusText(transfer.status),
+      status: getTransferStatusText(transfer.status, lang),
       createdAt: transfer.createdAt,
       notes: transfer.notes,
     };

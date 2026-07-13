@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 
 export default function ReceivedDevicesSubmit() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -47,16 +49,16 @@ export default function ReceivedDevicesSubmit() {
       apiRequest("POST", "/api/received-devices", data),
     onSuccess: () => {
       toast({
-        title: "✅ تم إدخال البيانات بنجاح",
-        description: "تم إرسال بيانات الجهاز إلى المشرف للمراجعة",
+        title: t('verification.completed_submit_data_successf'),
+        description: t('verification.completed_send_data_device_sup'),
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/received-devices"] });
     },
     onError: () => {
       toast({
-        title: "❌ خطأ",
-        description: "فشل إدخال بيانات الجهاز. يرجى المحاولة مرة أخرى",
+        title: t('verification.error_1'),
+        description: t('verification.fail_submit_data_device_other'),
         variant: "destructive",
       });
     },
@@ -65,8 +67,8 @@ export default function ReceivedDevicesSubmit() {
   const onSubmit = (data: InsertReceivedDevice) => {
     if (!data.itemTypeId) {
       toast({
-        title: "❌ بيانات ناقصة",
-        description: "يرجى اختيار نوع الجهاز أولاً",
+        title: t('verification.data_1'),
+        description: t('verification.type_device_2'),
         variant: "destructive",
       });
       return;
@@ -109,7 +111,7 @@ export default function ReceivedDevicesSubmit() {
               </div>
               <h1 className="text-5xl md:text-6xl font-bold">
                 <span className="bg-gradient-to-r from-[#18B2B0] via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                  إدخال بيانات الأجهزة
+                  {t('verification.submit_data_devices')}
                 </span>
               </h1>
             </motion.div>
@@ -119,7 +121,7 @@ export default function ReceivedDevicesSubmit() {
               transition={{ delay: 0.4 }}
               className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto"
             >
-              يرجى إدخال جميع بيانات الجهاز المستلم بدقة ليتم إرسالها للمشرف
+              {t('verification.submit_data_device_received')}
             </motion.p>
             
             {/* Back Button */}
@@ -135,7 +137,7 @@ export default function ReceivedDevicesSubmit() {
                 data-testid="button-back-home"
               >
                 <Home className="w-4 h-4 ml-2" />
-                العودة للصفحة الرئيسية
+                {t('verification.home')}
               </Button>
             </motion.div>
           </div>
@@ -156,7 +158,7 @@ export default function ReceivedDevicesSubmit() {
                 <div className="flex-1">
                   <p className="text-slate-300 leading-relaxed">
                     <Sparkles className="w-4 h-4 inline-block mr-2 text-[#18B2B0]" />
-                    سيتم إرسال البيانات تلقائياً إلى المشرف المسؤول للمراجعة والموافقة
+                    {t('verification.send_data_supervisor_admin')}
                   </p>
                 </div>
               </div>
@@ -178,7 +180,7 @@ export default function ReceivedDevicesSubmit() {
                   <div className="p-2 bg-gradient-to-br from-[#18B2B0]/20 to-cyan-500/20 rounded-xl">
                     <Package className="w-6 h-6 text-[#18B2B0]" />
                   </div>
-                  <CardTitle className="text-2xl text-slate-100">معلومات الجهاز</CardTitle>
+                  <CardTitle className="text-2xl text-slate-100">{t('verification.info_device')}</CardTitle>
                 </div>
               </CardHeader>
 
@@ -190,7 +192,7 @@ export default function ReceivedDevicesSubmit() {
                       <div className="flex items-center gap-2 pb-3 border-b border-slate-700/50">
                         <Smartphone className="w-5 h-5 text-[#18B2B0]" />
                         <h3 className="text-lg font-semibold text-slate-200">
-                          معلومات الجهاز الأساسية
+                          {t('verification.info_device_1')}
                         </h3>
                       </div>
 
@@ -201,7 +203,7 @@ export default function ReceivedDevicesSubmit() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-slate-300 text-base font-medium">
-                                نوع الجهاز <span className="text-red-400">*</span>
+                                {t('verification.type_device')} <span className="text-red-400">*</span>
                               </FormLabel>
                               <Select
                                 onValueChange={field.onChange}
@@ -210,7 +212,7 @@ export default function ReceivedDevicesSubmit() {
                               >
                                 <FormControl>
                                   <SelectTrigger className="h-12 bg-slate-800/50 border-slate-600 text-slate-100 focus:border-[#18B2B0] focus:ring-[#18B2B0]/20">
-                                    <SelectValue placeholder="اختر نوع الجهاز" />
+                                    <SelectValue placeholder={t('verification.type_device_1')} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent className="bg-slate-800 border-slate-700">
@@ -232,14 +234,14 @@ export default function ReceivedDevicesSubmit() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-slate-300 text-base font-medium">
-                                رقم التيرمينال <span className="text-red-400">*</span>
+                                {t('verification.number')} <span className="text-red-400">*</span>
                               </FormLabel>
                               <FormControl>
                                 <div className="relative group">
                                   <Input
                                     {...field}
                                     value={field.value ?? ""}
-                                    placeholder="أدخل رقم التيرمينال"
+                                    placeholder={t('verification.number_1')}
                                     className="h-12 bg-slate-800/50 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-[#18B2B0] focus:ring-[#18B2B0]/20"
                                     data-testid="input-terminalId"
                                   />
@@ -256,12 +258,12 @@ export default function ReceivedDevicesSubmit() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-slate-300 text-base font-medium">
-                                الرقم التسلسلي <span className="text-red-400">*</span>
+                                {t('verification.serial_number')} <span className="text-red-400">*</span>
                               </FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
-                                  placeholder="أدخل الرقم التسلسلي"
+                                  placeholder={t('verification.number_serial_1')}
                                   className="h-12 bg-slate-800/50 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-[#18B2B0] focus:ring-[#18B2B0]/20"
                                   data-testid="input-serialNumber"
                                 />
@@ -278,7 +280,7 @@ export default function ReceivedDevicesSubmit() {
                       <div className="flex items-center gap-2 pb-3 border-b border-slate-700/50">
                         <Package className="w-5 h-5 text-[#18B2B0]" />
                         <h3 className="text-lg font-semibold text-slate-200">
-                          الملحقات المرفقة
+                          {t('verification.item_23905')}
                         </h3>
                       </div>
 
@@ -301,7 +303,7 @@ export default function ReceivedDevicesSubmit() {
                                 <div className="flex items-center gap-3">
                                   <Battery className="w-5 h-5 text-[#18B2B0]" />
                                   <FormLabel className="text-base text-slate-300 cursor-pointer m-0">
-                                    البطارية
+                                    {t('verification.battery')}
                                   </FormLabel>
                                 </div>
                               </div>
@@ -327,7 +329,7 @@ export default function ReceivedDevicesSubmit() {
                                 <div className="flex items-center gap-3">
                                   <Cable className="w-5 h-5 text-[#18B2B0]" />
                                   <FormLabel className="text-base text-slate-300 cursor-pointer m-0">
-                                    كابل الشاحن
+                                    {t('verification.item_15919')}
                                   </FormLabel>
                                 </div>
                               </div>
@@ -353,7 +355,7 @@ export default function ReceivedDevicesSubmit() {
                                 <div className="flex items-center gap-3">
                                   <Cable className="w-5 h-5 text-[#18B2B0]" />
                                   <FormLabel className="text-base text-slate-300 cursor-pointer m-0">
-                                    رأس الشاحن
+                                    {t('verification.item_14304')}
                                   </FormLabel>
                                 </div>
                               </div>
@@ -379,7 +381,7 @@ export default function ReceivedDevicesSubmit() {
                                 <div className="flex items-center gap-3">
                                   <CreditCard className="w-5 h-5 text-[#18B2B0]" />
                                   <FormLabel className="text-base text-slate-300 cursor-pointer m-0">
-                                    يحتوي على شريحة SIM
+                                    {t('verification.sim')}
                                   </FormLabel>
                                 </div>
                               </div>
@@ -401,7 +403,7 @@ export default function ReceivedDevicesSubmit() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-slate-300 text-base font-medium">
-                                  نوع شريحة SIM
+                                  {t('verification.type_sim')}
                                 </FormLabel>
                                 <Select 
                                   onValueChange={field.onChange} 
@@ -410,7 +412,7 @@ export default function ReceivedDevicesSubmit() {
                                 >
                                   <FormControl>
                                     <SelectTrigger className="h-12 bg-slate-800/50 border-slate-600 text-slate-100 focus:border-[#18B2B0] focus:ring-[#18B2B0]/20">
-                                      <SelectValue placeholder="اختر نوع الشريحة" />
+                                      <SelectValue placeholder={t('verification.type_sim_1')} />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent className="bg-slate-800 border-slate-700">
@@ -432,7 +434,7 @@ export default function ReceivedDevicesSubmit() {
                       <div className="flex items-center gap-2 pb-3 border-b border-slate-700/50">
                         <AlertCircle className="w-5 h-5 text-orange-400" />
                         <h3 className="text-lg font-semibold text-slate-200">
-                          معلومات الأضرار (اختياري)
+                          {t('verification.info_1')}
                         </h3>
                       </div>
 
@@ -442,13 +444,13 @@ export default function ReceivedDevicesSubmit() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-slate-300 text-base font-medium">
-                              وصف الأضرار أو الملاحظات
+                              {t('verification.notes_3')}
                             </FormLabel>
                             <FormControl>
                               <Textarea
                                 {...field}
                                 value={field.value || ""}
-                                placeholder="اذكر أي أضرار أو ملاحظات على الجهاز (اختياري)"
+                                placeholder={t('verification.notes_device')}
                                 className="min-h-[120px] bg-slate-800/50 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-[#18B2B0] focus:ring-[#18B2B0]/20 resize-none"
                                 data-testid="textarea-damagePart"
                               />
@@ -469,7 +471,7 @@ export default function ReceivedDevicesSubmit() {
                         className="px-8 h-12 border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white"
                         data-testid="button-reset"
                       >
-                        إعادة تعيين
+                        {t('verification.item_15930')}
                       </Button>
                       <Button
                         type="submit"
@@ -480,11 +482,11 @@ export default function ReceivedDevicesSubmit() {
                         {createMutation.isPending ? (
                           <>
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                            جاري الإرسال...
+                            {t('verification.send')}
                           </>
                         ) : (
                           <>
-                            إرسال البيانات
+                            {t('verification.send_data')}
                             <ArrowRight className="w-5 h-5 mr-2" />
                           </>
                         )}

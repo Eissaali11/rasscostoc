@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -18,6 +19,8 @@ import neoleapLogo from "@assets/image_1762469922998.png";
 import madaDevice from "@assets/image_1762469811135.png";
 
 export default function UsersPage() {
+
+  const { t, dir } = useTranslation();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -36,14 +39,14 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
-        title: "تم الحذف بنجاح",
-        description: "تم حذف المستخدم",
+        title: t('users.completed_delete_successfully'),
+        description: t('users.completed_delete_user'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ",
-        description: "فشل حذف المستخدم",
+        title: t('users.error'),
+        description: t('users.fail_delete_user'),
         variant: "destructive",
       });
     },
@@ -57,16 +60,16 @@ export default function UsersPage() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
-        title: "تمت العملية بنجاح",
+        title: t('users.operation_successfully'),
         description: variables 
-          ? `تم تفعيل جميع المستخدمين بنجاح (عدد: ${data.count})` 
-          : `تم إيقاف جميع المستخدمين بنجاح (عدد: ${data.count})`,
+          ? t('users.completed_users_successfully', { var_0: data.count }) 
+          : t('users.completed_users_successfully_1', { var_0: data.count }),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ",
-        description: "فشل تحديث حالة المستخدمين",
+        title: t('users.error'),
+        description: t('users.fail_update_status_users'),
         variant: "destructive",
       });
     },
@@ -78,7 +81,7 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
+    if (confirm(t('users.delete_2'))) {
       deleteUserMutation.mutate(id);
     }
   };
@@ -112,14 +115,14 @@ export default function UsersPage() {
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-purple-500"></div>
             <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-pink-500 border-l-cyan-500"></div>
           </motion.div>
-          <p className="text-white text-lg font-semibold">جاري التحميل...</p>
+          <p className="text-white text-lg font-semibold">{t('users.loading_1')}</p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir={dir}>
       {/* Animated Banner */}
       <div className="relative overflow-hidden bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 shadow-2xl">
         <div className="absolute inset-0 bg-grid-white/5"></div>
@@ -163,7 +166,7 @@ export default function UsersPage() {
                 data-testid="button-back-home"
               >
                 <Home className="w-5 h-5 ml-2" />
-                الصفحة الرئيسية
+                {t('users.page_home')}
                 <ArrowRight className="w-5 h-5 mr-2" />
               </Button>
             </motion.div>
@@ -214,10 +217,10 @@ export default function UsersPage() {
               >
                 <h1 className="text-4xl lg:text-5xl font-black text-white mb-2 drop-shadow-2xl flex items-center justify-center gap-3">
                   <Sparkles className="h-10 w-10 text-yellow-300 animate-pulse" />
-                  إدارة المستخدمين
+                  {t('users.management_users')}
                   <Sparkles className="h-10 w-10 text-yellow-300 animate-pulse" />
                 </h1>
-                <p className="text-white/90 text-lg font-semibold">إضافة وإدارة مستخدمي النظام</p>
+                <p className="text-white/90 text-lg font-semibold">{t('users.add_system')}</p>
               </motion.div>
             </motion.div>
 
@@ -264,7 +267,7 @@ export default function UsersPage() {
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
             <Input
               type="text"
-              placeholder="ابحث عن مستخدم..."
+              placeholder={t('users.item_19252')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pr-10 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 h-12"
@@ -276,7 +279,7 @@ export default function UsersPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-initial">
               <Button
                 onClick={() => {
-                  if (confirm("هل أنت متأكد من تفعيل جميع المستخدمين؟")) {
+                  if (confirm(t('users.item_51185'))) {
                     bulkStatusMutation.mutate(true);
                   }
                 }}
@@ -285,14 +288,14 @@ export default function UsersPage() {
                 data-testid="button-activate-all"
               >
                 <UserCheck className="h-5 w-5" />
-                تفعيل جميع المستخدمين
+                {t('users.users')}
               </Button>
             </motion.div>
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-initial">
               <Button
                 onClick={() => {
-                  if (confirm("هل أنت متأكد من إيقاف جميع المستخدمين؟ (لن يتم إيقاف حسابك الحالي)")) {
+                  if (confirm(t('users.item_84836'))) {
                     bulkStatusMutation.mutate(false);
                   }
                 }}
@@ -301,7 +304,7 @@ export default function UsersPage() {
                 data-testid="button-deactivate-all"
               >
                 <UserX className="h-5 w-5" />
-                إيقاف جميع المستخدمين
+                {t('users.users_1')}
               </Button>
             </motion.div>
 
@@ -312,7 +315,7 @@ export default function UsersPage() {
                 data-testid="button-add-user"
               >
                 <Plus className="h-5 w-5" />
-                إضافة مستخدم جديد
+                {t('users.add_new')}
               </Button>
             </motion.div>
           </div>
@@ -416,22 +419,22 @@ export default function UsersPage() {
 
                     {/* Enterprise Details */}
                     {(user.employeeCode || user.technicianCode || user.department) && (
-                      <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-3 text-right" dir="rtl">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-3 text-right" dir={dir}>
                         {user.department && (
                           <div className="flex justify-between">
-                            <span className="text-slate-400">القسم:</span>
+                            <span className="text-slate-400">{t('users.item_8031')}</span>
                             <span className="font-semibold text-slate-700 dark:text-slate-300">{user.department}</span>
                           </div>
                         )}
                         {user.employeeCode && (
                           <div className="flex justify-between">
-                            <span className="text-slate-400">رقم الموظف:</span>
+                            <span className="text-slate-400">{t('users.number_7')}</span>
                             <span className="font-semibold text-slate-700 dark:text-slate-300">{user.employeeCode}</span>
                           </div>
                         )}
                         {user.technicianCode && (
                           <div className="flex justify-between">
-                            <span className="text-slate-400">رقم الفني:</span>
+                            <span className="text-slate-400">{t('users.number_technician')}</span>
                             <span className="font-semibold text-slate-700 dark:text-slate-300">{user.technicianCode}</span>
                           </div>
                         )}
@@ -471,7 +474,7 @@ export default function UsersPage() {
                         ${user.isActive 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 shadow-md' 
                           : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 shadow-md'}`}>
-                        {user.isActive ? '✓ نشط' : '✗ غير نشط'}
+                        {user.isActive ? t('users.status_active_symbol') : t('users.status_inactive_symbol')}
                       </motion.span>
                     </div>
                   </CardContent>
@@ -495,12 +498,12 @@ export default function UsersPage() {
                   <UserCircle className="h-24 w-24 mx-auto mb-6 text-slate-400" />
                 </motion.div>
                 <h3 className="text-2xl font-bold mb-3 text-slate-800 dark:text-white">
-                  {searchTerm ? 'لا توجد نتائج' : 'لا يوجد مستخدمين'}
+                  {searchTerm ? t('users.no_results') : t('users.no_3')}
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400 mb-6">
                   {searchTerm 
-                    ? 'لم نجد أي مستخدم يطابق بحثك' 
-                    : 'قم بإضافة أول مستخدم للنظام'}
+                    ? t('users.item_35152') 
+                    : t('users.item_36736')}
                 </p>
                 {!searchTerm && (
                   <Button 
@@ -508,7 +511,7 @@ export default function UsersPage() {
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                   >
                     <Plus className="h-5 w-5 ml-2" />
-                    إضافة أول مستخدم
+                    {t('users.add_1')}
                   </Button>
                 )}
               </CardContent>

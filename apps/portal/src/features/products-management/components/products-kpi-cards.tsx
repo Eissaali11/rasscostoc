@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import type { ProductsKpi } from "../types";
 import { Boxes, UserCog, Warehouse } from "lucide-react";
 
@@ -40,6 +41,7 @@ function KpiRing({ value, colorClass, icon: Icon, iconClass }: RingProps) {
 }
 
 export function ProductsKpiCards({ kpis }: ProductsKpiCardsProps) {
+  const { t } = useTranslation();
   const technicianRatio = kpis.totalStock > 0 ? Math.round((kpis.totalTechnicianStock / kpis.totalStock) * 100) : 0;
   const warehouseRatio = kpis.totalStock > 0 ? Math.round((kpis.totalWarehouseStock / kpis.totalStock) * 100) : 0;
 
@@ -49,7 +51,7 @@ export function ProductsKpiCards({ kpis }: ProductsKpiCardsProps) {
         <div className="absolute -right-6 -top-6 w-24 h-24 bg-cyan-500/20 rounded-full blur-2xl group-hover:bg-cyan-500/30 transition-all" />
         <div className="relative z-10 flex justify-between items-start">
           <div>
-            <p className="text-slate-300 text-sm font-medium mb-1">المخزون الكلي</p>
+            <p className="text-slate-300 text-sm font-medium mb-1">{t('common.inventory_13')}</p>
             <h3 className="text-3xl font-bold text-white tracking-wider">{kpis.totalStock.toLocaleString("en-US")}</h3>
           </div>
           <KpiRing value={100} colorClass="text-cyan-500" icon={Boxes} iconClass="text-cyan-500" />
@@ -60,7 +62,7 @@ export function ProductsKpiCards({ kpis }: ProductsKpiCardsProps) {
         <div className="absolute -right-6 -top-6 w-24 h-24 bg-orange-500/20 rounded-full blur-2xl group-hover:bg-orange-500/30 transition-all" />
         <div className="relative z-10 flex justify-between items-start">
           <div>
-            <p className="text-slate-300 text-sm font-medium mb-1">مخزون المندوبين</p>
+            <p className="text-slate-300 text-sm font-medium mb-1">{t('common.couriers_2')}</p>
             <h3 className="text-3xl font-bold text-white tracking-wider">{kpis.totalTechnicianStock.toLocaleString("en-US")}</h3>
           </div>
           <KpiRing value={technicianRatio} colorClass="text-orange-500" icon={UserCog} iconClass="text-orange-500" />
@@ -71,7 +73,7 @@ export function ProductsKpiCards({ kpis }: ProductsKpiCardsProps) {
         <div className="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-500/30 transition-all" />
         <div className="relative z-10 flex justify-between items-start">
           <div>
-            <p className="text-slate-300 text-sm font-medium mb-1">مخزون المستودعات</p>
+            <p className="text-slate-300 text-sm font-medium mb-1">{t('common.warehouses_3')}</p>
             <h3 className="text-3xl font-bold text-white tracking-wider">{kpis.totalWarehouseStock.toLocaleString("en-US")}</h3>
           </div>
           <KpiRing value={warehouseRatio} colorClass="text-purple-500" icon={Warehouse} iconClass="text-purple-500" />

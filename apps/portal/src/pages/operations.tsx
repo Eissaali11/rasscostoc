@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -124,39 +125,39 @@ type GroupedOperation = {
 };
 
 const systemActionLabels: Record<string, string> = {
-  create: "إنشاء",
-  update: "تحديث",
-  delete: "حذف",
-  approve: "موافقة",
-  reject: "رفض",
-  login: "تسجيل دخول",
-  logout: "تسجيل خروج",
-  transfer: "نقل مخزون",
-  depletion: "نفاذ مخزون",
+  create: t('common.item_7911'),
+  update: t('common.update'),
+  delete: t('common.delete'),
+  approve: t('common.item_9568'),
+  reject: t('common.reject'),
+  login: t('common.item_14368'),
+  logout: t('common.item_14346'),
+  transfer: t('common.item_12831'),
+  depletion: t('common.item_14385'),
 };
 
 const systemEntityLabels: Record<string, string> = {
-  user: "مستخدم",
-  users: "المستخدمين",
-  region: "منطقة",
-  regions: "المناطق",
-  warehouse: "مستودع",
-  warehouses: "المستودعات",
-  transfer: "عملية نقل",
-  stock: "المخزون",
-  item: "صنف",
-  inventory_request: "طلب مخزون",
-  stock_transfer: "نقل مخزون",
-  technician_inventory: "مخزون مندوب",
-  warehouse_inventory: "مخزون مستودع",
+  user: t('common.item_9540'),
+  users: t('common.users_4'),
+  region: t('common.region_6'),
+  regions: t('common.item_11158'),
+  warehouse: t('common.warehouse_2'),
+  warehouses: t('common.warehouses'),
+  transfer: t('common.operation_4'),
+  stock: t('common.inventory'),
+  item: t('common.item_4796'),
+  inventory_request: t('common.request'),
+  stock_transfer: t('common.item_12831'),
+  technician_inventory: t('common.item_15997'),
+  warehouse_inventory: t('common.warehouse_4'),
 };
 
 const systemFilterLabels: Record<SystemOperationFilter, string> = {
-  all: "الكل",
-  "stock-request": "طلب مخزون",
-  "stock-transfer": "نقل مخزون",
-  "stock-depletion-technician": "نفاذ مخزون مندوب",
-  "stock-depletion-warehouse": "نفاذ مخزون مستودع",
+  all: t('common.all'),
+  "stock-request": t('common.request'),
+  "stock-transfer": t('common.item_12831'),
+  "stock-depletion-technician": t('common.item_22395'),
+  "stock-depletion-warehouse": t('common.warehouse_5'),
 };
 
 function sumInventoryValue(inventory: unknown): number {
@@ -195,24 +196,24 @@ function getSystemOperationCategory(group: GroupedOperation): SystemOperationFil
   const action = (group.systemMeta?.action || "").toLowerCase();
   const description = (group.systemMeta?.description || group.notes || "").toLowerCase();
 
-  if (entityType === "inventory_request" || description.includes("طلب مخزون")) {
+  if (entityType === "inventory_request" || description.includes(t('common.request'))) {
     return "stock-request";
   }
 
   if (
     action === "transfer" ||
     entityType === "stock_transfer" ||
-    description.includes("نقل مخزون") ||
-    description.includes("تم سحب")
+    description.includes(t('common.item_12831')) ||
+    description.includes(t('common.completed_withdraw'))
   ) {
     return "stock-transfer";
   }
 
-  if (description.includes("نفاذ") && description.includes("مندوب")) {
+  if (description.includes(t('common.item_6366_1')) && description.includes(t('common.item_7978'))) {
     return "stock-depletion-technician";
   }
 
-  if (description.includes("نفاذ") && description.includes("مستودع")) {
+  if (description.includes(t('common.item_6366_1')) && description.includes(t('common.warehouse_2'))) {
     return "stock-depletion-warehouse";
   }
 
@@ -221,14 +222,14 @@ function getSystemOperationCategory(group: GroupedOperation): SystemOperationFil
 
 function getStatusBadge(status: GroupedOperation["status"]) {
   if (status === "pending") {
-    return <span className="px-3 py-1 rounded-full bg-[#00F2FF]/10 text-[#00F2FF] text-[10px] font-bold border border-[#00F2FF]/20">قيد التنفيذ</span>;
+    return <span className="px-3 py-1 rounded-full bg-[#00F2FF]/10 text-[#00F2FF] text-[10px] font-bold border border-[#00F2FF]/20">{t('common.pending')}</span>;
   }
 
   if (status === "accepted") {
-    return <span className="px-3 py-1 rounded-full bg-[#BC13FE]/10 text-[#BC13FE] text-[10px] font-bold border border-[#BC13FE]/20">مكتمل</span>;
+    return <span className="px-3 py-1 rounded-full bg-[#BC13FE]/10 text-[#BC13FE] text-[10px] font-bold border border-[#BC13FE]/20">{t('common.completed')}</span>;
   }
 
-  return <span className="px-3 py-1 rounded-full bg-[#FF8C00]/10 text-[#FF8C00] text-[10px] font-bold border border-[#FF8C00]/20">قيد الانتظار</span>;
+  return <span className="px-3 py-1 rounded-full bg-[#FF8C00]/10 text-[#FF8C00] text-[10px] font-bold border border-[#FF8C00]/20">{t('common.pending_waiting')}</span>;
 }
 
 function getProgressForGroup(group: GroupedOperation): number {
@@ -246,6 +247,7 @@ function getProgressClass(group: GroupedOperation): string {
 }
 
 export default function OperationsPage() {
+  const { t, dir } = useTranslation();
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
@@ -304,14 +306,14 @@ export default function OperationsPage() {
       n950: "N950",
       i9000s: "I9000s",
       i9100: "I9100",
-      rollPaper: "ورق",
-      stickers: "ملصقات",
-      newBatteries: "بطاريات جديدة",
-      mobilySim: "شرائح موبايلي",
-      stcSim: "شرائح STC",
-      zainSim: "شرائح زين",
-      lebara: "شرائح ليبارا",
-      lebaraSim: "شرائح ليبارا",
+      rollPaper: t('common.paper'),
+      stickers: t('common.stickers'),
+      newBatteries: t('common.batteries'),
+      mobilySim: t('common.sims_mobily'),
+      stcSim: t('common.sims_2'),
+      zainSim: t('common.sims_zain'),
+      lebara: t('common.sims_lebara'),
+      lebaraSim: t('common.sims_lebara'),
     };
 
     return itemNames[itemType] || itemType;
@@ -438,8 +440,8 @@ export default function OperationsPage() {
       const key = `${movement.technicianId}-${dayKey}-${movement.performedBy}-${movement.fromInventory}-${movement.toInventory}-${movement.notes || "no-notes"}`;
 
       if (!acc[key]) {
-        const fromLabel = movement.fromInventory === "fixed" ? "المخزون الثابت" : "المخزون المتحرك";
-        const toLabel = movement.toInventory === "fixed" ? "المخزون الثابت" : "المخزون المتحرك";
+        const fromLabel = movement.fromInventory === "fixed" ? t('common.inventory_1') : t('common.inventory_2');
+        const toLabel = movement.toInventory === "fixed" ? t('common.inventory_1') : t('common.inventory_2');
 
         acc[key] = {
           groupId: key,
@@ -538,18 +540,18 @@ export default function OperationsPage() {
         groupId: `depletion-tech-${technician.technicianId}`,
         sourceType: "system-event",
         warehouseId: `depletion-tech-${technician.technicianId}`,
-        warehouseName: "نفاذ مخزون مندوب",
+        warehouseName: t('common.item_22395'),
         technicianName: technician.technicianName,
         technicianId: technician.technicianId,
         createdAt: new Date(),
-        notes: `نفاذ كمية المخزون للمندوب ${technician.technicianName}`,
+        notes: t('common.quantity_inventory', { var_0: technician.technicianName }),
         status: "rejected",
         performedBy: "system",
         items: [
           {
             id: `depletion-tech-item-${technician.technicianId}`,
             itemType: "depletion",
-            itemNameAr: "نفاذ مخزون",
+            itemNameAr: t('common.item_14385'),
             packagingType: "event",
             quantity: 0,
           },
@@ -558,7 +560,7 @@ export default function OperationsPage() {
           action: "depletion",
           entityType: "technician_inventory",
           entityName: technician.technicianName,
-          description: `نفاذ كمية المخزون من مندوب: ${technician.technicianName}`,
+          description: t('common.quantity_inventory_1', { var_0: technician.technicianName }),
           success: false,
           severity: "warn",
           category: "stock-depletion-technician",
@@ -576,18 +578,18 @@ export default function OperationsPage() {
         groupId: `depletion-wh-${warehouse.id}`,
         sourceType: "system-event",
         warehouseId: warehouse.id,
-        warehouseName: "نفاذ مخزون مستودع",
+        warehouseName: t('common.warehouse_5'),
         technicianName: warehouse.name,
         technicianId: warehouse.id,
         createdAt: new Date(),
-        notes: `نفاذ كمية المخزون من المستودع ${warehouse.name}`,
+        notes: t('common.quantity_inventory_warehouse', { var_0: warehouse.name }),
         status: "rejected",
         performedBy: "system",
         items: [
           {
             id: `depletion-wh-item-${warehouse.id}`,
             itemType: "depletion",
-            itemNameAr: "نفاذ مخزون",
+            itemNameAr: t('common.item_14385'),
             packagingType: "event",
             quantity: 0,
           },
@@ -596,7 +598,7 @@ export default function OperationsPage() {
           action: "depletion",
           entityType: "warehouse_inventory",
           entityName: warehouse.name,
-          description: `نفاذ كمية المخزون من مستودع: ${warehouse.name}`,
+          description: t('common.quantity_inventory_warehouse_1', { var_0: warehouse.name }),
           success: false,
           severity: "warn",
           category: "stock-depletion-warehouse",
@@ -702,9 +704,9 @@ export default function OperationsPage() {
   const systemErrorsCount = filteredSystemOperations.filter((group) => !group.systemMeta?.success || group.systemMeta?.severity === "error").length;
 
   const getSourceTypeLabel = (group: GroupedOperation) => {
-    if (group.sourceType === "system-event") return "عملية نظام";
-    if (group.sourceType === "warehouse-movement") return "نقل مخزون";
-    return "نقل مندوب";
+    if (group.sourceType === "system-event") return t('common.operation_system_1');
+    if (group.sourceType === "warehouse-movement") return t('common.item_12831');
+    return t('common.item_12822');
   };
 
   const formatOperationDate = (value?: Date | string) => {
@@ -720,8 +722,8 @@ export default function OperationsPage() {
   const exportToExcel = async () => {
     if (operationView === "technicians" && (!transfers || transfers.length === 0)) {
       toast({
-        title: "لا توجد بيانات",
-        description: "لا توجد عمليات لتصديرها",
+        title: t('common.no_data_1'),
+        description: t('common.no_6'),
         variant: "destructive",
       });
       return;
@@ -729,8 +731,8 @@ export default function OperationsPage() {
 
     if (operationView === "warehouses" && (!filteredStockMovements || filteredStockMovements.length === 0)) {
       toast({
-        title: "لا توجد بيانات",
-        description: "لا توجد نتائج لحركات المخزون لتصديرها",
+        title: t('common.no_data_1'),
+        description: t('common.no_results_inventory'),
         variant: "destructive",
       });
       return;
@@ -738,8 +740,8 @@ export default function OperationsPage() {
 
     if (operationView === "system" && (!filteredSystemOperations || filteredSystemOperations.length === 0)) {
       toast({
-        title: "لا توجد بيانات",
-        description: "لا توجد عمليات نظام مطابقة للتصدير",
+        title: t('common.no_data_1'),
+        description: t('common.no_system'),
         variant: "destructive",
       });
       return;
@@ -748,10 +750,10 @@ export default function OperationsPage() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(
       operationView === "technicians"
-        ? "عمليات نقل المندوبين"
+        ? t('common.couriers_1')
         : operationView === "warehouses"
-          ? "حركات المخزون"
-          : "عمليات النظام",
+          ? t('common.transactions_inventory')
+          : t('common.system'),
     );
     worksheet.views = [{ rightToLeft: true }];
 
@@ -768,10 +770,10 @@ export default function OperationsPage() {
     worksheet.mergeCells("A1:H1");
     const titleCell = worksheet.getCell("A1");
     titleCell.value = operationView === "technicians"
-      ? "تقرير عمليات نقل المندوبين"
+      ? t('common.report_couriers')
       : operationView === "warehouses"
-        ? "تقرير حركات المخزون الداخلية"
-        : "تقرير عمليات النظام";
+        ? t('common.report_transactions_inventory')
+        : t('common.report_system');
     titleCell.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } };
     titleCell.alignment = { horizontal: "center", vertical: "middle" };
     titleCell.fill = {
@@ -794,10 +796,10 @@ export default function OperationsPage() {
     worksheet.addRow([]);
 
     const headerRow = operationView === "technicians"
-      ? worksheet.addRow(["#", "المستودع", "المندوب", "الصنف", "نوع التغليف", "الكمية", "الحالة", "التاريخ"])
+      ? worksheet.addRow(["#", t('common.warehouse_1'), t('common.technician'), t('common.item_7975'), t('common.type_1'), t('common.quantity_3'), t('common.status'), t('common.date_1')])
       : operationView === "warehouses"
-        ? worksheet.addRow(["#", "المندوب", "الصنف", "من", "إلى", "نوع التغليف", "الكمية", "التاريخ"])
-        : worksheet.addRow(["#", "المنفذ", "الدور", "العملية", "الكيان", "الوصف", "النتيجة", "التاريخ"]);
+        ? worksheet.addRow(["#", t('common.technician'), t('common.item_7975'), t('common.item_3211'), t('common.item_4786'), t('common.type_1'), t('common.quantity_3'), t('common.date_1')])
+        : worksheet.addRow(["#", t('common.item_9575'), t('common.item_7955'), t('common.operation_5'), t('common.item_9573'), t('common.item_7977'), t('common.item_11130'), t('common.date_1')]);
     headerRow.font = { bold: true, size: 12, color: { argb: "FFFFFFFF" } };
     headerRow.alignment = { horizontal: "center", vertical: "middle" };
     headerRow.height = 30;
@@ -818,16 +820,16 @@ export default function OperationsPage() {
     if (operationView === "technicians") {
       transfers.forEach((transfer, index) => {
         const statusText =
-          transfer.status === "accepted" ? "مقبول" :
-          transfer.status === "rejected" ? "مرفوض" :
-          "قيد الانتظار";
+          transfer.status === "accepted" ? t('common.approved') :
+          transfer.status === "rejected" ? t('common.rejected') :
+          t('common.pending_waiting');
 
         const row = worksheet.addRow([
           index + 1,
-          transfer.warehouseName || "غير محدد",
-          transfer.technicianName || "غير محدد",
+          transfer.warehouseName || t('common.item_11173'),
+          transfer.technicianName || t('common.item_11173'),
           getItemNameAr(transfer.itemType),
-          transfer.packagingType === "box" ? "كرتون" : "مفرد",
+          transfer.packagingType === "box" ? t('common.box') : t('common.item_6374_1'),
           transfer.quantity,
           statusText,
           format(new Date(transfer.createdAt), "PPp", { locale: ar }),
@@ -859,11 +861,11 @@ export default function OperationsPage() {
       filteredStockMovements.forEach((movement, index) => {
         const row = worksheet.addRow([
           index + 1,
-          movement.technicianName || "غير محدد",
+          movement.technicianName || t('common.item_11173'),
           getItemNameAr(movement.itemType),
-          movement.fromInventory === "fixed" ? "المخزون الثابت" : "المخزون المتحرك",
-          movement.toInventory === "fixed" ? "المخزون الثابت" : "المخزون المتحرك",
-          movement.packagingType === "box" ? "كرتون" : "مفرد",
+          movement.fromInventory === "fixed" ? t('common.inventory_1') : t('common.inventory_2'),
+          movement.toInventory === "fixed" ? t('common.inventory_1') : t('common.inventory_2'),
+          movement.packagingType === "box" ? t('common.box') : t('common.item_6374_1'),
           movement.quantity,
           format(new Date(movement.createdAt), "PPp", { locale: ar }),
         ]);
@@ -887,13 +889,13 @@ export default function OperationsPage() {
       });
     } else {
       filteredSystemOperations.forEach((group, index) => {
-        const actionLabel = systemActionLabels[group.systemMeta?.action || ""] || group.systemMeta?.action || "عملية";
+        const actionLabel = systemActionLabels[group.systemMeta?.action || ""] || group.systemMeta?.action || t('common.operation_6');
         const entityLabel = group.systemMeta?.entityName || group.items[0]?.itemNameAr || "-";
-        const statusText = group.systemMeta?.success === false || group.status === "rejected" ? "فاشل" : "ناجح";
+        const statusText = group.systemMeta?.success === false || group.status === "rejected" ? t('common.item_6368') : t('common.item_6342');
 
         const row = worksheet.addRow([
           index + 1,
-          group.technicianName || group.performedBy || "غير محدد",
+          group.technicianName || group.performedBy || t('common.item_11173'),
           group.systemMeta?.userRole || "-",
           actionLabel,
           entityLabel,
@@ -905,7 +907,7 @@ export default function OperationsPage() {
         row.alignment = { horizontal: "center", vertical: "middle" };
         row.height = 25;
 
-        const bgColor = statusText === "ناجح" ? "FFE0F2FE" : "FFFECACA";
+        const bgColor = statusText === t('common.item_6342') ? "FFE0F2FE" : "FFFECACA";
         row.eachCell((cell) => {
           cell.fill = {
             type: "pattern",
@@ -937,12 +939,12 @@ export default function OperationsPage() {
     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     saveAs(
       blob,
-      `${operationView === "technicians" ? "عمليات_المندوبين" : operationView === "warehouses" ? "حركات_المخزون" : "عمليات_النظام"}_${new Date().toISOString().split("T")[0]}.xlsx`,
+      `${operationView === "technicians" ? t('common.couriers_4') : operationView === "warehouses" ? t('common.transactions_inventory_1') : t('common.system_6')}_${new Date().toISOString().split("T")[0]}.xlsx`,
     );
 
     toast({
-      title: "تم التصدير",
-      description: `تم تصدير ${operationView === "technicians" ? transfers.length : operationView === "warehouses" ? filteredStockMovements.length : filteredSystemOperations.length} سجل بنجاح`,
+      title: t('common.completed_export'),
+      description: t('common.completed_export_log_successfully', { var_0: operationView === "technicians" ? transfers.length : operationView === "warehouses" ? filteredStockMovements.length : filteredSystemOperations.length }),
     });
   };
 
@@ -953,13 +955,13 @@ export default function OperationsPage() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] });
       toast({
-        title: "تم القبول",
-        description: "تم قبول العملية بنجاح",
+        title: t('common.completed_approve'),
+        description: t('common.completed_approve_operation_su'),
       });
     } catch (error: any) {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل قبول العملية",
+        title: t('common.error'),
+        description: error?.message || t('common.fail_approve_operation'),
         variant: "destructive",
       });
     } finally {
@@ -976,13 +978,13 @@ export default function OperationsPage() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] });
       toast({
-        title: "تم الرفض",
-        description: "تم رفض العملية",
+        title: t('common.completed_reject'),
+        description: t('common.completed_reject_operation_1'),
       });
     } catch (error: any) {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل رفض العملية",
+        title: t('common.error'),
+        description: error?.message || t('common.fail_reject_operation'),
         variant: "destructive",
       });
     } finally {
@@ -1015,7 +1017,7 @@ export default function OperationsPage() {
         <div className="min-h-[60vh] flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-cyan-300" />
-            <p className="mt-3 text-slate-300">جاري تحميل العمليات...</p>
+            <p className="mt-3 text-slate-300">{t('common.loading_operations')}</p>
           </div>
         </div>
     );
@@ -1033,7 +1035,7 @@ export default function OperationsPage() {
         <div className="relative z-10 p-6 md:p-10 space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-light text-white tracking-wide">إدارة <span className="font-bold">العمليات</span></h2>
+              <h2 className="text-3xl font-light text-white tracking-wide">{t('common.management_2')}<span className="font-bold">{t('common.operations_1')}</span></h2>
               <p className="text-slate-500 text-sm mt-1 font-light">Global Logistics &amp; Inventory Control Center</p>
             </div>
 
@@ -1047,7 +1049,7 @@ export default function OperationsPage() {
                     : "px-4 py-1.5 rounded-full text-slate-400 text-xs font-bold"
                 }
               >
-                نقل المندوبين
+                {t('common.couriers')}
               </button>
               <button
                 type="button"
@@ -1058,7 +1060,7 @@ export default function OperationsPage() {
                     : "px-4 py-1.5 rounded-full text-slate-400 text-xs font-bold"
                 }
               >
-                نقل المستودعات
+                {t('common.warehouses_1')}
               </button>
               {currentUser?.role === "admin" && (
                 <button
@@ -1070,7 +1072,7 @@ export default function OperationsPage() {
                       : "px-4 py-1.5 rounded-full text-slate-400 text-xs font-bold"
                   }
                 >
-                  عمليات النظام
+                  {t('common.system')}
                 </button>
               )}
             </div>
@@ -1082,7 +1084,7 @@ export default function OperationsPage() {
                 <Activity className="h-8 w-8" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">إجمالي العمليات</p>
+                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{t('common.total_operations')}</p>
                 <div className="flex items-baseline gap-3">
                   <h3 className="text-3xl font-light text-white tabular-nums">{totalOperationsCount}</h3>
                   <span className="text-[10px] text-cyan-300 font-bold">+12.4%</span>
@@ -1095,7 +1097,7 @@ export default function OperationsPage() {
                 {operationView === "system" ? <AlertCircle className="h-8 w-8" /> : <Truck className="h-8 w-8" />}
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? "أخطاء النظام" : "قيد التنفيذ"}</p>
+                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? t('common.system_2') : t('common.pending')}</p>
                 <div className="flex items-baseline gap-3">
                   <h3 className="text-3xl font-light text-cyan-300 tabular-nums">{operationView === "system" ? systemErrorsCount : pendingOperationsCount}</h3>
                   <span className="text-[10px] text-slate-400">{operationView === "system" ? "Error" : "Active"}</span>
@@ -1108,7 +1110,7 @@ export default function OperationsPage() {
                 <Hourglass className="h-8 w-8" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? "تحذيرات" : "في الانتظار"}</p>
+                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? t('common.item_11091') : t('common.waiting')}</p>
                 <div className="flex items-baseline gap-3">
                   <h3 className="text-3xl font-light text-orange-300 tabular-nums">{waitingOperationsCount}</h3>
                   <span className="text-[10px] text-slate-400">{operationView === "system" ? "Warn" : "Queue"}</span>
@@ -1121,7 +1123,7 @@ export default function OperationsPage() {
                 {operationView === "system" ? <Users className="h-8 w-8" /> : <CheckCircle2 className="h-8 w-8" />}
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? "مستخدمون نشطون" : "مكتملة اليوم"}</p>
+                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? t('common.item_20785') : t('common.day_1')}</p>
                 <div className="flex items-baseline gap-3">
                   <h3 className="text-3xl font-light text-purple-300 tabular-nums">{operationView === "system" ? onlineUsers.length : completedOperationsCount}</h3>
                   <span className="text-[10px] text-green-400 font-bold">{operationView === "system" ? "Online" : "4.2%"}</span>
@@ -1131,16 +1133,16 @@ export default function OperationsPage() {
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="relative w-full lg:max-w-sm" dir="rtl">
+            <div className="relative w-full lg:max-w-sm" dir={dir}>
               <Search className="h-4 w-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-500" />
               <Input
                 className="w-full bg-white/[0.02] border border-white/10 rounded-full py-2 pr-11 pl-4 text-sm text-white placeholder:text-slate-600 focus:ring-cyan-400 focus:border-cyan-400"
                 placeholder={
                   operationView === "technicians"
-                    ? "البحث في نقل المندوبين..."
+                    ? t('common.search_couriers')
                     : operationView === "warehouses"
-                      ? "البحث في نقل المستودعات..."
-                      : "البحث في عمليات النظام..."
+                      ? t('common.search_warehouses')
+                      : t('common.search_system')
                 }
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
@@ -1154,7 +1156,7 @@ export default function OperationsPage() {
               data-testid="button-export-operations"
             >
               <FileDown className="h-4 w-4 ml-2" />
-              {operationView === "technicians" ? "تصدير نقل المندوبين" : operationView === "warehouses" ? "تصدير نقل المستودعات" : "تصدير عمليات النظام"}
+              {operationView === "technicians" ? t('common.export_couriers') : operationView === "warehouses" ? t('common.export_warehouses') : t('common.export_system')}
             </Button>
           </div>
 
@@ -1188,9 +1190,9 @@ export default function OperationsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 space-y-5 order-2 lg:order-1">
               <div className="flex items-end justify-between px-2">
-                <h3 className="text-xl font-light text-white">سجل العمليات <span className="font-bold">الأخير</span></h3>
+                <h3 className="text-xl font-light text-white">{t('common.log_operations')}<span className="font-bold">{t('common.item_9527')}</span></h3>
                 <div className="px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-medium border border-white/10">
-                  {operationView === "technicians" ? "نقل المندوبين" : operationView === "warehouses" ? "نقل المستودعات" : "عمليات النظام"}
+                  {operationView === "technicians" ? t('common.couriers') : operationView === "warehouses" ? t('common.warehouses_1') : t('common.system')}
                 </div>
               </div>
 
@@ -1198,10 +1200,10 @@ export default function OperationsPage() {
                 {recentOperations.length === 0 ? (
                   <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-3xl p-6 text-center text-slate-500">
                     {operationView === "technicians"
-                      ? "لا توجد عمليات نقل مندوبين مطابقة للبحث."
+                      ? t('common.no_7')
                       : operationView === "warehouses"
-                        ? "لا توجد نتائج لنقل المستودعات مطابقة للبحث."
-                        : "لا توجد عمليات نظام مطابقة للبحث."}
+                        ? t('common.no_results_warehouses')
+                        : t('common.no_system_1')}
                   </div>
                 ) : (
                   recentOperations.map((group) => {
@@ -1235,7 +1237,7 @@ export default function OperationsPage() {
                           </div>
 
                           <div className="w-52">
-                            <p className="text-white font-medium text-sm">{group.warehouseName || "عملية مستودع"}</p>
+                            <p className="text-white font-medium text-sm">{group.warehouseName || t('common.operation_warehouse')}</p>
                             <p className="text-slate-500 text-[10px] tracking-widest mt-1 font-mono">
                               {group.groupId.slice(0, 18).toUpperCase()}
                             </p>
@@ -1276,7 +1278,7 @@ export default function OperationsPage() {
                             }}
                             className="bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/25"
                           >
-                            تفاصيل
+                            {t('common.details_1')}
                           </Button>
 
                           {pending ? (
@@ -1290,7 +1292,7 @@ export default function OperationsPage() {
                                 disabled={processingGroupId === group.groupId}
                                 className="bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/30"
                               >
-                                قبول
+                                {t('common.approve')}
                               </Button>
                               <Button
                                 size="sm"
@@ -1301,7 +1303,7 @@ export default function OperationsPage() {
                                 disabled={processingGroupId === group.groupId}
                                 className="bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/30"
                               >
-                                رفض
+                                {t('common.reject')}
                               </Button>
                             </div>
                           ) : isTechnicianTransfer ? (
@@ -1311,7 +1313,7 @@ export default function OperationsPage() {
                                 onClick={(event) => event.stopPropagation()}
                                 className="bg-white/5 border border-white/10 text-slate-200 hover:bg-white/10"
                               >
-                                عرض
+                                {t('common.view')}
                               </Button>
                             </Link>
                           ) : group.sourceType === "system-event" ? (
@@ -1320,7 +1322,7 @@ export default function OperationsPage() {
                             </div>
                           ) : (
                             <div className="px-3 py-1 rounded-full bg-cyan-400/10 text-cyan-300 text-[10px] font-bold border border-cyan-400/20">
-                              نتيجة النقل
+                              {t('common.item_15974')}
                             </div>
                           )}
                         </div>
@@ -1351,23 +1353,23 @@ export default function OperationsPage() {
                     {operationView === "system" ? (
                       <div className="flex-1 flex flex-col w-full gap-4">
                         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-                          <p className="text-slate-400 text-xs mb-1">آخر عملية نظام</p>
-                          <p className="text-white font-semibold">{mainOperation.systemMeta?.description || mainOperation.warehouseName || "عملية نظام"}</p>
+                          <p className="text-slate-400 text-xs mb-1">{t('common.operation_system')}</p>
+                          <p className="text-white font-semibold">{mainOperation.systemMeta?.description || mainOperation.warehouseName || t('common.operation_system_1')}</p>
                           <p className="text-slate-500 text-xs mt-2">
-                            المنفذ: {mainOperation.technicianName || "غير محدد"} • {mainOperation.systemMeta?.userRole || "-"}
+                            {t('common.executed_by', { name: mainOperation.technicianName || t('common.item_11173'), role: mainOperation.systemMeta?.userRole || "-" })}
                           </p>
                         </div>
 
                         <div className="flex-1 rounded-2xl bg-white/[0.02] border border-white/10 p-4 overflow-y-auto">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-bold text-white">الموجودون على النظام</h4>
+                            <h4 className="text-sm font-bold text-white">{t('common.system_1')}</h4>
                             <span className="text-xs text-cyan-300">{onlineUsers.length}</span>
                           </div>
 
                           <div className="space-y-2">
                             {onlineUsers.length === 0 ? (
                               <div className="text-xs text-slate-500 text-center py-4 border border-dashed border-white/10 rounded-xl">
-                                لا يوجد مستخدمون نشطون حالياً
+                                {t('common.no_5')}
                               </div>
                             ) : (
                               onlineUsers.slice(0, 12).map((systemUser) => (
@@ -1377,7 +1379,7 @@ export default function OperationsPage() {
                                     <p className="text-[11px] text-slate-500">{systemUser.email}</p>
                                   </div>
                                   <span className="text-[10px] text-green-300 border border-green-400/20 px-2 py-0.5 rounded-full bg-green-500/10">
-                                    نشط
+                                    {t('common.active_1')}
                                   </span>
                                 </div>
                               ))
@@ -1422,22 +1424,22 @@ export default function OperationsPage() {
 
                       <div className="text-center w-full mb-8">
                         <h4 className="text-2xl font-medium text-white mb-2">
-                          {mainOperation.warehouseName || "تشغيل عملية رئيسية"}
+                          {mainOperation.warehouseName || t('common.operation_7')}
                         </h4>
                         <p className="text-slate-400 text-sm font-light px-4">
-                          {mainOperation.technicianName || "فريق العمليات"} • {mainOperation.items.length} صنف
+                          {mainOperation.technicianName || t('common.operations_2')} • {t('common.item_5877', { count: mainOperation.items.length })}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 w-full mt-auto">
                         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center text-center">
                           <CheckCircle2 className="text-cyan-300 mb-2 h-7 w-7" />
-                          <p className="text-slate-300 text-sm font-bold mb-1">فحص الجودة</p>
-                          <p className="text-cyan-300 text-xs font-mono">تم {Math.min(100, getProgressForGroup(mainOperation) + 20)}%</p>
+                          <p className="text-slate-300 text-sm font-bold mb-1">{t('common.item_14330')}</p>
+                          <p className="text-cyan-300 text-xs font-mono">{t('common.completed_8')}{Math.min(100, getProgressForGroup(mainOperation) + 20)}%</p>
                         </div>
                         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center text-center">
                           <Clock3 className="text-orange-300 mb-2 h-7 w-7" />
-                          <p className="text-slate-300 text-sm font-bold mb-1">السرعة</p>
+                          <p className="text-slate-300 text-sm font-bold mb-1">{t('common.item_9521')}</p>
                           <p className="text-orange-300 text-xs font-mono" dir="ltr">{Math.max(8, mainOperation.items.length * 2)} t/h</p>
                         </div>
                       </div>
@@ -1448,7 +1450,7 @@ export default function OperationsPage() {
                   <div className="flex-1 flex items-center justify-center text-slate-500">
                     <div className="text-center">
                       <AlertCircle className="mx-auto h-10 w-10 mb-2" />
-                      لا توجد عملية رئيسية حالياً.
+                      {t('dashboard.no_operation')}
                     </div>
                   </div>
                 )}
@@ -1469,16 +1471,16 @@ export default function OperationsPage() {
       >
         <DialogContent className="bg-[#0A0D14]/95 backdrop-blur-xl border-white/20 text-white max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-cyan-300">تفاصيل العملية</DialogTitle>
+            <DialogTitle className="text-2xl text-cyan-300">{t('common.details_operation_1')}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              معلومات تفصيلية عن العملية المحددة من سجل العمليات الأخير.
+              {t('dashboard.info_operation_log_operations')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedDetailsGroup && (
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-400 text-sm">نوع العملية</span>
+                <span className="text-slate-400 text-sm">{t('common.type_operation')}</span>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(selectedDetailsGroup.status)}
                   <span className="px-3 py-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 text-xs font-bold">
@@ -1491,49 +1493,49 @@ export default function OperationsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">رقم العملية</p>
+                  <p className="text-slate-500 text-xs">{t('common.number_operation')}</p>
                   <p className="text-white font-medium mt-1 break-all">{selectedDetailsGroup.groupId}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">المستودع / الكيان</p>
+                  <p className="text-slate-500 text-xs">{t('common.warehouse_3')}</p>
                   <p className="text-white font-medium mt-1">
                     {selectedDetailsGroup.systemMeta?.entityName || selectedDetailsGroup.warehouseName || "-"}
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">المنفذ</p>
-                  <p className="text-white font-medium mt-1">{selectedDetailsGroup.technicianName || "غير محدد"}</p>
+                  <p className="text-slate-500 text-xs">{t('common.item_9575')}</p>
+                  <p className="text-white font-medium mt-1">{selectedDetailsGroup.technicianName || t('common.item_11173')}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">تم الإنشاء</p>
+                  <p className="text-slate-500 text-xs">{t('common.completed_1')}</p>
                   <p className="text-white font-medium mt-1">{formatOperationDate(selectedDetailsGroup.createdAt)}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">وقت الاستجابة</p>
+                  <p className="text-slate-500 text-xs">{t('common.time_1')}</p>
                   <p className="text-white font-medium mt-1">{formatOperationDate(selectedDetailsGroup.respondedAt)}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">مستوى الخطورة</p>
+                  <p className="text-slate-500 text-xs">{t('common.level')}</p>
                   <p className="text-white font-medium mt-1">{selectedDetailsGroup.systemMeta?.severity || "-"}</p>
                 </div>
               </div>
 
               {(selectedDetailsGroup.notes || selectedDetailsGroup.systemMeta?.description || selectedDetailsGroup.rejectionReason) && (
                 <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                  <p className="text-slate-500 text-xs mb-1">الوصف / الملاحظات</p>
+                  <p className="text-slate-500 text-xs mb-1">{t('common.notes_1')}</p>
                   <p className="text-slate-200 text-sm leading-6">
                     {selectedDetailsGroup.systemMeta?.description || selectedDetailsGroup.notes || "-"}
                   </p>
                   {selectedDetailsGroup.rejectionReason && (
-                    <p className="text-red-300 text-xs mt-2">سبب الرفض: {selectedDetailsGroup.rejectionReason}</p>
+                    <p className="text-red-300 text-xs mt-2">{t('common.reason_reject')}{selectedDetailsGroup.rejectionReason}</p>
                   )}
                 </div>
               )}
 
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-slate-500 text-xs mb-2">تفاصيل العناصر</p>
+                <p className="text-slate-500 text-xs mb-2">{t('common.details_items')}</p>
                 {selectedDetailsGroup.items.length === 0 ? (
-                  <p className="text-slate-500 text-sm">لا توجد عناصر مرتبطة بهذه العملية.</p>
+                  <p className="text-slate-500 text-sm">{t('common.no_items_operation')}</p>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {selectedDetailsGroup.items.map((item) => (
@@ -1561,15 +1563,15 @@ export default function OperationsPage() {
           <DialogHeader>
             <DialogTitle className="text-2xl text-red-400 flex items-center gap-2">
               <XCircle className="h-6 w-6" />
-              رفض العملية
+              {t('common.reject_operation')}
             </DialogTitle>
             <DialogDescription className="text-base text-gray-300">
-              يرجى إدخال سبب الرفض (اختياري) لتوضيح القرار.
+              {t('dashboard.submit_reason_reject')}
             </DialogDescription>
           </DialogHeader>
 
           <Textarea
-            placeholder="مثال: الكمية المطلوبة غير متوفرة حالياً..."
+            placeholder={t('common.quantity_4')}
             value={rejectionReason}
             onChange={(event) => setRejectionReason(event.target.value)}
             className="min-h-[120px] bg-white/5 border-white/20 text-white placeholder:text-gray-500 focus:border-red-500"
@@ -1582,7 +1584,7 @@ export default function OperationsPage() {
               onClick={() => setRejectDialogOpen(false)}
               className="bg-white/5 border-white/20 text-white hover:bg-white/10"
             >
-              إلغاء
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -1590,7 +1592,7 @@ export default function OperationsPage() {
               disabled={!selectedRejectGroup || processingGroupId === selectedRejectGroup.groupId}
               className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700"
             >
-              تأكيد الرفض
+              {t('common.confirm_reject')}
             </Button>
           </DialogFooter>
         </DialogContent>

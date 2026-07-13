@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/lib/language";
 
 interface StatsKpiCardProps {
   title: string;
@@ -22,6 +23,7 @@ export function StatsKpiCard({
   color = "primary",
   delay = 0
 }: StatsKpiCardProps) {
+  const { t } = useTranslation();
   const colorClasses = {
     primary: "bg-primary/10 text-primary",
     success: "bg-green-500/10 text-green-600",
@@ -51,7 +53,7 @@ export function StatsKpiCard({
           <div className="text-2xl font-bold text-white">{value}</div>
           {trend && (
             <p className={`text-xs ${trend.isPositive ? 'text-green-400' : 'text-red-400'}`}>
-              {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}% من الشهر الماضي
+              {t('common.from_last_month', { direction: trend.isPositive ? '↑' : '↓', value: Math.abs(trend.value) })}
             </p>
           )}
         </CardContent>

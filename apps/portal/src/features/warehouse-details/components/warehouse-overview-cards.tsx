@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Input } from "@/components/ui/input";
 import { Search, User, XCircle } from "lucide-react";
 
@@ -36,14 +37,15 @@ export function WarehouseOverviewCards({
   onTechnicianSearchChange,
   onClearTechnicianSearch,
 }: WarehouseOverviewCardsProps) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center justify-between">
         <div>
-          <p className="text-white/50 text-sm mb-2">إجمالي المخزون</p>
+          <p className="text-white/50 text-sm mb-2">{t('warehouse.total_inventory')}</p>
           <div className="flex items-baseline gap-2">
             <p className="text-white text-3xl font-bold">{totalInventory}</p>
-            <p className="text-sm text-white/60">قطعة</p>
+            <p className="text-sm text-white/60">{t('warehouse.piece')}</p>
           </div>
         </div>
         <div className="relative size-20">
@@ -76,10 +78,10 @@ export function WarehouseOverviewCards({
 
       <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center justify-between">
         <div>
-          <p className="text-white/50 text-sm mb-2">الأصناف الموجودة</p>
+          <p className="text-white/50 text-sm mb-2">{t('warehouse.text_1')}</p>
           <div className="flex items-baseline gap-2">
             <p className="text-white text-3xl font-bold">{availableItemTypesCount}</p>
-            <p className="text-sm text-white/60">صنف من أصل {totalItemTypesCount}</p>
+            <p className="text-sm text-white/60">{t('warehouse.item_12835')}{totalItemTypesCount}</p>
           </div>
         </div>
         <div className="relative size-20">
@@ -110,7 +112,7 @@ export function WarehouseOverviewCards({
             <div className="size-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
               <User className="h-5 w-5 text-blue-400" />
             </div>
-            <p className="text-white/70 text-sm">المندوبون المرتبطون</p>
+            <p className="text-white/70 text-sm">{t('warehouse.technician_2')}</p>
           </div>
           <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-200 text-xs border border-cyan-400/30">
             {warehouseTechnicians?.length || 0}
@@ -122,14 +124,14 @@ export function WarehouseOverviewCards({
           <Input
             value={technicianSearchQuery}
             onChange={(event) => onTechnicianSearchChange(event.target.value)}
-            placeholder="ابحث عن مندوب بالاسم أو اسم المستخدم أو المدينة"
+            placeholder={t('warehouse.technician_or_username_or_city')}
             className="h-9 pr-10 pl-10 bg-black/25 border-cyan-400/25 text-white placeholder:text-gray-400 focus:border-cyan-300"
           />
           {technicianSearchQuery.trim().length > 0 && (
             <button
               type="button"
               onClick={onClearTechnicianSearch}
-              aria-label="مسح البحث"
+              aria-label={t('warehouse.scan_search_3')}
               className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-cyan-300/70 hover:text-cyan-200 hover:bg-cyan-500/10 transition-colors"
             >
               <XCircle className="h-4 w-4" />
@@ -153,12 +155,12 @@ export function WarehouseOverviewCards({
             </div>
           ) : (
             <div className="text-xs text-gray-400 py-2 text-center bg-black/20 rounded-lg border border-white/10">
-              لا توجد نتائج مطابقة
+              {t('warehouse.no_results')}
             </div>
           )
         ) : (
           <div className="text-xs text-gray-400 py-2 text-center bg-black/20 rounded-lg border border-white/10">
-            لا يوجد مندوبون مرتبطون
+            {t('warehouse.no_technician')}
           </div>
         )}
       </div>

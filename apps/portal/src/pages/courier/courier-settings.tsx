@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -23,6 +24,7 @@ interface LookupsResponse {
 type TabKey = "technicians" | "cities" | "simTypes" | "vendorTypes" | "failureReasons";
 
 export default function CourierSettingsPage() {
+  const { t, dir } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>("technicians");
   const [search, setSearch] = useState("");
 
@@ -60,25 +62,25 @@ export default function CourierSettingsPage() {
   };
 
   const tabs = [
-    { key: "technicians", label: "الفنيين", icon: Users },
-    { key: "cities", label: "المدن والمناطق", icon: MapPin },
-    { key: "simTypes", label: "شرائح الاتصال", icon: Wifi },
-    { key: "vendorTypes", label: "الشركات المصنعة", icon: Building },
-    { key: "failureReasons", label: "أسباب الفشل", icon: AlertOctagon }
+    { key: "technicians", label: t('courier.technicians_1'), icon: Users },
+    { key: "cities", label: t('courier.item_20771'), icon: MapPin },
+    { key: "simTypes", label: t('courier.sims'), icon: Wifi },
+    { key: "vendorTypes", label: t('courier.item_22289'), icon: Building },
+    { key: "failureReasons", label: t('courier.fail_3'), icon: AlertOctagon }
   ];
 
   const filtered = getFilteredItems();
 
   return (
-    <div dir="rtl" className="space-y-6 text-slate-100 max-w-4xl">
+    <div dir={dir} className="space-y-6 text-slate-100 max-w-4xl">
       {/* Title */}
       <div className="border-b border-slate-700/60 pb-6">
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
           <Settings className="w-6 h-6 text-cyan-400" />
-          تهيئة الإعدادات وجداول المطابقة
+          {t('courier.settings_1')}
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          قوائم المطابقة والتحقق المعتمدة للفنيين، المدن، مزودي الشرائح، والشركات المصنعة.
+          {t('courier.text_2')}
         </p>
       </div>
 
@@ -113,7 +115,7 @@ export default function CourierSettingsPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="ابحث في القائمة..."
+          placeholder={t('courier.item_20836')}
           className="w-full bg-transparent border-0 text-slate-100 text-sm focus:outline-none focus:ring-0 placeholder:text-slate-500"
         />
       </div>
@@ -124,12 +126,12 @@ export default function CourierSettingsPage() {
           <div className="p-10 text-center text-slate-450">
             <div className="flex items-center justify-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-              جاري تحميل قوائم التهيئة...
+              {t('courier.loading_1')}
             </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center text-slate-550">
-            لا توجد سجلات مطابقة للبحث.
+            {t('courier.no_logs_1')}
           </div>
         ) : (
           <div className="divide-y divide-slate-800">
@@ -138,7 +140,7 @@ export default function CourierSettingsPage() {
                 <div key={tech.id} className="p-4 flex items-center justify-between hover:bg-slate-850/10 transition-colors">
                   <span className="font-semibold text-slate-200">{tech.name}</span>
                   <span className="text-xs font-mono text-cyan-400 px-2.5 py-1 bg-cyan-500/10 rounded-lg">
-                    رمز: {tech.code}
+                    {t('courier.count', { count: tech.code })}
                   </span>
                 </div>
               ))}
@@ -155,7 +157,7 @@ export default function CourierSettingsPage() {
               (filtered as any[]).map((sim) => (
                 <div key={sim.id} className="p-4 flex items-center justify-between hover:bg-slate-850/10 transition-colors">
                   <span className="font-semibold text-slate-200">{sim.name}</span>
-                  <span className="text-xs text-slate-500">مُعرّف: #{sim.id}</span>
+                  <span className="text-xs text-slate-500">{t('courier.item_9741')}{sim.id}</span>
                 </div>
               ))}
 
@@ -163,7 +165,7 @@ export default function CourierSettingsPage() {
               (filtered as any[]).map((vendor) => (
                 <div key={vendor.id} className="p-4 flex items-center justify-between hover:bg-slate-850/10 transition-colors">
                   <span className="font-semibold text-slate-200">{vendor.name}</span>
-                  <span className="text-xs text-slate-500">مُعرّف: #{vendor.id}</span>
+                  <span className="text-xs text-slate-500">{t('courier.item_9741')}{vendor.id}</span>
                 </div>
               ))}
 
@@ -171,7 +173,7 @@ export default function CourierSettingsPage() {
               (filtered as any[]).map((reason) => (
                 <div key={reason.id} className="p-4 flex items-center justify-between hover:bg-slate-850/10 transition-colors">
                   <span className="font-semibold text-slate-200">{reason.name}</span>
-                  <span className="text-xs text-slate-400">الترتيب: {reason.sortOrder}</span>
+                  <span className="text-xs text-slate-400">{t('courier.rank')}{reason.sortOrder}</span>
                 </div>
               ))}
           </div>

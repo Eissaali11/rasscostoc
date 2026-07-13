@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ interface DashboardData {
 }
 
 export default function FixedInventoryDashboard() {
+  const { t, dir } = useTranslation();
   const [selectedTechnician, setSelectedTechnician] = useState<{id: string; name: string} | null>(null);
 
   const { data, isLoading } = useQuery<DashboardData>({
@@ -48,9 +50,9 @@ export default function FixedInventoryDashboard() {
 
   const getAlertBadge = (level: AlertLevel) => {
     const variants = {
-      good: { color: 'bg-green-500', text: 'ممتاز', icon: CheckCircle },
-      warning: { color: 'bg-yellow-500', text: 'تحذير', icon: AlertTriangle },
-      critical: { color: 'bg-red-500', text: 'حرج', icon: AlertTriangle },
+      good: { color: 'bg-green-500', text: t('inventory.item_7949'), icon: CheckCircle },
+      warning: { color: 'bg-yellow-500', text: t('inventory.warning'), icon: AlertTriangle },
+      critical: { color: 'bg-red-500', text: t('inventory.item_4746'), icon: AlertTriangle },
     };
     const variant = variants[level];
     const Icon = variant.icon;
@@ -87,7 +89,7 @@ export default function FixedInventoryDashboard() {
           'bg-red-500'
         }`} />
         <span className="font-medium text-white">{total}</span>
-        <span className="text-xs text-gray-400">({boxes}ك + {units}م)</span>
+        <span className="text-xs text-gray-400">({boxes}{t('inventory.item_1678')}{units}{t('inventory.item_1646')}</span>
       </div>
     );
   };
@@ -105,7 +107,7 @@ export default function FixedInventoryDashboard() {
             >
               <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#18B2B0] border-r-[#18B2B0] shadow-lg shadow-[#18B2B0]/50"></div>
             </motion.div>
-            <p className="text-white text-lg font-medium">جاري تحميل البيانات...</p>
+            <p className="text-white text-lg font-medium">{t('inventory.loading_data')}</p>
           </div>
         </div>
       </div>
@@ -114,7 +116,7 @@ export default function FixedInventoryDashboard() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir={dir}>
         <GridBackground />
         <div className="flex items-center justify-center min-h-screen p-4 relative z-10">
           <motion.div
@@ -125,8 +127,8 @@ export default function FixedInventoryDashboard() {
             <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
               <CardContent className="py-12 text-center">
                 <Package className="h-20 w-20 mx-auto mb-6 text-[#18B2B0]" />
-                <h3 className="text-2xl font-bold mb-3 text-white">لا توجد بيانات</h3>
-                <p className="text-gray-300">لا توجد بيانات متاحة حالياً</p>
+                <h3 className="text-2xl font-bold mb-3 text-white">{t('inventory.no_data')}</h3>
+                <p className="text-gray-300">{t('inventory.no_data_1')}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -138,7 +140,7 @@ export default function FixedInventoryDashboard() {
   const { technicians, summary } = data;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir={dir}>
       <GridBackground />
       
       <div 
@@ -156,10 +158,10 @@ export default function FixedInventoryDashboard() {
         >
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white" data-testid="text-dashboard-title">
-              📊 المخزون الثابت للمندوبين
+              {t('inventory.inventory')}
             </h1>
             <p className="text-sm text-gray-300 mt-1">
-              متابعة وإدارة المخزون الثابت لجميع المندوبين
+              {t('inventory.followup_inventory_couriers')}
             </p>
           </div>
         </motion.div>
@@ -167,15 +169,15 @@ export default function FixedInventoryDashboard() {
         {/* Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {[
-            { title: "أجهزة N950", value: summary.totalN950, testId: "text-total-n950", delay: 0.1 },
-            { title: "أجهزة I9000s", value: summary.totalI9000s, testId: "text-total-i9000s", delay: 0.15 },
-            { title: "أجهزة I9100", value: summary.totalI9100, testId: "text-total-i9100", delay: 0.2 },
-            { title: "بطاريات جديدة", value: summary.totalNewBatteries, testId: "text-total-batteries", delay: 0.25 },
-            { title: "أوراق رول", value: summary.totalRollPaper, testId: "text-total-paper", delay: 0.3 },
-            { title: "ملصقات مداى", value: summary.totalStickers, testId: "text-total-stickers", delay: 0.35 },
-            { title: "شرائح موبايلي", value: summary.totalMobilySim, testId: "text-total-mobily", delay: 0.4 },
-            { title: "شرائح STC", value: summary.totalStcSim, testId: "text-total-stc", delay: 0.45 },
-            { title: "شرائح زين", value: summary.totalZainSim, testId: "text-total-zain", delay: 0.5 },
+            { title: t('inventory.n950_devices'), value: summary.totalN950, testId: "text-total-n950", delay: 0.1 },
+            { title: t('inventory.i9000s_devices'), value: summary.totalI9000s, testId: "text-total-i9000s", delay: 0.15 },
+            { title: t('inventory.i9100_devices'), value: summary.totalI9100, testId: "text-total-i9100", delay: 0.2 },
+            { title: t('inventory.batteries'), value: summary.totalNewBatteries, testId: "text-total-batteries", delay: 0.25 },
+            { title: t('inventory.item_12770'), value: summary.totalRollPaper, testId: "text-total-paper", delay: 0.3 },
+            { title: t('inventory.stickers_2'), value: summary.totalStickers, testId: "text-total-stickers", delay: 0.35 },
+            { title: t('inventory.sims_mobily'), value: summary.totalMobilySim, testId: "text-total-mobily", delay: 0.4 },
+            { title: t('inventory.stc_sims'), value: summary.totalStcSim, testId: "text-total-stc", delay: 0.45 },
+            { title: t('inventory.sims_zain'), value: summary.totalZainSim, testId: "text-total-zain", delay: 0.5 },
           ].map((item, index) => (
             <motion.div
               key={item.testId}
@@ -208,7 +210,7 @@ export default function FixedInventoryDashboard() {
                   <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm sm:text-base text-red-300">
-                      ⚠️ تنبيه: {summary.techniciansWithCriticalStock} مندوبين لديهم مخزون حرج!
+                      {t('inventory.critical_stock_alert', { count: summary.techniciansWithCriticalStock })}
                     </p>
                     <div className="mt-2 space-y-1">
                       {technicians
@@ -236,19 +238,19 @@ export default function FixedInventoryDashboard() {
           <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-xl">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <CardTitle className="text-base sm:text-lg text-white">المندوبين والمخزون الثابت</CardTitle>
+                <CardTitle className="text-base sm:text-lg text-white">{t('inventory.couriers')}</CardTitle>
                 <div className="flex gap-2 text-xs sm:text-sm text-gray-300">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span>ممتاز ({summary.techniciansWithGoodStock})</span>
+                    <span>{t('inventory.item_8021')}{summary.techniciansWithGoodStock})</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <span>تحذير ({summary.techniciansWithWarningStock})</span>
+                    <span>{t('inventory.warning_2')}{summary.techniciansWithWarningStock})</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span>حرج ({summary.techniciansWithCriticalStock})</span>
+                    <span>{t('inventory.item_4818')}{summary.techniciansWithCriticalStock})</span>
                   </div>
                 </div>
               </div>
@@ -259,17 +261,17 @@ export default function FixedInventoryDashboard() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-white/20">
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">اسم المندوب</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">المدينة</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.name_technician')}</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.city')}</th>
                       <th className="text-right py-3 px-2 text-sm font-semibold text-white">N950</th>
                       <th className="text-right py-3 px-2 text-sm font-semibold text-white">I900</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">أوراق</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">ملصقات</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">موبايلي</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.item_7941')}</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.stickers')}</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.mobily')}</th>
                       <th className="text-right py-3 px-2 text-sm font-semibold text-white">STC</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">زين</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">الحالة</th>
-                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">إجراءات</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.zain')}</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.status')}</th>
+                      <th className="text-right py-3 px-2 text-sm font-semibold text-white">{t('inventory.item_11035')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -300,7 +302,7 @@ export default function FixedInventoryDashboard() {
                             data-testid={`button-edit-${tech.technicianId}`}
                           >
                             <Plus className="w-4 h-4 ml-1" />
-                            تعديل
+                            {t('inventory.edit')}
                           </Button>
                         </td>
                       </motion.tr>
@@ -338,15 +340,15 @@ export default function FixedInventoryDashboard() {
                             {renderItemCell(tech.fixedInventory, 'i900')}
                           </div>
                           <div>
-                            <span className="text-gray-400">أوراق:</span>{' '}
+                            <span className="text-gray-400">{t('inventory.item_7999_1')}</span>{' '}
                             {renderItemCell(tech.fixedInventory, 'rollPaper')}
                           </div>
                           <div>
-                            <span className="text-gray-400">ملصقات:</span>{' '}
+                            <span className="text-gray-400">{t('inventory.stickers_1')}</span>{' '}
                             {renderItemCell(tech.fixedInventory, 'stickers')}
                           </div>
                           <div>
-                            <span className="text-gray-400">موبايلي:</span>{' '}
+                            <span className="text-gray-400">{t('inventory.mobily_1')}</span>{' '}
                             {renderItemCell(tech.fixedInventory, 'mobilySim')}
                           </div>
                           <div>
@@ -354,7 +356,7 @@ export default function FixedInventoryDashboard() {
                             {renderItemCell(tech.fixedInventory, 'stcSim')}
                           </div>
                           <div>
-                            <span className="text-gray-400">زين:</span>{' '}
+                            <span className="text-gray-400">{t('inventory.zain_1')}</span>{' '}
                             {renderItemCell(tech.fixedInventory, 'zainSim')}
                           </div>
                         </div>
@@ -366,7 +368,7 @@ export default function FixedInventoryDashboard() {
                           data-testid={`button-edit-mobile-${tech.technicianId}`}
                         >
                           <Plus className="w-4 h-4 ml-1" />
-                          تعديل المخزون
+                          {t('inventory.edit_inventory')}
                         </Button>
                       </CardContent>
                     </Card>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { Activity } from "lucide-react";
@@ -30,6 +31,7 @@ interface InventoryBarCardProps {
 }
 
 export const InventoryBarCard = ({ fixedInventory, movingInventory, title }: InventoryBarCardProps) => {
+  const { t } = useTranslation();
   const categories = [
     {
       name: "N950",
@@ -50,7 +52,7 @@ export const InventoryBarCard = ({ fixedInventory, movingInventory, title }: Inv
       color: "#ec4899",
     },
     {
-      name: "شرائح",
+      name: t('inventory.sims_1'),
       fixed: 
         (fixedInventory?.mobilySimBoxes || 0) + (fixedInventory?.mobilySimUnits || 0) +
         (fixedInventory?.stcSimBoxes || 0) + (fixedInventory?.stcSimUnits || 0) +
@@ -62,7 +64,7 @@ export const InventoryBarCard = ({ fixedInventory, movingInventory, title }: Inv
       color: "#10b981",
     },
     {
-      name: "ملحقات",
+      name: t('inventory.item_9545'),
       fixed: 
         (fixedInventory?.rollPaperBoxes || 0) + (fixedInventory?.rollPaperUnits || 0) +
         (fixedInventory?.stickersBoxes || 0) + (fixedInventory?.stickersUnits || 0) +
@@ -92,7 +94,7 @@ export const InventoryBarCard = ({ fixedInventory, movingInventory, title }: Inv
           ))}
           <div className="mt-2 pt-2 border-t border-white/10">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">الإجمالي:</span>
+              <span className="text-gray-400">{t('inventory.total_3')}</span>
               <span className="text-[#18B2B0] font-bold">
                 {payload.reduce((sum: number, entry: any) => sum + entry.value, 0).toLocaleString()}
               </span>
@@ -168,13 +170,13 @@ export const InventoryBarCard = ({ fixedInventory, movingInventory, title }: Inv
               />
               <Bar 
                 dataKey="fixed" 
-                name="المخزون الثابت" 
+                name={t('inventory.fixed')} 
                 fill="url(#fixedGradient)"
                 radius={[8, 8, 0, 0]}
               />
               <Bar 
                 dataKey="moving" 
-                name="المخزون المتحرك" 
+                name={t('inventory.moving')} 
                 fill="url(#movingGradient)"
                 radius={[8, 8, 0, 0]}
               />
@@ -195,8 +197,8 @@ export const InventoryBarCard = ({ fixedInventory, movingInventory, title }: Inv
                 {(category.fixed + category.moving).toLocaleString()}
               </p>
               <div className="flex gap-2 mt-2 text-xs">
-                <span className="text-[#18B2B0]">ث:{category.fixed}</span>
-                <span className="text-emerald-400">م:{category.moving}</span>
+                <span className="text-[#18B2B0]">{t('inventory.item_1637')}{category.fixed}</span>
+                <span className="text-emerald-400">{t('inventory.item_1663')}{category.moving}</span>
               </div>
             </div>
           ))}

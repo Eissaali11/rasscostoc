@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -140,7 +141,7 @@ function getStatusBadge(status: string) {
   if (status === "pending") {
     return (
       <Badge className="bg-yellow-500/10 text-yellow-300 border border-yellow-500/30">
-        قيد الانتظار
+        {t('notifications.pending_waiting')}
       </Badge>
     );
   }
@@ -148,19 +149,20 @@ function getStatusBadge(status: string) {
   if (status === "approved" || status === "accepted") {
     return (
       <Badge className="bg-green-500/10 text-green-300 border border-green-500/30">
-        مقبول
+        {t('notifications.approved')}
       </Badge>
     );
   }
 
   return (
     <Badge className="bg-red-500/10 text-red-300 border border-red-500/30">
-      مرفوض
+      {t('notifications.rejected')}
     </Badge>
   );
 }
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: itemTypes } = useActiveItemTypes();
@@ -291,7 +293,7 @@ export default function NotificationsPage() {
       if (user?.role === "admin" && directoryUser.role !== "technician") return;
       map.set(
         directoryUser.id,
-        directoryUser.fullName || directoryUser.username || `مندوب #${directoryUser.id.slice(0, 8)}`,
+        directoryUser.fullName || directoryUser.username || t('notifications.item_9013', { var_0: directoryUser.id.slice(0, 8) }),
       );
     });
     return map;
@@ -302,7 +304,7 @@ export default function NotificationsPage() {
       return item.transfers.map((transfer) => {
         const itemType = itemTypes?.find((type) => type.id === transfer.itemType);
         const itemName = transfer.itemNameAr || itemType?.nameAr || transfer.itemType;
-        return `${itemName}: ${transfer.quantity} ${transfer.packagingType === "box" ? "كرتون" : "قطعة"}`;
+        return t('notifications.item_3029', { var_0: itemName, var_1: transfer.quantity, var_2: transfer.packagingType === "box" ? t('notifications.box') : t('notifications.unit') });
       });
     }
 
@@ -313,8 +315,8 @@ export default function NotificationsPage() {
         const units = getInventoryValueForItemType(itemType.id, item.entries, item, "units");
         if (boxes > 0 || units > 0) {
           const parts: string[] = [];
-          if (boxes > 0) parts.push(`${boxes} كرتون`);
-          if (units > 0) parts.push(`${units} قطعة`);
+          if (boxes > 0) parts.push(t('notifications.box_1', { var_0: boxes }));
+          if (units > 0) parts.push(t('notifications.unit_1', { var_0: units }));
           rows.push(`${itemType.nameAr}: ${parts.join(" + ")}`);
         }
       });
@@ -325,19 +327,19 @@ export default function NotificationsPage() {
       { name: "N950", boxes: item.n950Boxes, units: item.n950Units },
       { name: "I9000S", boxes: item.i9000sBoxes, units: item.i9000sUnits },
       { name: "I9100", boxes: item.i9100Boxes, units: item.i9100Units },
-      { name: "ورق الطباعة", boxes: item.rollPaperBoxes, units: item.rollPaperUnits },
-      { name: "الملصقات", boxes: item.stickersBoxes, units: item.stickersUnits },
-      { name: "البطاريات", boxes: item.newBatteriesBoxes, units: item.newBatteriesUnits },
-      { name: "موبايلي", boxes: item.mobilySimBoxes, units: item.mobilySimUnits },
+      { name: t('notifications.paper_print'), boxes: item.rollPaperBoxes, units: item.rollPaperUnits },
+      { name: t('notifications.stickers'), boxes: item.stickersBoxes, units: item.stickersUnits },
+      { name: t('notifications.batteries'), boxes: item.newBatteriesBoxes, units: item.newBatteriesUnits },
+      { name: t('notifications.mobily'), boxes: item.mobilySimBoxes, units: item.mobilySimUnits },
       { name: "STC", boxes: item.stcSimBoxes, units: item.stcSimUnits },
-      { name: "زين", boxes: item.zainSimBoxes, units: item.zainSimUnits },
+      { name: t('notifications.zain'), boxes: item.zainSimBoxes, units: item.zainSimUnits },
     ];
 
     fallback.forEach((entry) => {
       if (entry.boxes > 0 || entry.units > 0) {
         const parts: string[] = [];
-        if (entry.boxes > 0) parts.push(`${entry.boxes} كرتون`);
-        if (entry.units > 0) parts.push(`${entry.units} قطعة`);
+        if (entry.boxes > 0) parts.push(t('notifications.box_1', { var_0: entry.boxes }));
+        if (entry.units > 0) parts.push(t('notifications.unit_1', { var_0: entry.units }));
         rows.push(`${entry.name}: ${parts.join(" + ")}`);
       }
     });
@@ -378,14 +380,14 @@ export default function NotificationsPage() {
       setSelectedRequest(null);
       setSelectedWarehouseId("");
       toast({
-        title: "تم قبول الطلب",
-        description: "تم إنشاء طلبات نقل المخزون بنجاح",
+        title: t('notifications.completed_approve_request'),
+        description: t('notifications.completed_requests_inventory_s'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل قبول الطلب",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_approve_request'),
         variant: "destructive",
       });
     },
@@ -401,12 +403,12 @@ export default function NotificationsPage() {
       setRejectDialogOpen(false);
       setSelectedRequest(null);
       setAdminNotes("");
-      toast({ title: "تم رفض الطلب" });
+      toast({ title: t('notifications.completed_reject_request') });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل رفض الطلب",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_reject_request'),
         variant: "destructive",
       });
     },
@@ -422,12 +424,12 @@ export default function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/my-moving-inventory"] });
       setTechApproveDialogOpen(false);
       setSelectedBatch(null);
-      toast({ title: "تم قبول الطلب" });
+      toast({ title: t('notifications.completed_approve_request') });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل قبول الطلب",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_approve_request'),
         variant: "destructive",
       });
     },
@@ -442,12 +444,12 @@ export default function NotificationsPage() {
       setTechRejectDialogOpen(false);
       setSelectedBatch(null);
       setTechRejectionReason("");
-      toast({ title: "تم رفض الطلب" });
+      toast({ title: t('notifications.completed_reject_request') });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل رفض الطلب",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_reject_request'),
         variant: "destructive",
       });
     },
@@ -461,12 +463,12 @@ export default function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] });
       setBulkApproveDialogOpen(false);
       setSelectedBatchIds([]);
-      toast({ title: "تم قبول الطلبات المحددة" });
+      toast({ title: t('notifications.completed_approve_requests') });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل قبول الطلبات",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_approve_requests'),
         variant: "destructive",
       });
     },
@@ -481,12 +483,12 @@ export default function NotificationsPage() {
       setBulkRejectDialogOpen(false);
       setSelectedBatchIds([]);
       setBulkRejectionReason("");
-      toast({ title: "تم رفض الطلبات المحددة" });
+      toast({ title: t('notifications.completed_reject_requests') });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل رفض الطلبات",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_reject_requests'),
         variant: "destructive",
       });
     },
@@ -506,12 +508,12 @@ export default function NotificationsPage() {
       setSelectedDeviceRequest(null);
       setDeviceActionType(null);
       setDeviceAdminNotes("");
-      toast({ title: "تم تحديث طلب الجهاز" });
+      toast({ title: t('notifications.completed_update_request_devic') });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error?.message || "فشل تحديث حالة الطلب",
+        title: t('notifications.error'),
+        description: error?.message || t('notifications.fail_update_status_request'),
         variant: "destructive",
       });
     },
@@ -587,8 +589,8 @@ export default function NotificationsPage() {
   const markAllAsRead = () => {
     setReadNotificationIds((current) => Array.from(new Set([...current, ...allVisibleNotificationIds])));
     toast({
-      title: "تم التحديث",
-      description: "تم تحديد كل الإشعارات المعروضة كمقروءة",
+      title: t('notifications.completed_update'),
+      description: t('notifications.completed_notifications'),
     });
   };
 
@@ -610,8 +612,8 @@ export default function NotificationsPage() {
     if (!selectedRequest) return;
     if (!selectedWarehouseId) {
       toast({
-        title: "خطأ",
-        description: "يجب اختيار المستودع أولاً",
+        title: t('notifications.error'),
+        description: t('notifications.warehouse_3'),
         variant: "destructive",
       });
       return;
@@ -623,8 +625,8 @@ export default function NotificationsPage() {
     if (!selectedRequest) return;
     if (!adminNotes.trim()) {
       toast({
-        title: "خطأ",
-        description: "يجب إدخال سبب الرفض",
+        title: t('notifications.error'),
+        description: t('notifications.submit_reason_reject_1'),
         variant: "destructive",
       });
       return;
@@ -651,8 +653,8 @@ export default function NotificationsPage() {
     if (!selectedBatch) return;
     if (!techRejectionReason.trim()) {
       toast({
-        title: "خطأ",
-        description: "يجب إدخال سبب الرفض",
+        title: t('notifications.error'),
+        description: t('notifications.submit_reason_reject_1'),
         variant: "destructive",
       });
       return;
@@ -667,8 +669,8 @@ export default function NotificationsPage() {
   const handleConfirmBulkReject = () => {
     if (!bulkRejectionReason.trim()) {
       toast({
-        title: "خطأ",
-        description: "يجب إدخال سبب الرفض",
+        title: t('notifications.error'),
+        description: t('notifications.submit_reason_reject_1'),
         variant: "destructive",
       });
       return;
@@ -680,8 +682,8 @@ export default function NotificationsPage() {
   const handleDeviceActionClick = (device: ReceivedDeviceRequest, action: "approve" | "reject") => {
     if (!isAdminOrSupervisor) {
       toast({
-        title: "غير مسموح",
-        description: "مراجعة طلبات الأجهزة متاحة للمشرف أو المدير فقط",
+        title: t('notifications.item_12807'),
+        description: t('notifications.review_requests_devices_manage'),
         variant: "destructive",
       });
       return;
@@ -698,8 +700,8 @@ export default function NotificationsPage() {
 
     if (deviceActionType === "reject" && !deviceAdminNotes.trim()) {
       toast({
-        title: "خطأ",
-        description: "يجب إدخال سبب الرفض",
+        title: t('notifications.error'),
+        description: t('notifications.submit_reason_reject_1'),
         variant: "destructive",
       });
       return;
@@ -721,11 +723,11 @@ export default function NotificationsPage() {
               <Bell className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">مركز التنبيهات الذكي</h2>
+              <h2 className="text-2xl font-bold text-white">{t('notifications.item_28728')}</h2>
               <p className="text-slate-400 text-sm mt-1">
                 {isAdminOrSupervisor
-                  ? "إدارة ومتابعة طلبات المخزون وسحب الأجهزة"
-                  : "إدارة طلبات النقل والإشعارات المرتبطة بالعهدة"}
+                  ? t('notifications.management_requests_inventory_')
+                  : t('notifications.management_requests')}
               </p>
             </div>
           </div>
@@ -737,16 +739,16 @@ export default function NotificationsPage() {
             type="button"
           >
             <Check className="h-4 w-4 ml-2" />
-            تحديد الكل كمقروء
+            {t('notifications.all')}
           </Button>
         </div>
 
         <div className="flex gap-2 flex-wrap">
           {[
-            { value: "all", label: "الكل", count: allCount },
-            { value: "pending", label: "قيد الانتظار", count: pendingCount },
-            { value: "approved", label: "مقبول", count: approvedCount },
-            { value: "rejected", label: "مرفوض", count: rejectedCount },
+            { value: "all", label: t('notifications.all_2'), count: allCount },
+            { value: "pending", label: t('notifications.pending_waiting'), count: pendingCount },
+            { value: "approved", label: t('notifications.approved'), count: approvedCount },
+            { value: "rejected", label: t('notifications.rejected'), count: rejectedCount },
           ].map((tab) => (
             <Button
               key={tab.value}
@@ -777,17 +779,17 @@ export default function NotificationsPage() {
                 >
                   {isAllSelected ? (
                     <>
-                      <CheckSquare className="h-4 w-4 ml-2" /> إلغاء تحديد الكل
+                      <CheckSquare className="h-4 w-4 ml-2" />{t('notifications.cancel_all')}
                     </>
                   ) : (
                     <>
-                      <Square className="h-4 w-4 ml-2" /> تحديد الكل
+                      <Square className="h-4 w-4 ml-2" />{t('notifications.all_1')}
                     </>
                   )}
                 </Button>
                 {selectedBatchIds.length > 0 && (
                   <Badge className="bg-cyan-400/15 text-cyan-300 border border-cyan-400/30">
-                    {selectedBatchIds.length} محدد
+                    {t('notifications.item_7433', { count: selectedBatchIds.length })}
                   </Badge>
                 )}
               </div>
@@ -801,7 +803,7 @@ export default function NotificationsPage() {
                     data-testid="button-bulk-approve"
                   >
                     <Check className="h-4 w-4 ml-2" />
-                    قبول المحدد ({selectedBatchIds.length})
+                    {t('notifications.approve_specified_count', { count: selectedBatchIds.length })}
                   </Button>
                   <Button
                     onClick={() => setBulkRejectDialogOpen(true)}
@@ -811,7 +813,7 @@ export default function NotificationsPage() {
                     data-testid="button-bulk-reject"
                   >
                     <X className="h-4 w-4 ml-2" />
-                    رفض المحدد ({selectedBatchIds.length})
+                    {t('notifications.reject_specified_count', { count: selectedBatchIds.length })}
                   </Button>
                 </div>
               )}
@@ -824,7 +826,7 @@ export default function NotificationsPage() {
             {isLoading ? (
               <div className="text-center py-12 rounded-2xl border border-slate-700/60 bg-slate-900/40">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-400" />
-                <p className="mt-4 text-slate-400">جاري تحميل الإشعارات...</p>
+                <p className="mt-4 text-slate-400">{t('notifications.loading_notifications')}</p>
               </div>
             ) : (
               <>
@@ -835,7 +837,7 @@ export default function NotificationsPage() {
                         <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-white font-semibold">
                             <Package className="h-4 w-4 text-cyan-300" />
-                            طلبات المخزون
+                            {t('notifications.requests_inventory')}
                           </div>
                           <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                             {filteredInventoryRequests.length}
@@ -844,7 +846,7 @@ export default function NotificationsPage() {
 
                         <div className="p-4 space-y-3">
                           {filteredInventoryRequests.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">لا توجد طلبات مخزون مطابقة للفلترة</div>
+                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests')}</div>
                           ) : (
                             filteredInventoryRequests.map((request) => {
                               const cardId = `stock-${request.id}`;
@@ -862,7 +864,7 @@ export default function NotificationsPage() {
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">طلب مخزون من {request.technicianName}</h3>
+                                      <h3 className="text-white font-bold text-base">{t('notifications.request_7')}{request.technicianName}</h3>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                                         <Clock3 className="h-3.5 w-3.5" />
                                         {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true, locale: ar })}
@@ -896,7 +898,7 @@ export default function NotificationsPage() {
                                         data-testid={`button-approve-${request.id}`}
                                       >
                                         <Check className="h-4 w-4 ml-1" />
-                                        موافقة
+                                        {t('notifications.item_9568')}
                                       </Button>
                                       <Button
                                         onClick={(event) => {
@@ -909,7 +911,7 @@ export default function NotificationsPage() {
                                         data-testid={`button-reject-${request.id}`}
                                       >
                                         <X className="h-4 w-4 ml-1" />
-                                        رفض
+                                        {t('notifications.reject')}
                                       </Button>
                                     </div>
                                   )}
@@ -926,7 +928,7 @@ export default function NotificationsPage() {
                         <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-white font-semibold">
                             <Smartphone className="h-4 w-4 text-cyan-300" />
-                            طلبات سحب الأجهزة
+                            {t('notifications.requests_withdraw_devices')}
                           </div>
                           <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                             {filteredReceivedDevices.length}
@@ -935,7 +937,7 @@ export default function NotificationsPage() {
 
                         <div className="p-4 space-y-3">
                           {filteredReceivedDevices.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">لا توجد طلبات أجهزة مطابقة للفلترة</div>
+                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests_devices')}</div>
                           ) : (
                             filteredReceivedDevices.map((device) => {
                               const cardId = `device-${device.id}`;
@@ -957,10 +959,10 @@ export default function NotificationsPage() {
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">طلب سحب جهاز: {device.terminalId}</h3>
-                                      <p className="text-xs text-slate-400 mt-1">الرقم التسلسلي: {device.serialNumber}</p>
+                                      <h3 className="text-white font-bold text-base">{t('notifications.request_withdraw_device_1')}{device.terminalId}</h3>
+                                      <p className="text-xs text-slate-400 mt-1">{t('notifications.number_serial')}{device.serialNumber}</p>
                                       <p className="text-xs text-slate-500 mt-1">
-                                        المندوب: {technicianNameById.get(device.technicianId) || `مندوب #${device.technicianId.slice(0, 8)}`}
+                                        {t('notifications.technician_label', { name: technicianNameById.get(device.technicianId) || t('notifications.item_9013', { var_0: device.technicianId.slice(0, 8) }) })}
                                       </p>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                                         <Clock3 className="h-3.5 w-3.5" />
@@ -986,7 +988,7 @@ export default function NotificationsPage() {
                                           data-testid={`button-approve-device-${device.id}`}
                                         >
                                           <Check className="h-4 w-4 ml-1" />
-                                          موافقة
+                                          {t('notifications.item_9568')}
                                         </Button>
                                         <Button
                                           onClick={(event) => {
@@ -999,7 +1001,7 @@ export default function NotificationsPage() {
                                           data-testid={`button-reject-device-${device.id}`}
                                         >
                                           <X className="h-4 w-4 ml-1" />
-                                          رفض
+                                          {t('notifications.reject')}
                                         </Button>
                                       </>
                                     )}
@@ -1014,7 +1016,7 @@ export default function NotificationsPage() {
                                       type="button"
                                     >
                                       <ArrowRight className="h-4 w-4 ml-1" />
-                                      فتح
+                                      {t('notifications.item_4760')}
                                     </Button>
                                   </div>
                                 </div>
@@ -1032,7 +1034,7 @@ export default function NotificationsPage() {
                         <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-white font-semibold">
                             <Warehouse className="h-4 w-4 text-cyan-300" />
-                            طلبات النقل من المستودعات
+                            {t('notifications.requests_warehouses')}
                           </div>
                           <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                             {filteredGroupedTransfers.length}
@@ -1041,7 +1043,7 @@ export default function NotificationsPage() {
 
                         <div className="p-4 space-y-3">
                           {filteredGroupedTransfers.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">لا توجد طلبات نقل مطابقة للفلترة</div>
+                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests_1')}</div>
                           ) : (
                             filteredGroupedTransfers.map((group) => {
                               const cardId = `transfer-${group.requestId}`;
@@ -1059,7 +1061,7 @@ export default function NotificationsPage() {
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">طلب نقل من {group.warehouseName}</h3>
+                                      <h3 className="text-white font-bold text-base">{t('notifications.request_8')}{group.warehouseName}</h3>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                                         <Clock3 className="h-3.5 w-3.5" />
                                         {formatDistanceToNow(new Date(group.createdAt), { addSuffix: true, locale: ar })}
@@ -1089,7 +1091,7 @@ export default function NotificationsPage() {
                                           data-testid={`button-approve-${group.requestId}`}
                                         >
                                           <Check className="h-4 w-4 ml-1" />
-                                          موافقة
+                                          {t('notifications.item_9568')}
                                         </Button>
                                         <Button
                                           onClick={(event) => {
@@ -1102,7 +1104,7 @@ export default function NotificationsPage() {
                                           data-testid={`button-reject-${group.requestId}`}
                                         >
                                           <X className="h-4 w-4 ml-1" />
-                                          رفض
+                                          {t('notifications.reject')}
                                         </Button>
                                       </div>
 
@@ -1125,7 +1127,7 @@ export default function NotificationsPage() {
                                         ) : (
                                           <Square className="h-4 w-4 ml-1" />
                                         )}
-                                        {selectedBatchIds.includes(group.requestId) ? "محدد" : "تحديد"}
+                                        {selectedBatchIds.includes(group.requestId) ? t('notifications.item_6352') : t('notifications.item_7935')}
                                       </Button>
                                     </div>
                                   )}
@@ -1142,7 +1144,7 @@ export default function NotificationsPage() {
                         <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-white font-semibold">
                             <Package className="h-4 w-4 text-cyan-300" />
-                            طلباتي المخزنية
+                            {t('notifications.item_22311')}
                           </div>
                           <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                             {filteredMyInventoryRequests.length}
@@ -1151,7 +1153,7 @@ export default function NotificationsPage() {
 
                         <div className="p-4 space-y-3">
                           {filteredMyInventoryRequests.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">لا توجد طلبات مطابقة للفلترة</div>
+                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests_2')}</div>
                           ) : (
                             filteredMyInventoryRequests.map((request) => {
                               const cardId = `mine-${request.id}`;
@@ -1170,7 +1172,7 @@ export default function NotificationsPage() {
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">طلب مخزون</h3>
+                                      <h3 className="text-white font-bold text-base">{t('notifications.request')}</h3>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                                         <Calendar className="h-3.5 w-3.5" />
                                         {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true, locale: ar })}
@@ -1183,7 +1185,7 @@ export default function NotificationsPage() {
                                         ))}
                                       </div>
                                       {request.adminNotes && request.status !== "pending" && (
-                                        <p className="text-xs text-yellow-300 mt-3">رد المشرف: {request.adminNotes}</p>
+                                        <p className="text-xs text-yellow-300 mt-3">{t('notifications.supervisor')}{request.adminNotes}</p>
                                       )}
                                     </div>
                                     {getStatusBadge(request.status)}
@@ -1204,7 +1206,7 @@ export default function NotificationsPage() {
                     className="text-slate-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1.5 transition-colors"
                   >
                     <ChevronDown className="h-4 w-4" />
-                    عرض الإشعارات الأقدم
+                    {t('notifications.view_notifications')}
                   </button>
                 </div>
               </>
@@ -1214,14 +1216,14 @@ export default function NotificationsPage() {
           <aside className="xl:col-span-4 rounded-3xl border border-slate-700/60 bg-slate-900/45 p-5 space-y-6 h-fit">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-cyan-300" />
-              إعدادات التنبيهات
+              {t('notifications.item_25401')}
             </h3>
 
             <div className="space-y-4">
               {[
-                { key: "stock" as const, label: "تنبيهات المخزون", hint: "طلبات المخزون ومتابعتها" },
-                { key: "daily" as const, label: "العمليات اليومية", hint: "نقل المخزون وسحب الأجهزة" },
-                { key: "security" as const, label: "تنبيهات الأمان", hint: "دخول وأذونات وسجل حساس" },
+                { key: "stock" as const, label: t('notifications.inventory'), hint: t('notifications.requests_inventory_1') },
+                { key: "daily" as const, label: t('notifications.operations'), hint: t('notifications.inventory_devices') },
+                { key: "security" as const, label: t('notifications.security'), hint: t('notifications.item_30312') },
               ].map((setting) => {
                 const enabled = notificationSettings[setting.key];
                 return (
@@ -1245,7 +1247,7 @@ export default function NotificationsPage() {
             </div>
 
             <div className="border-t border-slate-700/60 pt-5">
-              <h4 className="text-sm font-semibold text-slate-300 mb-4">ملخص الأسبوع</h4>
+              <h4 className="text-sm font-semibold text-slate-300 mb-4">{t('notifications.week')}</h4>
               <div className="rounded-xl border border-slate-700/60 bg-black/20 p-4">
                 <div className="flex items-end justify-between h-24 gap-1.5">
                   {weeklySummaryHeights.map((height, idx) => (
@@ -1255,23 +1257,23 @@ export default function NotificationsPage() {
                   ))}
                 </div>
                 <div className="flex justify-between mt-2 text-[10px] text-slate-500">
-                  <span>السبت</span>
-                  <span>الجمعة</span>
+                  <span>{t('notifications.item_7920')}</span>
+                  <span>{t('notifications.item_9534')}</span>
                 </div>
               </div>
 
               <div className="mt-4 space-y-2 text-xs">
                 <div className="flex items-center gap-2 text-slate-400">
                   <span className="w-2 h-2 rounded-full bg-cyan-300" />
-                  إجمالي: {allCount}
+                  {t('notifications.total_count', { count: allCount })}
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <span className="w-2 h-2 rounded-full bg-yellow-300" />
-                  قيد الانتظار: {pendingCount}
+                  {t('notifications.pending_count', { count: pendingCount })}
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <span className="w-2 h-2 rounded-full bg-red-400" />
-                  مرفوض: {rejectedCount}
+                  {t('notifications.rejected_count', { count: rejectedCount })}
                 </div>
               </div>
             </div>
@@ -1279,7 +1281,7 @@ export default function NotificationsPage() {
             {notificationSettings.security && (
               <div className="rounded-xl border border-slate-700/60 bg-slate-950/30 p-3 text-xs text-slate-400 flex items-start gap-2">
                 <ShieldAlert className="h-4 w-4 text-orange-300 mt-0.5" />
-                لا توجد تنبيهات أمان جديدة حالياً.
+                {t('notifications.no_security')}
               </div>
             )}
           </aside>
@@ -1289,25 +1291,25 @@ export default function NotificationsPage() {
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">قبول طلب المخزون</DialogTitle>
+            <DialogTitle className="text-xl">{t('notifications.approve_request_inventory')}</DialogTitle>
             <DialogDescription className="text-gray-400">
-              اختر المستودع الذي سيتم السحب منه
+              {t('notifications.warehouse_withdraw')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-4">
             {selectedRequest && (
               <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-                <p className="text-sm text-gray-400 mb-1">المندوب:</p>
+                <p className="text-sm text-gray-400 mb-1">{t('notifications.technician')}</p>
                 <p className="text-white font-bold">{selectedRequest.technicianName}</p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label className="text-white">المستودع</Label>
+              <Label className="text-white">{t('notifications.warehouse')}</Label>
               <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="select-warehouse">
-                  <SelectValue placeholder="اختر المستودع" />
+                  <SelectValue placeholder={t('notifications.warehouse_2')} />
                 </SelectTrigger>
                 <SelectContent className="bg-[#0f0f15] border-[#18B2B0]/20">
                   {warehouses.map((warehouse) => (
@@ -1329,7 +1331,7 @@ export default function NotificationsPage() {
               }}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmApprove}
@@ -1337,7 +1339,7 @@ export default function NotificationsPage() {
               className="bg-green-600 hover:bg-green-700 text-white"
               data-testid="button-confirm-approve"
             >
-              تأكيد القبول
+              {t('notifications.confirm_approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1346,15 +1348,15 @@ export default function NotificationsPage() {
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">رفض طلب المخزون</DialogTitle>
-            <DialogDescription className="text-gray-400">يرجى إدخال سبب الرفض</DialogDescription>
+            <DialogTitle className="text-xl">{t('notifications.reject_request_inventory')}</DialogTitle>
+            <DialogDescription className="text-gray-400">{t('notifications.submit_reason_reject')}</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <Textarea
               value={adminNotes}
               onChange={(event) => setAdminNotes(event.target.value)}
-              placeholder="اكتب سبب الرفض هنا..."
+              placeholder={t('notifications.reason_reject_3')}
               className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
               data-testid="textarea-admin-notes"
             />
@@ -1369,7 +1371,7 @@ export default function NotificationsPage() {
               }}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmReject}
@@ -1377,7 +1379,7 @@ export default function NotificationsPage() {
               className="bg-red-600 hover:bg-red-700 text-white"
               data-testid="button-confirm-reject"
             >
-              تأكيد الرفض
+              {t('notifications.confirm_reject')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1387,18 +1389,18 @@ export default function NotificationsPage() {
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              {deviceActionType === "approve" ? "الموافقة على طلب سحب جهاز" : "رفض طلب سحب جهاز"}
+              {deviceActionType === "approve" ? t('notifications.request_withdraw_device') : t('notifications.reject_request_withdraw_device')}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
               {deviceActionType === "approve"
-                ? "سيتم اعتماد الطلب وتحديث حالته مباشرة"
-                : "يرجى إدخال سبب الرفض قبل المتابعة"}
+                ? t('notifications.request_1')
+                : t('notifications.submit_reason_reject_followup')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedDeviceRequest && (
             <div className="py-2 px-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="text-sm text-gray-400">الجهاز:</p>
+              <p className="text-sm text-gray-400">{t('notifications.device')}</p>
               <p className="text-white font-semibold">
                 {selectedDeviceRequest.terminalId} • {selectedDeviceRequest.serialNumber}
               </p>
@@ -1409,7 +1411,7 @@ export default function NotificationsPage() {
             <Textarea
               value={deviceAdminNotes}
               onChange={(event) => setDeviceAdminNotes(event.target.value)}
-              placeholder={deviceActionType === "approve" ? "ملاحظات اختيارية..." : "اكتب سبب الرفض هنا..."}
+              placeholder={deviceActionType === "approve" ? t('notifications.notes') : t('notifications.reason_reject_3')}
               className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
               data-testid="textarea-device-action-notes"
             />
@@ -1426,7 +1428,7 @@ export default function NotificationsPage() {
               }}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmDeviceAction}
@@ -1441,7 +1443,7 @@ export default function NotificationsPage() {
               }
               data-testid="button-confirm-device-action"
             >
-              {reviewDeviceStatusMutation.isPending ? "جاري الحفظ..." : "تأكيد"}
+              {reviewDeviceStatusMutation.isPending ? t('notifications.save') : t('notifications.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1450,17 +1452,17 @@ export default function NotificationsPage() {
       <Dialog open={techApproveDialogOpen} onOpenChange={setTechApproveDialogOpen}>
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">قبول طلب النقل</DialogTitle>
+            <DialogTitle className="text-xl">{t('notifications.approve_request')}</DialogTitle>
             <DialogDescription className="text-gray-400">
-              سيتم إضافة الأصناف إلى مخزونك بعد الموافقة
+              {t('notifications.add')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedBatch && (
             <div className="py-4 p-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="text-sm text-gray-400 mb-1">من المستودع:</p>
+              <p className="text-sm text-gray-400 mb-1">{t('notifications.warehouse_1')}</p>
               <p className="text-white font-bold">{selectedBatch.warehouseName}</p>
-              <p className="text-xs text-gray-500 mt-2">عدد الأصناف: {selectedBatch.transfers.length}</p>
+              <p className="text-xs text-gray-500 mt-2">{t('notifications.item_15970')}{selectedBatch.transfers.length}</p>
             </div>
           )}
 
@@ -1470,7 +1472,7 @@ export default function NotificationsPage() {
               onClick={() => setTechApproveDialogOpen(false)}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleTechConfirmApprove}
@@ -1478,7 +1480,7 @@ export default function NotificationsPage() {
               className="bg-green-600 hover:bg-green-700 text-white"
               data-testid="button-tech-confirm-approve"
             >
-              تأكيد القبول
+              {t('notifications.confirm_approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1487,15 +1489,15 @@ export default function NotificationsPage() {
       <Dialog open={techRejectDialogOpen} onOpenChange={setTechRejectDialogOpen}>
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">رفض طلب النقل</DialogTitle>
-            <DialogDescription className="text-gray-400">يرجى إدخال سبب الرفض</DialogDescription>
+            <DialogTitle className="text-xl">{t('notifications.reject_request')}</DialogTitle>
+            <DialogDescription className="text-gray-400">{t('notifications.submit_reason_reject')}</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <Textarea
               value={techRejectionReason}
               onChange={(event) => setTechRejectionReason(event.target.value)}
-              placeholder="اكتب سبب الرفض هنا..."
+              placeholder={t('notifications.reason_reject_3')}
               className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
               data-testid="textarea-tech-rejection-reason"
             />
@@ -1510,7 +1512,7 @@ export default function NotificationsPage() {
               }}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleTechConfirmReject}
@@ -1518,7 +1520,7 @@ export default function NotificationsPage() {
               className="bg-red-600 hover:bg-red-700 text-white"
               data-testid="button-tech-confirm-reject"
             >
-              تأكيد الرفض
+              {t('notifications.confirm_reject')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1527,9 +1529,9 @@ export default function NotificationsPage() {
       <Dialog open={bulkApproveDialogOpen} onOpenChange={setBulkApproveDialogOpen}>
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">قبول الطلبات المحددة</DialogTitle>
+            <DialogTitle className="text-xl">{t('notifications.approve_requests')}</DialogTitle>
             <DialogDescription className="text-gray-400">
-              هل تريد قبول {selectedBatchIds.length} طلب؟
+              {t('notifications.accept_batch_confirm', { count: selectedBatchIds.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -1539,7 +1541,7 @@ export default function NotificationsPage() {
               onClick={() => setBulkApproveDialogOpen(false)}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={() => bulkApproveMutation.mutate(selectedBatchIds)}
@@ -1547,7 +1549,7 @@ export default function NotificationsPage() {
               className="bg-green-600 hover:bg-green-700 text-white"
               data-testid="button-confirm-bulk-approve"
             >
-              {bulkApproveMutation.isPending ? "جاري القبول..." : "تأكيد القبول"}
+              {bulkApproveMutation.isPending ? t('notifications.approve') : t('notifications.confirm_approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1556,9 +1558,9 @@ export default function NotificationsPage() {
       <Dialog open={bulkRejectDialogOpen} onOpenChange={setBulkRejectDialogOpen}>
         <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">رفض الطلبات المحددة</DialogTitle>
+            <DialogTitle className="text-xl">{t('notifications.reject_requests')}</DialogTitle>
             <DialogDescription className="text-gray-400">
-              يرجى إدخال سبب رفض {selectedBatchIds.length} طلب
+              {t('notifications.reject_batch_reason_prompt', { count: selectedBatchIds.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -1566,7 +1568,7 @@ export default function NotificationsPage() {
             <Textarea
               value={bulkRejectionReason}
               onChange={(event) => setBulkRejectionReason(event.target.value)}
-              placeholder="اكتب سبب الرفض هنا..."
+              placeholder={t('notifications.reason_reject_3')}
               className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
               data-testid="textarea-bulk-rejection-reason"
             />
@@ -1581,7 +1583,7 @@ export default function NotificationsPage() {
               }}
               className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
             >
-              إلغاء
+              {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmBulkReject}
@@ -1589,7 +1591,7 @@ export default function NotificationsPage() {
               className="bg-red-600 hover:bg-red-700 text-white"
               data-testid="button-confirm-bulk-reject"
             >
-              تأكيد الرفض
+              {t('notifications.confirm_reject')}
             </Button>
           </DialogFooter>
         </DialogContent>

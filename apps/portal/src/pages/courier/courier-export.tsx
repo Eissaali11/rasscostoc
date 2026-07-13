@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { Link } from "wouter";
 import {
   Download,
@@ -15,31 +16,31 @@ function todayIso() {
 
 const QUICK_EXPORTS = [
   {
-    label: "تصدير كافة السجلات",
+    label: t('courier.export_logs'),
     icon: Layers,
     params: new URLSearchParams(),
     color: "text-cyan-400 border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-500/5"
   },
   {
-    label: "تصدير حركة اليوم فقط",
+    label: t('courier.export_transaction_day'),
     icon: Calendar,
     params: new URLSearchParams({ dateFrom: todayIso(), dateTo: todayIso() }),
     color: "text-emerald-400 border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/5"
   },
   {
-    label: "تصدير الطلبات المكتملة",
+    label: t('courier.export_requests'),
     icon: CheckCircle2,
     params: new URLSearchParams({ status: "Installation Completed - NL" }),
     color: "text-sky-400 border-sky-500/30 hover:border-sky-400 hover:bg-sky-500/5"
   },
   {
-    label: "تصدير الطلبات غير المكتملة",
+    label: t('courier.export_requests_1'),
     icon: XCircle,
     params: new URLSearchParams({ status: "Not Completed" }),
     color: "text-red-400 border-red-500/30 hover:border-red-400 hover:bg-red-500/5"
   },
   {
-    label: "تصدير المعاملات تحت الإجراء",
+    label: t('courier.export_1'),
     icon: Hourglass,
     params: new URLSearchParams({ status: "Under Process" }),
     color: "text-amber-400 border-amber-500/30 hover:border-amber-400 hover:bg-amber-500/5"
@@ -47,6 +48,7 @@ const QUICK_EXPORTS = [
 ];
 
 export default function CourierExportPage() {
+  const { t, dir } = useTranslation();
   const getExportUrl = (params: URLSearchParams) => {
     const token = localStorage.getItem("auth-token") || "";
     params.set("token", token);
@@ -54,15 +56,15 @@ export default function CourierExportPage() {
   };
 
   return (
-    <div dir="rtl" className="space-y-6 text-slate-100 max-w-4xl">
+    <div dir={dir} className="space-y-6 text-slate-100 max-w-4xl">
       {/* Header */}
       <div className="border-b border-slate-700/60 pb-6">
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
           <Download className="w-6 h-6 text-cyan-400" />
-          تصدير جداول Excel
+          {t('courier.export')}
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          بوابتك لتصدير تقارير التسليم والمعالجة الميدانية في صيغ معيارية جاهزة للتحليل الفوري.
+          {t('courier.text_1')}
         </p>
       </div>
 
@@ -83,7 +85,7 @@ export default function CourierExportPage() {
               </div>
               <div>
                 <span className="font-semibold text-white block">{item.label}</span>
-                <span className="text-xs text-slate-400 mt-0.5 block">ملف Excel (.xlsx) منسق ومبوب</span>
+                <span className="text-xs text-slate-400 mt-0.5 block">{t('courier.file')}</span>
               </div>
             </a>
           );
@@ -97,8 +99,8 @@ export default function CourierExportPage() {
             <Sliders className="w-6 h-6 text-cyan-400" />
           </div>
           <div>
-            <span className="font-semibold text-white block">فلترة وتخصيص متقدم</span>
-            <span className="text-xs text-slate-400 mt-0.5 block">انتقل إلى محرك التقارير المتقدم لتحديد فلاتر دقيقة</span>
+            <span className="font-semibold text-white block">{t('courier.item_25538')}</span>
+            <span className="text-xs text-slate-400 mt-0.5 block">{t('courier.reports_1')}</span>
           </div>
         </Link>
       </div>

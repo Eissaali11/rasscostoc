@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TruckIcon, MinusCircle, ArrowRight, ArrowLeftRight, FileDown, Home, Package, RefreshCw, Bell, Smartphone } from "lucide-react";
@@ -91,6 +92,7 @@ interface WarehouseTransfer {
 }
 
 export default function MyMovingInventory() {
+  const { t, dir } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -199,14 +201,14 @@ export default function MyMovingInventory() {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse-transfers"] });
       queryClient.invalidateQueries({ queryKey: [`/api/technicians/${user?.id}`] });
       toast({
-        title: "✅ تم القبول",
-        description: "تم قبول عملية النقل وإضافة الكميات للمخزون المتحرك",
+        title: t('inventory.completed_approve'),
+        description: t('inventory.completed_approve_operation'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "❌ خطأ",
-        description: error.message || "فشل قبول عملية النقل",
+        title: t('inventory.error_1'),
+        description: error.message || t('inventory.fail_approve_operation'),
         variant: "destructive",
       });
     },
@@ -222,14 +224,14 @@ export default function MyMovingInventory() {
       setSelectedTransferId(null);
       setRejectionReason("");
       toast({
-        title: "تم الرفض",
-        description: "تم رفض عملية النقل",
+        title: t('inventory.completed_reject'),
+        description: t('inventory.completed_reject_operation'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error.message || "فشل رفض عملية النقل",
+        title: t('inventory.error'),
+        description: error.message || t('inventory.fail_reject_operation'),
         variant: "destructive",
       });
     },
@@ -249,8 +251,8 @@ export default function MyMovingInventory() {
   const handleRefresh = () => {
     refetch();
     toast({
-      title: "تم التحديث",
-      description: "تم تحديث المخزون بنجاح",
+      title: t('inventory.completed_update'),
+      description: t('inventory.completed_update_inventory_suc'),
     });
   };
 
@@ -262,13 +264,13 @@ export default function MyMovingInventory() {
     if (displayItems.length === 0) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('المخزون المتحرك');
+    const worksheet = workbook.addWorksheet(t('inventory.moving'));
 
     worksheet.views = [{ rightToLeft: true }];
 
     worksheet.mergeCells('A1:D1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = 'تقرير المخزون المتحرك';
+    titleCell.value = t('inventory.report_inventory_1');
     titleCell.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     titleCell.fill = {
@@ -280,7 +282,7 @@ export default function MyMovingInventory() {
     
     worksheet.mergeCells('A2:D2');
     const dateCell = worksheet.getCell('A2');
-    dateCell.value = `التاريخ: ${new Date().toLocaleDateString('ar-SA')}`;
+    dateCell.value = t('inventory.date_1', { var_0: new Date().toLocaleDateString('ar-SA') });
     dateCell.alignment = { horizontal: 'center' };
     dateCell.font = { bold: true };
     dateCell.fill = {
@@ -291,7 +293,7 @@ export default function MyMovingInventory() {
     worksheet.getRow(2).height = 25;
 
     worksheet.addRow([]);
-    const headerRow = worksheet.addRow(['الصنف', 'كراتين', 'وحدات', 'الإجمالي']);
+    const headerRow = worksheet.addRow([t('inventory.item_7975'), t('inventory.boxes'), t('inventory.units_1'), t('inventory.total')]);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
     headerRow.eachCell((cell) => {
@@ -329,7 +331,7 @@ export default function MyMovingInventory() {
     worksheet.addRow([]);
     const totalBoxes = displayItems.reduce((sum, item) => sum + item.boxes, 0);
     const totalUnits = displayItems.reduce((sum, item) => sum + item.units, 0);
-    const totalRow = worksheet.addRow(['الإجمالي', totalBoxes, totalUnits, getTotalItems()]);
+    const totalRow = worksheet.addRow([t('inventory.total'), totalBoxes, totalUnits, getTotalItems()]);
     totalRow.font = { bold: true };
     totalRow.eachCell((cell) => {
       cell.fill = {
@@ -355,7 +357,7 @@ export default function MyMovingInventory() {
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `المخزون_المتحرك_${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, t('inventory.inventory_var_0_xlsx', { var_0: new Date().toISOString().split('T')[0] }));
   };
 
   if (isLoading) {
@@ -371,7 +373,7 @@ export default function MyMovingInventory() {
             >
               <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#18B2B0] border-r-[#18B2B0] shadow-lg shadow-[#18B2B0]/50"></div>
             </motion.div>
-            <p className="text-white text-lg font-medium">جاري التحميل...</p>
+            <p className="text-white text-lg font-medium">{t('inventory.loading')}</p>
           </div>
         </div>
       </div>
@@ -380,7 +382,7 @@ export default function MyMovingInventory() {
 
   if (!inventory) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir={dir}>
         <GridBackground />
         <div className="flex items-center justify-center min-h-screen p-4 relative z-10">
           <motion.div
@@ -391,9 +393,9 @@ export default function MyMovingInventory() {
             <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
               <CardContent className="py-12 text-center">
                 <TruckIcon className="h-20 w-20 mx-auto mb-6 text-[#18B2B0]" />
-                <h3 className="text-2xl font-bold mb-3 text-white">لا يوجد مخزون متحرك</h3>
+                <h3 className="text-2xl font-bold mb-3 text-white">{t('inventory.no_1')}</h3>
                 <p className="text-gray-300 mb-6">
-                  قم بنقل بعض العناصر من المخزون الثابت أولاً
+                  {t('inventory.items_inventory')}
                 </p>
                 <button
                   onClick={() => setLocation("/")}
@@ -401,7 +403,7 @@ export default function MyMovingInventory() {
                   type="button"
                 >
                   <Home className="w-5 h-5" />
-                  <span>العودة للصفحة الرئيسية</span>
+                  <span>{t('inventory.home')}</span>
                 </button>
               </CardContent>
             </Card>
@@ -434,14 +436,14 @@ export default function MyMovingInventory() {
       icon: categoryIconMap[item.category] || "📦",
       color: categoryColorMap[item.category] || colors[index % colors.length],
       items: [
-        { label: "كرتون", value: item.boxes },
-        { label: "وحدات", value: item.units }
+        { label: t('inventory.box'), value: item.boxes },
+        { label: t('inventory.units_1'), value: item.units }
       ]
     };
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden" dir={dir}>
       <GridBackground />
       
       <div
@@ -467,7 +469,7 @@ export default function MyMovingInventory() {
                 </div>
                 <div>
                   <h1 className="text-3xl sm:text-4xl font-bold text-white mb-1">
-                    المخزون المتحرك
+                    {t('inventory.moving')}
                   </h1>
                   <p className="text-gray-400 text-sm">
                     {inventory?.technicianName} • {inventory?.city}
@@ -483,7 +485,7 @@ export default function MyMovingInventory() {
                   data-testid="button-back-home"
                 >
                   <Home className="h-4 w-4" />
-                  <span>الرئيسية</span>
+                  <span>{t('inventory.home_1')}</span>
                 </button>
                 
                 <button
@@ -493,7 +495,7 @@ export default function MyMovingInventory() {
                   data-testid="button-transfer-from-fixed"
                 >
                   <ArrowLeftRight className="h-4 w-4" />
-                  <span>نقل من الثابت</span>
+                  <span>{t('inventory.item_17574')}</span>
                 </button>
                 
                 <button
@@ -503,7 +505,7 @@ export default function MyMovingInventory() {
                   data-testid="button-refresh"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  <span>تحديث</span>
+                  <span>{t('inventory.update')}</span>
                 </button>
                 
                 <button
@@ -513,7 +515,7 @@ export default function MyMovingInventory() {
                   data-testid="button-update-inventory"
                 >
                   <MinusCircle className="h-4 w-4" />
-                  <span>تحديث</span>
+                  <span>{t('inventory.update')}</span>
                 </button>
                 
                 <button
@@ -523,7 +525,7 @@ export default function MyMovingInventory() {
                   data-testid="button-export-excel"
                 >
                   <FileDown className="h-4 w-4" />
-                  <span>تصدير Excel</span>
+                  <span>{t('inventory.export_1')}</span>
                 </button>
               </div>
             </div>
@@ -542,7 +544,7 @@ export default function MyMovingInventory() {
                   <div className="p-2 bg-gradient-to-br from-[#18B2B0] to-[#16a09e] rounded-xl shadow-lg shadow-[#18B2B0]/30">
                     <Package className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-sm font-medium text-gray-300">إجمالي العناصر</h3>
+                  <h3 className="text-sm font-medium text-gray-300">{t('inventory.total_items')}</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-items">
                   {getTotalItems()}
@@ -562,7 +564,7 @@ export default function MyMovingInventory() {
                   <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg shadow-purple-500/30">
                     <TruckIcon className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-sm font-medium text-gray-300">الأجهزة</h3>
+                  <h3 className="text-sm font-medium text-gray-300">{t('inventory.devices')}</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-devices">
                   {totalDevices}
@@ -582,7 +584,7 @@ export default function MyMovingInventory() {
                   <div className="p-2 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg shadow-amber-500/30">
                     <Package className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-sm font-medium text-gray-300">الملحقات</h3>
+                  <h3 className="text-sm font-medium text-gray-300">{t('inventory.item_12724')}</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-accessories">
                   {totalAccessories}
@@ -602,7 +604,7 @@ export default function MyMovingInventory() {
                   <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg shadow-green-500/30">
                     <Package className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-sm font-medium text-gray-300">الشرائح</h3>
+                  <h3 className="text-sm font-medium text-gray-300">{t('inventory.sims')}</h3>
                 </div>
                 <p className="text-3xl font-bold text-white" data-testid="text-total-sims">
                   {totalSims}
@@ -626,18 +628,18 @@ export default function MyMovingInventory() {
                       <Bell className="w-5 h-5 text-white" />
                     </div>
                     <h2 className="text-xl font-bold text-white">
-                      طلبات النقل المعلقة ({pendingTransfers.length})
+                      {t('inventory.requests_count', { count: pendingTransfers.length })}
                     </h2>
                   </div>
                   <div className="overflow-x-auto rounded-xl">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-white/10">
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">الصنف</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">الكمية</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">المستودع</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">التاريخ</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">الإجراءات</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.item_7975')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.quantity')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.warehouse')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.date')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.item_14214')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -650,7 +652,7 @@ export default function MyMovingInventory() {
                             className="border-b border-white/5 hover:bg-white/5 transition-colors"
                           >
                             <td className="py-4 px-4 text-white font-medium">{transfer.itemNameAr}</td>
-                            <td className="py-4 px-4 text-gray-300">{transfer.quantity} {transfer.packagingType === 'box' ? 'كرتون' : 'مفرد'}</td>
+                            <td className="py-4 px-4 text-gray-300">{transfer.quantity} {transfer.packagingType === 'box' ? t('inventory.box') : t('inventory.item_6374')}</td>
                             <td className="py-4 px-4 text-gray-300">{transfer.warehouseName}</td>
                             <td className="py-4 px-4 text-gray-400 text-sm">{format(new Date(transfer.createdAt), 'PPp', { locale: ar })}</td>
                             <td className="py-4 px-4">
@@ -660,14 +662,14 @@ export default function MyMovingInventory() {
                                   className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                                   disabled={acceptMutation.isPending}
                                 >
-                                  ✅ قبول
+                                  {t('inventory.approve')}
                                 </button>
                                 <button
                                   onClick={() => handleReject(transfer.id)}
                                   className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                                   disabled={rejectMutation.isPending}
                                 >
-                                  ❌ رفض
+                                  {t('inventory.reject')}
                                 </button>
                               </div>
                             </td>
@@ -726,23 +728,23 @@ export default function MyMovingInventory() {
                     <Smartphone className="w-5 h-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-white">
-                    الأصول المسلسلة بعهدتك النشطة ({serializedCustody?.length || 0})
+                    {t('inventory.count', { count: serializedCustody?.length || 0 })}
                   </h2>
                 </div>
 
                 {!serializedCustody || serializedCustody.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
-                    لا توجد أجهزة أو شرائح مسلسلة بعهدتك حالياً.
+                    {t('inventory.no_devices_sims')}
                   </div>
                 ) : (
                   <div className="overflow-x-auto rounded-xl">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-white/10">
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">الرقم التسلسلي</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">نوع الصنف</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">الحالة</th>
-                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">ملاحظات</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.number_serial')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.type')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.status')}</th>
+                          <th className="text-right py-4 px-4 text-sm font-semibold text-gray-300">{t('inventory.notes')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -756,7 +758,7 @@ export default function MyMovingInventory() {
                           >
                             <td className="py-4 px-4 text-white font-mono">{item.serialNumber}</td>
                             <td className="py-4 px-4 text-gray-300">
-                              {item.itemTypeNameAr || item.itemTypeNameEn || "غير معروف"}
+                              {item.itemTypeNameAr || item.itemTypeNameEn || t('inventory.item_12813')}
                             </td>
                             <td className="py-4 px-4">
                               <Badge className={
@@ -764,11 +766,11 @@ export default function MyMovingInventory() {
                                   ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                                   : "bg-amber-500/20 text-amber-400 border-amber-500/30"
                               }>
-                                {item.status === "RECEIVED_BY_TECHNICIAN" ? "مستلمة للفني" : "بانتظار التأكيد"}
+                                {item.status === "RECEIVED_BY_TECHNICIAN" ? t('inventory.item_17613') : t('inventory.confirm')}
                               </Badge>
                             </td>
                             <td className="py-4 px-4 text-gray-400 text-sm">
-                              {item.carrierName ? `شريحة ${item.carrierName}` : "جهاز نقطة بيع POS"}
+                              {item.carrierName ? t('inventory.sim', { var_0: item.carrierName }) : t('inventory.device')}
                             </td>
                           </motion.tr>
                         ))}
@@ -803,15 +805,15 @@ export default function MyMovingInventory() {
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent className="bg-slate-900/95 backdrop-blur-xl border-white/20 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">رفض عملية النقل</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t('inventory.reject_operation')}</DialogTitle>
             <DialogDescription className="text-gray-400">
-              يرجى تقديم سبب الرفض (اختياري)
+              {t('inventory.reason_reject')}
             </DialogDescription>
           </DialogHeader>
           <Textarea
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="أدخل سبب الرفض..."
+            placeholder={t('inventory.reason_reject_2')}
             className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
           />
           <DialogFooter className="gap-2">
@@ -819,14 +821,14 @@ export default function MyMovingInventory() {
               onClick={() => setRejectDialogOpen(false)}
               className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
             >
-              إلغاء
+              {t('inventory.cancel_1')}
             </button>
             <button
               onClick={handleConfirmReject}
               className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:shadow-lg hover:shadow-red-500/50 transition-all"
               disabled={rejectMutation.isPending}
             >
-              {rejectMutation.isPending ? "جاري الرفض..." : "تأكيد الرفض"}
+              {rejectMutation.isPending ? t('inventory.reject_1') : t('inventory.confirm_reject')}
             </button>
           </DialogFooter>
         </DialogContent>

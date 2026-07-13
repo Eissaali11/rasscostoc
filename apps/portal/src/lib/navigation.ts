@@ -29,72 +29,76 @@ import { ROLES } from "@shared/roles";
 export interface NavigationItem {
   id: string;
   href: string;
-  label: string;
+  /** i18n key under common.nav.* (e.g. "nav.home") */
+  labelKey: string;
   icon: LucideIcon;
   roles: string[];
   children?: {
     id: string;
     href: string;
-    label: string;
+    labelKey: string;
     icon: LucideIcon;
     roles?: string[];
   }[];
 }
 
+/** @deprecated use labelKey — kept for gradual migration */
+export type NavigationItemLegacy = NavigationItem & { label?: string };
+
 export const navigationRegistry: NavigationItem[] = [
   {
     id: "home",
     href: "/home",
-    label: "الصفحة الرئيسية",
+    labelKey: "nav.home",
     icon: Home,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.TECHNICIAN]
   },
   {
     id: "verification",
     href: "/verification",
-    label: "بوابة التحقق بالسيريال",
+    labelKey: "nav.verification",
     icon: QrCode,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "courier",
     href: "/courier",
-    label: "التوصيل والعمليات الميدانية",
+    labelKey: "nav.courier",
     icon: Truck,
     roles: [ROLES.ADMIN],
     children: [
       {
         id: "courier-dashboard",
         href: "/courier",
-        label: "لوحة التحكم",
+        labelKey: "nav.courier-dashboard",
         icon: LayoutDashboard,
         roles: [ROLES.ADMIN]
       },
       {
         id: "courier-ai-monitor",
         href: "/courier/ai-monitor",
-        label: "مراقبة الذكاء الاصطناعي",
+        labelKey: "nav.courier-ai-monitor",
         icon: BrainCircuit,
         roles: [ROLES.ADMIN]
       },
       {
         id: "courier-observability",
         href: "/courier/observability",
-        label: "مراقبة النظام والتتبع",
+        labelKey: "nav.courier-observability",
         icon: Activity,
         roles: [ROLES.ADMIN]
       },
       {
         id: "courier-audit-log",
         href: "/courier/audit-log",
-        label: "سجل التدقيق",
+        labelKey: "nav.courier-audit-log",
         icon: History,
         roles: [ROLES.ADMIN]
       },
       {
         id: "courier-settings",
         href: "/courier/settings",
-        label: "الإعدادات",
+        labelKey: "nav.courier-settings",
         icon: Settings,
         roles: [ROLES.ADMIN]
       }
@@ -103,77 +107,77 @@ export const navigationRegistry: NavigationItem[] = [
   {
     id: "inventory",
     href: "/admin-inventory-overview",
-    label: "إدارة المخزون",
+    labelKey: "nav.inventory",
     icon: Boxes,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "my-inventory",
     href: "/my-fixed-inventory",
-    label: "مخزوني الشخصي",
+    labelKey: "nav.my-inventory",
     icon: Boxes,
     roles: [ROLES.TECHNICIAN]
   },
   {
     id: "products",
     href: "/products-management",
-    label: "إدارة المنتجات",
+    labelKey: "nav.products",
     icon: Shapes,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.TECHNICIAN]
   },
   {
     id: "search",
     href: "/operations-search",
-    label: "البحث والاستعلام",
+    labelKey: "nav.search",
     icon: Search,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.TECHNICIAN]
   },
   {
     id: "operations",
     href: "/operations",
-    label: "العمليات التشغيلية",
+    labelKey: "nav.operations",
     icon: ClipboardList,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "warehouses",
     href: "/warehouses",
-    label: "إدارة المستودعات",
+    labelKey: "nav.warehouses",
     icon: Warehouse,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "withdrawn",
     href: "/withdrawn-devices",
-    label: "الأصناف المرتجعة",
+    labelKey: "nav.withdrawn",
     icon: Undo2,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "accounting",
     href: "/accounting",
-    label: "المحاسبة والمالية",
+    labelKey: "nav.accounting",
     icon: Calculator,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "logs",
     href: "/system-logs",
-    label: "سجل النظام والرقابة",
+    labelKey: "nav.logs",
     icon: ScrollText,
     roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   },
   {
     id: "backup",
     href: "/backup",
-    label: "النسخ الاحتياطية",
+    labelKey: "nav.backup",
     icon: ShieldCheck,
     roles: [ROLES.ADMIN]
   },
   {
     id: "item-types",
     href: "/item-types",
-    label: "إدارة أنواع الأصناف",
+    labelKey: "nav.item-types",
     icon: Shapes,
     roles: [ROLES.ADMIN]
   }

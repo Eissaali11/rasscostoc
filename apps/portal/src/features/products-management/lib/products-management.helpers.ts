@@ -6,6 +6,8 @@ import type {
   StorageOption,
 } from "../types";
 
+type UiLang = "ar" | "en";
+
 const asNumber = (value: unknown): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -13,11 +15,26 @@ const asNumber = (value: unknown): number => {
 
 const asString = (value: unknown): string => (value == null ? "" : String(value));
 
-export const normalizeProductMaster = (raw: any): ProductMaster => ({
+const resolveLang = (language?: UiLang): UiLang => {
+  if (language === "ar" || language === "en") return language;
+  if (typeof localStorage !== "undefined" && localStorage.getItem("language") === "en") return "en";
+  return "ar";
+};
+
+const FALLBACKS = {
+  product: { ar: "منتج", en: "Product" },
+  warehouse: { ar: "مستودع", en: "Warehouse" },
+  technician: { ar: "مندوب", en: "Technician" },
+} as const;
+
+const fallback = (key: keyof typeof FALLBACKS, language?: UiLang): string =>
+  FALLBACKS[key][resolveLang(language)];
+
+export const normalizeProductMaster = (raw: any, language?: UiLang): ProductMaster => ({
   id: asString(raw?.id),
   itemCode: raw?.itemCode ?? raw?.code ?? raw?.sku ?? null,
   barcode: raw?.barcode ?? raw?.barCode ?? null,
-  nameAr: asString(raw?.nameAr ?? raw?.name_ar ?? raw?.name ?? "منتج"),
+  nameAr: asString(raw?.nameAr ?? raw?.name_ar ?? raw?.name ?? fallback("product", language)),
   nameEn: raw?.nameEn ?? raw?.name_en ?? null,
   unitsPerBox: Math.max(1, asNumber(raw?.unitsPerBox ?? raw?.units_per_box ?? 1)),
 });
@@ -33,12 +50,18 @@ const readInventoryLine = (line: any) => ({
   technicianName: asString(line?.technicianName ?? line?.technician_name ?? line?.storageName),
 });
 
-export const toStorageOptions = (rows: any[], type: StorageBucketType): StorageOption[] => {
+export const toStorageOptions = (
+  rows: any[],
+  type: StorageBucketType,
+  language?: UiLang,
+): StorageOption[] => {
   if (type === "warehouse") {
     return rows
       .map((row) => ({
         id: asString(row?.id),
-        label: asString(row?.nameAr ?? row?.name_ar ?? row?.name ?? row?.warehouseName ?? "مستودع"),
+        label: asString(
+          row?.nameAr ?? row?.name_ar ?? row?.name ?? row?.warehouseName ?? fallback("warehouse", language),
+        ),
       }))
       .filter((option) => option.id.length > 0);
   }
@@ -52,7 +75,7 @@ export const toStorageOptions = (rows: any[], type: StorageBucketType): StorageO
           row?.nameAr ??
           [row?.firstName, row?.lastName].filter(Boolean).join(" ")) ||
           row?.technicianName ||
-          "مندوب"
+          fallback("technician", language),
       ),
     }))
     .filter((option) => option.id.length > 0);
@@ -61,9 +84,11 @@ export const toStorageOptions = (rows: any[], type: StorageBucketType): StorageO
 export const buildProductDistributionRows = (
   productsRaw: any[],
   warehouseInventoryRaw: any[],
-  technicianInventoryRaw: any[]
+  technicianInventoryRaw: any[],
+  language?: UiLang,
 ): ProductDistributionRow[] => {
-  const products = productsRaw.map(normalizeProductMaster);
+  const lang = resolveLang(language);
+  const products = productsRaw.map((raw) => normalizeProductMaster(raw, lang));
   const unitsPerBoxByItemId = new Map(products.map((product) => [product.id, product.unitsPerBox]));
 
   const byItemId = new Map<string, ProductDistributionRow>();
@@ -89,17 +114,17 @@ export const buildProductDistributionRows = (
       return existing;
     }
 
-    const fallback: ProductDistributionRow = {
+    const fallbackRow: ProductDistributionRow = {
       itemTypeId,
       itemCode: "-",
-      itemNameAr: `منتج #${itemTypeId}`,
+      itemNameAr: `${fallback("product", lang)} #${itemTypeId}`,
       totalQuantity: 0,
       warehouseQuantity: 0,
       technicianQuantity: 0,
       locations: [],
     };
-    byItemId.set(itemTypeId, fallback);
-    return fallback;
+    byItemId.set(itemTypeId, fallbackRow);
+    return fallbackRow;
   };
 
   const appendLocationQuantity = (
@@ -107,13 +132,13 @@ export const buildProductDistributionRows = (
     storageType: StorageBucketType,
     storageId: string,
     storageName: string,
-    quantity: number
+    quantity: number,
   ) => {
     const existing = target.locations.find(
       (location) =>
         location.storageType === storageType &&
         location.storageId === storageId &&
-        location.storageName === storageName
+        location.storageName === storageName,
     );
 
     if (existing) {
@@ -148,8 +173,8 @@ export const buildProductDistributionRows = (
       target,
       "warehouse",
       line.warehouseId,
-      line.warehouseName || "مستودع",
-      normalizedQuantity
+      line.warehouseName || fallback("warehouse", lang),
+      normalizedQuantity,
     );
   }
 
@@ -172,8 +197,8 @@ export const buildProductDistributionRows = (
       target,
       "technician",
       line.technicianId,
-      line.technicianName || "مندوب",
-      normalizedQuantity
+      line.technicianName || fallback("technician", lang),
+      normalizedQuantity,
     );
   }
 
@@ -194,7 +219,6 @@ export const calculateProductsKpis = (rows: ProductDistributionRow[]): ProductsK
       totalStock: 0,
       totalWarehouseStock: 0,
       totalTechnicianStock: 0,
-    }
+    },
   );
 };
-

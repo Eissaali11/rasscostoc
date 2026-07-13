@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -81,6 +82,7 @@ const fetchArray = async <T,>(url: string): Promise<T[]> => {
 };
 
 export default function ProductSmartAddPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -92,8 +94,8 @@ export default function ProductSmartAddPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPage, setPreviewPage] = useState(1);
   const [logs, setLogs] = useState<LiveLog[]>([
-    { id: "log-1", level: "system", message: "تم بدء جلسة التحقق الذكي..." },
-    { id: "log-2", level: "system", message: "بانتظار المسح..." },
+    { id: "log-1", level: "system", message: t('common.completed_verification') },
+    { id: "log-2", level: "system", message: t('common.scan_2') },
   ]);
   const [duplicatePreview, setDuplicatePreview] = useState<string | null>(null);
 
@@ -186,11 +188,11 @@ export default function ProductSmartAddPage() {
           serialNumber: normalized,
           createdAt,
           status: "duplicate",
-          message: "هذا الرقم مسجل بالفعل في النظام.",
+          message: t('common.number_system'),
         },
         ...previous,
       ]);
-      addLog("error", `فشل التحقق: ${normalized} - عذراً، هذا الرقم مسجل بالفعل.`);
+      addLog("error", t('common.fail_verification_number', { var_0: normalized }));
       setDuplicatePreview(normalized);
       setTimeout(() => setDuplicatePreview(null), 1800);
       setSerialInput("");
@@ -203,22 +205,22 @@ export default function ProductSmartAddPage() {
         serialNumber: normalized,
         createdAt,
         status: "verified",
-        message: "تمت الإضافة لقائمة الانتظار بنجاح",
+        message: t('common.add_waiting_successfully'),
       },
       ...previous,
     ]);
-    addLog("success", `تم التحقق: ${normalized} - تمت الإضافة لقائمة الانتظار.`);
+    addLog("success", t('common.completed_verification_add_waiting', { var_0: normalized }));
     setSerialInput("");
   };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id || !id) {
-        throw new Error("بيانات المستخدم أو المنتج غير متوفرة.");
+        throw new Error(t('common.data_user_1'));
       }
 
       if (pendingRows.length === 0) {
-        throw new Error("لا توجد أجهزة جاهزة للحفظ.");
+        throw new Error(t('common.no_devices'));
       }
 
       let successCount = 0;
@@ -249,7 +251,7 @@ export default function ProductSmartAddPage() {
           setRows((previous) =>
             previous.map((record) =>
               record.id === row.id
-                ? { ...record, status: "saved", message: "تم حفظ السيريال بنجاح" }
+                ? { ...record, status: "saved", message: t('common.completed_save_serial_successf') }
                 : record
             )
           );
@@ -258,7 +260,7 @@ export default function ProductSmartAddPage() {
           setRows((previous) =>
             previous.map((record) =>
               record.id === row.id
-                ? { ...record, status: "error", message: "فشل حفظ السيريال، حاول مرة أخرى" }
+                ? { ...record, status: "error", message: t('common.fail_save_other') }
                 : record
             )
           );
@@ -270,14 +272,14 @@ export default function ProductSmartAddPage() {
     onSuccess: ({ successCount, failedCount }) => {
       queryClient.invalidateQueries({ queryKey: [id ? `/api/item-types/${id}/serial-tracking` : ""] });
       toast({
-        title: "تم إنهاء الحفظ",
-        description: `تم حفظ ${successCount} سيريال${failedCount ? `، وفشل ${failedCount}` : ""}`,
+        title: t('common.completed_save'),
+        description: t('common.save_serials_result', { success: successCount, failedSuffix: failedCount ? t('common.save_failed_suffix', { failed: failedCount }) : "" }),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "تعذر حفظ الجلسة",
-        description: error?.message || "حدث خطأ أثناء حفظ الأجهزة.",
+        title: t('common.save_3'),
+        description: error?.message || t('common.error_save_devices'),
         variant: "destructive",
       });
     },
@@ -286,8 +288,8 @@ export default function ProductSmartAddPage() {
   const exportPreviewToExcel = async () => {
     if (!itemTypeQuery.data || previewRows.length === 0) {
       toast({
-        title: "لا توجد بيانات للتصدير",
-        description: "أضف بيانات أولاً ثم افتح المعاينة للتصدير.",
+        title: t('common.no_data'),
+        description: t('common.data_3'),
         variant: "destructive",
       });
       return;
@@ -298,10 +300,10 @@ export default function ProductSmartAddPage() {
     const warehouseName = selectedWarehouse?.nameAr || selectedWarehouse?.name || "-";
 
     const mapStatus = (status: SessionRow["status"]) => {
-      if (status === "saved") return "تم الحفظ";
-      if (status === "verified") return "جاهز للحفظ";
-      if (status === "error") return "فشل الحفظ";
-      return "مكرر";
+      if (status === "saved") return t('common.completed_save_1');
+      if (status === "verified") return t('common.item_14362');
+      if (status === "error") return t('common.fail_save');
+      return t('common.duplicate');
     };
 
     const workbook = new ExcelJS.Workbook();
@@ -332,7 +334,7 @@ export default function ProductSmartAddPage() {
     };
 
     worksheet.mergeCells("A1:G1");
-    worksheet.getCell("A1").value = "StockPro | معاينة تقرير الإضافة الفوري";
+    worksheet.getCell("A1").value = t('common.report_add_1');
     worksheet.getCell("A1").font = { name: "Arial", bold: true, size: 16, color: { argb: "FFFFFFFF" } };
     worksheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
     worksheet.getCell("A1").fill = {
@@ -343,7 +345,7 @@ export default function ProductSmartAddPage() {
     worksheet.getRow(1).height = 30;
 
     worksheet.mergeCells("A2:G2");
-    worksheet.getCell("A2").value = `تاريخ التصدير: ${now.toLocaleDateString("en-GB")} | ${now.toLocaleTimeString("en-US")}`;
+    worksheet.getCell("A2").value = t('common.date_export', { var_0: now.toLocaleDateString("en-GB"), var_1: now.toLocaleTimeString("en-US") });
     worksheet.getCell("A2").font = { name: "Arial", size: 11, color: { argb: "FFCBD5E1" } };
     worksheet.getCell("A2").alignment = { horizontal: "center", vertical: "middle" };
     worksheet.getCell("A2").fill = {
@@ -353,12 +355,12 @@ export default function ProductSmartAddPage() {
     };
     worksheet.getRow(2).height = 22;
 
-    worksheet.getCell("A4").value = "إجمالي الأجهزة";
-    worksheet.getCell("D4").value = "تاريخ العملية";
-    worksheet.getCell("A5").value = "المنتج";
-    worksheet.getCell("D5").value = "المنطقة";
-    worksheet.getCell("A6").value = "المستودع الوجهة";
-    worksheet.getCell("D6").value = "حالة التقرير";
+    worksheet.getCell("A4").value = t('common.total_devices');
+    worksheet.getCell("D4").value = t('common.date_operation');
+    worksheet.getCell("A5").value = t('common.item_9548');
+    worksheet.getCell("D5").value = t('common.region');
+    worksheet.getCell("A6").value = t('common.warehouse_6');
+    worksheet.getCell("D6").value = t('common.status_report');
 
     worksheet.mergeCells("B4:C4");
     worksheet.mergeCells("E4:G4");
@@ -367,12 +369,12 @@ export default function ProductSmartAddPage() {
     worksheet.mergeCells("B6:C6");
     worksheet.mergeCells("E6:G6");
 
-    worksheet.getCell("B4").value = `${previewRows.length} قطعة`;
+    worksheet.getCell("B4").value = t('common.unit_5', { var_0: previewRows.length });
     worksheet.getCell("E4").value = now.toLocaleDateString("en-GB");
     worksheet.getCell("B5").value = productName;
     worksheet.getCell("E5").value = destinationRegionName;
     worksheet.getCell("B6").value = warehouseName;
-    worksheet.getCell("E6").value = "جاهز للتصدير";
+    worksheet.getCell("E6").value = t('common.item_17533');
 
     ["A4", "D4", "A5", "D5", "A6", "D6"].forEach((ref) => {
       const cell = worksheet.getCell(ref);
@@ -406,7 +408,7 @@ export default function ProductSmartAddPage() {
     });
 
     const headerRowIndex = 8;
-    const headers = ["م", "السيريال نمبر", "اسم المنتج", "المنطقة", "المستودع", "توقيت المسح", "الحالة"];
+    const headers = [t('common.item_1605'), t('common.serial'), t('common.name_6'), t('common.region'), t('common.warehouse_1'), t('common.scan_1'), t('common.status')];
     worksheet.getRow(headerRowIndex).values = headers;
 
     const headerRow = worksheet.getRow(headerRowIndex);
@@ -469,7 +471,7 @@ export default function ProductSmartAddPage() {
     const noteRowIndex = lastDataRowIndex + 2;
     worksheet.mergeCells(`A${noteRowIndex}:G${noteRowIndex}`);
     const noteCell = worksheet.getCell(`A${noteRowIndex}`);
-    noteCell.value = "الملف مجهز بتنسيق محاسبي متقدم (XLSX) - StockPro";
+    noteCell.value = t('common.file_6');
     noteCell.font = { name: "Arial", bold: true, size: 10, color: { argb: "FF93C5FD" } };
     noteCell.alignment = { horizontal: "center", vertical: "middle" };
     noteCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF172554" } };
@@ -480,11 +482,11 @@ export default function ProductSmartAddPage() {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
-    saveAs(blob, `معاينة_الإضافة_${itemTypeQuery.data.id}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    saveAs(blob, t('common.add_10', { var_0: itemTypeQuery.data.id, var_1: new Date().toISOString().slice(0, 10) }));
 
     toast({
-      title: "تم تنزيل الملف",
-      description: "تم تنزيل ملف Excel المنسق بنجاح.",
+      title: t('common.completed_download_file'),
+      description: t('common.completed_download_file_succes'),
     });
   };
 
@@ -494,7 +496,7 @@ export default function ProductSmartAddPage() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-slate-300 gap-3">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span>جاري تحميل مركز الإضافة الذكية...</span>
+        <span>{t('common.loading_add')}</span>
       </div>
     );
   }
@@ -505,23 +507,23 @@ export default function ProductSmartAddPage() {
     <div className="space-y-6 pb-28">
       <section className="rounded-2xl border border-slate-700 bg-slate-900/60 p-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">مركز المسح والتحقق الذكي</h2>
-          <p className="text-xs text-slate-400 mt-1">نظام إضافة الأجهزة المجمع بمنع التكرار</p>
+          <h2 className="text-2xl font-bold text-white">{t('common.scan')}</h2>
+          <p className="text-xs text-slate-400 mt-1">{t('common.system_add_devices_duplicate')}</p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-4 bg-slate-800/70 px-4 py-2 rounded-xl border border-slate-700">
             <div className="text-center border-l border-slate-700 pl-4">
-              <p className="text-[10px] text-slate-400 uppercase">الأجهزة الفريدة</p>
+              <p className="text-[10px] text-slate-400 uppercase">{t('common.devices_1')}</p>
               <p className="text-xl font-bold text-cyan-400">{uniqueCount}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] text-slate-400 uppercase">التكرارات الممنوعة</p>
+              <p className="text-[10px] text-slate-400 uppercase">{t('common.item_27063')}</p>
               <p className="text-xl font-bold text-rose-500">{duplicateCount}</p>
             </div>
           </div>
           <Button asChild variant="outline" className="border-slate-700 bg-slate-800/70 text-slate-100">
-            <Link href={`/products-management/${id}/details`}>الرجوع للتفاصيل</Link>
+            <Link href={`/products-management/${id}/details`}>{t('common.item_22342')}</Link>
           </Button>
         </div>
       </section>
@@ -529,22 +531,22 @@ export default function ProductSmartAddPage() {
       <section className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 flex items-end justify-between gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
           <div className="space-y-2">
-            <label className="text-xs text-slate-400">المنتج المستهدف</label>
+            <label className="text-xs text-slate-400">{t('common.item_22320')}</label>
             <div className="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm font-semibold">
               {itemType?.nameAr || "-"}
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-xs text-slate-400">المستودع الوجهة</label>
+            <label className="text-xs text-slate-400">{t('common.warehouse_6')}</label>
             <select
               value={destinationWarehouseId}
               onChange={(event) => setDestinationWarehouseId(event.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-cyan-400 focus:border-cyan-400"
             >
-              <option value="">اختر المستودع...</option>
+              <option value="">{t('common.warehouse_7')}</option>
               {(warehousesQuery.data ?? []).map((warehouse) => (
                 <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.nameAr || warehouse.name || "مستودع"}
+                  {warehouse.nameAr || warehouse.name || t('common.warehouse_2')}
                 </option>
               ))}
             </select>
@@ -557,17 +559,17 @@ export default function ProductSmartAddPage() {
             onClick={() => {
               setRows([]);
               setLogs([
-                { id: `log-reset-${Date.now()}`, level: "system", message: "تمت إعادة ضبط الجلسة." },
-                { id: `log-wait-${Date.now() + 1}`, level: "system", message: "بانتظار المسح..." },
+                { id: `log-reset-${Date.now()}`, level: "system", message: t('common.item_27088') },
+                { id: `log-wait-${Date.now() + 1}`, level: "system", message: t('common.scan_2') },
               ]);
             }}
             className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 text-sm hover:bg-slate-700"
           >
-            إعادة ضبط
+            {t('common.item_12690')}
           </button>
           <div className="px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm flex items-center gap-2">
             <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-            الجلسة نشطة
+            {t('common.item_15921')}
           </div>
         </div>
       </section>
@@ -584,8 +586,8 @@ export default function ProductSmartAddPage() {
             {duplicatePreview && (
               <div className="absolute inset-0 bg-rose-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6">
                 <AlertTriangle className="h-16 w-16 text-rose-400 mb-3" />
-                <p className="text-xl font-bold text-white">تنبيه: السيريال مكرر</p>
-                <p className="text-rose-200 mt-1">{duplicatePreview} مضاف مسبقاً</p>
+                <p className="text-xl font-bold text-white">{t('common.alert_serial_duplicate')}</p>
+                <p className="text-rose-200 mt-1">{duplicatePreview}{t('common.item_15959')}</p>
               </div>
             )}
 
@@ -607,7 +609,7 @@ export default function ProductSmartAddPage() {
                     appendScannedSerial();
                   }
                 }}
-                placeholder="امسح أو أدخل الرقم التسلسلي"
+                placeholder={t('common.number_serial_2')}
                 className="bg-slate-950 border-slate-700 text-white pr-10"
               />
               <QrCode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -617,7 +619,7 @@ export default function ProductSmartAddPage() {
               onClick={appendScannedSerial}
               className="px-5 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-700 text-white font-bold"
             >
-              إضافة للسجل
+              {t('common.add_5')}
             </button>
           </div>
         </div>
@@ -626,7 +628,7 @@ export default function ProductSmartAddPage() {
           <div className="px-5 py-4 border-b border-slate-700 bg-slate-800/40 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Cpu className="h-4 w-4 text-cyan-300" />
-              سجل العمليات المباشر
+              {t('common.log_operations_1')}
             </h3>
             <span className="text-[10px] text-slate-500">{new Date().toLocaleTimeString("en-US")}</span>
           </div>
@@ -652,25 +654,25 @@ export default function ProductSmartAddPage() {
       <section className="space-y-4">
         <h3 className="text-lg font-bold text-white flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-cyan-300" />
-          قائمة الأجهزة الموثقة (المسح الحالي)
+          {t('inventory.documented_devices_list')}
         </h3>
 
         <div className="rounded-3xl border border-slate-700 bg-slate-900/60 overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-800/50 text-slate-400 text-xs text-right border-b border-slate-700">
-                <th className="px-6 py-4 font-bold">السيريال نمبر</th>
-                <th className="px-6 py-4 font-bold">المنتج</th>
-                <th className="px-6 py-4 font-bold">وقت المسح</th>
-                <th className="px-6 py-4 font-bold">الحالة</th>
-                <th className="px-6 py-4 font-bold text-left">إجراء</th>
+                <th className="px-6 py-4 font-bold">{t('common.serial')}</th>
+                <th className="px-6 py-4 font-bold">{t('common.item_9548')}</th>
+                <th className="px-6 py-4 font-bold">{t('common.time_scan')}</th>
+                <th className="px-6 py-4 font-bold">{t('common.status')}</th>
+                <th className="px-6 py-4 font-bold text-left">{t('common.item_7882')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-slate-500 text-sm">
-                    لم يتم العثور على سجلات في الجلسة الحالية. قم بمسح المزيد من الأجهزة للبدء.
+                    {t('inventory.no_session_records')}
                   </td>
                 </tr>
               ) : (
@@ -721,7 +723,7 @@ export default function ProductSmartAddPage() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <Warehouse className="h-4 w-4 text-slate-400" />
-            <span className="text-slate-400 text-sm">الأجهزة الجاهزة للحفظ:</span>
+            <span className="text-slate-400 text-sm">{t('common.devices_2')}</span>
             <span className="text-2xl font-bold text-white">{pendingRows.length}</span>
           </div>
           <div className="flex items-center gap-2 text-cyan-300 text-xs font-semibold uppercase tracking-wider">
@@ -739,20 +741,20 @@ export default function ProductSmartAddPage() {
             }}
             className="px-5 py-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-semibold hover:bg-emerald-500/20 transition-colors"
           >
-            عرض البيانات المدخلة
+            {t('common.view_data')}
           </button>
           <button
             type="button"
             onClick={() => {
               setRows([]);
               setLogs([
-                { id: `log-cancel-${Date.now()}`, level: "system", message: "تم إلغاء الجلسة الحالية." },
-                { id: `log-wait-${Date.now() + 1}`, level: "system", message: "بانتظار المسح..." },
+                { id: `log-cancel-${Date.now()}`, level: "system", message: t('common.completed_cancel') },
+                { id: `log-wait-${Date.now() + 1}`, level: "system", message: t('common.scan_2') },
               ]);
             }}
             className="px-5 py-3 text-slate-400 hover:text-white"
           >
-            إلغاء الجلسة
+            {t('common.cancel_3')}
           </button>
           <button
             type="button"
@@ -761,7 +763,7 @@ export default function ProductSmartAddPage() {
             className="bg-gradient-to-br from-cyan-400 to-blue-700 text-white px-7 py-3 rounded-2xl font-bold flex items-center gap-2 disabled:opacity-60"
           >
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            <span>تأكيد وحفظ الأجهزة ({pendingRows.length})</span>
+            <span>{t('common.confirm_devices')}{pendingRows.length})</span>
           </button>
         </div>
       </footer>
@@ -771,8 +773,8 @@ export default function ProductSmartAddPage() {
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
-                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">معاينة تقرير الإضافة الفوري</h2>
-                <p className="text-slate-400">راجع البيانات قبل تصديرها إلى ملف Excel المحاسبي</p>
+                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{t('common.report_add')}</h2>
+                <p className="text-slate-400">{t('common.data_file')}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -781,7 +783,7 @@ export default function ProductSmartAddPage() {
                   className="bg-slate-800 text-slate-200 px-6 py-2.5 rounded-lg font-bold hover:bg-slate-700 transition-all inline-flex items-center gap-2"
                 >
                   <X className="h-4 w-4" />
-                  إغلاق
+                  {t('common.close')}
                 </button>
                 <button
                   type="button"
@@ -789,28 +791,28 @@ export default function ProductSmartAddPage() {
                   className="bg-emerald-500 hover:bg-emerald-500/90 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg shadow-emerald-500/20 inline-flex items-center gap-2 transition-all"
                 >
                   <Download className="h-4 w-4" />
-                  تحميل ملف Excel منسق
+                  {t('inventory.download_formatted_excel')}
                 </button>
               </div>
             </div>
 
             <div className="rounded-2xl p-6 mb-8 grid grid-cols-1 md:grid-cols-4 gap-8 bg-slate-800/60 backdrop-blur-xl border border-slate-700">
               <div className="flex flex-col gap-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">إجمالي الأجهزة</span>
-                <span className="text-2xl font-bold text-white">{previewRows.length} قطعة</span>
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{t('common.total_devices')}</span>
+                <span className="text-2xl font-bold text-white">{previewRows.length}{t('common.unit')}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">تاريخ العملية</span>
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{t('common.date_operation')}</span>
                 <span className="text-2xl font-bold text-white">{new Date().toLocaleDateString("en-GB")}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">المستودع الوجهة</span>
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{t('common.warehouse_6')}</span>
                 <span className="text-xl font-bold text-white">{selectedWarehouse?.nameAr || selectedWarehouse?.name || "-"}</span>
               </div>
               <div className="flex flex-col gap-1 justify-center">
                 <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-4 py-2 w-fit shadow-[0_0_15px_rgba(16,183,127,0.25)]">
                   <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-emerald-300 text-sm font-bold">جاهز للتصدير</span>
+                  <span className="text-emerald-300 text-sm font-bold">{t('common.item_17533')}</span>
                 </div>
               </div>
             </div>
@@ -820,19 +822,19 @@ export default function ProductSmartAddPage() {
                 <table className="w-full text-right border-collapse">
                   <thead>
                     <tr className="bg-slate-800/50 text-slate-300 text-sm font-bold border-b border-slate-700">
-                      <th className="px-6 py-4">م</th>
-                      <th className="px-6 py-4">السيريال نمبر</th>
-                      <th className="px-6 py-4">اسم المنتج</th>
-                      <th className="px-6 py-4">المنطقة</th>
-                      <th className="px-6 py-4">المستودع</th>
-                      <th className="px-6 py-4">توقيت المسح</th>
+                      <th className="px-6 py-4">{t('common.item_1605')}</th>
+                      <th className="px-6 py-4">{t('common.serial')}</th>
+                      <th className="px-6 py-4">{t('common.name_6')}</th>
+                      <th className="px-6 py-4">{t('common.region')}</th>
+                      <th className="px-6 py-4">{t('common.warehouse_1')}</th>
+                      <th className="px-6 py-4">{t('common.scan_1')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {previewPageRows.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-10 text-center text-slate-500 text-sm">
-                          لا توجد بيانات مدخلة لعرضها في المعاينة.
+                          {t('inventory.no_preview_data')}
                         </td>
                       </tr>
                     ) : (
@@ -852,7 +854,7 @@ export default function ProductSmartAddPage() {
               </div>
 
               <div className="px-6 py-4 bg-slate-800/30 flex items-center justify-between border-t border-slate-700">
-                <p className="text-slate-500 text-sm">عرض {previewFrom} - {previewTo} من أصل {previewRows.length} جهاز ممسوح</p>
+                <p className="text-slate-500 text-sm">{t('common.view')}{previewFrom} - {previewTo}{t('common.item_8007')}{previewRows.length}{t('common.device_5')}</p>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -877,7 +879,7 @@ export default function ProductSmartAddPage() {
             <div className="flex justify-end">
               <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-2">
                 <Info className="h-4 w-4 text-blue-400" />
-                <p className="text-blue-200 text-xs font-medium">الملف مجهز بتنسيق محاسبي متقدم (XLSX)</p>
+                <p className="text-blue-200 text-xs font-medium">{t('common.file_2')}</p>
               </div>
             </div>
           </div>

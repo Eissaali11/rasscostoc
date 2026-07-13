@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -29,38 +30,7 @@ import { exportWithdrawnDevicesToExcel } from "@/lib/exportToExcel";
 
 type DeviceReviewStatus = "pending" | "approved" | "rejected";
 
-const statusConfig: Record<
-  DeviceReviewStatus,
-  {
-    text: string;
-    borderClass: string;
-    badgeClass: string;
-    icon: React.ComponentType<{ className?: string }>;
-    cardBg: string;
-  }
-> = {
-  pending: {
-    text: "قيد المراجعة",
-    borderClass: "border-r-4 border-r-amber-500",
-    badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    icon: TriangleAlert,
-    cardBg: "bg-slate-900/40",
-  },
-  approved: {
-    text: "موافق عليها",
-    borderClass: "border-r-4 border-r-emerald-500",
-    badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    icon: CheckCircle2,
-    cardBg: "bg-slate-900/40",
-  },
-  rejected: {
-    text: "مرفوضة",
-    borderClass: "border-r-4 border-r-rose-500",
-    badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    icon: XCircle,
-    cardBg: "bg-slate-900/40",
-  },
-};
+
 
 const normalize = (value?: string | null): string => (value || "").trim().toLowerCase();
 
@@ -117,6 +87,40 @@ const formatCardTime = (value?: unknown): string => {
 };
 
 export default function WithdrawnDevicesAllPage() {
+  const { t } = useTranslation();
+
+  const statusConfig: Record<
+    DeviceReviewStatus,
+    {
+      text: string;
+      borderClass: string;
+      badgeClass: string;
+      icon: React.ComponentType<{ className?: string }>;
+      cardBg: string;
+    }
+  > = {
+    pending: {
+      text: t('reports.pending_review_1'),
+      borderClass: "border-r-4 border-r-amber-500",
+      badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+      icon: TriangleAlert,
+      cardBg: "bg-slate-900/40",
+    },
+    approved: {
+      text: t('reports.ok_1'),
+      borderClass: "border-r-4 border-r-emerald-500",
+      badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      icon: CheckCircle2,
+      cardBg: "bg-slate-900/40",
+    },
+    rejected: {
+      text: t('reports.item_9566'),
+      borderClass: "border-r-4 border-r-rose-500",
+      badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+      icon: XCircle,
+      cardBg: "bg-slate-900/40",
+    },
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all");
@@ -169,7 +173,7 @@ export default function WithdrawnDevicesAllPage() {
   }, [allDevices, searchTerm, statusFilter, regionFilter]);
 
   if (isLoading) {
-    return <div className="text-center py-12 text-slate-300">جاري التحميل...</div>;
+    return <div className="text-center py-12 text-slate-300">{t('reports.loading')}</div>;
   }
 
   return (
@@ -181,7 +185,7 @@ export default function WithdrawnDevicesAllPage() {
             <Button asChild variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800/70 hover:text-white w-fit">
               <Link href="/withdrawn-devices">
                 <ArrowRight className="h-4 w-4 ml-2" />
-                <span>العودة للملخص</span>
+                <span>{t('reports.item_19160')}</span>
               </Link>
             </Button>
             <div className="flex items-center gap-3">
@@ -190,9 +194,9 @@ export default function WithdrawnDevicesAllPage() {
               </div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                  سجل العمليات المرتجعة <span className="text-cyan-300">Operations History</span>
+                  {t('reports.returned_ops_history')} <span className="text-cyan-300">Operations History</span>
                 </h2>
-                <p className="text-sm text-slate-400">سجل كامل بجميع عمليات الأجهزة المرتجعة الموافق عليها والمرفوضة بالتفصيل</p>
+                <p className="text-sm text-slate-400">{t('reports.log_devices_returned_ok')}</p>
               </div>
             </div>
           </div>
@@ -202,7 +206,7 @@ export default function WithdrawnDevicesAllPage() {
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
             >
               <Download className="h-4 w-4 ml-2" />
-              تصدير إكسل Excel
+              {t('reports.export_excel_label')}
             </Button>
           </div>
         </div>
@@ -213,7 +217,7 @@ export default function WithdrawnDevicesAllPage() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
             <Input
               type="text"
-              placeholder="ابحث باسم الفني، الرقم التسلسلي، أو المدينة..."
+              placeholder={t('reports.number_city')}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               className="pr-9 bg-slate-950/40 border-slate-800 text-white placeholder:text-slate-500"
@@ -223,13 +227,13 @@ export default function WithdrawnDevicesAllPage() {
           <div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="bg-slate-950/40 border-slate-800 text-white">
-                <SelectValue placeholder="تصفية حسب الحالة" />
+                <SelectValue placeholder={t('reports.filter_status')} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                <SelectItem value="all">جميع الحالات (موافق ومرفوض وقيد المراجعة)</SelectItem>
-                <SelectItem value="approved">موافق عليها فقط</SelectItem>
-                <SelectItem value="rejected">مرفوضة فقط</SelectItem>
-                <SelectItem value="pending">قيد المراجعة فقط</SelectItem>
+                <SelectItem value="all">{t('reports.ok_review')}</SelectItem>
+                <SelectItem value="approved">{t('reports.ok')}</SelectItem>
+                <SelectItem value="rejected">{t('reports.item_14392')}</SelectItem>
+                <SelectItem value="pending">{t('reports.pending_review')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -237,10 +241,10 @@ export default function WithdrawnDevicesAllPage() {
           <div>
             <Select value={regionFilter} onValueChange={setRegionFilter}>
               <SelectTrigger className="bg-slate-950/40 border-slate-800 text-white">
-                <SelectValue placeholder="تصفية حسب المنطقة" />
+                <SelectValue placeholder={t('reports.filter_region')} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                <SelectItem value="all">جميع المناطق</SelectItem>
+                <SelectItem value="all">{t('reports.item_17578')}</SelectItem>
                 {uniqueRegions.map((reg) => (
                   <SelectItem key={reg} value={reg}>
                     {reg}
@@ -286,16 +290,16 @@ export default function WithdrawnDevicesAllPage() {
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-cyan-400 shrink-0" />
                       <div>
-                        <p className="text-[11px] text-slate-500 leading-none">اسم الفني</p>
+                        <p className="text-[11px] text-slate-500 leading-none">{t('reports.name_technician')}</p>
                         <p className="font-semibold text-slate-200 mt-0.5">{device.technicianName}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-cyan-400 shrink-0" />
                       <div>
-                        <p className="text-[11px] text-slate-500 leading-none">المنطقة / المدينة</p>
+                        <p className="text-[11px] text-slate-500 leading-none">{t('reports.region_city')}</p>
                         <p className="font-semibold text-slate-200 mt-0.5">
-                          {device.regionName || "غير محددة"} • <span className="text-xs text-slate-400 font-normal">{device.city}</span>
+                          {device.regionName || t('reports.item_12750')} • <span className="text-xs text-slate-400 font-normal">{device.city}</span>
                         </p>
                       </div>
                     </div>
@@ -303,7 +307,7 @@ export default function WithdrawnDevicesAllPage() {
 
                   {/* Device info */}
                   <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-slate-400">معلومات الجهاز:</h3>
+                    <h3 className="text-sm font-semibold text-slate-400">{t('reports.info_device')}</h3>
                     <p className="text-base font-bold text-slate-100 font-mono tracking-wide bg-slate-950/40 px-3 py-2 rounded-md border border-slate-800/60" dir="ltr">
                       ID: <span className="text-cyan-400">{device.terminalId}</span>
                       <span className="text-slate-600 mx-2">|</span>
@@ -313,23 +317,23 @@ export default function WithdrawnDevicesAllPage() {
 
                   {/* Accessories grid */}
                   <div>
-                    <h4 className="text-xs font-bold text-slate-500 mb-2">الملحقات المرفقة:</h4>
+                    <h4 className="text-xs font-bold text-slate-500 mb-2">{t('reports.item_23963_1')}</h4>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="flex items-center gap-1.5 bg-slate-950/30 px-2 py-1.5 rounded border border-slate-800/40 text-slate-300 text-xs">
                         {hasBattery ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
-                        <span>بطارية ({device.battery})</span>
+                        <span>{t('reports.battery_2')}{device.battery})</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-slate-950/30 px-2 py-1.5 rounded border border-slate-800/40 text-slate-300 text-xs">
                         {hasCable ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
-                        <span>كابل شاحن</span>
+                        <span>{t('reports.item_12740')}</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-slate-950/30 px-2 py-1.5 rounded border border-slate-800/40 text-slate-300 text-xs">
                         {hasHead ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
-                        <span>رأس شاحن</span>
+                        <span>{t('reports.item_11125')}</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-slate-950/30 px-2 py-1.5 rounded border border-slate-800/40 text-slate-300 text-xs">
                         {hasSim ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
-                        <span>شريحة ({device.simCardType || "لا يوجد"})</span>
+                        <span>{t('reports.sim_5')}{device.simCardType || t('reports.no')})</span>
                       </div>
                     </div>
                   </div>
@@ -337,16 +341,16 @@ export default function WithdrawnDevicesAllPage() {
                   {/* Damage & Notes */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800/60">
                     <div>
-                      <h4 className="text-xs font-bold text-slate-500 mb-1">حالة الضرر / التلف:</h4>
+                      <h4 className="text-xs font-bold text-slate-500 mb-1">{t('reports.status_damage')}</h4>
                       <p className="text-xs text-slate-300 font-semibold bg-rose-500/5 px-2 py-1.5 rounded border border-rose-500/10 flex items-center gap-1.5">
                         <TriangleAlert className="h-3.5 w-3.5 text-rose-400 shrink-0" />
-                        {device.damagePart || "لا يوجد أجزاء متضررة"}
+                        {device.damagePart || t('reports.no_parts')}
                       </p>
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-500 mb-1">ملاحظات العملية:</h4>
+                      <h4 className="text-xs font-bold text-slate-500 mb-1">{t('reports.notes_operation')}</h4>
                       <p className="text-xs text-slate-400 bg-slate-950/20 px-2 py-1.5 rounded border border-slate-800/40 min-h-[32px] italic">
-                        {device.notes || "لا توجد ملاحظات إضافية"}
+                        {device.notes || t('reports.no_notes')}
                       </p>
                     </div>
                   </div>
@@ -362,7 +366,7 @@ export default function WithdrawnDevicesAllPage() {
                   >
                     <Link href={`/withdrawn-devices/${device.id}`}>
                       <CircleEllipsis className="h-4 w-4 ml-1.5" />
-                      تفاصيل كاملة
+                      {t('reports.details')}
                     </Link>
                   </Button>
                 </div>
@@ -371,7 +375,7 @@ export default function WithdrawnDevicesAllPage() {
           })
         ) : (
           <div className="col-span-2 p-12 border-2 border-dashed border-slate-800 bg-slate-900/20 text-center rounded-xl">
-            <p className="text-slate-400">لا توجد أجهزة مرتجعة مطابقة للتصفية والبحث حالياً.</p>
+            <p className="text-slate-400">{t('reports.no_devices')}</p>
           </div>
         )}
       </section>

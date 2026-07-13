@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
@@ -34,6 +35,7 @@ import { WarehouseTransfersSection } from "@/features/warehouse-details/componen
 import { WarehouseDetailsModals } from "@/features/warehouse-details/components/warehouse-details-modals";
 
 export default function WarehouseDetailsPage() {
+  const { t, language } = useTranslation();
   const [, params] = useRoute("/warehouses/:id");
   const warehouseId = params?.id || "";
   const { toast } = useToast();
@@ -78,15 +80,15 @@ export default function WarehouseDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouses"] });
       toast({
-        title: "تم حذف المستودع",
-        description: "تم حذف المستودع بنجاح",
+        title: t('warehouse.completed_delete_warehouse'),
+        description: t('warehouse.completed_delete_warehouse_suc'),
       });
       window.location.href = "/warehouses";
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في الحذف",
-        description: error.message || "حدث خطأ أثناء حذف المستودع",
+        title: t('warehouse.error_delete'),
+        description: error.message || t('warehouse.error_delete_warehouse'),
         variant: "destructive",
       });
     },
@@ -100,8 +102,8 @@ export default function WarehouseDetailsPage() {
     });
 
     toast({
-      title: "تم التحميل بنجاح",
-      description: "تم حفظ إيصال النقل",
+      title: t('warehouse.completed_loading_successfully'),
+      description: t('warehouse.completed_save'),
     });
   };
 
@@ -151,7 +153,7 @@ export default function WarehouseDetailsPage() {
     const fresh = await refetchItemTypes();
     const latestItemTypes = fresh.data ?? itemTypesData;
 
-    const transfersData = buildTransferExportRows(allTransfers, latestItemTypes);
+    const transfersData = buildTransferExportRows(allTransfers, latestItemTypes, language);
 
     await exportSingleWarehouseToExcel({
       warehouse: {
@@ -166,8 +168,8 @@ export default function WarehouseDetailsPage() {
     });
 
     toast({
-      title: "تم التصدير بنجاح",
-      description: "تم تصدير بيانات المستودع إلى ملف Excel",
+      title: t('warehouse.completed_export_successfully'),
+      description: t('warehouse.exported_to_excel'),
     });
   };
 
@@ -192,11 +194,11 @@ export default function WarehouseDetailsPage() {
         <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#0a0a0c] text-white flex items-center justify-center">
           <div className="text-center bg-white/[0.03] border border-white/10 rounded-3xl p-10 max-w-md w-full">
             <Warehouse className="h-14 w-14 mx-auto text-cyan-300 mb-4" />
-            <h2 className="text-3xl font-bold mb-3">المستودع غير موجود</h2>
-            <p className="text-slate-400 mb-6">لم نتمكن من العثور على بيانات هذا المستودع.</p>
+            <h2 className="text-3xl font-bold mb-3">{t('warehouse.warehouse')}</h2>
+            <p className="text-slate-400 mb-6">{t('warehouse.data_warehouse')}</p>
             <Link href="/warehouses">
               <Button className="bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/30" data-testid="button-back-warehouses">
-                العودة للمستودعات
+                {t('warehouse.item_25487')}
               </Button>
             </Link>
           </div>
@@ -234,7 +236,7 @@ export default function WarehouseDetailsPage() {
               <Link href="/warehouses">
                 <button className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm" type="button" data-testid="button-back-warehouses">
                   <ArrowRight className="h-4 w-4" />
-                  العودة للمستودعات
+                  {t('warehouse.item_25487')}
                 </button>
               </Link>
               <div className="hidden md:block h-6 w-px bg-white/10" />
@@ -248,7 +250,7 @@ export default function WarehouseDetailsPage() {
                   data-testid="badge-warehouse-status"
                 >
                   <span className={warehouse.isActive ? "size-1.5 rounded-full bg-green-500" : "size-1.5 rounded-full bg-slate-500"} />
-                  {warehouse.isActive ? "نشط" : "غير نشط"}
+                  {warehouse.isActive ? t('warehouse.active') : t('warehouse.active_1')}
                 </span>
               </div>
               <p className="text-white/40 text-sm flex items-center gap-1.5">
@@ -284,7 +286,7 @@ export default function WarehouseDetailsPage() {
               data-testid="button-export-excel"
             >
               <Download className="h-4 w-4 ml-2" />
-              تصدير Excel
+              {t('warehouse.export_excel')}
             </Button>
             <Button
               onClick={() => setShowUpdateInventoryModal(true)}
@@ -292,7 +294,7 @@ export default function WarehouseDetailsPage() {
               data-testid="button-update-inventory"
             >
               <RefreshCw className="h-4 w-4 ml-2" />
-              تحديث المخزون
+              {t('warehouse.update_inventory')}
             </Button>
             <Button
               onClick={() => setShowTransferModal(true)}
@@ -300,7 +302,7 @@ export default function WarehouseDetailsPage() {
               data-testid="button-transfer-to-technician"
             >
               <Send className="h-4 w-4 ml-2" />
-              نقل إلى مندوب
+              {t('warehouse.item_17640')}
             </Button>
             <Button
               variant="destructive"
@@ -309,7 +311,7 @@ export default function WarehouseDetailsPage() {
               data-testid="button-delete-warehouse"
             >
               <Trash2 className="h-4 w-4 ml-2" />
-              حذف المستودع
+              {t('warehouse.delete_warehouse')}
             </Button>
           </div>
 

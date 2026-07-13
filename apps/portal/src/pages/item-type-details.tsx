@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
@@ -42,30 +43,31 @@ interface ReceivedDevice {
 
 type StatusFilter = "all" | DeviceStatus;
 
-const CATEGORY_LABELS: Record<string, string> = {
-  devices: "الأجهزة",
-  papers: "الورقيات",
-  sim: "شرائح الاتصال",
-  accessories: "الإكسسوارات",
-};
-
-const STATUS_META: Record<DeviceStatus, { label: string; badgeClass: string }> = {
-  pending: {
-    label: "قيد المراجعة",
-    badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/25",
-  },
-  approved: {
-    label: "معتمد",
-    badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
-  },
-  rejected: {
-    label: "مرفوض",
-    badgeClass: "bg-red-500/15 text-red-300 border-red-500/25",
-  },
-};
-
 export default function ItemTypeDetailsPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+
+  const CATEGORY_LABELS = useMemo<Record<string, string>>(() => ({
+    devices: t('common.devices'),
+    papers: t('common.item_12737'),
+    sim: t('common.sims'),
+    accessories: t('common.item_17450'),
+  }), [t]);
+
+  const STATUS_META = useMemo<Record<DeviceStatus, { label: string; badgeClass: string }>>(() => ({
+    pending: {
+      label: t('common.pending_review'),
+      badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/25",
+    },
+    approved: {
+      label: t('common.item_7964'),
+      badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
+    },
+    rejected: {
+      label: t('common.rejected'),
+      badgeClass: "bg-red-500/15 text-red-300 border-red-500/25",
+    },
+  }), [t]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
@@ -132,11 +134,11 @@ export default function ItemTypeDetailsPage() {
       <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl">
         <CardContent className="p-10 text-center space-y-4">
           <Package className="h-12 w-12 text-slate-500 mx-auto" />
-          <h2 className="text-xl font-bold text-white">الصنف غير موجود</h2>
+          <h2 className="text-xl font-bold text-white">{t('common.item_20812')}</h2>
           <Button asChild variant="outline" className="border-slate-700 bg-slate-800/50 text-slate-200 hover:bg-slate-700">
             <Link href="/item-types">
               <ArrowLeft className="h-4 w-4 ml-2" />
-              العودة لإدارة الأصناف
+              {t('common.item_30222')}
             </Link>
           </Button>
         </CardContent>
@@ -151,10 +153,10 @@ export default function ItemTypeDetailsPage() {
           <div className="space-y-2">
             <div className="flex items-center gap-3 text-slate-400 text-sm">
               <Link href="/item-types" className="hover:text-cyan-300 transition-colors">
-                إدارة الأصناف
+                {t('common.management_1')}
               </Link>
               <span>/</span>
-              <span className="text-cyan-300">تفاصيل الصنف</span>
+              <span className="text-cyan-300">{t('common.details')}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{itemType.nameAr}</h1>
             <p className="text-slate-400">{itemType.nameEn} • SKU: {itemType.id}</p>
@@ -165,12 +167,12 @@ export default function ItemTypeDetailsPage() {
               {CATEGORY_LABELS[itemType.category] ?? itemType.category}
             </Badge>
             <Badge className="bg-slate-800 text-slate-200 border-slate-600">
-              {itemType.unitsPerBox} وحدة/كرتون
+              {t('inventory.count_carton', { count: t('common.unit_4', { count: itemType.unitsPerBox }) })}
             </Badge>
             <Button asChild variant="outline" className="border-slate-700 bg-slate-800/50 text-slate-200 hover:bg-slate-700">
               <Link href="/item-types">
                 <ArrowLeft className="h-4 w-4 ml-2" />
-                رجوع
+                {t('common.item_6366')}
               </Link>
             </Button>
           </div>
@@ -181,8 +183,8 @@ export default function ItemTypeDetailsPage() {
         <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl">
           <CardContent className="p-10 text-center space-y-3">
             <Package className="h-12 w-12 text-slate-500 mx-auto" />
-            <h2 className="text-xl font-bold text-white">التتبع التسلسلي غير متاح لهذا الصنف</h2>
-            <p className="text-slate-400">يتوفر تتبع السيريال فقط لفئة الأجهزة حاليًا.</p>
+            <h2 className="text-xl font-bold text-white">{t('common.track_serial')}</h2>
+            <p className="text-slate-400">{t('common.track_serial_devices')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -192,7 +194,7 @@ export default function ItemTypeDetailsPage() {
               <div className="h-1 bg-cyan-400/80" />
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">إجمالي السيريالات</p>
+                  <p className="text-sm text-slate-400">{t('common.total')}</p>
                   <p className="text-2xl font-bold text-white">{stats.total}</p>
                 </div>
                 <Smartphone className="h-7 w-7 text-cyan-300" />
@@ -203,7 +205,7 @@ export default function ItemTypeDetailsPage() {
               <div className="h-1 bg-amber-400/80" />
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">قيد المراجعة</p>
+                  <p className="text-sm text-slate-400">{t('common.pending_review')}</p>
                   <p className="text-2xl font-bold text-white">{stats.pending}</p>
                 </div>
                 <Clock3 className="h-7 w-7 text-amber-300" />
@@ -214,7 +216,7 @@ export default function ItemTypeDetailsPage() {
               <div className="h-1 bg-emerald-400/80" />
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">معتمد</p>
+                  <p className="text-sm text-slate-400">{t('common.item_7964')}</p>
                   <p className="text-2xl font-bold text-white">{stats.approved}</p>
                 </div>
                 <CheckCircle2 className="h-7 w-7 text-emerald-300" />
@@ -225,7 +227,7 @@ export default function ItemTypeDetailsPage() {
               <div className="h-1 bg-red-400/80" />
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">مرفوض</p>
+                  <p className="text-sm text-slate-400">{t('common.rejected')}</p>
                   <p className="text-2xl font-bold text-white">{stats.rejected}</p>
                 </div>
                 <XCircle className="h-7 w-7 text-red-300" />
@@ -235,7 +237,7 @@ export default function ItemTypeDetailsPage() {
 
           <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl overflow-hidden">
             <CardHeader className="border-b border-slate-700/60 bg-slate-900/40">
-              <CardTitle className="text-white text-lg sm:text-xl">سجل تتبع السيريال</CardTitle>
+              <CardTitle className="text-white text-lg sm:text-xl">{t('common.log_track_serial')}</CardTitle>
             </CardHeader>
 
             <CardContent className="p-0">
@@ -245,17 +247,17 @@ export default function ItemTypeDetailsPage() {
                   <Input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="بحث برقم السيريال أو رقم الجهاز..."
+                    placeholder={t('common.search_serial_number_device_1')}
                     className="pr-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
                   />
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
                   {[
-                    { value: "all", label: "الكل" },
-                    { value: "pending", label: "قيد المراجعة" },
-                    { value: "approved", label: "معتمد" },
-                    { value: "rejected", label: "مرفوض" },
+                    { value: "all", label: t('common.all') },
+                    { value: "pending", label: t('common.pending_review') },
+                    { value: "approved", label: t('common.item_7964') },
+                    { value: "rejected", label: t('common.rejected') },
                   ].map((option) => (
                     <Button
                       key={option.value}
@@ -283,20 +285,20 @@ export default function ItemTypeDetailsPage() {
               ) : filteredDevices.length === 0 ? (
                 <div className="p-12 text-center">
                   <Smartphone className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white mb-1">لا توجد سجلات مطابقة</h3>
-                  <p className="text-slate-400">غيّر البحث أو حالة التصفية لعرض نتائج مختلفة.</p>
+                  <h3 className="text-lg font-bold text-white mb-1">{t('common.no_logs')}</h3>
+                  <p className="text-slate-400">{t('common.search_status_filter_results')}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-700/60 hover:bg-transparent bg-slate-900/25">
-                        <TableHead className="text-right text-slate-400">رقم السيريال</TableHead>
-                        <TableHead className="text-right text-slate-400">رقم الجهاز</TableHead>
-                        <TableHead className="text-right text-slate-400">المندوب</TableHead>
-                        <TableHead className="text-right text-slate-400">الحالة</TableHead>
-                        <TableHead className="text-right text-slate-400">التاريخ</TableHead>
-                        <TableHead className="text-right text-slate-400">الإجراءات</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.number_serial')}</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.number_device')}</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.technician')}</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.status')}</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.date_1')}</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.item_14214')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -321,7 +323,7 @@ export default function ItemTypeDetailsPage() {
                               <Button asChild variant="ghost" size="sm" className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/10">
                                 <Link href={`/received-devices/${device.id}`}>
                                   <Eye className="h-4 w-4 ml-1" />
-                                  عرض
+                                  {t('common.view')}
                                 </Link>
                               </Button>
                             </TableCell>

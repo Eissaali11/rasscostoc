@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, CheckCircle2, FileDown, Filter, Search, XCircle } from "lucide-react";
@@ -67,6 +68,7 @@ function getInventoryValue(inventory: any, entries: InventoryEntry[] | undefined
 }
 
 export default function AdminInventoryOverview() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [searchName, setSearchName] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
@@ -92,20 +94,20 @@ export default function AdminInventoryOverview() {
   const getAlertBadge = (level: 'good' | 'warning' | 'critical') => {
     if (level === 'critical') {
       return {
-        label: "حرج",
+        label: t('inventory.item_4746'),
         className: "bg-red-500/15 text-red-300 border border-red-400/30",
       };
     }
 
     if (level === 'warning') {
       return {
-        label: "مشغول",
+        label: t('inventory.item_7999'),
         className: "bg-amber-500/15 text-amber-300 border border-amber-400/30",
       };
     }
 
     return {
-      label: "نشط",
+      label: t('inventory.active'),
       className: "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30",
     };
   };
@@ -194,7 +196,7 @@ export default function AdminInventoryOverview() {
 
     worksheet.mergeCells(2, 1, 2, numCols);
     const dateCell = worksheet.getCell(2, 1);
-    dateCell.value = `تاريخ التقرير: ${arabicDate} | Report Date: ${englishDate} | ${time}`;
+    dateCell.value = t('inventory.date_report', { var_0: arabicDate, var_1: englishDate, var_2: time });
     dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
     dateCell.font = { bold: true, size: 10 };
     worksheet.getRow(2).height = 20;
@@ -324,7 +326,7 @@ export default function AdminInventoryOverview() {
 
     worksheet.mergeCells(2, 1, 2, numCols);
     const dateCell = worksheet.getCell(2, 1);
-    dateCell.value = `تاريخ التقرير: ${arabicDate} | Report Date: ${englishDate} | ${time}`;
+    dateCell.value = t('inventory.date_report', { var_0: arabicDate, var_1: englishDate, var_2: time });
     dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
     dateCell.font = { bold: true, size: 10 };
     worksheet.getRow(2).height = 20;
@@ -478,15 +480,15 @@ export default function AdminInventoryOverview() {
 
     const workbook = new ExcelJS.Workbook();
     
-    createTotalWorksheet(workbook, 'مخزون شامل - Total');
-    createInventoryWorksheet(workbook, 'ثابت كراتين - Fixed Boxes', 'fixed', 'boxes');
-    createInventoryWorksheet(workbook, 'ثابت مفردات - Fixed Units', 'fixed', 'units');
-    createInventoryWorksheet(workbook, 'متحرك كراتين - Moving Boxes', 'moving', 'boxes');
-    createInventoryWorksheet(workbook, 'متحرك مفردات - Moving Units', 'moving', 'units');
+    createTotalWorksheet(workbook, t('inventory.item_15016'));
+    createInventoryWorksheet(workbook, t('inventory.boxes_2'), 'fixed', 'boxes');
+    createInventoryWorksheet(workbook, t('inventory.item_17035'), 'fixed', 'units');
+    createInventoryWorksheet(workbook, t('inventory.boxes_3'), 'moving', 'boxes');
+    createInventoryWorksheet(workbook, t('inventory.item_18807'), 'moving', 'units');
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `تقرير_المخزون_${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, t('inventory.report_inventory_var_0_xlsx', { var_0: new Date().toISOString().split('T')[0] }));
   };
 
   if (isLoading) {
@@ -494,7 +496,7 @@ export default function AdminInventoryOverview() {
         <div className="h-full flex items-center justify-center">
           <div className="text-center space-y-3">
             <div className="mx-auto size-12 rounded-full border-2 border-cyan-400/50 border-t-transparent animate-spin" />
-            <p className="text-slate-200 text-sm">جاري تحميل بيانات المندوبين...</p>
+            <p className="text-slate-200 text-sm">{t('inventory.loading_data_couriers')}</p>
           </div>
         </div>
     );
@@ -510,8 +512,8 @@ export default function AdminInventoryOverview() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-slate-100">لوحة مخزون المندوبين</h1>
-            <p className="text-sm text-slate-400">عرض شامل لحالة العهدة الثابتة والمتحركة</p>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-100">{t('inventory.dashboard_couriers')}</h1>
+            <p className="text-sm text-slate-400">{t('inventory.view')}</p>
           </div>
           <div className="flex items-center gap-2 text-cyan-300 text-sm">
             <CalendarDays className="h-4 w-4" />
@@ -522,22 +524,22 @@ export default function AdminInventoryOverview() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="rounded-2xl border border-cyan-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-cyan-400" />
-            <p className="text-xs text-slate-400 mb-2">إجمالي عهد المندوبين</p>
+            <p className="text-xs text-slate-400 mb-2">{t('inventory.total_couriers_1')}</p>
             <p className="text-3xl font-bold text-slate-100">{totalTechniciansInventory.toLocaleString("ar-SA")}</p>
           </div>
           <div className="rounded-2xl border border-emerald-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400" />
-            <p className="text-xs text-slate-400 mb-2">القطع النشطة</p>
+            <p className="text-xs text-slate-400 mb-2">{t('inventory.units_active')}</p>
             <p className="text-3xl font-bold text-emerald-300">{totalFixedInventory.toLocaleString("ar-SA")}</p>
           </div>
           <div className="rounded-2xl border border-orange-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-orange-400" />
-            <p className="text-xs text-slate-400 mb-2">القطع المعلقة</p>
+            <p className="text-xs text-slate-400 mb-2">{t('inventory.units')}</p>
             <p className="text-3xl font-bold text-orange-300">{totalMovingInventory.toLocaleString("ar-SA")}</p>
           </div>
           <div className="rounded-2xl border border-sky-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-sky-400" />
-            <p className="text-xs text-slate-400 mb-2">مندوبين قيد العمل</p>
+            <p className="text-xs text-slate-400 mb-2">{t('inventory.pending')}</p>
             <p className="text-3xl font-bold text-sky-300">{technicians.length.toLocaleString("ar-SA")}</p>
           </div>
         </div>
@@ -547,7 +549,7 @@ export default function AdminInventoryOverview() {
             <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-cyan-300/70" />
             <input
               type="text"
-              placeholder="بحث عن اسم المندوب أو الرقم الوظيفي..."
+              placeholder={t('inventory.search_name_technician_number')}
               value={searchName}
               onChange={(event) => setSearchName(event.target.value)}
               data-testid="input-search-name"
@@ -561,7 +563,7 @@ export default function AdminInventoryOverview() {
               onChange={(event) => setSelectedRegion(event.target.value)}
               className="bg-[#102222] border border-cyan-400/20 rounded-xl px-3 py-2.5 text-sm text-slate-200 min-w-[150px] outline-none focus:ring-2 focus:ring-cyan-400/40"
             >
-              <option value="all">كل المناطق</option>
+              <option value="all">{t('inventory.item_14397')}</option>
               {regionOptions.map((regionName) => (
                 <option key={regionName} value={regionName}>{regionName}</option>
               ))}
@@ -570,7 +572,7 @@ export default function AdminInventoryOverview() {
             <button
               type="button"
               className="p-2.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-300"
-              aria-label="تصفية"
+              aria-label={t('inventory.filter')}
             >
               <Filter className="h-4 w-4" />
             </button>
@@ -582,15 +584,15 @@ export default function AdminInventoryOverview() {
               data-testid="button-export-all"
             >
               <FileDown className="h-4 w-4" />
-              تصدير
+              {t('inventory.export')}
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-slate-300">
-          <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-400/25" data-testid="text-critical-count">حرج: {criticalTechs}</span>
-          <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-400/25" data-testid="text-warning-count">تحذير: {warningTechs}</span>
-          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-400/25" data-testid="text-good-count">نشط: {goodTechs}</span>
+          <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-400/25" data-testid="text-critical-count">{t('inventory.item_4804')}{criticalTechs}</span>
+          <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-400/25" data-testid="text-warning-count">{t('inventory.warning_1')}{warningTechs}</span>
+          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-400/25" data-testid="text-good-count">{t('inventory.active_1')}{goodTechs}</span>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-5 pb-2">
@@ -609,18 +611,18 @@ export default function AdminInventoryOverview() {
                   <div className="flex items-center gap-3">
                     <div className="text-right min-w-0">
                       <h3 className="text-lg font-bold text-slate-100 truncate">{technician.technicianName}</h3>
-                      <p className="text-xs text-cyan-300 truncate">مندوب اتصالات - {technician.city}</p>
+                      <p className="text-xs text-cyan-300 truncate">{t('inventory.item_19161')}{technician.city}</p>
                       <p className="text-[11px] text-slate-500">ID: #{technician.technicianId.slice(0, 8).toUpperCase()}</p>
                     </div>
                     <div className="size-14 rounded-2xl bg-slate-800 border border-cyan-300/25 flex items-center justify-center text-cyan-200 font-bold">
-                      {(technician.technicianName || "ف").slice(0, 1)}
+                      {(technician.technicianName || t('inventory.item_1601')).slice(0, 1)}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-5">
-                  <RingMetric label="مخزون ثابت" percent={fixedPercent} value={fixedTotal} color="cyan" />
-                  <RingMetric label="مخزون متحرك" percent={movingPercent} value={movingTotal} color="orange" />
+                  <RingMetric label={t('inventory.item_14327')} percent={fixedPercent} value={fixedTotal} color="cyan" />
+                  <RingMetric label={t('inventory.item_15971')} percent={movingPercent} value={movingTotal} color="orange" />
                 </div>
 
                 <button
@@ -628,7 +630,7 @@ export default function AdminInventoryOverview() {
                   onClick={() => setLocation(`/technician-details/${technician.technicianId}`)}
                   className="w-full py-2.5 rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400 hover:text-[#102222] font-semibold text-sm transition-colors"
                 >
-                  عرض العهدة بالكامل
+                  {t('inventory.view_1')}
                 </button>
               </div>
             );
@@ -637,7 +639,7 @@ export default function AdminInventoryOverview() {
 
         {technicians.length === 0 && (
           <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-            لا توجد نتائج مطابقة للفلترة الحالية.
+            {t('inventory.no_results')}
           </div>
         )}
       </div>
@@ -646,6 +648,7 @@ export default function AdminInventoryOverview() {
 }
 
 function RingMetric({ label, percent, value, color }: { label: string; percent: number; value: number; color: "cyan" | "orange" }) {
+  const { t } = useTranslation();
   const strokeClass = color === "cyan" ? "text-cyan-400" : "text-orange-400";
 
   return (
@@ -670,7 +673,7 @@ function RingMetric({ label, percent, value, color }: { label: string; percent: 
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-100">
-          {percent.toLocaleString("ar-SA")}٪
+          {t('inventory.count_2', { count: percent.toLocaleString("ar-SA") })}
         </div>
       </div>
 

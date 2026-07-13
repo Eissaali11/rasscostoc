@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardStats } from "@shared/schema";
@@ -8,6 +9,7 @@ interface StatsCardsProps {
 }
 
 export default function StatsCards({ stats, isLoading }: StatsCardsProps) {
+  const { t } = useTranslation();
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -34,7 +36,7 @@ export default function StatsCards({ stats, isLoading }: StatsCardsProps) {
         <Card>
           <CardContent className="p-6">
             <div className="text-center text-muted-foreground">
-              لا توجد بيانات متاحة
+              {t('common.no_data_5')}
             </div>
           </CardContent>
         </Card>
@@ -48,7 +50,7 @@ export default function StatsCards({ stats, isLoading }: StatsCardsProps) {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">إجمالي الأصناف</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('common.total_1')}</p>
               <p className="text-3xl font-bold text-foreground" data-testid="text-total-items">
                 {stats.totalItems}
               </p>
@@ -64,7 +66,7 @@ export default function StatsCards({ stats, isLoading }: StatsCardsProps) {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">أصناف منخفضة</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('common.item_17535')}</p>
               <p className="text-3xl font-bold text-warning" data-testid="text-low-stock-items">
                 {stats.lowStockItems}
               </p>
@@ -80,7 +82,7 @@ export default function StatsCards({ stats, isLoading }: StatsCardsProps) {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">أصناف نافدة</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('common.item_15916')}</p>
               <p className="text-3xl font-bold text-destructive" data-testid="text-out-of-stock-items">
                 {stats.outOfStockItems}
               </p>
@@ -96,7 +98,7 @@ export default function StatsCards({ stats, isLoading }: StatsCardsProps) {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">العمليات اليوم</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('common.operations_day')}</p>
               <p className="text-3xl font-bold text-success" data-testid="text-today-transactions">
                 {stats.todayTransactions}
               </p>

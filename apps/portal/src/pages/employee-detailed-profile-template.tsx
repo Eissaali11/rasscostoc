@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -52,6 +53,7 @@ function isImageAttachment(file?: { type?: string; name?: string } | null): bool
 }
 
 export default function EmployeeDetailedProfileTemplatePage() {
+  const { t, dir } = useTranslation();
   const { user: authUser } = useAuth();
   const [location] = useLocation();
 
@@ -95,8 +97,8 @@ export default function EmployeeDetailedProfileTemplatePage() {
   const movingEntries = Array.isArray(movingEntriesQuery.data) ? movingEntriesQuery.data : [];
 
   const regionName = useMemo(() => {
-    if (!shownUser?.regionId) return "غير محدد";
-    return regions.find((region) => region.id === shownUser.regionId)?.name || "غير محدد";
+    if (!shownUser?.regionId) return t('users.item_11173');
+    return regions.find((region) => region.id === shownUser.regionId)?.name || t('users.item_11173');
   }, [regions, shownUser?.regionId]);
 
   const fixedInventoryTotal = useMemo(() => {
@@ -117,62 +119,62 @@ export default function EmployeeDetailedProfileTemplatePage() {
   const otherFiles = Array.isArray(extraProfile?.otherFiles) ? extraProfile.otherFiles : [];
 
   const fixedInventoryStatus = fixedEntriesQuery.isLoading
-    ? "جاري التحميل"
+    ? t('users.loading')
     : fixedEntriesQuery.error
-      ? "تعذر جلب البيانات"
-      : "بيانات حقيقية";
+      ? t('users.data')
+      : t('users.data_1');
 
   const movingInventoryStatus = movingEntriesQuery.isLoading
-    ? "جاري التحميل"
+    ? t('users.loading')
     : movingEntriesQuery.error
-      ? "تعذر جلب البيانات"
-      : "بيانات حقيقية";
+      ? t('users.data')
+      : t('users.data_1');
 
   const personalInfoRows = [
-    { label: "الاسم الكامل", value: shownUser?.fullName || "-" },
-    { label: "رقم الهوية", value: extraProfile?.nationalId || shownUser?.id || "-" },
-    { label: "رقم الجوال", value: extraProfile?.phoneNumber || shownUser?.username || "-", className: "text-cyan-300" },
-    { label: "تاريخ الميلاد", value: extraProfile?.birthDate || formatDate(shownUser?.createdAt) },
-    { label: "انتهاء الهوية", value: extraProfile?.nationalIdExpiryDate || formatDate(shownUser?.updatedAt), className: "text-rose-400" },
-    { label: "اسم الكفيل", value: extraProfile?.sponsorName || shownUser?.email || "-" },
-    { label: "انتهاء الرخصة", value: extraProfile?.licenseExpiryDate || "-" },
-    { label: "رقم الجواز", value: extraProfile?.passportNumber || shownUser?.username || "-" },
-    { label: "انتهاء الجواز", value: extraProfile?.passportExpiryDate || "-" },
-    { label: "الجنسية", value: extraProfile?.nationality || regionName || "-" },
-    { label: "رقم أبشر", value: extraProfile?.absherNumber || (shownUser?.id ? shownUser.id.slice(-6) : "-") },
-    { label: "المؤهلات", value: extraProfile?.qualification || roleLabel || "-" },
+    { label: t('users.name'), value: shownUser?.fullName || "-" },
+    { label: t('users.number'), value: extraProfile?.nationalId || shownUser?.id || "-" },
+    { label: t('users.number_mobile'), value: extraProfile?.phoneNumber || shownUser?.username || "-", className: "text-cyan-300" },
+    { label: t('users.date'), value: extraProfile?.birthDate || formatDate(shownUser?.createdAt) },
+    { label: t('users.item_19123'), value: extraProfile?.nationalIdExpiryDate || formatDate(shownUser?.updatedAt), className: "text-rose-400" },
+    { label: t('users.name_1'), value: extraProfile?.sponsorName || shownUser?.email || "-" },
+    { label: t('users.item_19054'), value: extraProfile?.licenseExpiryDate || "-" },
+    { label: t('users.number_1'), value: extraProfile?.passportNumber || shownUser?.username || "-" },
+    { label: t('users.item_19070'), value: extraProfile?.passportExpiryDate || "-" },
+    { label: t('users.item_11139'), value: extraProfile?.nationality || regionName || "-" },
+    { label: t('users.number_2'), value: extraProfile?.absherNumber || (shownUser?.id ? shownUser.id.slice(-6) : "-") },
+    { label: t('users.item_12720'), value: extraProfile?.qualification || roleLabel || "-" },
   ];
 
   if (isLoadingUser && !shownUser) {
     return (
-      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir="rtl">
-        <p className="text-sm text-slate-300">جاري تحميل بيانات الموظف...</p>
+      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir={dir}>
+        <p className="text-sm text-slate-300">{t('users.loading_data')}</p>
       </div>
     );
   }
 
   if (isViewingAnotherUser && selectedUserError) {
     return (
-      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir="rtl">
-        <p className="text-sm text-rose-300">تعذر تحميل ملف الموظف المطلوب. تأكد من صلاحية الوصول أو وجود المستخدم.</p>
+      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir={dir}>
+        <p className="text-sm text-rose-300">{t('users.loading_file_user')}</p>
       </div>
     );
   }
 
   if (!shownUser) {
     return (
-      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir="rtl">
-        <p className="text-sm text-slate-300">لا توجد بيانات موظف متاحة للعرض.</p>
+      <div className="min-h-screen bg-[#0f2323] text-slate-100 flex items-center justify-center" dir={dir}>
+        <p className="text-sm text-slate-300">{t('users.no_data')}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f2323] text-slate-100" dir="rtl">
+    <div className="min-h-screen bg-[#0f2323] text-slate-100" dir={dir}>
       <main className="min-h-screen flex flex-col bg-[#0f2323]/50 overflow-y-auto">
           <header className="sticky top-0 z-40 bg-[#0f2323]/80 backdrop-blur-md border-b border-white/5 px-8 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold">ملف الموظف التفصيلي</h2>
+              <h2 className="text-lg font-bold">{t('users.file')}</h2>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                   isActive
@@ -180,7 +182,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                     : "bg-rose-500/10 text-rose-400 border-rose-500/20"
                 }`}
               >
-                {isActive ? "نشط" : "غير نشط"}
+                {isActive ? t('users.active') : t('users.inactive')}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -189,7 +191,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                 className="bg-cyan-400 hover:bg-cyan-300 text-[#0f2323] px-4 py-2 rounded-lg text-sm font-bold transition-all inline-flex items-center gap-2"
               >
                 <Edit3 className="h-4 w-4" />
-                تعديل البيانات
+                {t('users.edit_data')}
               </Link>
               <button className="bg-white/5 hover:bg-white/10 text-white p-2 rounded-lg border border-white/10">
                 <Printer className="h-4 w-4" />
@@ -225,7 +227,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                     <h3 className="text-3xl font-bold text-white mb-1">{shownUser?.fullName || "-"}</h3>
                     <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm">
                       <span className="flex items-center gap-1">
-                        <Badge className="h-4 w-4 text-cyan-300" /> الرقم الوظيفي: {employeeCode(shownUser?.id)}
+                        <Badge className="h-4 w-4 text-cyan-300" />{t('users.number_11')}{employeeCode(shownUser?.id)}
                       </span>
                       <span className="flex items-center gap-1">
                         <BriefcaseBusiness className="h-4 w-4 text-cyan-300" />
@@ -236,11 +238,11 @@ export default function EmployeeDetailedProfileTemplatePage() {
                   <div className="flex flex-wrap gap-2">
                     <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs flex items-center gap-2">
                       <span className="size-2 rounded-full bg-cyan-300 animate-pulse" />
-                      بصمة دخول نشطة
+                      {t('users.item_19150')}
                     </div>
                     <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs flex items-center gap-2">
                       <BadgeCheck className="h-3 w-3 text-cyan-300" />
-                      موظف معتمد
+                      {t('users.item_14402')}
                     </div>
                   </div>
                 </div>
@@ -252,7 +254,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <User className="h-5 w-5 text-cyan-300" />
-                    <h4 className="text-lg font-bold">المعلومات الشخصية</h4>
+                    <h4 className="text-lg font-bold">{t('users.info')}</h4>
                   </div>
 
                   <div className="bg-[#152e2e]/60 backdrop-blur-xl border border-cyan-400/10 rounded-2xl overflow-hidden">
@@ -275,7 +277,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <Warehouse className="h-5 w-5 text-cyan-300" />
-                    <h4 className="text-lg font-bold">قسم العهد</h4>
+                    <h4 className="text-lg font-bold">{t('users.item_12788')}</h4>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -285,23 +287,23 @@ export default function EmployeeDetailedProfileTemplatePage() {
                           <div className="size-10 bg-cyan-400/10 rounded-lg flex items-center justify-center">
                             <Car className="h-5 w-5 text-cyan-300" />
                           </div>
-                          <h5 className="font-bold">عهدة السيارة</h5>
+                          <h5 className="font-bold">{t('users.item_17505')}</h5>
                         </div>
                         <span className="text-[10px] bg-white/5 px-2 py-1 rounded border border-white/10 uppercase font-bold text-slate-400 tracking-tighter">
-                          نظام العهد الثابتة
+                          {t('users.system')}
                         </span>
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">إجمالي الكمية</span>
+                          <span className="text-slate-400">{t('users.total_quantity')}</span>
                           <span className="font-semibold">{fixedInventoryTotal}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">عدد الأصناف</span>
+                          <span className="text-slate-400">{t('users.item_15912')}</span>
                           <span className="font-semibold">{fixedEntries.length}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">حالة البيانات</span>
+                          <span className="text-slate-400">{t('users.status_data')}</span>
                           <span className="font-semibold">{fixedInventoryStatus}</span>
                         </div>
                         {carHandoverFile ? (
@@ -311,7 +313,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                             className="w-full mt-2 py-2 rounded-lg bg-cyan-400/10 text-cyan-300 text-xs font-bold border border-cyan-400/20 hover:bg-cyan-400/20 transition-all inline-flex items-center justify-center gap-2"
                           >
                             <Download className="h-3 w-3" />
-                            تحميل نموذج الاستلام والتسليم
+                            {t('users.loading_receive')}
                           </a>
                         ) : (
                           <button
@@ -319,7 +321,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                             disabled
                           >
                             <Download className="h-3 w-3" />
-                            لا يوجد نموذج مرفوع
+                            {t('users.no')}
                           </button>
                         )}
                       </div>
@@ -331,7 +333,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                           <div className="size-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
                             <Smartphone className="h-5 w-5 text-emerald-400" />
                           </div>
-                          <h5 className="font-bold">عهدة الجوال</h5>
+                          <h5 className="font-bold">{t('users.mobile')}</h5>
                         </div>
                         <span className="text-[10px] bg-white/5 px-2 py-1 rounded border border-white/10 uppercase font-bold text-slate-400 tracking-tighter">
                           Enterprise Device
@@ -339,23 +341,23 @@ export default function EmployeeDetailedProfileTemplatePage() {
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">إجمالي الكمية</span>
+                          <span className="text-slate-400">{t('users.total_quantity')}</span>
                           <span className="font-semibold">{movingInventoryTotal}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">عدد الأصناف</span>
+                          <span className="text-slate-400">{t('users.item_15912')}</span>
                           <span className="font-mono text-xs text-cyan-300">{movingEntries.length}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">إجمالي العهد</span>
+                          <span className="text-slate-400">{t('users.total')}</span>
                           <span className="font-semibold">{totalInventory}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">حالة البيانات</span>
+                          <span className="text-slate-400">{t('users.status_data')}</span>
                           <span className="font-semibold">{movingInventoryStatus}</span>
                         </div>
                         <div className="flex justify-between items-center text-sm py-1 border-b border-white/5">
-                          <span className="text-slate-400">آخر تحديث</span>
+                          <span className="text-slate-400">{t('users.update')}</span>
                           <span className="font-semibold">{formatDate(shownUser?.updatedAt)}</span>
                         </div>
                       </div>
@@ -368,24 +370,24 @@ export default function EmployeeDetailedProfileTemplatePage() {
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <BriefcaseBusiness className="h-5 w-5 text-cyan-300" />
-                    <h4 className="text-lg font-bold">المعلومات الوظيفية</h4>
+                    <h4 className="text-lg font-bold">{t('users.info_1')}</h4>
                   </div>
 
                   <div className="bg-[#152e2e]/60 backdrop-blur-xl border border-cyan-400/10 rounded-2xl p-5 space-y-4">
                     <div className="space-y-1">
-                      <p className="text-[10px] uppercase text-slate-500 font-bold">المشروع الحالي</p>
+                      <p className="text-[10px] uppercase text-slate-500 font-bold">{t('users.item_20739')}</p>
                       <p className="text-sm font-bold text-white flex items-center gap-2">
-                        {extraProfile?.projectName || `مشروع ${regionName}`}
+                        {extraProfile?.projectName || t('users.item_8979', { var_0: regionName })}
                         <span className="size-2 rounded-full bg-cyan-300" />
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] uppercase text-slate-500 font-bold">المدينة</p>
+                      <p className="text-[10px] uppercase text-slate-500 font-bold">{t('users.city')}</p>
                       <p className="text-sm font-bold text-white">{extraProfile?.city || shownUser?.city || "-"}</p>
                     </div>
 
                     <div className="pt-4 border-t border-white/5 space-y-4">
-                      <p className="text-xs font-bold text-slate-400">وثائق العمل</p>
+                      <p className="text-xs font-bold text-slate-400">{t('users.item_15951')}</p>
 
                       <a
                         href={jobOfferFile?.dataUrl || "#"}
@@ -412,7 +414,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                         )}
                         <div className="absolute inset-0 flex flex-col justify-end p-3 bg-black/25">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-bold truncate">{jobOfferFile?.name || "لا يوجد عرض وظيفي مرفوع"}</span>
+                            <span className="text-[10px] font-bold truncate">{jobOfferFile?.name || t('users.no_view')}</span>
                             <Download className="h-3 w-3 text-cyan-300 shrink-0" />
                           </div>
                         </div>
@@ -445,7 +447,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                         )}
                         <div className="absolute inset-0 flex flex-col justify-end p-3 bg-black/25">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-bold truncate">{promissoryNoteFile?.name || "لا يوجد سند لأمر مرفوع"}</span>
+                            <span className="text-[10px] font-bold truncate">{promissoryNoteFile?.name || t('users.no_voucher')}</span>
                             <Eye className="h-3 w-3 text-cyan-300 shrink-0" />
                           </div>
                         </div>
@@ -454,11 +456,11 @@ export default function EmployeeDetailedProfileTemplatePage() {
                       <div className="group relative rounded-xl overflow-hidden border border-white/10 hover:border-cyan-400/50 transition-all">
                         <div className="w-full min-h-24 bg-gradient-to-br from-slate-800 to-[#0f2323] p-3">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold">مرفقات أخرى ({otherFiles.length})</span>
+                            <span className="text-[10px] font-bold">{t('users.other')}{otherFiles.length})</span>
                             <FolderOpen className="h-3 w-3 text-cyan-300" />
                           </div>
                           {otherFiles.length === 0 ? (
-                            <p className="text-[10px] text-slate-400">لا توجد مرفقات إضافية</p>
+                            <p className="text-[10px] text-slate-400">{t('users.no_1')}</p>
                           ) : (
                             <div className="space-y-1">
                               {otherFiles.slice(0, 3).map((file) => (
@@ -474,7 +476,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
                                 </a>
                               ))}
                               {otherFiles.length > 3 && (
-                                <p className="text-[10px] text-slate-400">+{otherFiles.length - 3} مرفقات أخرى</p>
+                                <p className="text-[10px] text-slate-400">+{otherFiles.length - 3}{t('users.other_1')}</p>
                               )}
                             </div>
                           )}
@@ -487,15 +489,15 @@ export default function EmployeeDetailedProfileTemplatePage() {
                 <section className="bg-gradient-to-br from-cyan-400/10 to-transparent border border-cyan-400/20 rounded-2xl p-5">
                   <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
                     <Cpu className="h-4 w-4 text-cyan-300" />
-                    إحصائيات سريعة
+                    {t('users.item_20639')}
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 mb-1">نسبة الحضور</p>
+                      <p className="text-[10px] text-slate-500 mb-1">{t('users.item_15921')}</p>
                       <p className="text-lg font-bold text-cyan-300">98%</p>
                     </div>
                     <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 mb-1">المهام المنجزة</p>
+                      <p className="text-[10px] text-slate-500 mb-1">{t('users.item_20736')}</p>
                       <p className="text-lg font-bold text-cyan-300">{fixedEntries.length + movingEntries.length}</p>
                     </div>
                   </div>
@@ -505,7 +507,7 @@ export default function EmployeeDetailedProfileTemplatePage() {
           </div>
 
           <footer className="mt-auto p-8 border-t border-white/5 text-center text-slate-500 text-[10px] uppercase tracking-widest">
-            نظام StockPro Elite لإدارة الموارد البشرية والمخازن © 2024 - جميع الحقوق محفوظة
+            {t('users.system_3')}
           </footer>
       </main>
     </div>

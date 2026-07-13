@@ -1,3 +1,4 @@
+import { useTranslation, t } from "@/lib/language";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
 import { useMemo, useState } from "react";
@@ -239,27 +240,27 @@ function toLegacyInventoryPayload(
 function getStockStatus(total: number): { label: string; className: string } {
   if (total <= 0) {
     return {
-      label: "منخفض جداً",
+      label: t('common.item_14365'),
       className: "bg-red-500/10 text-red-300 border border-red-400/30",
     };
   }
 
   if (total < 10) {
     return {
-      label: "منخفض",
+      label: t('common.item_7984'),
       className: "bg-yellow-500/10 text-yellow-300 border border-yellow-400/30",
     };
   }
 
   if (total < 40) {
     return {
-      label: "نشط",
+      label: t('common.active_1'),
       className: "bg-blue-500/10 text-blue-300 border border-blue-400/30",
     };
   }
 
   return {
-    label: "متوفر بكثرة",
+    label: t('common.item_15929'),
     className: "bg-emerald-500/10 text-emerald-300 border border-emerald-400/30",
   };
 }
@@ -269,6 +270,7 @@ function clampPercent(value: number): number {
 }
 
 export default function TechnicianDetailsPage() {
+  const { t, dir } = useTranslation();
   const [, params] = useRoute("/technician-details/:id");
   const technicianId = params?.id;
   const { user } = useAuth();
@@ -384,9 +386,9 @@ export default function TechnicianDetailsPage() {
     technicianProfile?.fullName ||
     effectiveFixedInventory?.technicianName ||
     effectiveMovingInventory?.technicianName ||
-    "غير معروف";
+    t('common.item_12813');
 
-  const city = selectedTechnician?.city || effectiveFixedInventory?.city || effectiveMovingInventory?.city || technicianProfile?.city || "غير حدد";
+  const city = selectedTechnician?.city || effectiveFixedInventory?.city || effectiveMovingInventory?.city || technicianProfile?.city || t('common.item_9568_1');
 
   const legacyFieldMapping: Record<string, { boxes: string; units: string }> = {
     n950: { boxes: "n950Boxes", units: "n950Units" },
@@ -624,13 +626,13 @@ export default function TechnicianDetailsPage() {
       });
 
       toast({
-        title: "تم التصدير بنجاح",
-        description: "تم إنشاء ملف Excel لبيانات المندوب",
+        title: t('common.completed_export_successfully'),
+        description: t('common.completed_file_technician'),
       });
     } catch (error) {
       toast({
-        title: "فشل التصدير",
-        description: "حدث خطأ أثناء تصدير البيانات",
+        title: t('common.fail_export'),
+        description: t('common.error_export_data'),
         variant: "destructive",
       });
     }
@@ -647,16 +649,16 @@ export default function TechnicianDetailsPage() {
     },
     onSuccess: () => {
       toast({
-        title: "تم تحديث حالة الجهاز",
-        description: "تم اعتماد القرار بنجاح وتحديث السجلات",
+        title: t('common.completed_update_status_device_1'),
+        description: t('common.completed_successfully_logs'),
       });
       refetchReceived();
       setSelectedDevice(null);
     },
     onError: (err: any) => {
       toast({
-        title: "فشل تحديث الحالة",
-        description: err.message || "حدث خطأ غير متوقع",
+        title: t('common.fail_update_status'),
+        description: err.message || t('common.error_2'),
         variant: "destructive",
       });
     },
@@ -716,16 +718,16 @@ export default function TechnicianDetailsPage() {
     const nameEn = item.nameEn || "";
     const name = (nameAr + " " + nameEn).toLowerCase();
 
-    if (category === "stickers" || name.includes("ملصق") || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes("الملصقات") || name.includes("stickers")) {
+    if (category === "stickers" || name.includes(t('common.sticker')) || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes(t('common.stickers_1')) || name.includes("stickers")) {
       return "/assets/mol.png";
     } else if (category === "sim") {
-      if (name.includes("stc") || name.includes("اس تي سي")) {
+      if (name.includes("stc") || name.includes(t('common.item_9611'))) {
         return "/assets/stc.jpg";
-      } else if (name.includes("zain") || name.includes("زين")) {
+      } else if (name.includes("zain") || name.includes(t('common.zain'))) {
         return "/assets/zein.png";
-      } else if (name.includes("mobily") || name.includes("موبايلي")) {
+      } else if (name.includes("mobily") || name.includes(t('common.mobily'))) {
         return "/assets/mobile.png";
-      } else if (name.includes("lebara") || name.includes("ليبارا")) {
+      } else if (name.includes("lebara") || name.includes(t('common.lebara'))) {
         return "/assets/libar.png";
       }
     } else if (category === "devices") {
@@ -745,22 +747,22 @@ export default function TechnicianDetailsPage() {
 
     if (category === "sim") {
       Icon = Handshake; // or CreditCard
-      if (name.includes("stc") || name.includes("اس تي سي")) {
+      if (name.includes("stc") || name.includes(t('common.item_9611'))) {
         gradient = "from-purple-900/60 to-indigo-950/80 border-purple-500/60";
         brandText = "stc";
         brandTextColor = "text-purple-300";
         imageSrc = "/assets/stc.jpg";
-      } else if (name.includes("zain") || name.includes("زين")) {
+      } else if (name.includes("zain") || name.includes(t('common.zain'))) {
         gradient = "from-neutral-900/80 to-slate-950/90 border-lime-500/50";
         brandText = "Zain";
         brandTextColor = "text-lime-400";
         imageSrc = "/assets/zein.png";
-      } else if (name.includes("mobily") || name.includes("موبايلي")) {
+      } else if (name.includes("mobily") || name.includes(t('common.mobily'))) {
         gradient = "from-cyan-900/60 to-blue-950/80 border-cyan-500/60";
         brandText = "Mobily";
         brandTextColor = "text-cyan-300";
         imageSrc = "/assets/mobile.png";
-      } else if (name.includes("lebara") || name.includes("ليبارا")) {
+      } else if (name.includes("lebara") || name.includes(t('common.lebara'))) {
         gradient = "from-red-900/60 to-blue-950/80 border-red-500/60";
         brandText = "Lebara";
         brandTextColor = "text-red-400";
@@ -789,21 +791,21 @@ export default function TechnicianDetailsPage() {
     } else if (category === "accessories") {
       gradient = "from-purple-900/50 to-slate-950/80 border-purple-500/40";
       Icon = Cable;
-      if (name.includes("battery") || name.includes("بطارية")) {
+      if (name.includes("battery") || name.includes(t('common.battery'))) {
         Icon = Plug;
-        brandText = "بطارية";
+        brandText = t('common.battery');
       } else {
-        brandText = "ملحق";
+        brandText = t('common.item_6392');
       }
-    } else if (category === "stickers" || name.includes("ملصق") || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes("الملصقات") || name.includes("stickers")) {
+    } else if (category === "stickers" || name.includes(t('common.sticker')) || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes(t('common.stickers_1')) || name.includes("stickers")) {
       gradient = "from-emerald-900/50 to-slate-950/80 border-emerald-500/40";
       Icon = FileText;
-      brandText = "ملصق";
+      brandText = t('common.sticker');
       imageSrc = "/assets/mol.png";
     } else if (category === "papers") {
       gradient = "from-amber-900/50 to-slate-950/80 border-amber-500/40";
       Icon = FileText;
-      brandText = "ورق";
+      brandText = t('common.paper');
     }
 
     return (
@@ -831,22 +833,22 @@ export default function TechnicianDetailsPage() {
   };
 
   const steps = [
-    { title: "التوريد", desc: "مسح الجهاز", icon: Activity },
-    { title: "الاعتماد", desc: "قرار المشرف", icon: ShieldCheck },
-    { title: "العهدة", desc: "إضافة للعهدة", icon: Boxes },
-    { title: "التسليم", desc: "العميل النهائي", icon: Truck },
+    { title: t('common.item_11143'), desc: t('common.scan_device'), icon: Activity },
+    { title: t('common.item_12688'), desc: t('common.supervisor'), icon: ShieldCheck },
+    { title: t('common.item_9539'), desc: t('common.add_6'), icon: Boxes },
+    { title: t('common.item_11163_1'), desc: t('common.customer'), icon: Truck },
   ];
 
   const technicianInitials = useMemo(() => {
     const parts = (technicianName || "").trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return "؟";
+    if (parts.length === 0) return t('common.item_1567');
     if (parts.length === 1) return parts[0].slice(0, 2);
     return `${parts[0][0] || ""}${parts[1][0] || ""}`;
   }, [technicianName]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-6" dir={dir}>
         <Skeleton className="h-28 w-full rounded-2xl" />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <Skeleton className="h-32 rounded-2xl" />
@@ -861,14 +863,14 @@ export default function TechnicianDetailsPage() {
 
   if (!hasAnyData) {
     return (
-      <div className="rounded-2xl border border-red-500/30 bg-[#122222] p-12 text-center" dir="rtl">
+      <div className="rounded-2xl border border-red-500/30 bg-[#122222] p-12 text-center" dir={dir}>
         <XCircle className="h-14 w-14 text-red-400 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">لم يتم العثور على البيانات</h2>
-        <p className="text-slate-400 mb-6">لا توجد بيانات متاحة لهذا المندوب</p>
+        <h2 className="text-2xl font-bold text-white mb-2">{t('common.data_4')}</h2>
+        <p className="text-slate-400 mb-6">{t('common.no_data_technician')}</p>
         <Link href="/home">
           <Button className="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold">
             <ArrowLeft className="ml-2 h-4 w-4" />
-            العودة للوحة التحكم
+            {t('common.control')}
           </Button>
         </Link>
       </div>
@@ -876,7 +878,7 @@ export default function TechnicianDetailsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-4" dir="rtl">
+    <div className="space-y-6 pb-4" dir={dir}>
       {/* Hero identity */}
       <header className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1a3636] p-6 shadow-lg">
         <div className="pointer-events-none absolute -left-16 -top-20 size-56 rounded-full bg-cyan-400/10 blur-3xl" />
@@ -889,7 +891,7 @@ export default function TechnicianDetailsPage() {
             </div>
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-400/80">
-                StockPro · عهدة المندوب
+                {t('inventory.technician_3')}
               </p>
               <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
                 {technicianName}
@@ -897,15 +899,15 @@ export default function TechnicianDetailsPage() {
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-950/40 px-2.5 py-1">
                   <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-                  {city || "بدون مدينة"}
+                  {city || t('common.city')}
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
                   <Smartphone className="h-3.5 w-3.5" />
-                  عهدة نشطة: {arNumber(serializedItems.length)}
+                  {t('common.active_custody_count', { count: arNumber(serializedItems.length) })}
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-cyan-300">
                   <Truck className="h-3.5 w-3.5" />
-                  مسلَّم: {arNumber(deliveryLogCount)}
+                  {t('common.delivered_count_label', { count: arNumber(deliveryLogCount) })}
                 </span>
               </div>
             </div>
@@ -916,7 +918,7 @@ export default function TechnicianDetailsPage() {
               <Link href="/operations">
                 <Button className="bg-cyan-400 px-5 font-bold text-slate-950 hover:bg-cyan-300">
                   <Truck className="ml-2 h-4 w-4" />
-                  تحويل للمستودع
+                  {t('common.transfer_1')}
                 </Button>
               </Link>
             ) : null}
@@ -927,12 +929,12 @@ export default function TechnicianDetailsPage() {
               data-testid="button-export"
             >
               <Download className="ml-2 h-4 w-4" />
-              تصدير Excel
+              {t('inventory.export_excel')}
             </Button>
             <Link href="/home">
               <Button variant="outline" className="border-slate-600 text-slate-200 hover:bg-slate-800">
                 <ArrowLeft className="ml-2 h-4 w-4" />
-                رجوع
+                {t('common.item_6366')}
               </Button>
             </Link>
           </div>
@@ -943,36 +945,36 @@ export default function TechnicianDetailsPage() {
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
-            label: "إجمالي المخزون",
+            label: t('common.total_inventory'),
             value: grandTotal,
-            hint: `تغطية الأصناف ${arNumber(Number(inventoryAccuracy.toFixed(1)))}%`,
+            hint: t('common.item_20140', { var_0: arNumber(Number(inventoryAccuracy.toFixed(1))) }),
             icon: Boxes,
             accent: "cyan",
             width: inventoryAccuracy,
             trendUp: true,
           },
           {
-            label: "مخزون التسليم (كراتين)",
+            label: t('common.boxes_1'),
             value: totalBoxes,
-            hint: `المتحرك ${arNumber(Number(movingBoxesShare.toFixed(1)))}%`,
+            hint: t('common.item_12168', { var_0: arNumber(Number(movingBoxesShare.toFixed(1))) }),
             icon: Handshake,
             accent: "emerald",
             width: movingBoxesShare,
             trendUp: true,
           },
           {
-            label: "مخزون ثابت متبقي",
+            label: t('common.item_22330'),
             value: totalFixed,
-            hint: `يمثل ${arNumber(Number(fixedShare.toFixed(1)))}% من الإجمالي`,
+            hint: t('common.total_5', { var_0: arNumber(Number(fixedShare.toFixed(1))) }),
             icon: MapPin,
             accent: "sky",
             width: fixedShare,
             trendUp: true,
           },
           {
-            label: "مخزون متنقل متبقي",
+            label: t('common.item_24017'),
             value: totalMoving,
-            hint: `يمثل ${arNumber(Number(movingShare.toFixed(1)))}% من الإجمالي`,
+            hint: t('common.total_5', { var_0: arNumber(Number(movingShare.toFixed(1))) }),
             icon: Truck,
             accent: "amber",
             width: movingShare,
@@ -1022,21 +1024,21 @@ export default function TechnicianDetailsPage() {
         >
           <div className="flex flex-col gap-4 border-b border-slate-700/60 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-100">توزيع الأصناف</h2>
-              <p className="text-xs text-slate-400">مخزون ثابت ومتحرك حسب نوع الصنف</p>
+              <h2 className="text-lg font-bold text-slate-100">{t('common.item_19128')}</h2>
+              <p className="text-xs text-slate-400">{t('common.type_2')}</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <TabsList className="w-full justify-start rounded-xl border border-slate-700/60 bg-slate-950/50 p-1 sm:w-auto">
-                <TabsTrigger value="all" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">الكل</TabsTrigger>
-                <TabsTrigger value="fixed" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">ثابت</TabsTrigger>
-                <TabsTrigger value="moving" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">متحرك</TabsTrigger>
+                <TabsTrigger value="all" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">{t('common.all')}</TabsTrigger>
+                <TabsTrigger value="fixed" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">{t('common.item_6308')}</TabsTrigger>
+                <TabsTrigger value="moving" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">{t('common.item_7952')}</TabsTrigger>
               </TabsList>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="بحث في المنتجات..."
+                  placeholder={t('common.search_12')}
                   className="border-slate-700 bg-slate-950/50 pr-10 text-slate-200"
                 />
               </div>
@@ -1053,19 +1055,19 @@ export default function TechnicianDetailsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-950/50 hover:bg-slate-950/50">
-                        <TableHead className="text-right text-slate-400">اسم المنتج</TableHead>
-                        <TableHead className="text-center text-slate-400">الكراتين</TableHead>
-                        <TableHead className="text-center text-slate-400">الوحدات</TableHead>
-                        <TableHead className="text-center text-slate-400">الإجمالي</TableHead>
-                        <TableHead className="text-center text-slate-400">الحالة</TableHead>
-                        <TableHead className="text-center text-slate-400">الإجراءات</TableHead>
+                        <TableHead className="text-right text-slate-400">{t('common.name_6')}</TableHead>
+                        <TableHead className="text-center text-slate-400">{t('common.boxes')}</TableHead>
+                        <TableHead className="text-center text-slate-400">{t('common.units_1')}</TableHead>
+                        <TableHead className="text-center text-slate-400">{t('common.total_2')}</TableHead>
+                        <TableHead className="text-center text-slate-400">{t('common.status')}</TableHead>
+                        <TableHead className="text-center text-slate-400">{t('common.item_14214')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {rows.length === 0 ? (
                         <TableRow className="border-slate-800">
                           <TableCell colSpan={6} className="py-12 text-center text-slate-500">
-                            لا توجد نتائج مطابقة
+                            {t('common.no_results_1')}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1112,7 +1114,7 @@ export default function TechnicianDetailsPage() {
                                   className="border-slate-700 text-slate-300 hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300"
                                 >
                                   <Link href={`/technician-details/${technicianId}/item/${row.id}`}>
-                                    <span className="ml-1">التفاصيل</span>
+                                    <span className="ml-1">{t('common.details_4')}</span>
                                     <ChevronLeft className="h-4 w-4" />
                                   </Link>
                                 </Button>
@@ -1132,19 +1134,19 @@ export default function TechnicianDetailsPage() {
         {expandedRow ? (
           <div className="grid grid-cols-1 gap-5 border-t border-slate-800 bg-slate-950/30 p-5 md:grid-cols-3">
             <div className="space-y-3">
-              <h4 className="text-sm font-bold text-cyan-300">تفاصيل التوزيع</h4>
+              <h4 className="text-sm font-bold text-cyan-300">{t('common.details_5')}</h4>
               <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-3">
-                <span className="text-sm text-slate-400">المخزون الثابت</span>
+                <span className="text-sm text-slate-400">{t('common.inventory_1')}</span>
                 <span className="font-bold text-slate-100">{arNumber(expandedRow.fixedTotal)}</span>
               </div>
               <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-3">
-                <span className="text-sm text-slate-400">المخزون المتحرك</span>
+                <span className="text-sm text-slate-400">{t('common.inventory_2')}</span>
                 <span className="font-bold text-slate-100">{arNumber(expandedRow.movingTotal)}</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-sm font-bold text-cyan-300">حركة الصنف (آخر 7 أيام)</h4>
+              <h4 className="text-sm font-bold text-cyan-300">{t('common.transaction')}</h4>
               <div className="flex h-28 items-end gap-2 px-1 pb-1">
                 {movementBars.map((value, index) => (
                   <div
@@ -1157,9 +1159,9 @@ export default function TechnicianDetailsPage() {
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-sm font-bold text-cyan-300">ملخص سريع</h4>
+              <h4 className="text-sm font-bold text-cyan-300">{t('common.item_12787')}</h4>
               <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
-                الصنف المحدد يعرض توزيعه الحالي بين المخزون الثابت والمتحرك. استخدم «التفاصيل» لعرض الأرقام التسلسلية والمسلَّمة.
+                {t('inventory.inventory_details')}
               </div>
             </div>
           </div>
@@ -1175,10 +1177,10 @@ export default function TechnicianDetailsPage() {
                 <span className="flex size-9 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10">
                   <Smartphone className="h-4 w-4 text-cyan-400" />
                 </span>
-                الأرقام التسلسلية والأجهزة الميدانية
+                {t('common.item_52592')}
               </h3>
               <p className="mt-1.5 text-xs text-slate-400">
-                نظام v3 — العهدة النشطة وسجل تسليم الأجهزة والشرائح المكتملة
+                {t('inventory.system_active_devices')}
               </p>
             </div>
 
@@ -1187,7 +1189,7 @@ export default function TechnicianDetailsPage() {
                 value="active"
                 className="gap-2 rounded-lg px-4 py-2 data-[state=active]:border data-[state=active]:border-emerald-400/30 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300"
               >
-                العهدة النشطة
+                {t('common.active_4')}
                 <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
                   {arNumber(serializedItems.length)}
                 </span>
@@ -1196,7 +1198,7 @@ export default function TechnicianDetailsPage() {
                 value="history"
                 className="gap-2 rounded-lg px-4 py-2 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/15 data-[state=active]:text-cyan-300"
               >
-                سجل التسليم
+                {t('common.log_1')}
                 <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
                   {arNumber(deliveryLogCount)}
                 </span>
@@ -1209,12 +1211,12 @@ export default function TechnicianDetailsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
-                    <TableHead className="text-right text-slate-400">اسم وصورة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-400">الرقم التسلسلي S/N</TableHead>
-                    <TableHead className="text-center text-slate-400">الباركود / الشريحة</TableHead>
-                    <TableHead className="text-center text-slate-400">حالة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-400">التصنيف</TableHead>
-                    <TableHead className="text-center text-slate-400">تاريخ الاستلام</TableHead>
+                    <TableHead className="text-right text-slate-400">{t('common.name_7')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.number_serial_3')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.sim')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.status_4')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.category')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.date_receive')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1225,23 +1227,23 @@ export default function TechnicianDetailsPage() {
                           <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-500">
                             <Boxes className="h-5 w-5" />
                           </div>
-                          <p className="font-semibold text-slate-300">لا توجد عهدة نشطة حالياً</p>
-                          <p className="text-xs text-slate-500">الأجهزة والشرائح المسلَّمة تظهر في تبويب سجل التسليم</p>
+                          <p className="font-semibold text-slate-300">{t('common.no_8')}</p>
+                          <p className="text-xs text-slate-500">{t('common.devices_log')}</p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     serializedItems.map((item) => {
-                      let statusLabel = "في العهدة الميدانية";
+                      let statusLabel = t('common.item_27159');
                       let statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
 
-                      let categoryLabel = "أجهزة POS";
+                      let categoryLabel = t('common.devices_9');
                       if (item.itemTypeCategory === "sim") {
-                        categoryLabel = "شريحة SIM";
+                        categoryLabel = t('common.sim_3');
                       } else if (item.itemTypeCategory === "papers") {
-                        categoryLabel = "مطبوعات / ورق";
+                        categoryLabel = t('common.paper_1');
                       } else if (item.itemTypeCategory === "accessories") {
-                        categoryLabel = "ملحقات";
+                        categoryLabel = t('common.item_9545_1');
                       }
 
                       return (
@@ -1250,7 +1252,7 @@ export default function TechnicianDetailsPage() {
                             <div className="flex items-center gap-3">
                               {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
                               <div>
-                                <p className="text-sm font-bold text-slate-200 transition-colors group-hover:text-cyan-300">{item.itemTypeName || "صنف غير معروف"}</p>
+                                <p className="text-sm font-bold text-slate-200 transition-colors group-hover:text-cyan-300">{item.itemTypeName || t('common.item_17641')}</p>
                                 <p className="text-xs text-slate-500">{item.itemTypeCategory || "Serialized Item"}</p>
                               </div>
                             </div>
@@ -1259,7 +1261,7 @@ export default function TechnicianDetailsPage() {
                             <span className="rounded-md border border-slate-800 bg-slate-900 px-2.5 py-1">{item.serialNumber}</span>
                           </TableCell>
                           <TableCell className="text-center font-mono text-xs text-slate-300">
-                            {item.itemTypeCategory === "sim" ? item.carrierName || "شريحة" : item.barcode || "-"}
+                            {item.itemTypeCategory === "sim" ? item.carrierName || t('common.sim_1') : item.barcode || "-"}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge className={`${statusColor} px-2.5 py-0.5 text-xs font-bold`}>{statusLabel}</Badge>
@@ -1280,13 +1282,13 @@ export default function TechnicianDetailsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
-                    <TableHead className="text-right text-slate-400">اسم وصورة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-400">الرقم التسلسلي S/N</TableHead>
-                    <TableHead className="text-center text-slate-400">رقم الجهاز TID</TableHead>
-                    <TableHead className="text-center text-slate-400">حالة المنتج</TableHead>
-                    <TableHead className="text-center text-slate-400">نوع المستودع</TableHead>
-                    <TableHead className="text-center text-slate-400">تاريخ العمليات</TableHead>
-                    <TableHead className="text-center text-slate-400">الإجراءات</TableHead>
+                    <TableHead className="text-right text-slate-400">{t('common.name_7')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.number_serial_3')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.number_device_1')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.status_4')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.type_warehouse')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.date_operations')}</TableHead>
+                    <TableHead className="text-center text-slate-400">{t('common.item_14214')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1297,18 +1299,18 @@ export default function TechnicianDetailsPage() {
                           <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-500">
                             <Truck className="h-5 w-5" />
                           </div>
-                          <p className="font-semibold text-slate-300">لا توجد تسليمات بعد</p>
-                          <p className="text-xs text-slate-500">عند إكمال الطلبات ستظهر الأجهزة والشرائح المسلَّمة هنا</p>
+                          <p className="font-semibold text-slate-300">{t('common.no_9')}</p>
+                          <p className="text-xs text-slate-500">{t('common.requests_devices')}</p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     <>
                       {deliveredItems.map((item) => {
-                        let categoryLabel = "أجهزة POS";
-                        if (item.itemTypeCategory === "sim") categoryLabel = "شريحة SIM";
-                        else if (item.itemTypeCategory === "papers") categoryLabel = "مطبوعات / ورق";
-                        else if (item.itemTypeCategory === "accessories") categoryLabel = "ملحقات";
+                        let categoryLabel = t('common.devices_9');
+                        if (item.itemTypeCategory === "sim") categoryLabel = t('common.sim_3');
+                        else if (item.itemTypeCategory === "papers") categoryLabel = t('common.paper_1');
+                        else if (item.itemTypeCategory === "accessories") categoryLabel = t('common.item_9545_1');
 
                         return (
                           <TableRow key={`v3-${item.movementId || item.id}`} className="border-slate-800 hover:bg-cyan-400/5 transition-colors group">
@@ -1316,9 +1318,9 @@ export default function TechnicianDetailsPage() {
                               <div className="flex items-center gap-3">
                                 {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
                                 <div>
-                                  <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{item.itemTypeName || "صنف غير معروف"}</p>
+                                  <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{item.itemTypeName || t('common.item_17641')}</p>
                                   <p className="text-xs text-slate-500">
-                                    {item.referenceId ? `طلب #${item.referenceId}` : categoryLabel}
+                                    {item.referenceId ? t('common.request_1', { var_0: item.referenceId }) : categoryLabel}
                                   </p>
                                 </div>
                               </div>
@@ -1331,15 +1333,15 @@ export default function TechnicianDetailsPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-black text-xs px-2.5 py-0.5">
-                                تم التسليم للعميل
+                                {t('common.completed_2')}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-center text-slate-300 text-xs">مخزون متحرك (v3)</TableCell>
+                            <TableCell className="text-center text-slate-300 text-xs">{t('common.item_16253')}</TableCell>
                             <TableCell className="text-center text-slate-400 text-xs">
                               {formatDateTime(item.deliveredAt || item.createdAt)}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px]">مسلَّم</Badge>
+                              <Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px]">{t('common.item_9632')}</Badge>
                             </TableCell>
                           </TableRow>
                         );
@@ -1348,7 +1350,7 @@ export default function TechnicianDetailsPage() {
                         .filter((d) => !deliveredItems.some((i) => i.serialNumber === d.serialNumber))
                         .map((device) => {
                           const matchedType = itemTypes?.find((t) => t.id === device.itemTypeId);
-                          const itemName = matchedType?.nameAr || (device.terminalId ? `جهاز ${device.terminalId}` : "جهاز غير معروف");
+                          const itemName = matchedType?.nameAr || (device.terminalId ? t('common.device_3', { var_0: device.terminalId }) : t('common.device_1'));
                           return (
                             <TableRow
                               key={`legacy-${device.id}`}
@@ -1374,18 +1376,18 @@ export default function TechnicianDetailsPage() {
                               <TableCell className="text-center text-slate-300 font-mono text-xs">{device.terminalId || "-"}</TableCell>
                               <TableCell className="text-center">
                                 <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-black text-xs px-2.5 py-0.5">
-                                  تم التسليم للعميل
+                                  {t('common.completed_2')}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-center text-slate-300 text-xs">
-                                {device.inventoryType === "moving" ? "مخزون متحرك (حقيبة)" : "مخزون ثابت"}
+                                {device.inventoryType === "moving" ? t('common.item_24030') : t('common.item_14327')}
                               </TableCell>
                               <TableCell className="text-center text-slate-400 text-xs">
                                 {formatDateTime(device.updatedAt || device.createdAt)}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 text-xs font-bold">
-                                  عرض التفاصيل الكاملة
+                                  {t('common.view_details_2')}
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -1403,35 +1405,35 @@ export default function TechnicianDetailsPage() {
       <footer className="grid grid-cols-1 gap-4 pb-2 md:grid-cols-2">
         <div className="flex items-center justify-between rounded-2xl border border-emerald-400/20 bg-slate-900/45 p-5 backdrop-blur-xl">
           <div>
-            <h5 className="mb-1 text-sm text-slate-400">دقة المخزون الفعلي</h5>
+            <h5 className="mb-1 text-sm text-slate-400">{t('common.inventory_3')}</h5>
             <p className="text-2xl font-black text-slate-100">{arNumber(Number(inventoryAccuracy.toFixed(1)))}%</p>
           </div>
           <div className="flex size-14 items-center justify-center rounded-2xl border-2 border-emerald-400/60 text-xs font-bold text-emerald-300">
-            {inventoryAccuracy >= 85 ? "عالية" : inventoryAccuracy >= 60 ? "جيدة" : "متوسطة"}
+            {inventoryAccuracy >= 85 ? t('common.item_7959') : inventoryAccuracy >= 60 ? t('common.item_6350') : t('common.item_9546')}
           </div>
         </div>
 
         <div className="flex items-center justify-between rounded-2xl border border-amber-400/20 bg-slate-900/45 p-5 backdrop-blur-xl">
           <div>
-            <h5 className="mb-1 text-sm text-slate-400">تنبيهات انخفاض المخزون</h5>
-            <p className="text-2xl font-black text-amber-300">{arNumber(lowStockAlertsCount)} أصناف</p>
+            <h5 className="mb-1 text-sm text-slate-400">{t('common.inventory_4')}</h5>
+            <p className="text-2xl font-black text-amber-300">{arNumber(lowStockAlertsCount)}{t('common.item_7942')}</p>
           </div>
           <Button variant="outline" className="border-amber-400/30 text-amber-200 hover:bg-amber-500/10">
-            مراجعة الآن
+            {t('common.review')}
           </Button>
         </div>
       </footer>
 
       {/* Dialog modal for Scanned Device Details */}
       <Dialog open={!!selectedDevice} onOpenChange={(open) => !open && setSelectedDevice(null)}>
-        <DialogContent className="sm:max-w-2xl bg-slate-950/95 border border-cyan-400/20 backdrop-blur-2xl text-slate-100 p-6 rounded-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="sm:max-w-2xl bg-slate-950/95 border border-cyan-400/20 backdrop-blur-2xl text-slate-100 p-6 rounded-2xl max-h-[90vh] overflow-y-auto" dir={dir}>
           <DialogHeader className="text-right border-b border-slate-800 pb-4 mb-4">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-cyan-400" />
-              تفاصيل ودورة حياة الجهاز / الشريحة
+              {t('inventory.details_device_sim')}
             </DialogTitle>
             <DialogDescription className="text-slate-400 text-xs mt-1">
-              تتبع تفاصيل الجهاز، الملحقات المرفقة، وحالته التشغيلية والعهدة
+              {t('common.track_details')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1495,81 +1497,81 @@ export default function TechnicianDetailsPage() {
                   {activeStepIndex === 2 && <Boxes className="w-4 h-4 text-cyan-400" />}
                   {activeStepIndex === 3 && <Truck className="w-4 h-4 text-cyan-400" />}
                   <h4 className="text-sm font-bold text-slate-200">
-                    {activeStepIndex === 0 && "تفاصيل التوريد والمسح الضوئي (Intake)"}
-                    {activeStepIndex === 1 && "الاعتماد وموافقة المشرف (Approval)"}
-                    {activeStepIndex === 2 && "حالة العهدة الميدانية (Active Custody)"}
-                    {activeStepIndex === 3 && "تسليم الجهاز النهائي (Handover)"}
+                    {activeStepIndex === 0 && t('common.details_7')}
+                    {activeStepIndex === 1 && t('common.supervisor_2')}
+                    {activeStepIndex === 2 && t('common.status_10')}
+                    {activeStepIndex === 3 && t('common.device_4')}
                   </h4>
                 </div>
 
                 <div className="divide-y divide-slate-800/60">
                   {activeStepIndex === 0 && (
                     <>
-                      {renderDetailItem("المنتج", itemTypes?.find((t) => t.id === selectedDevice.itemTypeId)?.nameAr || "جهاز غير معروف")}
-                      {renderDetailItem("الرقم التسلسلي S/N", selectedDevice.serialNumber, true)}
-                      {renderDetailItem("رقم الجهاز (Terminal ID)", selectedDevice.terminalId || "-", true)}
-                      {renderDetailItem("تاريخ المسح", formatDateTime(selectedDevice.createdAt))}
-                      {renderDetailItem("نوع المستودع", selectedDevice.inventoryType === "moving" ? "مخزون متحرك (حقيبة)" : "مخزون ثابت")}
+                      {renderDetailItem(t('common.item_9548'), itemTypes?.find((t) => t.id === selectedDevice.itemTypeId)?.nameAr || t('common.device_1'))}
+                      {renderDetailItem(t('common.number_serial_3'), selectedDevice.serialNumber, true)}
+                      {renderDetailItem(t('common.number_device_2'), selectedDevice.terminalId || "-", true)}
+                      {renderDetailItem(t('common.date_scan'), formatDateTime(selectedDevice.createdAt))}
+                      {renderDetailItem(t('common.type_warehouse'), selectedDevice.inventoryType === "moving" ? t('common.item_24030') : t('common.item_14327'))}
                     </>
                   )}
 
                   {activeStepIndex === 1 && (
                     <>
-                      {renderDetailItem("الحالة الحالية للطلب", 
-                        selectedDevice.status === "approved" ? "مقبول" : 
-                        selectedDevice.status === "rejected" ? "مرفوض" : "قيد المراجعة"
+                      {renderDetailItem(t('common.status_5'), 
+                        selectedDevice.status === "approved" ? t('common.approved') : 
+                        selectedDevice.status === "rejected" ? t('common.rejected') : t('common.pending_review')
                       )}
-                      {renderDetailItem("المشرف المسؤول", selectedDevice.approvedBy || "بانتظار المراجعة...")}
-                      {renderDetailItem("تاريخ القرار", formatDateTime(selectedDevice.approvedAt))}
-                      {renderDetailItem("ملاحظات المراجعة", selectedDevice.adminNotes || "لا توجد")}
+                      {renderDetailItem(t('common.supervisor_admin'), selectedDevice.approvedBy || t('common.review_1'))}
+                      {renderDetailItem(t('common.date_3'), formatDateTime(selectedDevice.approvedAt))}
+                      {renderDetailItem(t('common.notes_review'), selectedDevice.adminNotes || t('common.no_10'))}
                     </>
                   )}
 
                   {activeStepIndex === 2 && (
                     <>
-                      {renderDetailItem("حائز العهدة الحالي", technicianName)}
-                      {renderDetailItem("حالة العهدة الفنية", 
+                      {renderDetailItem(t('common.item_25468'), technicianName)}
+                      {renderDetailItem(t('common.status_6'), 
                         (selectedDevice.status === "approved" || selectedDevice.status === "delivered")
-                          ? "نشطة (في عهدة المندوب)" 
-                          : "غير نشطة (بانتظار الاعتماد)"
+                          ? t('common.technician_5') 
+                          : t('common.item_35103')
                       )}
-                      {renderDetailItem("نوع العهدة الجغرافية", selectedDevice.inventoryType === "moving" ? "حقيبة المندوب الميدانية" : "المستودع الرئيسي")}
-                      {renderDetailItem("الموقع الجغرافي المسجل", "الرياض، المملكة العربية السعودية")}
+                      {renderDetailItem(t('common.type_3'), selectedDevice.inventoryType === "moving" ? t('common.technician_6') : t('common.warehouse_primary'))}
+                      {renderDetailItem(t('common.signed_3'), t('common.item_46213'))}
                     </>
                   )}
 
                   {activeStepIndex === 3 && (
                     <>
-                      {renderDetailItem("حالة التسليم النهائية", "تم التسليم للعميل بنجاح")}
-                      {renderDetailItem("اسم العميل / المنشأة", "متجر الاتصالات الحديثة (سجل تجاري: 1010384729)")}
-                      {renderDetailItem("تاريخ ووقت التسليم", formatDateTime(selectedDevice.updatedAt || selectedDevice.createdAt))}
-                      {renderDetailItem("كود التحقق الثنائي OTP", "OTP-4820", true)}
-                      {renderDetailItem("المستلم المسؤول", "أحمد المحمد (مدير الفرع)")}
+                      {renderDetailItem(t('common.status_7'), t('common.completed_successfully_1'))}
+                      {renderDetailItem(t('common.name_customer'), t('common.log_2'))}
+                      {renderDetailItem(t('common.date_4'), formatDateTime(selectedDevice.updatedAt || selectedDevice.createdAt))}
+                      {renderDetailItem(t('common.code_verification'), "OTP-4820", true)}
+                      {renderDetailItem(t('common.received_admin'), t('common.manager_branch'))}
                       
                       {/* Customer Signature display */}
                       <div className="py-3 border-b border-slate-800/60">
-                        <span className="text-slate-400 text-xs block mb-2 font-medium">التوقيع الرقمي للعميل</span>
+                        <span className="text-slate-400 text-xs block mb-2 font-medium">{t('common.signature_digital')}</span>
                         <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-800/60 flex items-center justify-center h-24 relative overflow-hidden">
                           {/* Signature mock graphic */}
                           <svg className="w-48 h-16 text-cyan-400/80 stroke-current opacity-75" viewBox="0 0 200 60" fill="none" strokeWidth="2" strokeLinecap="round">
                             <path d="M20,40 Q40,10 60,30 T100,20 T140,40 T180,25 Q190,15 170,45" />
                           </svg>
-                          <span className="absolute bottom-1.5 right-3 text-[10px] text-slate-500 font-mono">تم التوقيع إلكترونياً</span>
+                          <span className="absolute bottom-1.5 right-3 text-[10px] text-slate-500 font-mono">{t('common.completed_signature')}</span>
                         </div>
                       </div>
 
                       {/* Evidence Photo display */}
                       <div className="py-3">
-                        <span className="text-slate-400 text-xs block mb-2 font-medium">صورة إثبات التركيب والتسليم</span>
+                        <span className="text-slate-400 text-xs block mb-2 font-medium">{t('common.image_proof')}</span>
                         <div className="relative rounded-xl border border-slate-800 overflow-hidden bg-slate-900 aspect-video flex items-center justify-center">
                           <img 
                             src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=400" 
-                            alt="إثبات التركيب" 
+                            alt={t('common.proof')} 
                             className="object-cover w-full h-full opacity-60"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
                           <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] text-slate-300">
-                            <span className="font-bold">صورة الجهاز في الموقع</span>
+                            <span className="font-bold">{t('common.image_device_signed')}</span>
                             <span className="font-mono text-slate-400">TID: {selectedDevice.terminalId || "N/A"}</span>
                           </div>
                         </div>
@@ -1578,12 +1580,12 @@ export default function TechnicianDetailsPage() {
                       {/* GPS verification map */}
                       <div className="py-3 border-t border-slate-800/60 flex items-center justify-between">
                         <div>
-                          <span className="text-slate-400 text-xs font-medium block">إحداثيات التحقق GPS</span>
+                          <span className="text-slate-400 text-xs font-medium block">{t('common.verification')}</span>
                           <span className="font-mono text-xs text-slate-300 font-bold">24.7136° N, 46.6753° E</span>
                         </div>
                         <Button size="sm" variant="outline" className="border-slate-800 text-cyan-400 hover:bg-cyan-400/5 text-xs">
                           <MapPin className="w-3.5 h-3.5 ml-1" />
-                          عرض الخريطة
+                          {t('common.view_3')}
                         </Button>
                       </div>
                     </>
@@ -1594,13 +1596,13 @@ export default function TechnicianDetailsPage() {
               {/* Hardware Diagnostic Profile */}
               {(!selectedDevice.itemTypeId || itemTypes?.find((t) => t.id === selectedDevice.itemTypeId)?.category === "devices") && activeStepIndex < 3 && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400">التشخيص الفني والملحقات</h4>
+                  <h4 className="text-xs font-bold text-slate-400">{t('common.technician_4')}</h4>
                   <div className="grid grid-cols-2 gap-3">
-                    {renderAccessoryChip("بطارية سليمة", !!selectedDevice.battery, Smartphone)}
-                    {renderAccessoryChip("كابل شاحن", !!selectedDevice.chargerCable, Cable)}
-                    {renderAccessoryChip("رأس شاحن", !!selectedDevice.chargerHead, Plug)}
+                    {renderAccessoryChip(t('common.battery_1'), !!selectedDevice.battery, Smartphone)}
+                    {renderAccessoryChip(t('common.item_12740'), !!selectedDevice.chargerCable, Cable)}
+                    {renderAccessoryChip(t('common.item_11125'), !!selectedDevice.chargerHead, Plug)}
                     {renderAccessoryChip(
-                      selectedDevice.hasSim ? `شريحة ${selectedDevice.simCardType || "SIM"}` : "شريحة SIM",
+                      selectedDevice.hasSim ? t('common.sim_2', { var_0: selectedDevice.simCardType || "SIM" }) : t('common.sim_3'),
                       !!selectedDevice.hasSim,
                       Smartphone
                     )}
@@ -1613,7 +1615,7 @@ export default function TechnicianDetailsPage() {
                 <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex gap-3 items-start">
                   <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="text-sm font-bold text-rose-300">تقرير الضرر / الأعطال</h5>
+                    <h5 className="text-sm font-bold text-rose-300">{t('common.report')}</h5>
                     <p className="text-xs text-rose-400/90 mt-1">{selectedDevice.damagePart}</p>
                   </div>
                 </div>
@@ -1624,12 +1626,12 @@ export default function TechnicianDetailsPage() {
                 <div className="mt-6 pt-5 border-t border-slate-800">
                   <h5 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
                     <Settings className="w-4 h-4 text-cyan-400" />
-                    اتخاذ قرار بشأن الاستلام
+                    {t('common.receive')}
                   </h5>
                   <textarea
                     value={adminNotesText}
                     onChange={(e) => setAdminNotesText(e.target.value)}
-                    placeholder="أدخل أي ملاحظات فنية للمندوب أو أسباب لرفض اعتماد الجهاز..."
+                    placeholder={t('common.notes_device_1')}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-400/40 mb-4 h-20 placeholder:text-slate-600"
                   />
                   <div className="flex gap-3">
@@ -1638,14 +1640,14 @@ export default function TechnicianDetailsPage() {
                       disabled={updateStatusMutation.isPending}
                       className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black"
                     >
-                      {updateStatusMutation.isPending ? "جاري الاعتماد..." : "قبول واعتماد الجهاز"}
+                      {updateStatusMutation.isPending ? t('common.item_19208') : t('common.approve_device')}
                     </Button>
                     <Button
                       onClick={() => updateStatusMutation.mutate({ status: "rejected", adminNotes: adminNotesText })}
                       disabled={updateStatusMutation.isPending}
                       className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold"
                     >
-                      {updateStatusMutation.isPending ? "جاري الرفض..." : "رفض الطلب"}
+                      {updateStatusMutation.isPending ? t('common.reject_1') : t('common.reject_request')}
                     </Button>
                   </div>
                 </div>
@@ -1659,7 +1661,7 @@ export default function TechnicianDetailsPage() {
               onClick={() => setSelectedDevice(null)}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6"
             >
-              إغلاق
+              {t('common.close')}
             </Button>
           </div>
         </DialogContent>

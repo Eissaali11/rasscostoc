@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, LogOut, ArrowRight, Shield, UserCircle } from "lucide-react";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { getRoleLabel, ROLE_BADGE_VARIANTS, type UserRole } from "@shared/roles";
 
 export default function ProfilePage() {
+  const { t, dir } = useTranslation();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -21,13 +23,13 @@ export default function ProfilePage() {
   }
 
   const userInfo = [
-    { label: "الاسم الكامل", value: user.fullName, icon: UserCircle },
-    { label: "اسم المستخدم", value: user.username, icon: User },
-    { label: "الدور", value: getRoleLabel(user.role), icon: Shield },
+    { label: t('users.name'), value: user.fullName, icon: UserCircle },
+    { label: t('users.name_user'), value: user.username, icon: User },
+    { label: t('users.role'), value: getRoleLabel(user.role), icon: Shield },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50" dir={dir}>
       <div className="relative overflow-hidden bg-gradient-to-r from-[#18B2B0] via-teal-500 to-cyan-500 shadow-2xl">
         <div className="absolute inset-0 bg-grid-white/5"></div>
         
@@ -52,10 +54,10 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h1 className="text-5xl font-black text-white drop-shadow-lg">
-                  الملف الشخصي
+                  {t('users.file_3')}
                 </h1>
                 <p className="text-xl text-white/90 mt-2">
-                  معلومات حسابك الشخصي
+                  {t('users.info_4')}
                 </p>
               </div>
             </div>
@@ -66,7 +68,7 @@ export default function ProfilePage() {
                 data-testid="button-back-home"
               >
                 <ArrowRight className="h-5 w-5 ml-2" />
-                رجوع
+                {t('users.item_6366')}
               </Button>
             </Link>
           </div>
@@ -83,7 +85,7 @@ export default function ProfilePage() {
             <CardHeader className="bg-gradient-to-r from-[#18B2B0]/10 to-teal-50/50 border-b">
               <CardTitle className="text-3xl text-gray-900 flex items-center gap-3">
                 <User className="h-8 w-8 text-[#18B2B0]" />
-                معلومات الحساب
+                {t('users.info_5')}
               </CardTitle>
             </CardHeader>
             
@@ -109,7 +111,7 @@ export default function ProfilePage() {
                           <p className="text-xl font-bold text-gray-900">{info.value}</p>
                         </div>
                       </div>
-                      {info.label === "الدور" && (
+                      {info.label === t('users.role') && (
                         <Badge 
                           className={ROLE_BADGE_VARIANTS[user.role as UserRole] || "bg-gray-100 text-gray-700 border-gray-200"}
                         >
@@ -133,7 +135,7 @@ export default function ProfilePage() {
                     data-testid="button-logout"
                   >
                     <LogOut className="h-5 w-5 ml-2" />
-                    تسجيل الخروج
+                    {t('users.item_17525')}
                   </Button>
                 </motion.div>
               </div>

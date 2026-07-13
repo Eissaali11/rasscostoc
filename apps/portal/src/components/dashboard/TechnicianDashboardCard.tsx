@@ -1,3 +1,4 @@
+import { useTranslation } from "@/lib/language";
 import { motion } from "framer-motion";
 import { TechnicianWithBothInventories } from "@shared/schema";
 import { User, MapPin, AlertTriangle, CheckCircle, XCircle, Package, Smartphone, TruckIcon } from "lucide-react";
@@ -26,6 +27,7 @@ interface ProductStatus {
 }
 
 export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboardCardProps) => {
+  const { t } = useTranslation();
   const fixedInv = technician.fixedInventory as any;
   const movingInv = technician.movingInventory as any;
   
@@ -82,7 +84,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
     },
     {
       name: "Roll Paper",
-      nameAr: "أوراق رول",
+      nameAr: t('dashboard.item_12770'),
       fixedBoxes: fixedInv?.rollPaperBoxes || 0,
       fixedUnits: fixedInv?.rollPaperUnits || 0,
       fixedTotal: (fixedInv?.rollPaperBoxes || 0) + (fixedInv?.rollPaperUnits || 0),
@@ -96,7 +98,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
     },
     {
       name: "Stickers",
-      nameAr: "ملصقات",
+      nameAr: t('dashboard.stickers'),
       fixedBoxes: fixedInv?.stickersBoxes || 0,
       fixedUnits: fixedInv?.stickersUnits || 0,
       fixedTotal: (fixedInv?.stickersBoxes || 0) + (fixedInv?.stickersUnits || 0),
@@ -110,7 +112,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
     },
     {
       name: "Batteries",
-      nameAr: "بطاريات",
+      nameAr: t('dashboard.batteries'),
       fixedBoxes: fixedInv?.newBatteriesBoxes || 0,
       fixedUnits: fixedInv?.newBatteriesUnits || 0,
       fixedTotal: (fixedInv?.newBatteriesBoxes || 0) + (fixedInv?.newBatteriesUnits || 0),
@@ -124,7 +126,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
     },
     {
       name: "Mobily SIM",
-      nameAr: "موبايلي",
+      nameAr: t('dashboard.mobily'),
       fixedBoxes: fixedInv?.mobilySimBoxes || 0,
       fixedUnits: fixedInv?.mobilySimUnits || 0,
       fixedTotal: (fixedInv?.mobilySimBoxes || 0) + (fixedInv?.mobilySimUnits || 0),
@@ -152,7 +154,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
     },
     {
       name: "Zain SIM",
-      nameAr: "زين",
+      nameAr: t('dashboard.zain'),
       fixedBoxes: fixedInv?.zainSimBoxes || 0,
       fixedUnits: fixedInv?.zainSimUnits || 0,
       fixedTotal: (fixedInv?.zainSimBoxes || 0) + (fixedInv?.zainSimUnits || 0),
@@ -221,7 +223,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
                       </div>
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge className="bg-[#18B2B0]/20 text-[#18B2B0] border-[#18B2B0]/30 text-xs">
-                          {totalInventory} وحدة
+                          {t('dashboard.unit', { count: totalInventory })}
                         </Badge>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -231,7 +233,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p>المخزون الثابت</p>
+                            <p>{t('dashboard.fixed_inventory')}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -242,7 +244,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p>المخزون المتحرك</p>
+                            <p>{t('dashboard.moving_inventory')}</p>
                           </TooltipContent>
                         </Tooltip>
                         {criticalCount > 0 && (
@@ -309,11 +311,11 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
                                 <div className="text-xs">
                                   <p className="flex items-center gap-1">
                                     <Package className="h-3 w-3 text-purple-400" />
-                                    <span>ثابت: {product.fixedTotal}</span>
+                                    <span>{t('dashboard.item_6366')}{product.fixedTotal}</span>
                                   </p>
                                   <p className="flex items-center gap-1">
                                     <TruckIcon className="h-3 w-3 text-green-400" />
-                                    <span>متحرك: {product.movingTotal}</span>
+                                    <span>{t('dashboard.item_8010')}{product.movingTotal}</span>
                                   </p>
                                 </div>
                               </TooltipContent>
@@ -328,7 +330,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom">
-                                  <p className="text-xs">ثابت: ك{product.fixedBoxes} م{product.fixedUnits}</p>
+                                  <p className="text-xs">{t('dashboard.item_8001')}{product.fixedBoxes}{t('dashboard.item_1605')}{product.fixedUnits}</p>
                                 </TooltipContent>
                               </Tooltip>
                               <span className="text-xs text-gray-500">/</span>
@@ -339,7 +341,7 @@ export const TechnicianDashboardCard = ({ technician, index }: TechnicianDashboa
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom">
-                                  <p className="text-xs">متحرك: ك{product.movingBoxes} م{product.movingUnits}</p>
+                                  <p className="text-xs">{t('dashboard.item_9645')}{product.movingBoxes}{t('dashboard.item_1605')}{product.movingUnits}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </div>

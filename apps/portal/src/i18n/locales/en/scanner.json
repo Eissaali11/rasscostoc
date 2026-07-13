@@ -1,0 +1,15 @@
+{
+  "title": "Scanner",
+  "scan": "Scan",
+  "scanning": "Scanning...",
+  "scan_serial": "Scan serial number",
+  "serial_placeholder": "Enter or scan serial",
+  "success": "Scan successful",
+  "invalid": "Invalid code",
+  "duplicate": "Duplicate serial",
+  "not_found": "Serial not found",
+  "camera_permission": "Camera permission is required to scan",
+  "manual_entry": "Manual entry",
+  "verify": "Verify",
+  "clear": "Clear field"
+}
