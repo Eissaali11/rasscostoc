@@ -2,14 +2,8 @@ import { useTranslation } from "@/lib/language";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import {
-  Loader2,
-  History,
-  FileSpreadsheet,
-  Clock,
-  User,
-  Activity
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { Loader2, History, User } from "lucide-react";
 
 interface AuditRow {
   id: number;
@@ -28,6 +22,13 @@ interface ListResponse {
   total: number;
 }
 
+const RASSCO = {
+  primary: "#18B2B0",
+  gray: "#6B7280",
+  danger: "#E05252",
+  success: "#149D9B",
+};
+
 export default function CourierAuditLogPage() {
   const { t, dir } = useTranslation();
   const [tableFilter, setTableFilter] = useState("");
@@ -39,109 +40,124 @@ export default function CourierAuditLogPage() {
       if (tableFilter) params.set("table", tableFilter);
       params.set("pageSize", "100");
       return apiRequest("GET", `/api/courier/audit-log?${params.toString()}`).then((r) => r.json());
-    }
+    },
   });
 
   const total = data?.total || 0;
   const rows = data?.rows || [];
 
+  const actionLabel = (action: string) => {
+    if (action === "create") return { label: t("courier.add"), color: RASSCO.success };
+    if (action === "delete") return { label: t("courier.delete"), color: RASSCO.danger };
+    return { label: t("courier.edit"), color: RASSCO.primary };
+  };
+
   return (
-    <div dir={dir} className="space-y-6 text-slate-100">
-      {/* Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-700/60 pb-6">
+    <div dir={dir} className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <History className="w-6 h-6 text-cyan-400" />
-            {t('courier.log')}
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-2">
+            <span
+              className="size-10 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: `${RASSCO.primary}18`, color: RASSCO.primary }}
+            >
+              <History className="w-5 h-5" />
+            </span>
+            {t("courier.log")}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {t('courier.log_inventory_level')}
-          </p>
+          <p className="text-sm text-[#6B7280] mt-1">{t("courier.log_inventory_level")}</p>
         </div>
-        <div>
-          <select
-            value={tableFilter}
-            onChange={(e) => setTableFilter(e.target.value)}
-            className="rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
-          >
-            <option value="">{t('courier.item_17549')}</option>
-            <option value="requests">{t('courier.data')}</option>
-            <option value="executions">{t('courier.data_verification')}</option>
-          </select>
-        </div>
-      </div>
+        <select
+          value={tableFilter}
+          onChange={(e) => setTableFilter(e.target.value)}
+          className="rounded-xl border border-[rgba(24,178,176,0.18)] bg-white/90 px-4 py-2.5 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0] focus:ring-2 focus:ring-[#18B2B0]/20"
+        >
+          <option value="">{t("courier.item_17549")}</option>
+          <option value="requests">{t("courier.data")}</option>
+          <option value="executions">{t("courier.data_verification")}</option>
+        </select>
+      </motion.div>
 
-      <div className="text-sm text-slate-450">
-        {t('courier.audit_moves_summary', { total })}
-      </div>
+      <div className="text-sm font-semibold text-[#6B7280]">{t("courier.audit_moves_summary", { total })}</div>
 
-      {/* Audit table */}
-      <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="rassco-glass overflow-hidden"
+      >
         <div className="overflow-x-auto max-h-[70vh]">
           <table className="w-full text-sm text-right">
-            <thead className="bg-[#102222] text-slate-300 border-b border-slate-700/60 sticky top-0 z-10">
+            <thead className="sticky top-0 z-10 bg-[rgba(248,250,251,0.95)] backdrop-blur border-b border-[rgba(24,178,176,0.12)] text-[#6B7280]">
               <tr>
-                <th className="p-4 font-semibold">{t('courier.item_11155')}</th>
-                <th className="p-4 font-semibold">{t('courier.user')}</th>
-                <th className="p-4 font-semibold">{t('courier.table')}</th>
-                <th className="p-4 font-semibold">{t('courier.number_log')}</th>
-                <th className="p-4 font-semibold">{t('courier.operation')}</th>
-                <th className="p-4 font-semibold">{t('courier.item_7966')}</th>
-                <th className="p-4 font-semibold">{t('courier.value')}</th>
-                <th className="p-4 font-semibold">{t('courier.value_1')}</th>
+                <th className="p-4 font-semibold">{t("courier.item_11155")}</th>
+                <th className="p-4 font-semibold">{t("courier.user")}</th>
+                <th className="p-4 font-semibold">{t("courier.table")}</th>
+                <th className="p-4 font-semibold">{t("courier.number_log")}</th>
+                <th className="p-4 font-semibold">{t("courier.operation")}</th>
+                <th className="p-4 font-semibold">{t("courier.item_7966")}</th>
+                <th className="p-4 font-semibold">{t("courier.value")}</th>
+                <th className="p-4 font-semibold">{t("courier.value_1")}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[rgba(24,178,176,0.08)] text-[#2D3135]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="p-10 text-center text-slate-400">
+                  <td colSpan={8} className="p-10 text-center text-[#6B7280]">
                     <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                      {t('courier.loading_logs')}
+                      <Loader2 className="w-5 h-5 animate-spin" style={{ color: RASSCO.primary }} />
+                      {t("courier.loading_logs")}
                     </div>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-10 text-center text-slate-500">
-                    {t('courier.no_transactions')}
+                  <td colSpan={8} className="p-10 text-center text-[#6B7280]">
+                    {t("courier.no_transactions")}
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-800/20 transition-colors">
-                    <td className="p-4 whitespace-nowrap text-xs text-slate-400">{row.changedAt || "—"}</td>
-                    <td className="p-4 whitespace-nowrap font-medium text-slate-200">
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        {row.changedByName || t('courier.system')}
-                      </div>
-                    </td>
-                    <td className="p-4 whitespace-nowrap font-mono text-xs">{row.tableName}</td>
-                    <td className="p-4 whitespace-nowrap font-mono">#{row.recordId}</td>
-                    <td className="p-4 whitespace-nowrap">
-                      {row.action === "create" ? (
-                        <span className="text-emerald-400 font-semibold">{t('courier.add')}</span>
-                      ) : row.action === "delete" ? (
-                        <span className="text-red-400 font-semibold">{t('courier.delete')}</span>
-                      ) : (
-                        <span className="text-cyan-400 font-semibold">{t('courier.edit')}</span>
-                      )}
-                    </td>
-                    <td className="p-4 whitespace-nowrap font-mono text-xs text-slate-400">{row.fieldName || "—"}</td>
-                    <td className="p-4 max-w-[160px] truncate font-mono text-xs" title={row.oldValue ?? ""}>
-                      {row.oldValue ?? "—"}
-                    </td>
-                    <td className="p-4 max-w-[160px] truncate font-mono text-xs text-cyan-300" title={row.newValue ?? ""}>
-                      {row.newValue ?? "—"}
-                    </td>
-                  </tr>
-                ))
+                rows.map((row) => {
+                  const action = actionLabel(row.action);
+                  return (
+                    <tr key={row.id} className="hover:bg-[rgba(24,178,176,0.04)] transition-colors">
+                      <td className="p-4 whitespace-nowrap text-xs text-[#6B7280]">{row.changedAt || "—"}</td>
+                      <td className="p-4 whitespace-nowrap font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-[#6B7280]" />
+                          {row.changedByName || t("courier.system")}
+                        </div>
+                      </td>
+                      <td className="p-4 whitespace-nowrap font-mono text-xs">{row.tableName}</td>
+                      <td className="p-4 whitespace-nowrap font-mono">#{row.recordId}</td>
+                      <td className="p-4 whitespace-nowrap">
+                        <span className="font-semibold" style={{ color: action.color }}>
+                          {action.label}
+                        </span>
+                      </td>
+                      <td className="p-4 whitespace-nowrap font-mono text-xs text-[#6B7280]">{row.fieldName || "—"}</td>
+                      <td className="p-4 max-w-[160px] truncate font-mono text-xs text-[#6B7280]" title={row.oldValue ?? ""}>
+                        {row.oldValue ?? "—"}
+                      </td>
+                      <td
+                        className="p-4 max-w-[160px] truncate font-mono text-xs font-semibold"
+                        style={{ color: RASSCO.primary }}
+                        title={row.newValue ?? ""}
+                      >
+                        {row.newValue ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

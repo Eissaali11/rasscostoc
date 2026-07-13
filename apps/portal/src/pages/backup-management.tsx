@@ -420,21 +420,18 @@ export default function BackupManagementPage() {
   };
 
   return (
-    <div className="bg-[#0f0814] text-slate-100 relative overflow-x-hidden -m-8 p-8">
+    <div className="bg-[#F8FAFB] text-[#2D3135] relative overflow-x-hidden -m-8 p-8">
 
       <main className="relative">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#8c25f4]/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#00f2ff]/5 blur-[100px] rounded-full pointer-events-none" />
-
         <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-8 z-10">
           <div>
-            <h2 className="text-3xl font-black text-white tracking-tight">{t("settings.backup_page_title")}</h2>
-            <p className="text-slate-400 mt-1">{t("settings.backup_page_subtitle")}</p>
+            <h2 className="text-3xl font-black text-[#2D3135] tracking-tight">{t("settings.backup_page_title")}</h2>
+            <p className="text-[#6B7280] mt-1">{t("settings.backup_page_subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
             <label
               htmlFor="backup-file-input"
-              className="bg-transparent border border-[#8c25f4]/40 text-[#8c25f4] hover:bg-[#8c25f4]/10 px-6 py-3 rounded-xl flex items-center gap-2 font-bold transition-all cursor-pointer"
+              className="bg-white border border-[#18B2B0]/30 text-[#18B2B0] hover:bg-[#18B2B0]/10 px-6 py-3 rounded-xl flex items-center gap-2 font-bold transition-all cursor-pointer"
             >
               <Upload className="h-4 w-4" />
               {t("settings.import_backup")}
@@ -442,7 +439,7 @@ export default function BackupManagementPage() {
             <button
               onClick={handleExportBackup}
               disabled={isExporting}
-              className="bg-[#8c25f4] hover:bg-[#8c25f4]/90 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold transition-all neon-glow disabled:opacity-70"
+              className="bg-[#18B2B0] hover:bg-[#149D9B] text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold transition-all disabled:opacity-70"
               data-testid="button-export-quick"
             >
               <Download className="h-4 w-4" />
@@ -463,53 +460,53 @@ export default function BackupManagementPage() {
         />
 
         <div className="px-8 pb-8 z-10 space-y-6">
-          <section className="glass p-6 rounded-2xl border border-[#8c25f4]/20">
+          <section className="rassco-glass rassco-glass-static p-6">
             <div className="flex items-center gap-2 mb-6">
-              <Upload className="text-[#00f2ff] h-5 w-5" />
-              <h3 className="text-lg font-bold text-white">{t("settings.import_data")}</h3>
+              <Upload className="text-[#18B2B0] h-5 w-5" />
+              <h3 className="text-lg font-bold text-[#2D3135]">{t("settings.import_data")}</h3>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
               <label
                 htmlFor="backup-file-input"
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={handleDrop}
-                className="lg:col-span-2 dotted-neon rounded-2xl p-10 flex flex-col items-center justify-center text-center group cursor-pointer bg-[#8c25f4]/5"
+                className="lg:col-span-2 rounded-2xl border-2 border-dashed border-[#18B2B0]/30 p-10 flex flex-col items-center justify-center text-center group cursor-pointer bg-[#18B2B0]/5 hover:border-[#18B2B0]/50 hover:bg-[#18B2B0]/8 transition-colors"
               >
-                <div className="w-16 h-16 rounded-full bg-[#8c25f4]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <CloudUpload className="text-[#8c25f4] h-8 w-8" />
+                <div className="w-16 h-16 rounded-full bg-[#18B2B0]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <CloudUpload className="text-[#18B2B0] h-8 w-8" />
                 </div>
-                <p className="text-lg font-bold mb-1">{t("settings.drop_backup_here")}</p>
-                <p className="text-sm text-slate-400 mb-4">{t("settings.or_click_to_choose")}</p>
+                <p className="text-lg font-bold mb-1 text-[#2D3135]">{t("settings.drop_backup_here")}</p>
+                <p className="text-sm text-[#6B7280] mb-4">{t("settings.or_click_to_choose")}</p>
                 {selectedFile ? (
-                  <p className="text-xs text-emerald-400 font-bold mb-3">{selectedFile.name}</p>
+                  <p className="text-xs text-[#149D9B] font-bold mb-3">{selectedFile.name}</p>
                 ) : null}
                 <div className="flex gap-2">
-                  <span className="px-3 py-1 bg-[#0f0814]/50 border border-[#8c25f4]/20 rounded text-[10px] text-[#8c25f4] font-bold uppercase tracking-wider">.sql</span>
-                  <span className="px-3 py-1 bg-[#0f0814]/50 border border-[#8c25f4]/20 rounded text-[10px] text-[#8c25f4] font-bold uppercase tracking-wider">.zip</span>
-                  <span className="px-3 py-1 bg-[#0f0814]/50 border border-[#8c25f4]/20 rounded text-[10px] text-[#8c25f4] font-bold uppercase tracking-wider">.bak</span>
+                  <span className="px-3 py-1 bg-white border border-[#18B2B0]/25 rounded text-[10px] text-[#18B2B0] font-bold uppercase tracking-wider">.sql</span>
+                  <span className="px-3 py-1 bg-white border border-[#18B2B0]/25 rounded text-[10px] text-[#18B2B0] font-bold uppercase tracking-wider">.zip</span>
+                  <span className="px-3 py-1 bg-white border border-[#18B2B0]/25 rounded text-[10px] text-[#18B2B0] font-bold uppercase tracking-wider">.bak</span>
                 </div>
               </label>
 
               <div className="flex flex-col gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-bold text-slate-400">{t("settings.processing_data")}</span>
-                    <span className="text-[#00f2ff] font-bold">65%</span>
+                    <span className="font-bold text-[#6B7280]">{t("settings.processing_data")}</span>
+                    <span className="text-[#18B2B0] font-bold">65%</span>
                   </div>
-                  <div className="w-full h-3 bg-[#8c25f4]/10 rounded-full overflow-hidden">
-                    <div className="h-full w-[65%] bg-gradient-to-r from-[#8c25f4] to-[#00f2ff] rounded-full shadow-[0_0_10px_rgba(140,37,244,0.5)]" />
+                  <div className="w-full h-3 bg-[#E6E8EC] rounded-full overflow-hidden">
+                    <div className="h-full w-[65%] bg-[#18B2B0] rounded-full" />
                   </div>
                 </div>
 
-                <div className="bg-[#8c25f4]/5 p-4 rounded-xl border border-[#8c25f4]/10">
-                  <div className="flex items-center gap-3 text-xs text-slate-400 leading-relaxed">
-                    <CheckCircle2 className="text-[#8c25f4] h-4 w-4" />
+                <div className="bg-[#18B2B0]/5 p-4 rounded-xl border border-[#18B2B0]/15">
+                  <div className="flex items-center gap-3 text-xs text-[#6B7280] leading-relaxed">
+                    <CheckCircle2 className="text-[#18B2B0] h-4 w-4" />
                     <p>{t("settings.import_compat_warning")}</p>
                   </div>
                 </div>
 
                 <button
-                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-all disabled:opacity-50"
+                  className="w-full py-3 bg-[#18B2B0] hover:bg-[#149D9B] text-white rounded-xl font-bold transition-all disabled:opacity-50"
                   disabled={isImporting || !selectedFile}
                   onClick={handleStartImport}
                   data-testid="button-import-backup"
@@ -521,56 +518,56 @@ export default function BackupManagementPage() {
           </section>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass p-6 rounded-2xl flex flex-col gap-2">
+            <div className="rassco-glass p-6 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">{t("settings.last_backup")}</span>
-                <History className="text-[#8c25f4] h-4 w-4" />
+                <span className="text-[#6B7280] text-sm">{t("settings.last_backup")}</span>
+                <History className="text-[#18B2B0] h-4 w-4" />
               </div>
-              <div className="text-2xl font-bold text-white">{lastBackupLabel}</div>
-              <div className="text-xs text-emerald-500 font-medium">
+              <div className="text-2xl font-bold text-[#2D3135]">{lastBackupLabel}</div>
+              <div className="text-xs text-[#149D9B] font-medium">
                 {t("settings.saved_copies_count", {
                   count: storageStats?.exportsCount ?? mergedBackupRows.length,
                 })}
               </div>
             </div>
 
-            <div className="glass p-6 rounded-2xl flex flex-col gap-2">
+            <div className="rassco-glass p-6 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">{t("settings.total_data_size")}</span>
-                <Database className="text-[#8c25f4] h-4 w-4" />
+                <span className="text-[#6B7280] text-sm">{t("settings.total_data_size")}</span>
+                <Database className="text-[#18B2B0] h-4 w-4" />
               </div>
-              <div className="text-2xl font-bold text-white" dir="ltr">
+              <div className="text-2xl font-bold text-[#2D3135]" dir="ltr">
                 <span className="inline-flex items-baseline gap-1.5">
                   <span>{totalStorageDisplay.value}</span>
                   <span>{totalStorageDisplay.unit}</span>
                 </span>
               </div>
-              <div className="text-xs text-emerald-500 font-medium">{t("settings.unlimited_capacity")}</div>
+              <div className="text-xs text-[#149D9B] font-medium">{t("settings.unlimited_capacity")}</div>
             </div>
 
-            <div className="glass p-6 rounded-2xl flex flex-col gap-2 relative overflow-hidden">
+            <div className="rassco-glass p-6 flex flex-col gap-2 relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">{t("settings.system_status")}</span>
-                <CheckCircle2 className="text-emerald-500 h-4 w-4" />
+                <span className="text-[#6B7280] text-sm">{t("settings.system_status")}</span>
+                <CheckCircle2 className="text-[#18B2B0] h-4 w-4" />
               </div>
-              <div className="text-2xl font-bold text-white pr-4 neon-pulse">{t("settings.safe_and_connected")}</div>
-              <div className="text-xs text-slate-400">{t("settings.all_services_ok")}</div>
+              <div className="text-2xl font-bold text-[#2D3135] pr-4">{t("settings.safe_and_connected")}</div>
+              <div className="text-xs text-[#6B7280]">{t("settings.all_services_ok")}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 glass rounded-2xl overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-[#8c25f4]/10 flex items-center justify-between">
-                <h3 className="text-lg font-bold">{t("settings.backup_history")}</h3>
-                <button className="p-2 hover:bg-[#8c25f4]/10 rounded-lg transition-colors" type="button" aria-label={t("settings.filter")}>
-                  <Filter className="text-slate-400 h-4 w-4" />
+            <div className="lg:col-span-2 rassco-glass rassco-glass-static overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#E6E8EC] flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#2D3135]">{t("settings.backup_history")}</h3>
+                <button className="p-2 hover:bg-[#F3F4F6] rounded-lg transition-colors" type="button" aria-label={t("settings.filter")}>
+                  <Filter className="text-[#6B7280] h-4 w-4" />
                 </button>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-right border-collapse">
                   <thead>
-                    <tr className="bg-[#8c25f4]/5 text-slate-400 text-xs uppercase tracking-wider">
+                    <tr className="bg-[#F3F4F6] text-[#6B7280] text-xs uppercase tracking-wider">
                       <th className="px-6 py-4 font-bold">{t("settings.backup_name")}</th>
                       <th className="px-6 py-4 font-bold">{t("settings.date_time")}</th>
                       <th className="px-6 py-4 font-bold">{t("settings.size")}</th>
@@ -578,10 +575,10 @@ export default function BackupManagementPage() {
                       <th className="px-6 py-4 font-bold">{t("settings.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#8c25f4]/5">
+                  <tbody className="divide-y divide-[#E6E8EC]">
                     {mergedBackupRows.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
+                        <td colSpan={5} className="px-6 py-8 text-center text-sm text-[#6B7280]">
                           {t("settings.no_backups_yet")}
                         </td>
                       </tr>
@@ -592,20 +589,20 @@ export default function BackupManagementPage() {
                           : null;
 
                         return (
-                          <tr key={row.id} className="hover:bg-[#8c25f4]/5 transition-colors">
-                            <td className="px-6 py-4 text-sm font-medium">{row.name}</td>
-                            <td className="px-6 py-4 text-sm text-slate-400">
+                          <tr key={row.id} className="hover:bg-[#F8FAFB] transition-colors">
+                            <td className="px-6 py-4 text-sm font-medium text-[#2D3135]">{row.name}</td>
+                            <td className="px-6 py-4 text-sm text-[#6B7280]">
                               {row.createdAt ? new Date(row.createdAt).toLocaleString(dateLocale) : "-"}
                             </td>
-                            <td className="px-6 py-4 text-sm" dir="ltr">
+                            <td className="px-6 py-4 text-sm text-[#2D3135]" dir="ltr">
                               {sizeLabel ? `${sizeLabel.value} ${sizeLabel.unit}` : "-"}
                             </td>
                             <td className="px-6 py-4 text-sm">
                               <span
                                 className={
                                   row.type === "cloud"
-                                    ? "px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs border border-blue-500/30"
-                                    : "px-2 py-1 rounded bg-[#00f2ff]/20 text-[#00f2ff] text-xs border border-[#00f2ff]/30"
+                                    ? "px-2 py-1 rounded bg-[#6B7280]/10 text-[#6B7280] text-xs border border-[#6B7280]/25"
+                                    : "px-2 py-1 rounded bg-[#18B2B0]/10 text-[#149D9B] text-xs border border-[#18B2B0]/25"
                                 }
                               >
                                 {row.type === "cloud" ? t("settings.cloud") : t("settings.local")}
@@ -616,7 +613,7 @@ export default function BackupManagementPage() {
                                 {row.source === "local" ? (
                                   <>
                                     <button
-                                      className="text-[#8c25f4] hover:text-[#8c25f4]/80"
+                                      className="text-[#18B2B0] hover:text-[#149D9B]"
                                       title={t("settings.restore")}
                                       onClick={() =>
                                         handleRestoreRecent({
@@ -632,7 +629,7 @@ export default function BackupManagementPage() {
                                       <RotateCcw className="h-4 w-4" />
                                     </button>
                                     <button
-                                      className="text-slate-400 hover:text-white"
+                                      className="text-[#6B7280] hover:text-[#2D3135]"
                                       title={t("settings.download")}
                                       onClick={() => handleRedownload({
                                         name: row.name,
@@ -646,7 +643,7 @@ export default function BackupManagementPage() {
                                       <Download className="h-4 w-4" />
                                     </button>
                                     <button
-                                      className="text-slate-400 hover:text-white"
+                                      className="text-[#6B7280] hover:text-[#E05252]"
                                       title={t("settings.delete")}
                                       onClick={() => handleRemoveBackup(row.name)}
                                       type="button"
@@ -657,14 +654,14 @@ export default function BackupManagementPage() {
                                 ) : (
                                   <>
                                     <button
-                                      className="text-slate-600 cursor-not-allowed"
+                                      className="text-[#D7DCE2] cursor-not-allowed"
                                       title={t("settings.restore_local_only")}
                                       type="button"
                                     >
                                       <RotateCcw className="h-4 w-4" />
                                     </button>
                                     <button
-                                      className="text-slate-600 cursor-not-allowed"
+                                      className="text-[#D7DCE2] cursor-not-allowed"
                                       title={t("settings.download_local_only")}
                                       type="button"
                                     >
@@ -684,57 +681,51 @@ export default function BackupManagementPage() {
             </div>
 
             <div className="flex flex-col gap-6">
-              <div className="glass p-8 rounded-2xl flex flex-col items-center justify-center text-center">
-                <h4 className="text-sm font-bold mb-6 self-start">{t("settings.cloud_storage_usage")}</h4>
+              <div className="rassco-glass p-8 flex flex-col items-center justify-center text-center">
+                <h4 className="text-sm font-bold mb-6 self-start text-[#2D3135]">{t("settings.cloud_storage_usage")}</h4>
                 <div className="relative w-48 h-48 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200" fill="none">
-                    <circle cx="100" cy="100" r="88" stroke="rgba(140,37,244,0.2)" strokeWidth="12" />
+                    <circle cx="100" cy="100" r="88" stroke="#E6E8EC" strokeWidth="12" />
                     <circle
                       cx="100"
                       cy="100"
                       r="88"
-                      stroke="url(#paint0_linear)"
+                      stroke="#18B2B0"
                       strokeWidth="12"
                       strokeLinecap="round"
                       strokeDasharray={storageCircleCircumference}
                       strokeDashoffset={storageCircleOffset}
                     />
-                    <defs>
-                      <linearGradient id="paint0_linear" x1="0" y1="0" x2="1" y2="1">
-                        <stop stopColor="#8c25f4" />
-                        <stop offset="1" stopColor="#00f2ff" />
-                      </linearGradient>
-                    </defs>
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black text-white" dir="ltr">{usedCapacityPercent}%</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">{t("settings.used_capacity")}</span>
+                    <span className="text-3xl font-black text-[#2D3135]" dir="ltr">{usedCapacityPercent}%</span>
+                    <span className="text-[10px] text-[#6B7280] uppercase tracking-widest">{t("settings.used_capacity")}</span>
                   </div>
                 </div>
 
                 <div className="mt-8 w-full flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#8c25f4]" />
-                    <span className="text-slate-400">
+                    <span className="w-3 h-3 rounded-full bg-[#18B2B0]" />
+                    <span className="text-[#6B7280]">
                       {t("settings.used")} <span dir="ltr">({usedStorageDisplay.value} {usedStorageDisplay.unit})</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#8c25f4]/10" />
-                    <span className="text-slate-400">
+                    <span className="w-3 h-3 rounded-full bg-[#E6E8EC]" />
+                    <span className="text-[#6B7280]">
                       {t("settings.available")} <span dir="ltr">({availableStorageDisplay.value} {availableStorageDisplay.unit})</span>
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="glass p-6 rounded-2xl">
+              <div className="rassco-glass p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h4 className="font-bold">{t("settings.auto_schedule")}</h4>
+                  <h4 className="font-bold text-[#2D3135]">{t("settings.auto_schedule")}</h4>
                   <button
                     type="button"
                     onClick={() => setScheduleEnabled((prev) => !prev)}
-                    className={`w-11 h-6 rounded-full relative transition-colors ${scheduleEnabled ? "bg-[#8c25f4]" : "bg-[#8c25f4]/20"}`}
+                    className={`w-11 h-6 rounded-full relative transition-colors ${scheduleEnabled ? "bg-[#18B2B0]" : "bg-[#E6E8EC]"}`}
                     aria-label={t("settings.enable_schedule")}
                   >
                     <span
@@ -744,7 +735,7 @@ export default function BackupManagementPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className={`flex items-center p-3 rounded-xl border transition-all cursor-pointer ${scheduleType === "daily" ? "bg-[#8c25f4]/5 border-[#8c25f4]/30" : "border-[#8c25f4]/10 hover:border-[#8c25f4]/30"}`}>
+                  <label className={`flex items-center p-3 rounded-xl border transition-all cursor-pointer ${scheduleType === "daily" ? "bg-[#18B2B0]/6 border-[#18B2B0]/35" : "border-[#E6E8EC] hover:border-[#18B2B0]/30"}`}>
                     <input
                       className="w-4 h-4"
                       name="schedule"
@@ -753,12 +744,12 @@ export default function BackupManagementPage() {
                       onChange={() => setScheduleType("daily")}
                     />
                     <div className="mr-4">
-                      <p className="text-sm font-bold">{t("settings.daily")}</p>
-                      <p className="text-[10px] text-slate-400">{t("settings.daily_desc")}</p>
+                      <p className="text-sm font-bold text-[#2D3135]">{t("settings.daily")}</p>
+                      <p className="text-[10px] text-[#6B7280]">{t("settings.daily_desc")}</p>
                     </div>
                   </label>
 
-                  <label className={`flex items-center p-3 rounded-xl border transition-all cursor-pointer ${scheduleType === "weekly" ? "bg-[#8c25f4]/5 border-[#8c25f4]/30" : "border-[#8c25f4]/10 hover:border-[#8c25f4]/30"}`}>
+                  <label className={`flex items-center p-3 rounded-xl border transition-all cursor-pointer ${scheduleType === "weekly" ? "bg-[#18B2B0]/6 border-[#18B2B0]/35" : "border-[#E6E8EC] hover:border-[#18B2B0]/30"}`}>
                     <input
                       className="w-4 h-4"
                       name="schedule"
@@ -767,13 +758,13 @@ export default function BackupManagementPage() {
                       onChange={() => setScheduleType("weekly")}
                     />
                     <div className="mr-4">
-                      <p className="text-sm font-bold">{t("settings.weekly")}</p>
-                      <p className="text-[10px] text-slate-400">{t("settings.weekly_desc")}</p>
+                      <p className="text-sm font-bold text-[#2D3135]">{t("settings.weekly")}</p>
+                      <p className="text-[10px] text-[#6B7280]">{t("settings.weekly_desc")}</p>
                     </div>
                   </label>
                 </div>
 
-                <button className="w-full mt-6 py-2.5 rounded-xl border border-[#8c25f4]/40 text-[#8c25f4] text-xs font-bold hover:bg-[#8c25f4] hover:text-white transition-all" type="button">
+                <button className="w-full mt-6 py-2.5 rounded-xl border border-[#18B2B0]/35 text-[#18B2B0] text-xs font-bold hover:bg-[#18B2B0] hover:text-white transition-all" type="button">
                   {t("settings.update_schedule")}
                 </button>
               </div>
@@ -781,31 +772,31 @@ export default function BackupManagementPage() {
           </div>
         </div>
 
-        <footer className="mt-auto p-6 bg-[#8c25f4]/5 border-t border-[#8c25f4]/10 flex flex-col md:flex-row md:items-center justify-between gap-4 z-10">
+        <footer className="mt-auto p-6 bg-white/60 border-t border-[#E6E8EC] flex flex-col md:flex-row md:items-center justify-between gap-4 z-10">
           <div className="flex items-center gap-4">
             <div className="flex -space-x-2 space-x-reverse">
               <img
                 alt="Avatar"
-                className="w-8 h-8 rounded-full border-2 border-[#0f0814]"
+                className="w-8 h-8 rounded-full border-2 border-white"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvXYfcdb50qRRpqJLf3yqj3XIlGo8-_Z5FEGNFkL0_e1HP9a5amoZwkHg9TjLfhy9c1Sj0NeZgzVuZFTsF_Ir6PnKrqX4CT1oLgLNofWm9ZSnP2qCQNjDnJTcC_5wteoddoipkth-hbqlWlH7eXLY1mFXRPVtJyrPtRw7-Eroe9plYHkEJDM1bMUl6cea0SyElv58ne8ZuFmElkIeb3xD8t92DbyFM0DKSdhrDY3GFXCv-0yjNCx6br9Q1zEX0TaKlg0df8mdUlRc"
               />
               <img
                 alt="Avatar"
-                className="w-8 h-8 rounded-full border-2 border-[#0f0814]"
+                className="w-8 h-8 rounded-full border-2 border-white"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuAATPAnMuYkpNL44qjRYOzUNFAcuteUpUk4T51lZ5u4Kzi2LQLMtcysDOeUxlIykkDs8mb5qs_AQypgt3mBZngz4IBTOmBB_E-cK39c98u_ZgKiyNAn-D5NC0r97WMmft4vK1fsWjVLTl5L0cXget8dN0cnFfsjWsP_68PhWcMneFy142L5MzxkGZrw0gDhb3iVACihOoZXO9mvgxyNqlrmFXmlz5JasQrxLOq7IyhyG5NdeF6eBDSsJ5SpQTGRpBrvm1Q-bTVqt70"
               />
             </div>
-            <p className="text-xs text-slate-400">{t("settings.support_team_online")}</p>
+            <p className="text-xs text-[#6B7280]">{t("settings.support_team_online")}</p>
           </div>
 
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-[#00f2ff]" />
-              <span className="text-[10px] uppercase tracking-tighter text-slate-400 font-bold">AES-256 Encrypted</span>
+              <Lock className="h-4 w-4 text-[#18B2B0]" />
+              <span className="text-[10px] uppercase tracking-tighter text-[#6B7280] font-bold">AES-256 Encrypted</span>
             </div>
             <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4 text-[#00f2ff]" />
-              <span className="text-[10px] uppercase tracking-tighter text-slate-400 font-bold">Region: EU-Central-1</span>
+              <Cloud className="h-4 w-4 text-[#18B2B0]" />
+              <span className="text-[10px] uppercase tracking-tighter text-[#6B7280] font-bold">Region: EU-Central-1</span>
             </div>
           </div>
         </footer>

@@ -167,15 +167,15 @@ function statusLabel(status: string): string {
 
 function statusClass(status: string): string {
   if (["posted", "submitted", "acknowledged"].includes(status)) {
-    return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+    return "bg-[#18B2B0]/10 text-[#149D9B] border border-[#18B2B0]/25";
   }
   if (["draft", "pending", "generated"].includes(status)) {
-    return "bg-amber-500/15 text-amber-300 border border-amber-500/30";
+    return "bg-[#F4B740]/12 text-[#8a6410] border border-[#F4B740]/30";
   }
   if (["retrying", "failed"].includes(status)) {
-    return "bg-rose-500/15 text-rose-300 border border-rose-500/30";
+    return "bg-[#E05252]/10 text-[#E05252] border border-[#E05252]/25";
   }
-  return "bg-slate-500/15 text-slate-300 border border-slate-500/30";
+  return "bg-[#6B7280]/10 text-[#6B7280] border border-[#6B7280]/25";
 }
 
 function toDateInputValue(value: Date): string {
@@ -213,12 +213,12 @@ function formatNumberForPdf(value: number): string {
 }
 
 const chartPalette = {
-  cyan: "#22d3ee",
-  cyanSoft: "#06b6d4",
-  emerald: "#10b981",
-  rose: "#fb7185",
-  amber: "#f59e0b",
-  slate: "#64748b",
+  cyan: "#18B2B0",
+  cyanSoft: "#149D9B",
+  emerald: "#18B2B0",
+  rose: "#E05252",
+  amber: "#F4B740",
+  slate: "#6B7280",
 };
 
 type AccountingTabValue = "overview" | "coa" | "journal" | "sales" | "purchases" | "payments" | "tax" | "einvoice" | "reports";
@@ -226,29 +226,29 @@ type AccentTone = "cyan" | "emerald" | "amber" | "rose" | "violet";
 
 const toneStyles: Record<AccentTone, { iconWrap: string; icon: string; title: string }> = {
   cyan: {
-    iconWrap: "border-cyan-400/40 bg-cyan-500/15",
-    icon: "text-cyan-200",
-    title: "text-cyan-50",
+    iconWrap: "border-[#18B2B0]/30 bg-[#18B2B0]/10",
+    icon: "text-[#18B2B0]",
+    title: "text-[#2D3135]",
   },
   emerald: {
-    iconWrap: "border-emerald-400/40 bg-emerald-500/15",
-    icon: "text-emerald-200",
-    title: "text-emerald-50",
+    iconWrap: "border-[#18B2B0]/30 bg-[#18B2B0]/10",
+    icon: "text-[#149D9B]",
+    title: "text-[#2D3135]",
   },
   amber: {
-    iconWrap: "border-amber-400/40 bg-amber-500/15",
-    icon: "text-amber-200",
-    title: "text-amber-50",
+    iconWrap: "border-[#F4B740]/35 bg-[#F4B740]/12",
+    icon: "text-[#8a6410]",
+    title: "text-[#2D3135]",
   },
   rose: {
-    iconWrap: "border-rose-400/40 bg-rose-500/15",
-    icon: "text-rose-200",
-    title: "text-rose-50",
+    iconWrap: "border-[#E05252]/30 bg-[#E05252]/10",
+    icon: "text-[#E05252]",
+    title: "text-[#2D3135]",
   },
   violet: {
-    iconWrap: "border-violet-400/40 bg-violet-500/15",
-    icon: "text-violet-200",
-    title: "text-violet-50",
+    iconWrap: "border-[#6B7280]/30 bg-[#6B7280]/10",
+    icon: "text-[#6B7280]",
+    title: "text-[#2D3135]",
   },
 };
 
@@ -283,8 +283,8 @@ function renderFinanceTooltip(
     if (!active || !payload || payload.length === 0) return null;
 
     return (
-      <div className="rounded-xl border border-slate-500/50 bg-slate-950/95 px-3 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur">
-        {label && <p className="mb-2 text-[11px] font-bold text-cyan-200">{label}</p>}
+      <div className="rounded-xl border border-[#E6E8EC] bg-white/95 px-3 py-2 text-xs text-[#2D3135] shadow-lg backdrop-blur">
+        {label && <p className="mb-2 text-[11px] font-bold text-[#18B2B0]">{label}</p>}
         <div className="space-y-1">
           {payload.map((item, index) => (
             <div key={`${item.name || "item"}-${index}`} className="flex items-center justify-between gap-3">
@@ -292,7 +292,7 @@ function renderFinanceTooltip(
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color || chartPalette.cyan }} />
                 <span>{item.name || t('accounting.value_3')}</span>
               </div>
-              <span className="font-semibold text-white">{valueFormatter(Number(item.value || 0))}</span>
+              <span className="font-semibold text-[#2D3135]">{valueFormatter(Number(item.value || 0))}</span>
             </div>
           ))}
         </div>
@@ -1006,7 +1006,7 @@ export default function AccountingDashboardPage() {
       container.innerHTML = `
         <div style="padding:0;">
           <div style="background:linear-gradient(135deg,#0f766e,#0ea5a5);padding:28px 24px;text-align:center;color:#fff;">
-            <h1 style="margin:0;font-size:28px;">STOCKPRO</h1>
+            <h1 style="margin:0;font-size:28px;">RASSCO</h1>
             <p style="margin:8px 0 0 0;font-size:15px;">${mode === "summary" ? t('accounting.report_3') : t('accounting.report_4')}</p>
             <p style="margin:6px 0 0 0;font-size:12px;opacity:.9;">${t('accounting.export_date_label', { date: escapeHtml(dateLabel) })}</p>
           </div>
@@ -1252,7 +1252,7 @@ export default function AccountingDashboardPage() {
       container.innerHTML = `
         <div style="padding:0;">
           <div style="background:linear-gradient(135deg,#0f766e,#0ea5a5);padding:28px 24px;text-align:center;color:#fff;">
-            <h1 style="margin:0;font-size:28px;">STOCKPRO</h1>
+            <h1 style="margin:0;font-size:28px;">RASSCO</h1>
             <p style="margin:8px 0 0 0;font-size:15px;">${mode === "sales" ? t('accounting.log_invoices_sales_1') : t('accounting.log_invoices_purchases_1')}</p>
             <p style="margin:6px 0 0 0;font-size:12px;opacity:.9;">${t('accounting.export_date_label', { date: escapeHtml(dateLabel) })}</p>
           </div>
@@ -1542,7 +1542,7 @@ export default function AccountingDashboardPage() {
 
   if (!canReadAccounting) {
     return (
-      <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-200">
+      <div className="rounded-2xl border border-[#E05252]/25 bg-[#E05252]/10 p-6 text-[#E05252]">
         <div className="flex items-center gap-3 text-lg font-semibold">
           <AlertTriangle className="h-5 w-5" />
           {t('accounting.no_accounting')}
@@ -1565,29 +1565,29 @@ export default function AccountingDashboardPage() {
 
   return (
     <div
-      className="space-y-6 rounded-3xl bg-[radial-gradient(circle_at_top_right,#0f172a_0%,#0b1220_35%,#06090f_100%)] p-4 md:p-6"
+      className="space-y-6 rounded-3xl bg-[#F8FAFB] p-4 md:p-6"
       data-testid="accounting-dashboard-page"
     >
-      <section className="relative overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-6 shadow-[0_20px_80px_-35px_rgba(6,182,212,0.65)] backdrop-blur-xl md:p-8">
-        <div className="pointer-events-none absolute -left-10 -top-16 h-48 w-48 rounded-full bg-cyan-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -right-16 bottom-0 h-44 w-44 rounded-full bg-emerald-400/15 blur-3xl" />
+      <section className="relative overflow-hidden rassco-glass rassco-glass-static p-6 md:p-8">
+        <div className="pointer-events-none absolute -left-10 -top-16 h-48 w-48 rounded-full bg-[#18B2B0]/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 bottom-0 h-44 w-44 rounded-full bg-[#F4B740]/10 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-[0.22em] text-cyan-300/90">STOCKPRO FINANCE CONTROL</p>
-            <h3 className="mt-3 text-2xl font-black text-white md:text-3xl">{t('accounting.accounting')}</h3>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300 md:text-base">
+            <p className="text-xs font-bold tracking-[0.22em] text-[#18B2B0]">RASSCO FINANCE</p>
+            <h3 className="mt-3 text-2xl font-black text-[#2D3135] md:text-3xl">{t('accounting.accounting')}</h3>
+            <p className="mt-2 max-w-2xl text-sm text-[#6B7280] md:text-base">
               {t('accounting.ops_subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className="border border-emerald-300/30 bg-emerald-400/15 text-emerald-200">
+            <Badge className="border border-[#18B2B0]/25 bg-[#18B2B0]/10 text-[#149D9B]">
               {isLoadingAny ? t('accounting.update_2') : t('accounting.item_6348')}
             </Badge>
             <Button
               type="button"
               variant="outline"
               onClick={refreshAll}
-              className="border-cyan-400/50 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
+              className="border-[#18B2B0]/40 bg-[#18B2B0]/10 text-[#149D9B] hover:bg-[#18B2B0]/20"
             >
               <RefreshCw className="ml-2 h-4 w-4" />
               {t('accounting.update_all')}
@@ -1597,7 +1597,7 @@ export default function AccountingDashboardPage() {
       </section>
 
       {apiErrors.length > 0 && (
-        <section className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
+        <section className="rounded-2xl border border-[#F4B740]/35 bg-[#F4B740]/10 p-4 text-[#8a6410]">
           <div className="flex items-center gap-2 font-semibold">
             <AlertTriangle className="h-4 w-4" />
             {t('accounting.loading_part_data_accounting')}
@@ -1611,7 +1611,7 @@ export default function AccountingDashboardPage() {
       )}
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 backdrop-blur sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl rassco-glass rassco-glass-static p-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
           {accountingTabs.map((tab) => {
             const styles = toneStyles[tab.tone];
             const Icon = tab.icon;
@@ -1619,7 +1619,7 @@ export default function AccountingDashboardPage() {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="group flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent px-3 py-2 text-[13px] font-medium text-slate-300 transition-all data-[state=active]:border-cyan-400/40 data-[state=active]:bg-slate-800/85 data-[state=active]:text-white"
+                className="group flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent px-3 py-2 text-[13px] font-medium text-[#6B7280] transition-all data-[state=active]:border-[#18B2B0]/40 data-[state=active]:bg-[#18B2B0]/10 data-[state=active]:text-[#149D9B]"
               >
                 <span className={`flex h-6 w-6 items-center justify-center rounded-md border ${styles.iconWrap}`}>
                   <Icon className={`h-3.5 w-3.5 ${styles.icon}`} />
@@ -1632,77 +1632,77 @@ export default function AccountingDashboardPage() {
 
         <TabsContent value="overview" className="space-y-4">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="group relative overflow-hidden border-white/10 bg-slate-900/65 backdrop-blur-xl">
-              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-cyan-300/20 blur-2xl" />
+            <Card className="group relative overflow-hidden rassco-glass rassco-glass-static">
+              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-[#18B2B0]/10 blur-2xl" />
               <CardHeader className="pb-2">
                 <SectionHeading title={t('accounting.active')} icon={Calculator} tone="cyan" />
               </CardHeader>
               <CardContent className="flex items-center justify-between">
-                <p className="text-2xl font-black text-white">{totals.coaActive}</p>
-                <Calculator className="h-5 w-5 text-cyan-300" />
+                <p className="text-2xl font-black text-[#2D3135]">{totals.coaActive}</p>
+                <Calculator className="h-5 w-5 text-[#18B2B0]" />
               </CardContent>
             </Card>
 
-            <Card className="group relative overflow-hidden border-white/10 bg-slate-900/65 backdrop-blur-xl">
-              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-emerald-300/20 blur-2xl" />
+            <Card className="group relative overflow-hidden rassco-glass rassco-glass-static">
+              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-[#18B2B0]/10 blur-2xl" />
               <CardHeader className="pb-2">
                 <SectionHeading title={t('accounting.item_22362')} icon={FileText} tone="emerald" />
               </CardHeader>
               <CardContent className="flex items-center justify-between">
-                <p className="text-2xl font-black text-white">{totals.journalsPosted}</p>
-                <FileText className="h-5 w-5 text-emerald-300" />
+                <p className="text-2xl font-black text-[#2D3135]">{totals.journalsPosted}</p>
+                <FileText className="h-5 w-5 text-[#18B2B0]" />
               </CardContent>
             </Card>
 
-            <Card className="group relative overflow-hidden border-white/10 bg-slate-900/65 backdrop-blur-xl">
-              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-cyan-300/20 blur-2xl" />
+            <Card className="group relative overflow-hidden rassco-glass rassco-glass-static">
+              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-[#18B2B0]/10 blur-2xl" />
               <CardHeader className="pb-2">
                 <SectionHeading title={t('accounting.total_sales')} icon={Receipt} tone="cyan" />
               </CardHeader>
               <CardContent className="flex items-center justify-between">
-                <p className="text-lg font-black text-white">{formatMoney(totals.salesTotal)}</p>
-                <Receipt className="h-5 w-5 text-cyan-300" />
+                <p className="text-lg font-black text-[#2D3135]">{formatMoney(totals.salesTotal)}</p>
+                <Receipt className="h-5 w-5 text-[#18B2B0]" />
               </CardContent>
             </Card>
 
-            <Card className="group relative overflow-hidden border-white/10 bg-slate-900/65 backdrop-blur-xl">
-              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-rose-300/20 blur-2xl" />
+            <Card className="group relative overflow-hidden rassco-glass rassco-glass-static">
+              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-[#E05252]/10 blur-2xl" />
               <CardHeader className="pb-2">
                 <SectionHeading title={t('accounting.total_purchases')} icon={Landmark} tone="rose" />
               </CardHeader>
               <CardContent className="flex items-center justify-between">
-                <p className="text-lg font-black text-white">{formatMoney(totals.purchaseTotal)}</p>
-                <Landmark className="h-5 w-5 text-rose-300" />
+                <p className="text-lg font-black text-[#2D3135]">{formatMoney(totals.purchaseTotal)}</p>
+                <Landmark className="h-5 w-5 text-[#E05252]" />
               </CardContent>
             </Card>
           </section>
 
           <section className="grid gap-4 xl:grid-cols-2">
-            <Card className="border-white/10 bg-slate-900/65 backdrop-blur-xl">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.vat_3')} icon={ShieldCheck} tone="emerald" />
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
-                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] p-3"><span>{t('accounting.vat_1')}</span><span className="font-semibold text-white">{formatMoney(vatSummary?.outputTax)}</span></div>
-                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] p-3"><span>{t('accounting.vat_2')}</span><span className="font-semibold text-white">{formatMoney(vatSummary?.inputTax)}</span></div>
-                <div className="flex items-center justify-between rounded-xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100"><span>{t('accounting.item_20718')}</span><span className="font-bold">{formatMoney(vatSummary?.netVatPayable)}</span></div>
+              <CardContent className="space-y-3 text-sm text-[#6B7280]">
+                <div className="flex items-center justify-between rounded-xl border border-[#E6E8EC] bg-[#F8FAFB] p-3"><span>{t('accounting.vat_1')}</span><span className="font-semibold text-[#2D3135]">{formatMoney(vatSummary?.outputTax)}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-[#E6E8EC] bg-[#F8FAFB] p-3"><span>{t('accounting.vat_2')}</span><span className="font-semibold text-[#2D3135]">{formatMoney(vatSummary?.inputTax)}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-[#18B2B0]/30 bg-[#18B2B0]/10 p-3 text-[#149D9B]"><span>{t('accounting.item_20718')}</span><span className="font-bold">{formatMoney(vatSummary?.netVatPayable)}</span></div>
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-slate-900/65 backdrop-blur-xl">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_19155')} icon={ArrowRightLeft} tone="violet" />
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
-                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] p-3"><span>{t('accounting.total_vouchers_receipt')}</span><span className="font-semibold text-emerald-300">{formatMoney(totals.receiptsTotal)}</span></div>
-                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] p-3"><span>{t('accounting.total_vouchers_disbursement')}</span><span className="font-semibold text-rose-300">{formatMoney(totals.disbursementsTotal)}</span></div>
-                <div className="flex items-center justify-between rounded-xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100"><span>{t('accounting.transaction')}</span><span className="font-bold">{formatMoney(totals.receiptsTotal - totals.disbursementsTotal)}</span></div>
+              <CardContent className="space-y-3 text-sm text-[#6B7280]">
+                <div className="flex items-center justify-between rounded-xl border border-[#E6E8EC] bg-[#F8FAFB] p-3"><span>{t('accounting.total_vouchers_receipt')}</span><span className="font-semibold text-[#149D9B]">{formatMoney(totals.receiptsTotal)}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-[#E6E8EC] bg-[#F8FAFB] p-3"><span>{t('accounting.total_vouchers_disbursement')}</span><span className="font-semibold text-[#E05252]">{formatMoney(totals.disbursementsTotal)}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-[#18B2B0]/30 bg-[#18B2B0]/10 p-3 text-[#149D9B]"><span>{t('accounting.transaction')}</span><span className="font-bold">{formatMoney(totals.receiptsTotal - totals.disbursementsTotal)}</span></div>
               </CardContent>
             </Card>
           </section>
 
           <section className="grid gap-4 xl:grid-cols-12">
-            <Card className="border-white/10 bg-slate-900/65 backdrop-blur-xl xl:col-span-8">
+            <Card className="rassco-glass rassco-glass-static xl:col-span-8">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_38209')} icon={BarChart3} tone="cyan" />
               </CardHeader>
@@ -1719,9 +1719,9 @@ export default function AccountingDashboardPage() {
                         <stop offset="100%" stopColor={chartPalette.rose} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="4 4" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="month" stroke="#94a3b8" tickLine={false} axisLine={false} />
-                    <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(value: number) => `${Math.round(Number(value || 0) / 1000)}k`} />
+                    <CartesianGrid strokeDasharray="4 4" stroke="#E6E8EC" />
+                    <XAxis dataKey="month" stroke="#9AA1AB" tickLine={false} axisLine={false} />
+                    <YAxis stroke="#9AA1AB" tickLine={false} axisLine={false} tickFormatter={(value: number) => `${Math.round(Number(value || 0) / 1000)}k`} />
                     <Tooltip content={renderFinanceTooltip((value) => formatMoney(value))} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
                     <Area type="monotone" dataKey="sales" name={t('accounting.sales')} stroke={chartPalette.cyan} fill="url(#salesGradPro)" strokeWidth={2.2} />
@@ -1732,7 +1732,7 @@ export default function AccountingDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-slate-900/65 backdrop-blur-xl xl:col-span-4">
+            <Card className="rassco-glass rassco-glass-static xl:col-span-4">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_19185')} icon={BarChart3} tone="amber" />
               </CardHeader>
@@ -1745,26 +1745,26 @@ export default function AccountingDashboardPage() {
                         <stop offset="100%" stopColor={chartPalette.cyan} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EC" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="shortName" width={90} tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="shortName" width={90} tick={{ fill: "#6B7280", fontSize: 11 }} tickLine={false} axisLine={false} />
                     <Tooltip content={renderFinanceTooltip((value) => formatMoney(value))} />
                     <Bar dataKey="soldAmount" radius={[10, 10, 10, 10]} fill="url(#topTechBarGrad)">
-                      <LabelList dataKey="soldAmount" position="right" formatter={(value: number) => `${Math.round(Number(value || 0)).toLocaleString("ar-SA")}`} fill="#e2e8f0" fontSize={11} />
+                      <LabelList dataKey="soldAmount" position="right" formatter={(value: number) => `${Math.round(Number(value || 0)).toLocaleString("ar-SA")}`} fill="#2D3135" fontSize={11} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-slate-900/65 backdrop-blur-xl xl:col-span-6">
+            <Card className="rassco-glass rassco-glass-static xl:col-span-6">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_27162')} icon={ArrowRightLeft} tone="violet" />
               </CardHeader>
               <CardContent className="relative h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={paymentMix} dataKey="value" nameKey="name" outerRadius={96} innerRadius={62} stroke="rgba(15,23,42,0.9)">
+                    <Pie data={paymentMix} dataKey="value" nameKey="name" outerRadius={96} innerRadius={62} stroke="#ffffff">
                       {paymentMix.map((_, index) => (
                         <Cell key={index} fill={index === 0 ? chartPalette.emerald : chartPalette.rose} />
                       ))}
@@ -1774,13 +1774,13 @@ export default function AccountingDashboardPage() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                  <p className="text-[11px] text-slate-400">{t('accounting.total_transaction')}</p>
-                  <p className="text-lg font-black text-white">{formatMoney(paymentTotal)}</p>
+                  <p className="text-[11px] text-[#6B7280]">{t('accounting.total_transaction')}</p>
+                  <p className="text-lg font-black text-[#2D3135]">{formatMoney(paymentTotal)}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-slate-900/65 backdrop-blur-xl xl:col-span-6">
+            <Card className="rassco-glass rassco-glass-static xl:col-span-6">
               <CardHeader>
                 <SectionHeading title={t('accounting.status_3')} icon={FileText} tone="amber" />
               </CardHeader>
@@ -1788,7 +1788,7 @@ export default function AccountingDashboardPage() {
                 <div className="relative h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={journalStatusMix} dataKey="value" nameKey="name" outerRadius={88} innerRadius={55} stroke="rgba(15,23,42,0.9)">
+                      <Pie data={journalStatusMix} dataKey="value" nameKey="name" outerRadius={88} innerRadius={55} stroke="#ffffff">
                         {journalStatusMix.map((_, index) => (
                           <Cell key={index} fill={[chartPalette.cyan, chartPalette.amber, chartPalette.slate][index % 3]} />
                         ))}
@@ -1797,21 +1797,21 @@ export default function AccountingDashboardPage() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                    <p className="text-[11px] text-slate-400">{t('accounting.total')}</p>
-                    <p className="text-lg font-black text-white">{journalTotal}</p>
+                    <p className="text-[11px] text-[#6B7280]">{t('accounting.total')}</p>
+                    <p className="text-lg font-black text-[#2D3135]">{journalTotal}</p>
                   </div>
                 </div>
-                <div className="space-y-2 self-center rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm">
+                <div className="space-y-2 self-center rounded-xl border border-[#E6E8EC] bg-[#F8FAFB] p-3 text-sm">
                   {journalStatusMix.map((row, index) => {
                     const color = [chartPalette.cyan, chartPalette.amber, chartPalette.slate][index % 3];
                     const percent = journalTotal > 0 ? Math.round((Number(row.value || 0) / journalTotal) * 100) : 0;
                     return (
                       <div key={row.name}>
-                        <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
+                        <div className="mb-1 flex items-center justify-between text-xs text-[#6B7280]">
                           <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />{row.name}</span>
                           <span>{row.value}</span>
                         </div>
-                        <div className="h-1.5 w-full rounded-full bg-slate-800">
+                        <div className="h-1.5 w-full rounded-full bg-[#E6E8EC]">
                           <div className="h-1.5 rounded-full" style={{ width: `${percent}%`, backgroundColor: color }} />
                         </div>
                       </div>
@@ -1824,7 +1824,7 @@ export default function AccountingDashboardPage() {
         </TabsContent>
 
         <TabsContent value="coa" className="space-y-4">
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader>
               <SectionHeading title={t('accounting.add_new')} icon={Calculator} tone="emerald" />
             </CardHeader>
@@ -1842,7 +1842,7 @@ export default function AccountingDashboardPage() {
                   <Label htmlFor="coa-type">{t('accounting.type')}</Label>
                   <select
                     id="coa-type"
-                    className="h-10 w-full rounded-md border border-slate-700 bg-[#122828] px-3 text-sm text-slate-100"
+                    className="h-10 w-full rounded-md border border-[#E6E8EC] bg-white px-3 text-sm text-[#2D3135]"
                     value={coaForm.accountType}
                     onChange={(e) => setCoaForm((prev) => ({ ...prev, accountType: e.target.value }))}
                   >
@@ -1863,7 +1863,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.item_19084')} icon={Calculator} tone="emerald" /></CardHeader>
             <CardContent>
               <Table>
@@ -1882,7 +1882,7 @@ export default function AccountingDashboardPage() {
                       <TableCell>{account.name_ar}</TableCell>
                       <TableCell>{account.account_type}</TableCell>
                       <TableCell>
-                        <Badge className={account.is_active ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-500/20 text-slate-300"}>
+                        <Badge className={account.is_active ? "bg-[#18B2B0]/10 text-[#149D9B]" : "bg-[#6B7280]/10 text-[#6B7280]"}>
                           {account.is_active ? t('accounting.active_1') : t('accounting.item_7994')}
                         </Badge>
                       </TableCell>
@@ -1895,7 +1895,7 @@ export default function AccountingDashboardPage() {
         </TabsContent>
 
         <TabsContent value="journal" className="space-y-4">
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.pending')} icon={FileText} tone="amber" /></CardHeader>
             <CardContent>
               <form onSubmit={handleCreateJournal} className="grid gap-3 md:grid-cols-3">
@@ -1904,14 +1904,14 @@ export default function AccountingDashboardPage() {
                 <div><Label htmlFor="j-amount">{t('accounting.item_9558')}</Label><Input id="j-amount" type="number" min="0" step="0.01" value={journalForm.amount} onChange={(e) => setJournalForm((prev) => ({ ...prev, amount: e.target.value }))} required /></div>
                 <div>
                   <Label htmlFor="j-debit">{t('accounting.item_12755')}</Label>
-                  <select id="j-debit" className="h-10 w-full rounded-md border border-slate-700 bg-[#122828] px-3 text-sm text-slate-100" value={journalForm.debitAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, debitAccountId: e.target.value }))} required>
+                  <select id="j-debit" className="h-10 w-full rounded-md border border-[#E6E8EC] bg-white px-3 text-sm text-[#2D3135]" value={journalForm.debitAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, debitAccountId: e.target.value }))} required>
                     <option value="">{t('accounting.item_15850')}</option>
                     {coa.map((account) => <option key={`debit-${account.id}`} value={account.id}>{account.code} - {account.name_ar}</option>)}
                   </select>
                 </div>
                 <div>
                   <Label htmlFor="j-credit">{t('accounting.item_12689')}</Label>
-                  <select id="j-credit" className="h-10 w-full rounded-md border border-slate-700 bg-[#122828] px-3 text-sm text-slate-100" value={journalForm.creditAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, creditAccountId: e.target.value }))} required>
+                  <select id="j-credit" className="h-10 w-full rounded-md border border-[#E6E8EC] bg-white px-3 text-sm text-[#2D3135]" value={journalForm.creditAccountId} onChange={(e) => setJournalForm((prev) => ({ ...prev, creditAccountId: e.target.value }))} required>
                     <option value="">{t('accounting.item_15850')}</option>
                     {coa.map((account) => <option key={`credit-${account.id}`} value={account.id}>{account.code} - {account.name_ar}</option>)}
                   </select>
@@ -1922,7 +1922,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.item_17624')} icon={FileText} tone="amber" /></CardHeader>
             <CardContent>
               <Table>
@@ -1952,7 +1952,7 @@ export default function AccountingDashboardPage() {
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader className="flex flex-row items-center justify-between">
               <SectionHeading title={t('accounting.invoice_sales')} icon={Receipt} tone="cyan" />
               <div className="flex items-center gap-2">
@@ -1977,7 +1977,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.invoices_sales')} icon={Receipt} tone="cyan" /></CardHeader>
             <CardContent>
               <Table>
@@ -1987,7 +1987,7 @@ export default function AccountingDashboardPage() {
                     <TableRow key={invoice.id}>
                       <TableCell>{invoice.invoice_no}</TableCell>
                       <TableCell>{new Date(invoice.issue_datetime).toLocaleDateString("ar-SA")}</TableCell>
-                      <TableCell className="max-w-[280px] whitespace-normal text-xs text-slate-300">{invoice.items_summary || "-"}</TableCell>
+                      <TableCell className="max-w-[280px] whitespace-normal text-xs text-[#6B7280]">{invoice.items_summary || "-"}</TableCell>
                       <TableCell>{formatMoney(invoice.taxable_amount)}</TableCell>
                       <TableCell>{formatMoney(invoice.vat_total)}</TableCell>
                       <TableCell>{formatMoney(invoice.grand_total)}</TableCell>
@@ -2007,7 +2007,7 @@ export default function AccountingDashboardPage() {
         </TabsContent>
 
         <TabsContent value="purchases" className="space-y-4">
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader className="flex flex-row items-center justify-between">
               <SectionHeading title={t('accounting.invoice_purchases')} icon={Landmark} tone="rose" />
               <div className="flex items-center gap-2">
@@ -2032,7 +2032,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.invoices_purchases')} icon={Landmark} tone="rose" /></CardHeader>
             <CardContent>
               <Table>
@@ -2042,7 +2042,7 @@ export default function AccountingDashboardPage() {
                     <TableRow key={bill.id}>
                       <TableCell>{bill.bill_no}</TableCell>
                       <TableCell>{new Date(bill.issue_date).toLocaleDateString("ar-SA")}</TableCell>
-                      <TableCell className="max-w-[280px] whitespace-normal text-xs text-slate-300">{bill.items_summary || "-"}</TableCell>
+                      <TableCell className="max-w-[280px] whitespace-normal text-xs text-[#6B7280]">{bill.items_summary || "-"}</TableCell>
                       <TableCell>{formatMoney(bill.taxable_amount)}</TableCell>
                       <TableCell>{formatMoney(bill.vat_total)}</TableCell>
                       <TableCell>{formatMoney(bill.grand_total)}</TableCell>
@@ -2063,7 +2063,7 @@ export default function AccountingDashboardPage() {
 
         <TabsContent value="payments" className="space-y-4">
           <section className="grid gap-4 xl:grid-cols-2">
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader><SectionHeading title={t('accounting.voucher_receipt_1')} icon={Receipt} tone="emerald" /></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateReceipt} className="grid gap-3 md:grid-cols-3">
@@ -2075,7 +2075,7 @@ export default function AccountingDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader><SectionHeading title={t('accounting.voucher_disbursement_1')} icon={ArrowRightLeft} tone="violet" /></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateDisbursement} className="grid gap-3 md:grid-cols-3">
@@ -2088,13 +2088,13 @@ export default function AccountingDashboardPage() {
             </Card>
           </section>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.batch_document')} icon={Calculator} tone="amber" /></CardHeader>
             <CardContent>
               <form onSubmit={handleAllocatePayment} className="grid gap-3 md:grid-cols-4">
                 <div>
                   <Label htmlFor="alloc-payment">{t('accounting.voucher_payment_receipt')}</Label>
-                  <select id="alloc-payment" className="h-10 w-full rounded-md border border-slate-700 bg-[#122828] px-3 text-sm text-slate-100" value={allocationForm.paymentId} onChange={(e) => setAllocationForm((prev) => ({ ...prev, paymentId: e.target.value }))} required>
+                  <select id="alloc-payment" className="h-10 w-full rounded-md border border-[#E6E8EC] bg-white px-3 text-sm text-[#2D3135]" value={allocationForm.paymentId} onChange={(e) => setAllocationForm((prev) => ({ ...prev, paymentId: e.target.value }))} required>
                     <option value="">{t('accounting.voucher')}</option>
                     {payments.map((payment) => <option key={payment.id} value={payment.id}>{payment.voucher_no} - {formatMoney(payment.amount)}</option>)}
                   </select>
@@ -2107,7 +2107,7 @@ export default function AccountingDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.vouchers_payment')} icon={ArrowRightLeft} tone="violet" /></CardHeader>
             <CardContent>
               <Table>
@@ -2125,7 +2125,7 @@ export default function AccountingDashboardPage() {
                       <TableCell className="space-y-2">
                         <Button type="button" size="sm" variant="outline" onClick={() => loadPaymentAllocations(payment.id)}>{t('accounting.view_1')}</Button>
                         {(allocationRows[payment.id] || []).length > 0 && (
-                          <div className="space-y-1 text-xs text-slate-300">
+                          <div className="space-y-1 text-xs text-[#6B7280]">
                             {(allocationRows[payment.id] || []).slice(0, 3).map((row) => (
                               <div key={row.id}>{row.document_type} - {formatMoney(row.allocated_amount)}</div>
                             ))}
@@ -2141,7 +2141,7 @@ export default function AccountingDashboardPage() {
         </TabsContent>
 
         <TabsContent value="tax" className="space-y-4">
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.vat_4')} icon={ShieldCheck} tone="emerald" /></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-4">
               <div><Label htmlFor="vat-from">{t('accounting.date_1')}</Label><Input id="vat-from" type="date" value={vatFilter.from} onChange={(e) => setVatFilter((prev) => ({ ...prev, from: e.target.value }))} /></div>
@@ -2151,27 +2151,27 @@ export default function AccountingDashboardPage() {
           </Card>
 
           <section className="grid gap-4 md:grid-cols-3">
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.vat_1')} icon={ShieldCheck} tone="emerald" />
               </CardHeader>
-              <CardContent className="pt-0 text-xl font-bold text-emerald-300">{formatMoney(vatSummary?.outputTax)}</CardContent>
+              <CardContent className="pt-0 text-xl font-bold text-[#149D9B]">{formatMoney(vatSummary?.outputTax)}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.vat_2')} icon={ShieldCheck} tone="amber" />
               </CardHeader>
-              <CardContent className="pt-0 text-xl font-bold text-amber-300">{formatMoney(vatSummary?.inputTax)}</CardContent>
+              <CardContent className="pt-0 text-xl font-bold text-[#8a6410]">{formatMoney(vatSummary?.inputTax)}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_9554')} icon={ShieldCheck} tone="cyan" />
               </CardHeader>
-              <CardContent className="pt-0 text-xl font-bold text-cyan-300">{formatMoney(vatSummary?.netVatPayable)}</CardContent>
+              <CardContent className="pt-0 text-xl font-bold text-[#18B2B0]">{formatMoney(vatSummary?.netVatPayable)}</CardContent>
             </Card>
           </section>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.transactions_vat')} icon={ShieldCheck} tone="emerald" /></CardHeader>
             <CardContent>
               <Table>
@@ -2194,26 +2194,26 @@ export default function AccountingDashboardPage() {
 
         <TabsContent value="einvoice" className="space-y-4">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.total_documents')} icon={FileCheck2} tone="amber" /></CardHeader>
-              <CardContent className="pt-0 text-2xl font-black text-amber-100">{einvoiceStatusCounts.total}</CardContent>
+              <CardContent className="pt-0 text-2xl font-black text-[#8a6410]">{einvoiceStatusCounts.total}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.item_17546')} icon={ShieldCheck} tone="emerald" /></CardHeader>
-              <CardContent className="pt-0 text-2xl font-black text-emerald-200">{einvoiceStatusCounts.submitted}</CardContent>
+              <CardContent className="pt-0 text-2xl font-black text-[#149D9B]">{einvoiceStatusCounts.submitted}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.pending_waiting')} icon={AlertTriangle} tone="amber" /></CardHeader>
-              <CardContent className="pt-0 text-2xl font-black text-amber-200">{einvoiceStatusCounts.pending}</CardContent>
+              <CardContent className="pt-0 text-2xl font-black text-[#8a6410]">{einvoiceStatusCounts.pending}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.item_17483')} icon={RefreshCw} tone="rose" /></CardHeader>
-              <CardContent className="pt-0 text-2xl font-black text-rose-200">{einvoiceStatusCounts.retrying}</CardContent>
+              <CardContent className="pt-0 text-2xl font-black text-[#E05252]">{einvoiceStatusCounts.retrying}</CardContent>
             </Card>
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
-            <Card className="border-slate-700/60 bg-[#173030] xl:col-span-2">
+            <Card className="rassco-glass rassco-glass-static xl:col-span-2">
               <CardHeader>
                 <SectionHeading title={t('accounting.invoice')} icon={FileCheck2} tone="amber" />
               </CardHeader>
@@ -2228,11 +2228,11 @@ export default function AccountingDashboardPage() {
                     <Input id="ei-source-id" value={einvoiceForm.sourceId} onChange={(e) => setEinvoiceForm((prev) => ({ ...prev, sourceId: e.target.value }))} placeholder={t('accounting.invoice_sales_1')} required />
                   </div>
                   <div className="md:col-span-3 flex flex-wrap items-center gap-2 pt-1">
-                    <Button type="submit" disabled={!canWriteAccounting} className="bg-amber-500/80 text-slate-950 hover:bg-amber-400">
+                    <Button type="submit" disabled={!canWriteAccounting} className="bg-[#F4B740] text-[#2D3135] hover:bg-[#e0a52a]">
                       <FileCheck2 className="ml-2 h-4 w-4" />
                       {t('accounting.document_1')}
                     </Button>
-                    <Button type="button" variant="outline" className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/einvoice?limit=100"] })}>
+                    <Button type="button" variant="outline" className="border-[#18B2B0]/30 bg-[#18B2B0]/10 text-[#149D9B]" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/einvoice?limit=100"] })}>
                       <RefreshCw className="ml-2 h-4 w-4" />
                       {t('accounting.update_1')}
                     </Button>
@@ -2241,31 +2241,31 @@ export default function AccountingDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.notes')} icon={ShieldCheck} tone="cyan" />
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
-                <div className="rounded-lg border border-slate-600/60 bg-slate-900/35 px-3 py-2">{t('accounting.status')}<span className="font-semibold text-emerald-200">{t('accounting.posted')}</span>{t('accounting.document_2')}</div>
-                <div className="rounded-lg border border-slate-600/60 bg-slate-900/35 px-3 py-2">{t('accounting.status_1')}<span className="font-semibold text-rose-200">Retrying</span>{t('accounting.table')}</div>
-                <div className="rounded-lg border border-slate-600/60 bg-slate-900/35 px-3 py-2">{t('accounting.operation_send')}</div>
+              <CardContent className="space-y-3 text-sm text-[#6B7280]">
+                <div className="rounded-lg border border-[#E6E8EC] bg-[#F8FAFB] px-3 py-2">{t('accounting.status')}<span className="font-semibold text-[#149D9B]">{t('accounting.posted')}</span>{t('accounting.document_2')}</div>
+                <div className="rounded-lg border border-[#E6E8EC] bg-[#F8FAFB] px-3 py-2">{t('accounting.status_1')}<span className="font-semibold text-[#E05252]">Retrying</span>{t('accounting.table')}</div>
+                <div className="rounded-lg border border-[#E6E8EC] bg-[#F8FAFB] px-3 py-2">{t('accounting.operation_send')}</div>
               </CardContent>
             </Card>
           </section>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader>
               <SectionHeading title={t('accounting.documents')} icon={FileCheck2} tone="amber" />
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2 text-xs">
-                <span className="text-cyan-200">{t('accounting.view_documents_status_send')}</span>
-                <span className="font-semibold text-slate-300">{t('accounting.total_logs')}{einvoiceDocuments.length}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#18B2B0]/20 bg-[#18B2B0]/5 px-3 py-2 text-xs">
+                <span className="text-[#149D9B]">{t('accounting.view_documents_status_send')}</span>
+                <span className="font-semibold text-[#6B7280]">{t('accounting.total_logs')}{einvoiceDocuments.length}</span>
               </div>
-              <div className="overflow-x-auto rounded-xl border border-slate-700/60">
+              <div className="overflow-x-auto rounded-xl border border-[#E6E8EC]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-700/60 bg-slate-900/30">
+                    <TableRow className="border-[#E6E8EC] bg-[#F8FAFB]">
                       <TableHead className="whitespace-nowrap">{t('accounting.item_9563')}</TableHead>
                       <TableHead className="whitespace-nowrap">{t('accounting.source')}</TableHead>
                       <TableHead className="whitespace-nowrap">{t('accounting.status_2')}</TableHead>
@@ -2278,12 +2278,12 @@ export default function AccountingDashboardPage() {
                   <TableBody>
                     {einvoiceDocuments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-8 text-center text-sm text-slate-400">
+                        <TableCell colSpan={7} className="py-8 text-center text-sm text-[#6B7280]">
                           {t('accounting.no_einvoice_docs')}
                         </TableCell>
                       </TableRow>
                     ) : einvoiceDocuments.map((doc) => (
-                      <TableRow key={doc.id} className="border-slate-700/60 hover:bg-slate-900/20">
+                      <TableRow key={doc.id} className="border-[#E6E8EC] hover:bg-[#F8FAFB]">
                         <TableCell className="max-w-[160px] truncate" title={doc.id}>{doc.id}</TableCell>
                         <TableCell>{doc.source_type}</TableCell>
                         <TableCell><Badge className={statusClass(doc.zatca_status)}>{statusLabel(doc.zatca_status)}</Badge></TableCell>
@@ -2295,7 +2295,7 @@ export default function AccountingDashboardPage() {
                             <Button
                               type="button"
                               size="sm"
-                              className="bg-emerald-500/85 text-slate-950 hover:bg-emerald-400"
+                              className="bg-[#18B2B0] text-white hover:bg-[#149D9B]"
                               disabled={!canWriteAccounting}
                               onClick={() => submitSimpleAction(`/api/einvoice/${doc.id}/submit`, t('accounting.completed_send_document'), ["/api/einvoice?limit=100"])}
                             >
@@ -2306,7 +2306,7 @@ export default function AccountingDashboardPage() {
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                              className="border-[#E05252]/30 bg-[#E05252]/10 text-[#E05252] hover:bg-[#E05252]/20"
                               disabled={!canWriteAccounting}
                               onClick={() => submitSimpleAction(`/api/einvoice/${doc.id}/retry`, t('accounting.item_25455'), ["/api/einvoice?limit=100"])}
                             >
@@ -2326,25 +2326,25 @@ export default function AccountingDashboardPage() {
 
         <TabsContent value="reports" className="space-y-4">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.sales_1')} icon={BarChart3} tone="amber" /></CardHeader>
-              <CardContent className="pt-0 text-lg font-black text-amber-100">{formatMoney(topTechnicianAmount)}</CardContent>
+              <CardContent className="pt-0 text-lg font-black text-[#8a6410]">{formatMoney(topTechnicianAmount)}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.sales_2')} icon={FileSpreadsheet} tone="cyan" /></CardHeader>
-              <CardContent className="pt-0 text-lg font-black text-cyan-100">{formatMoney(topItemAmount)}</CardContent>
+              <CardContent className="pt-0 text-lg font-black text-[#18B2B0]">{formatMoney(topItemAmount)}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.item_17578')} icon={BarChart3} tone="emerald" /></CardHeader>
-              <CardContent className="pt-0 text-2xl font-black text-emerald-200">{topTechnicians.length}</CardContent>
+              <CardContent className="pt-0 text-2xl font-black text-[#149D9B]">{topTechnicians.length}</CardContent>
             </Card>
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader className="pb-2"><SectionHeading title={t('accounting.item_15912')} icon={FileSpreadsheet} tone="violet" /></CardHeader>
-              <CardContent className="pt-0 text-2xl font-black text-violet-200">{topItems.length}</CardContent>
+              <CardContent className="pt-0 text-2xl font-black text-[#6B7280]">{topItems.length}</CardContent>
             </Card>
           </section>
 
-          <Card className="border-slate-700/60 bg-[#173030]">
+          <Card className="rassco-glass rassco-glass-static">
             <CardHeader><SectionHeading title={t('accounting.reports')} icon={FileSpreadsheet} tone="cyan" /></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3 md:grid-cols-3">
@@ -2352,23 +2352,23 @@ export default function AccountingDashboardPage() {
                 <div className="space-y-2"><Label htmlFor="rep-to">{t('accounting.date_2')}</Label><Input id="rep-to" type="date" value={reportsFilter.to} onChange={(e) => setReportsFilter((prev) => ({ ...prev, to: e.target.value }))} /></div>
                 <div className="space-y-2"><Label htmlFor="rep-limit">{t('accounting.item_6343')}</Label><Input id="rep-limit" type="number" min="1" max="100" value={reportsFilter.limit} onChange={(e) => setReportsFilter((prev) => ({ ...prev, limit: e.target.value }))} /></div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-600/60 bg-slate-900/30 p-3">
-                <Button type="button" onClick={refreshAll} className="bg-cyan-500/80 text-slate-950 hover:bg-cyan-400"><RefreshCw className="ml-2 h-4 w-4" />{t('accounting.update_reports')}</Button>
-                <Button type="button" variant="outline" className="border-emerald-400/40 bg-emerald-500/10 text-emerald-200" onClick={() => exportReports("top")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6895')}</Button>
-                <Button type="button" variant="outline" className="border-cyan-400/40 bg-cyan-500/10 text-cyan-200" onClick={() => exportReports("summary")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6901')}</Button>
-                <Button type="button" variant="outline" className="border-amber-400/40 bg-amber-500/10 text-amber-200" onClick={() => exportReportsPdf("top")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6616')}</Button>
-                <Button type="button" variant="outline" className="border-violet-400/40 bg-violet-500/10 text-violet-200" onClick={() => exportReportsPdf("summary")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6622')}</Button>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#E6E8EC] bg-[#F8FAFB] p-3">
+                <Button type="button" onClick={refreshAll} className="bg-[#18B2B0] text-white hover:bg-[#149D9B]"><RefreshCw className="ml-2 h-4 w-4" />{t('accounting.update_reports')}</Button>
+                <Button type="button" variant="outline" className="border-[#18B2B0]/30 bg-[#18B2B0]/10 text-[#149D9B]" onClick={() => exportReports("top")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6895')}</Button>
+                <Button type="button" variant="outline" className="border-[#18B2B0]/30 bg-[#18B2B0]/10 text-[#149D9B]" onClick={() => exportReports("summary")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6901')}</Button>
+                <Button type="button" variant="outline" className="border-[#F4B740]/30 bg-[#F4B740]/10 text-[#8a6410]" onClick={() => exportReportsPdf("top")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6616')}</Button>
+                <Button type="button" variant="outline" className="border-[#6B7280]/30 bg-[#6B7280]/10 text-[#6B7280]" onClick={() => exportReportsPdf("summary")} disabled={isExporting}><Download className="ml-2 h-4 w-4" />{t('accounting.item_6622')}</Button>
               </div>
             </CardContent>
           </Card>
 
           <section className="grid gap-4 xl:grid-cols-2">
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_19185')} icon={BarChart3} tone="amber" />
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="text-xs text-slate-400">{t('accounting.rank_sales')}</div>
+                <div className="text-xs text-[#6B7280]">{t('accounting.rank_sales')}</div>
                 <Table>
                   <TableHeader><TableRow><TableHead>{t('accounting.item_9571')}</TableHead><TableHead>{t('accounting.quantity')}</TableHead><TableHead>{t('accounting.sales')}</TableHead><TableHead>{t('accounting.invoices')}</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -2385,12 +2385,12 @@ export default function AccountingDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-700/60 bg-[#173030]">
+            <Card className="rassco-glass rassco-glass-static">
               <CardHeader>
                 <SectionHeading title={t('accounting.item_27121')} icon={FileSpreadsheet} tone="cyan" />
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="text-xs text-slate-400">{t('accounting.value_2')}</div>
+                <div className="text-xs text-[#6B7280]">{t('accounting.value_2')}</div>
                 <Table>
                   <TableHeader><TableRow><TableHead>{t('accounting.item_7975')}</TableHead><TableHead>{t('accounting.quantity')}</TableHead><TableHead>{t('accounting.sales')}</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -2410,12 +2410,12 @@ export default function AccountingDashboardPage() {
       </Tabs>
 
       {!canWriteAccounting && (
-        <section className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4 text-cyan-100">
+        <section className="rounded-2xl border border-[#18B2B0]/25 bg-[#18B2B0]/8 p-4 text-[#149D9B]">
           <div className="flex items-center gap-2 font-semibold">
             <ShieldCheck className="h-4 w-4" />
             {t('accounting.item_28734')}
           </div>
-          <p className="mt-1 text-sm text-cyan-200">{t('accounting.reports_finance')}</p>
+          <p className="mt-1 text-sm text-[#149D9B]">{t('accounting.reports_finance')}</p>
         </section>
       )}
     </div>

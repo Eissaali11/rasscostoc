@@ -493,11 +493,11 @@ export default function ProductsManagementPage() {
     const message = loadError instanceof Error ? loadError.message : t('common.loading_data_2');
     return (
       <div className="px-4 md:px-6 py-6">
-        <div className="rounded-xl border border-orange-400/30 bg-orange-500/10 p-5 text-center">
-          <AlertTriangle className="h-8 w-8 text-orange-300 mx-auto mb-2" />
-          <p className="text-orange-200 font-bold mb-1">{t('common.loading_data_page')}</p>
-          <p className="text-orange-100/80 text-sm">{message}</p>
-          <p className="text-orange-100/70 text-xs mt-2">{t('common.page')}</p>
+        <div className="rounded-[22px] border border-[#F4B740]/30 bg-[#FDF6E7] p-5 text-center shadow-[0_20px_45px_rgba(0,0,0,0.06)]">
+          <AlertTriangle className="h-8 w-8 text-[#F4B740] mx-auto mb-2" />
+          <p className="text-[#8a6410] font-bold mb-1">{t('common.loading_data_page')}</p>
+          <p className="text-[#6B7280] text-sm">{message}</p>
+          <p className="text-[#9AA1AB] text-xs mt-2">{t('common.page')}</p>
         </div>
       </div>
     );
@@ -560,7 +560,7 @@ export default function ProductsManagementPage() {
       />
 
       {receiveMessage ? (
-        <div className="mt-3 text-xs rounded-lg border border-slate-700/70 bg-slate-900/60 text-slate-300 px-3 py-2">
+        <div className="mt-3 text-xs rounded-lg border border-[#18B2B0]/20 bg-[#18B2B0]/6 text-[#2D3135] px-3 py-2">
           {receiveMessage}
         </div>
       ) : null}

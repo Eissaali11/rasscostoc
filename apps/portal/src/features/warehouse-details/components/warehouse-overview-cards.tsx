@@ -40,99 +40,91 @@ export function WarehouseOverviewCards({
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center justify-between">
+      <div className="rassco-glass rassco-glass-static p-6 flex items-center justify-between">
         <div>
-          <p className="text-white/50 text-sm mb-2">{t('warehouse.total_inventory')}</p>
+          <p className="text-[#6B7280] text-sm mb-2">{t('warehouse.total_inventory')}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-white text-3xl font-bold">{totalInventory}</p>
-            <p className="text-sm text-white/60">{t('warehouse.piece')}</p>
+            <p className="text-[#2D3135] text-3xl font-bold">{totalInventory}</p>
+            <p className="text-sm text-[#6B7280]">{t('warehouse.piece')}</p>
           </div>
         </div>
         <div className="relative size-20">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <defs>
-              <linearGradient id="summaryGradientWarehouse" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#00f2ff" />
-                <stop offset="100%" stopColor="#bc13fe" />
-              </linearGradient>
-            </defs>
-            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#E6E8EC" strokeWidth="5" />
             <circle
               cx="18"
               cy="18"
               r="14"
               fill="none"
-              stroke="url(#summaryGradientWarehouse)"
+              stroke="#18B2B0"
               strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray="87.9"
               strokeDashoffset={`${87.9 - (87.9 * inventoryUsagePercent) / 100}`}
-              className="drop-shadow-[0_0_8px_rgba(0,242,255,0.4)]"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-cyan-300 font-bold text-sm">{inventoryUsagePercent}%</span>
+            <span className="text-[#149D9B] font-bold text-sm">{inventoryUsagePercent}%</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center justify-between">
+      <div className="rassco-glass rassco-glass-static p-6 flex items-center justify-between">
         <div>
-          <p className="text-white/50 text-sm mb-2">{t('warehouse.text_1')}</p>
+          <p className="text-[#6B7280] text-sm mb-2">{t('warehouse.text_1')}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-white text-3xl font-bold">{availableItemTypesCount}</p>
-            <p className="text-sm text-white/60">{t('warehouse.item_12835')}{totalItemTypesCount}</p>
+            <p className="text-[#2D3135] text-3xl font-bold">{availableItemTypesCount}</p>
+            <p className="text-sm text-[#6B7280]">{t('warehouse.item_12835')}{totalItemTypesCount}</p>
           </div>
         </div>
         <div className="relative size-20">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#E6E8EC" strokeWidth="5" />
             <circle
               cx="18"
               cy="18"
               r="14"
               fill="none"
-              stroke="url(#summaryGradientWarehouse)"
+              stroke="#F4B740"
               strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray="87.9"
               strokeDashoffset={`${87.9 - (87.9 * availableItemTypesPercent) / 100}`}
-              className="drop-shadow-[0_0_8px_rgba(188,19,254,0.4)]"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-purple-300 font-bold text-sm">{availableItemTypesPercent}%</span>
+            <span className="text-[#8a6410] font-bold text-sm">{availableItemTypesPercent}%</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+      <div className="rassco-glass rassco-glass-static p-6">
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-              <User className="h-5 w-5 text-blue-400" />
+            <div className="size-10 rounded-xl bg-[#18B2B0]/10 border border-[#18B2B0]/25 flex items-center justify-center shrink-0">
+              <User className="h-5 w-5 text-[#18B2B0]" />
             </div>
-            <p className="text-white/70 text-sm">{t('warehouse.technician_2')}</p>
+            <p className="text-[#2D3135] text-sm">{t('warehouse.technician_2')}</p>
           </div>
-          <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-200 text-xs border border-cyan-400/30">
+          <span className="px-2 py-0.5 rounded-md bg-[#18B2B0]/10 text-[#149D9B] text-xs border border-[#18B2B0]/25">
             {warehouseTechnicians?.length || 0}
           </span>
         </div>
 
         <div className="relative mb-3">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-300/70" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280]" />
           <Input
             value={technicianSearchQuery}
             onChange={(event) => onTechnicianSearchChange(event.target.value)}
             placeholder={t('warehouse.technician_or_username_or_city')}
-            className="h-9 pr-10 pl-10 bg-black/25 border-cyan-400/25 text-white placeholder:text-gray-400 focus:border-cyan-300"
+            className="h-9 pr-10 pl-10 bg-white border-[#E6E8EC] text-[#2D3135] placeholder:text-[#9AA1AB] focus:border-[#18B2B0]"
           />
           {technicianSearchQuery.trim().length > 0 && (
             <button
               type="button"
               onClick={onClearTechnicianSearch}
               aria-label={t('warehouse.scan_search_3')}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-cyan-300/70 hover:text-cyan-200 hover:bg-cyan-500/10 transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F3F4F6] transition-colors"
             >
               <XCircle className="h-4 w-4" />
             </button>
@@ -146,7 +138,7 @@ export function WarehouseOverviewCards({
                 {filteredLinkedTechnicians.map((technician) => (
                   <div
                     key={technician.id}
-                    className="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-400/30 text-xs text-cyan-100"
+                    className="px-3 py-1.5 rounded-lg bg-[#18B2B0]/10 border border-[#18B2B0]/25 text-xs text-[#149D9B]"
                   >
                     {technician.fullName}
                   </div>
@@ -154,12 +146,12 @@ export function WarehouseOverviewCards({
               </div>
             </div>
           ) : (
-            <div className="text-xs text-gray-400 py-2 text-center bg-black/20 rounded-lg border border-white/10">
+            <div className="text-xs text-[#9AA1AB] py-2 text-center bg-[#F3F4F6] rounded-lg border border-[#E6E8EC]">
               {t('warehouse.no_results')}
             </div>
           )
         ) : (
-          <div className="text-xs text-gray-400 py-2 text-center bg-black/20 rounded-lg border border-white/10">
+          <div className="text-xs text-[#9AA1AB] py-2 text-center bg-[#F3F4F6] rounded-lg border border-[#E6E8EC]">
             {t('warehouse.no_technician')}
           </div>
         )}

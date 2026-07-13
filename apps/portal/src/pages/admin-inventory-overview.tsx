@@ -1,7 +1,8 @@
 import { useTranslation } from "@/lib/language";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CalendarDays, CheckCircle2, FileDown, Filter, Search, XCircle } from "lucide-react";
+import { CalendarDays, FileDown, Filter, Search } from "lucide-react";
+import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -95,20 +96,20 @@ export default function AdminInventoryOverview() {
     if (level === 'critical') {
       return {
         label: t('inventory.item_4746'),
-        className: "bg-red-500/15 text-red-300 border border-red-400/30",
+        className: "bg-[#E05252]/10 text-[#E05252] border border-[#E05252]/25",
       };
     }
 
     if (level === 'warning') {
       return {
         label: t('inventory.item_7999'),
-        className: "bg-amber-500/15 text-amber-300 border border-amber-400/30",
+        className: "bg-[#F4B740]/15 text-[#8a6410] border border-[#F4B740]/35",
       };
     }
 
     return {
       label: t('inventory.active'),
-      className: "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30",
+      className: "bg-[#18B2B0]/10 text-[#149D9B] border border-[#18B2B0]/25",
     };
   };
 
@@ -495,8 +496,8 @@ export default function AdminInventoryOverview() {
     return (
         <div className="h-full flex items-center justify-center">
           <div className="text-center space-y-3">
-            <div className="mx-auto size-12 rounded-full border-2 border-cyan-400/50 border-t-transparent animate-spin" />
-            <p className="text-slate-200 text-sm">{t('inventory.loading_data_couriers')}</p>
+            <div className="mx-auto size-12 rounded-full border-2 border-[#18B2B0]/40 border-t-[#18B2B0] animate-spin" />
+            <p className="text-[#6B7280] text-sm">{t('inventory.loading_data_couriers')}</p>
           </div>
         </div>
     );
@@ -512,48 +513,67 @@ export default function AdminInventoryOverview() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-slate-100">{t('inventory.dashboard_couriers')}</h1>
-            <p className="text-sm text-slate-400">{t('inventory.view')}</p>
+            <h1 className="text-xl md:text-2xl font-bold text-[#2D3135]">{t('inventory.dashboard_couriers')}</h1>
+            <p className="text-sm text-[#6B7280]">{t('inventory.view')}</p>
           </div>
-          <div className="flex items-center gap-2 text-cyan-300 text-sm">
+          <div className="flex items-center gap-2 text-[#18B2B0] text-sm font-semibold">
             <CalendarDays className="h-4 w-4" />
             <span>{todayAr}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-cyan-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-cyan-400" />
-            <p className="text-xs text-slate-400 mb-2">{t('inventory.total_couriers_1')}</p>
-            <p className="text-3xl font-bold text-slate-100">{totalTechniciansInventory.toLocaleString("ar-SA")}</p>
-          </div>
-          <div className="rounded-2xl border border-emerald-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400" />
-            <p className="text-xs text-slate-400 mb-2">{t('inventory.units_active')}</p>
-            <p className="text-3xl font-bold text-emerald-300">{totalFixedInventory.toLocaleString("ar-SA")}</p>
-          </div>
-          <div className="rounded-2xl border border-orange-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-orange-400" />
-            <p className="text-xs text-slate-400 mb-2">{t('inventory.units')}</p>
-            <p className="text-3xl font-bold text-orange-300">{totalMovingInventory.toLocaleString("ar-SA")}</p>
-          </div>
-          <div className="rounded-2xl border border-sky-400/15 bg-slate-900/40 p-5 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-sky-400" />
-            <p className="text-xs text-slate-400 mb-2">{t('inventory.pending')}</p>
-            <p className="text-3xl font-bold text-sky-300">{technicians.length.toLocaleString("ar-SA")}</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rassco-glass p-5 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-[#18B2B0]" />
+            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.total_couriers_1')}</p>
+            <p className="text-3xl font-bold text-[#2D3135]">{totalTechniciansInventory.toLocaleString("ar-SA")}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="rassco-glass p-5 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-[#18B2B0]" />
+            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.units_active')}</p>
+            <p className="text-3xl font-bold text-[#149D9B]">{totalFixedInventory.toLocaleString("ar-SA")}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="rassco-glass p-5 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-[#F4B740]" />
+            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.units')}</p>
+            <p className="text-3xl font-bold text-[#8a6410]">{totalMovingInventory.toLocaleString("ar-SA")}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="rassco-glass p-5 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-[#6B7280]" />
+            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.pending')}</p>
+            <p className="text-3xl font-bold text-[#2D3135]">{technicians.length.toLocaleString("ar-SA")}</p>
+          </motion.div>
         </div>
 
-        <div className="rounded-2xl border border-cyan-400/10 bg-slate-900/30 p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="rassco-glass rassco-glass-static p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
           <div className="relative flex-1">
-            <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-cyan-300/70" />
+            <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
             <input
               type="text"
               placeholder={t('inventory.search_name_technician_number')}
               value={searchName}
               onChange={(event) => setSearchName(event.target.value)}
               data-testid="input-search-name"
-              className="w-full bg-[#102222] border border-cyan-400/20 rounded-xl pr-9 pl-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-cyan-400/40"
+              className="w-full bg-white border border-[#E6E8EC] rounded-xl pr-9 pl-3 py-2.5 text-sm text-[#2D3135] placeholder:text-[#9AA1AB] outline-none focus:ring-2 focus:ring-[#18B2B0]/30 focus:border-[#18B2B0]"
             />
           </div>
 
@@ -561,7 +581,7 @@ export default function AdminInventoryOverview() {
             <select
               value={selectedRegion}
               onChange={(event) => setSelectedRegion(event.target.value)}
-              className="bg-[#102222] border border-cyan-400/20 rounded-xl px-3 py-2.5 text-sm text-slate-200 min-w-[150px] outline-none focus:ring-2 focus:ring-cyan-400/40"
+              className="bg-white border border-[#E6E8EC] rounded-xl px-3 py-2.5 text-sm text-[#2D3135] min-w-[150px] outline-none focus:ring-2 focus:ring-[#18B2B0]/30 focus:border-[#18B2B0]"
             >
               <option value="all">{t('inventory.item_14397')}</option>
               {regionOptions.map((regionName) => (
@@ -571,7 +591,7 @@ export default function AdminInventoryOverview() {
 
             <button
               type="button"
-              className="p-2.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-300"
+              className="p-2.5 rounded-xl border border-[#18B2B0]/25 bg-[#18B2B0]/10 text-[#18B2B0]"
               aria-label={t('inventory.filter')}
             >
               <Filter className="h-4 w-4" />
@@ -579,7 +599,7 @@ export default function AdminInventoryOverview() {
 
             <button
               onClick={exportToExcel}
-              className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-cyan-400/10 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-400 hover:text-[#102222] transition-colors text-sm font-semibold"
+              className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#18B2B0] text-white border border-[#18B2B0] hover:bg-[#149D9B] transition-colors text-sm font-semibold"
               type="button"
               data-testid="button-export-all"
             >
@@ -589,14 +609,14 @@ export default function AdminInventoryOverview() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-400/25" data-testid="text-critical-count">{t('inventory.item_4804')}{criticalTechs}</span>
-          <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-400/25" data-testid="text-warning-count">{t('inventory.warning_1')}{warningTechs}</span>
-          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-400/25" data-testid="text-good-count">{t('inventory.active_1')}{goodTechs}</span>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="px-3 py-1 rounded-full bg-[#E05252]/10 text-[#E05252] border border-[#E05252]/25 font-semibold" data-testid="text-critical-count">{t('inventory.item_4804')}{criticalTechs}</span>
+          <span className="px-3 py-1 rounded-full bg-[#F4B740]/15 text-[#8a6410] border border-[#F4B740]/35 font-semibold" data-testid="text-warning-count">{t('inventory.warning_1')}{warningTechs}</span>
+          <span className="px-3 py-1 rounded-full bg-[#18B2B0]/10 text-[#149D9B] border border-[#18B2B0]/25 font-semibold" data-testid="text-good-count">{t('inventory.active_1')}{goodTechs}</span>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-5 pb-2">
-          {technicians.map((technician) => {
+          {technicians.map((technician, index) => {
             const fixedTotal = calculateFixedTotal(technician.fixedInventory);
             const movingTotal = calculateMovingTotal(technician.movingInventory);
             const fixedPercent = Math.min(100, Math.round((fixedTotal / maxFixedInventory) * 100));
@@ -604,41 +624,47 @@ export default function AdminInventoryOverview() {
             const badge = getAlertBadge(technician.alertLevel);
 
             return (
-              <div key={technician.technicianId} className="rounded-2xl border border-cyan-400/10 bg-slate-900/40 p-5 hover:border-cyan-400/35 transition-colors">
+              <motion.div
+                key={technician.technicianId}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(index, 8) * 0.03 }}
+                className="rassco-glass p-5"
+              >
                 <div className="flex items-start justify-between mb-5">
                   <span className={`px-3 py-1 rounded-full text-[11px] font-semibold ${badge.className}`}>{badge.label}</span>
 
                   <div className="flex items-center gap-3">
                     <div className="text-right min-w-0">
-                      <h3 className="text-lg font-bold text-slate-100 truncate">{technician.technicianName}</h3>
-                      <p className="text-xs text-cyan-300 truncate">{t('inventory.item_19161')}{technician.city}</p>
-                      <p className="text-[11px] text-slate-500">ID: #{technician.technicianId.slice(0, 8).toUpperCase()}</p>
+                      <h3 className="text-lg font-bold text-[#2D3135] truncate">{technician.technicianName}</h3>
+                      <p className="text-xs text-[#18B2B0] truncate">{t('inventory.item_19161')}{technician.city}</p>
+                      <p className="text-[11px] text-[#9AA1AB]">ID: #{technician.technicianId.slice(0, 8).toUpperCase()}</p>
                     </div>
-                    <div className="size-14 rounded-2xl bg-slate-800 border border-cyan-300/25 flex items-center justify-center text-cyan-200 font-bold">
+                    <div className="size-14 rounded-2xl bg-[#18B2B0]/10 border border-[#18B2B0]/25 flex items-center justify-center text-[#18B2B0] font-bold">
                       {(technician.technicianName || t('inventory.item_1601')).slice(0, 1)}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-5">
-                  <RingMetric label={t('inventory.item_14327')} percent={fixedPercent} value={fixedTotal} color="cyan" />
-                  <RingMetric label={t('inventory.item_15971')} percent={movingPercent} value={movingTotal} color="orange" />
+                  <RingMetric label={t('inventory.item_14327')} percent={fixedPercent} value={fixedTotal} color="teal" />
+                  <RingMetric label={t('inventory.item_15971')} percent={movingPercent} value={movingTotal} color="warning" />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setLocation(`/technician-details/${technician.technicianId}`)}
-                  className="w-full py-2.5 rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400 hover:text-[#102222] font-semibold text-sm transition-colors"
+                  className="w-full py-2.5 rounded-xl border border-[#18B2B0]/25 bg-[#18B2B0]/10 text-[#18B2B0] hover:bg-[#18B2B0] hover:text-white font-semibold text-sm transition-colors"
                 >
                   {t('inventory.view_1')}
                 </button>
-              </div>
+              </motion.div>
             );
           })}
         </div>
 
         {technicians.length === 0 && (
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+          <div className="rassco-glass rassco-glass-static p-8 text-center text-[#6B7280]">
             {t('inventory.no_results')}
           </div>
         )}
@@ -647,38 +673,37 @@ export default function AdminInventoryOverview() {
   );
 }
 
-function RingMetric({ label, percent, value, color }: { label: string; percent: number; value: number; color: "cyan" | "orange" }) {
+function RingMetric({ label, percent, value, color }: { label: string; percent: number; value: number; color: "teal" | "warning" }) {
   const { t } = useTranslation();
-  const strokeClass = color === "cyan" ? "text-cyan-400" : "text-orange-400";
+  const strokeColor = color === "teal" ? "#18B2B0" : "#F4B740";
 
   return (
-    <div className="rounded-xl border border-cyan-400/10 bg-[#102222]/70 p-4 flex flex-col items-center gap-2">
+    <div className="rounded-xl border border-[#18B2B0]/12 bg-white/60 p-4 flex flex-col items-center gap-2">
       <div className="relative w-16 h-16">
         <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
           <path
-            className="text-slate-700"
+            className="text-[#E6E8EC]"
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
             stroke="currentColor"
             strokeWidth="3"
           />
           <path
-            className={strokeClass}
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
-            stroke="currentColor"
+            stroke={strokeColor}
             strokeDasharray={`${percent}, 100`}
             strokeLinecap="round"
             strokeWidth="3"
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-100">
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-[#2D3135]">
           {t('inventory.count_2', { count: percent.toLocaleString("ar-SA") })}
         </div>
       </div>
 
-      <div className="text-[11px] text-slate-400">{label}</div>
-      <div className="text-sm font-semibold text-slate-200">{value.toLocaleString("ar-SA")}</div>
+      <div className="text-[11px] text-[#6B7280]">{label}</div>
+      <div className="text-sm font-semibold text-[#2D3135]">{value.toLocaleString("ar-SA")}</div>
     </div>
   );
 }

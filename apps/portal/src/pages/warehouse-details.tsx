@@ -175,15 +175,11 @@ export default function WarehouseDetailsPage() {
 
   if (warehouseLoading) {
     return (
-        <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#0a0a0c] text-white relative overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-purple-500/10 blur-[120px] rounded-full" />
-            <div className="absolute top-[25%] -right-[15%] w-[40%] h-[40%] bg-cyan-400/10 blur-[120px] rounded-full" />
-          </div>
+        <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#F8FAFB] relative overflow-hidden">
           <div className="relative z-10 p-8 space-y-6">
-            <Skeleton className="h-24 w-full bg-white/5" />
-            <Skeleton className="h-56 w-full bg-white/5" />
-            <Skeleton className="h-80 w-full bg-white/5" />
+            <Skeleton className="h-24 w-full bg-white/60" />
+            <Skeleton className="h-56 w-full bg-white/60" />
+            <Skeleton className="h-80 w-full bg-white/60" />
           </div>
         </div>
     );
@@ -191,13 +187,13 @@ export default function WarehouseDetailsPage() {
 
   if (!warehouse) {
     return (
-        <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#0a0a0c] text-white flex items-center justify-center">
-          <div className="text-center bg-white/[0.03] border border-white/10 rounded-3xl p-10 max-w-md w-full">
-            <Warehouse className="h-14 w-14 mx-auto text-cyan-300 mb-4" />
-            <h2 className="text-3xl font-bold mb-3">{t('warehouse.warehouse')}</h2>
-            <p className="text-slate-400 mb-6">{t('warehouse.data_warehouse')}</p>
+        <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#F8FAFB] flex items-center justify-center">
+          <div className="text-center rassco-glass rassco-glass-static p-10 max-w-md w-full">
+            <Warehouse className="h-14 w-14 mx-auto text-[#18B2B0] mb-4" />
+            <h2 className="text-3xl font-bold mb-3 text-[#2D3135]">{t('warehouse.warehouse')}</h2>
+            <p className="text-[#6B7280] mb-6">{t('warehouse.data_warehouse')}</p>
             <Link href="/warehouses">
-              <Button className="bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/30" data-testid="button-back-warehouses">
+              <Button className="bg-[#18B2B0] text-white hover:bg-[#149D9B]" data-testid="button-back-warehouses">
                 {t('warehouse.item_25487')}
               </Button>
             </Link>
@@ -216,52 +212,46 @@ export default function WarehouseDetailsPage() {
     : 0;
 
   const getGaugeStyle = (total: number) => {
-    if (total <= 3) return { color: "#ff4d4d", glow: "drop-shadow-[0_0_8px_rgba(255,77,77,0.6)]", text: "text-red-400" };
-    if (total <= 9) return { color: "#ffb347", glow: "drop-shadow-[0_0_8px_rgba(255,179,71,0.6)]", text: "text-orange-300" };
-    return { color: "#00ff9d", glow: "drop-shadow-[0_0_8px_rgba(0,255,157,0.6)]", text: "text-emerald-400" };
+    if (total <= 3) return { color: "#E05252", glow: "", text: "text-[#E05252]" };
+    if (total <= 9) return { color: "#F4B740", glow: "", text: "text-[#8a6410]" };
+    return { color: "#18B2B0", glow: "", text: "text-[#149D9B]" };
   };
 
   return (
     <>
-      <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#0a0a0c] text-slate-100 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-purple-500/10 blur-[120px] rounded-full" />
-          <div className="absolute top-[30%] -right-[15%] w-[40%] h-[40%] bg-cyan-400/10 blur-[120px] rounded-full" />
-          <div className="absolute -bottom-[20%] left-[30%] w-[60%] h-[60%] bg-blue-500/10 blur-[150px] rounded-full" />
-        </div>
-
+      <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#F8FAFB] text-[#2D3135] relative overflow-hidden">
         <div className="relative z-10 p-6 md:p-10 space-y-8">
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5 border-b border-white/5 pb-6">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5 border-b border-[#E6E8EC] pb-6">
             <div className="flex flex-wrap items-center gap-4">
               <Link href="/warehouses">
-                <button className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm" type="button" data-testid="button-back-warehouses">
+                <button className="flex items-center gap-2 text-[#6B7280] hover:text-[#2D3135] transition-colors text-sm" type="button" data-testid="button-back-warehouses">
                   <ArrowRight className="h-4 w-4" />
                   {t('warehouse.item_25487')}
                 </button>
               </Link>
-              <div className="hidden md:block h-6 w-px bg-white/10" />
+              <div className="hidden md:block h-6 w-px bg-[#E6E8EC]" />
               <div className="flex items-center gap-3">
-                <h2 className="text-3xl font-bold text-white" data-testid="text-warehouse-name">{warehouse.name}</h2>
+                <h2 className="text-3xl font-bold text-[#2D3135]" data-testid="text-warehouse-name">{warehouse.name}</h2>
                 <span
                   className={warehouse.isActive
-                    ? "inline-flex items-center gap-2 bg-green-500/10 text-green-400 text-xs font-bold px-3 py-1 rounded-full border border-green-500/20"
-                    : "inline-flex items-center gap-2 bg-slate-500/10 text-slate-400 text-xs font-bold px-3 py-1 rounded-full border border-slate-500/20"
+                    ? "inline-flex items-center gap-2 bg-[#18B2B0]/10 text-[#149D9B] text-xs font-bold px-3 py-1 rounded-full border border-[#18B2B0]/25"
+                    : "inline-flex items-center gap-2 bg-[#6B7280]/10 text-[#6B7280] text-xs font-bold px-3 py-1 rounded-full border border-[#6B7280]/25"
                   }
                   data-testid="badge-warehouse-status"
                 >
-                  <span className={warehouse.isActive ? "size-1.5 rounded-full bg-green-500" : "size-1.5 rounded-full bg-slate-500"} />
+                  <span className={warehouse.isActive ? "size-1.5 rounded-full bg-[#18B2B0]" : "size-1.5 rounded-full bg-[#6B7280]"} />
                   {warehouse.isActive ? t('warehouse.active') : t('warehouse.active_1')}
                 </span>
               </div>
-              <p className="text-white/40 text-sm flex items-center gap-1.5">
+              <p className="text-[#6B7280] text-sm flex items-center gap-1.5">
                 <MapPin className="h-4 w-4" />
                 <span data-testid="text-warehouse-location">{warehouse.location}</span>
               </p>
             </div>
 
-            <button className="self-start xl:self-auto flex items-center justify-center rounded-2xl bg-white/5 p-2.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors border border-white/10 relative" type="button">
+            <button className="self-start xl:self-auto flex items-center justify-center rounded-2xl bg-white p-2.5 text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#2D3135] transition-colors border border-[#E6E8EC] relative" type="button">
               <AlertTriangle className="h-5 w-5" />
-              <span className="absolute top-2 right-2 size-2 bg-purple-500 rounded-full shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+              <span className="absolute top-2 right-2 size-2 bg-[#F4B740] rounded-full" />
             </button>
           </div>
 
@@ -282,7 +272,7 @@ export default function WarehouseDetailsPage() {
             <Button
               onClick={handleExportToExcel}
               disabled={!warehouse || warehouseLoading}
-              className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20"
+              className="bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 text-[#149D9B] border border-[#18B2B0]/25"
               data-testid="button-export-excel"
             >
               <Download className="h-4 w-4 ml-2" />
@@ -290,7 +280,7 @@ export default function WarehouseDetailsPage() {
             </Button>
             <Button
               onClick={() => setShowUpdateInventoryModal(true)}
-              className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+              className="bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 text-[#149D9B] border border-[#18B2B0]/25"
               data-testid="button-update-inventory"
             >
               <RefreshCw className="h-4 w-4 ml-2" />
@@ -298,7 +288,7 @@ export default function WarehouseDetailsPage() {
             </Button>
             <Button
               onClick={() => setShowTransferModal(true)}
-              className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/20"
+              className="bg-[#F4B740]/12 hover:bg-[#F4B740]/20 text-[#8a6410] border border-[#F4B740]/30"
               data-testid="button-transfer-to-technician"
             >
               <Send className="h-4 w-4 ml-2" />
@@ -307,7 +297,7 @@ export default function WarehouseDetailsPage() {
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 ms-auto"
+              className="bg-[#E05252]/10 hover:bg-[#E05252]/20 text-[#E05252] border border-[#E05252]/25 ms-auto"
               data-testid="button-delete-warehouse"
             >
               <Trash2 className="h-4 w-4 ml-2" />
