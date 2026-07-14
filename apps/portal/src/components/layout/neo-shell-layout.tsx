@@ -337,8 +337,8 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
-        <header className="h-20 border-b border-rassco-border bg-white/95 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0 sticky top-0 z-10">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="relative h-20 border-b border-rassco-border bg-white/95 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3 min-w-0 z-10">
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 rounded-2xl text-rassco-gray hover:bg-[rgba(24,178,176,0.12)] hover:text-[#18B2B0] transition-colors shrink-0"
@@ -346,34 +346,24 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
             >
               <Menu className="h-6 w-6" />
             </button>
-            <Link
-              href="/home"
-              className="hidden sm:flex items-center shrink-0 pe-3 border-e border-rassco-border/80"
-              aria-label="RASSCO Home"
-            >
-              <img
-                src={logoHorizontal}
-                alt="RASSCO"
-                className="h-10 w-auto max-w-[168px] object-contain object-left"
-              />
-            </Link>
-            <div className="min-w-0 flex flex-col">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-rassco-text truncate">
-                {title}
-              </h2>
-              <span className="sm:hidden text-[11px] font-semibold tracking-[0.14em] text-rassco-gray uppercase">
-                RASSCO
-              </span>
-            </div>
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-rassco-text truncate max-w-[42vw] sm:max-w-[28vw] lg:max-w-none">
+              {title}
+            </h2>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <Link
-              href="/home"
-              className="sm:hidden h-10 w-10 rounded-xl bg-[#F3F4F6] ring-1 ring-rassco-border/70 flex items-center justify-center overflow-hidden shadow-sm"
-              aria-label="RASSCO Home"
-            >
-              <img src={logoIcon} alt="RASSCO" className="h-8 w-8 object-contain" />
-            </Link>
+
+          <Link
+            href="/home"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-20"
+            aria-label="RASSCO Home"
+          >
+            <img
+              src={logoHorizontal}
+              alt="RASSCO"
+              className="h-9 sm:h-10 w-auto max-w-[150px] sm:max-w-[168px] object-contain"
+            />
+          </Link>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 z-10">
             <button
               type="button"
               onClick={() => changeLanguage(language === "ar" ? "en" : "ar")}
