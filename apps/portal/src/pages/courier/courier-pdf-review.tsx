@@ -1,10 +1,10 @@
 ﻿import { useTranslation } from "@/lib/language";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { motion } from "framer-motion";
 import {
-  FileText,
   CheckCircle2,
   AlertCircle,
   Search,
@@ -211,31 +211,34 @@ export default function CourierPdfReviewPage() {
 
   return (
     <div dir={dir} className="rassco-page space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <button
-            onClick={() => navigate("/courier/pdf")}
-            className="flex items-center gap-1 text-xs text-[#6B7280] hover:text-[#2D3135] transition-colors mb-2"
-          >
-            <ArrowRight className="w-3.5 h-3.5" />
-            {t('courier.item_25514')}
-          </button>
-          <h1 className="text-xl font-bold text-[#2D3135] flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#18B2B0]" />
-            {t('courier.review_document_data_images')}
-          </h1>
-          <p className="text-sm text-[#6B7280] mt-1">
-            {t('courier.file_1')} <span className="font-mono text-[#18B2B0]">{report.fileName}</span>
-          </p>
-        </div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <button
+          onClick={() => navigate("/courier/pdf")}
+          className="flex items-center gap-1 text-xs font-semibold text-[#6B7280] hover:text-[#18B2B0] transition-colors mb-3"
+        >
+          <ArrowRight className="w-3.5 h-3.5" />
+          {t('courier.item_25514')}
+        </button>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-3">
+          <span className="courier-icon-badge">
+            <Sparkles className="w-5 h-5" />
+          </span>
+          {t('courier.review_document_data_images')}
+        </h1>
+        <p className="text-sm text-[#6B7280] mt-1.5 ps-14">
+          {t('courier.file_1')} <span className="font-mono text-[#18B2B0] font-semibold">{report.fileName}</span>
+        </p>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* PDF/Image Preview Frame */}
-        <div className="lg:col-span-6 rassco-glass border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm flex flex-col">
-          <div className="bg-[#F8FAFC] px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#4B5563]">{t('courier.document')}</span>
+        <div className="lg:col-span-6 courier-panel courier-panel-static flex flex-col">
+          <div className="bg-[#F8FAFC] px-4 py-3 border-b border-[rgba(24,178,176,0.16)] flex items-center justify-between">
+            <span className="text-xs font-bold text-[#4B5563]">{t('courier.document')}</span>
           </div>
           {report.fileName.toLowerCase().match(/\.(png|jpe?g|webp)$/) ? (
             <div className="w-full h-[650px] bg-[#F8FAFC] flex items-center justify-center overflow-auto p-4">
@@ -256,21 +259,21 @@ export default function CourierPdfReviewPage() {
 
         {/* OCR Extracted Fields */}
         <div className="lg:col-span-3 flex flex-col gap-6">
-          <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4">
-            <h2 className="text-sm font-semibold text-[#4B5563] border-b border-[#E2E8F0] pb-2">
+          <div className="courier-panel courier-panel-static p-5 space-y-4">
+            <h2 className="text-sm font-bold text-[#4B5563] border-b border-[rgba(24,178,176,0.16)] pb-2">
               {t('courier.item_36640')}
             </h2>
             {Object.entries(report.extractedJson || {}).map(([key, field]) => (
               <div key={key} className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-[#4B5563]">
+                  <label className="text-xs font-semibold text-[#4B5563]">
                     {getFieldLabel(key)}
                   </label>
                   <ConfidenceBadge value={field.confidence} />
                 </div>
                 <input
                   dir="ltr"
-                  className="w-full rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] px-3 py-2 text-sm text-[#2D3135] font-mono focus:border-[#18B2B0] focus:outline-none"
+                  className="courier-input font-mono"
                   value={editable[key] ?? ""}
                   onChange={(e) =>
                     setEditable((v) => ({ ...v, [key]: e.target.value }))
@@ -278,8 +281,8 @@ export default function CourierPdfReviewPage() {
                 />
               </div>
             ))}
-            <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#6B7280]">
-              <span>{t('courier.rate_total')}</span>
+            <div className="pt-2 border-t border-[rgba(24,178,176,0.16)] flex items-center justify-between text-xs text-[#6B7280]">
+              <span className="font-semibold">{t('courier.rate_total')}</span>
               <ConfidenceBadge value={report.overallConfidence} />
             </div>
           </div>
@@ -287,16 +290,16 @@ export default function CourierPdfReviewPage() {
 
         {/* Link to Request & Actions */}
         <div className="lg:col-span-3 flex flex-col gap-6">
-          <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-5 shadow-sm flex flex-col gap-4 flex-1">
-            <h2 className="text-sm font-semibold text-[#4B5563] border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
+          <div className="courier-panel courier-panel-static p-5 flex flex-col gap-4 flex-1">
+            <h2 className="text-sm font-bold text-[#4B5563] border-b border-[rgba(24,178,176,0.16)] pb-2 flex items-center gap-1.5">
               <Link2 className="w-4 h-4 text-[#18B2B0]" />
               {t('courier.item_35123')}
             </h2>
 
             {linkedRequestId ? (
               <div className="space-y-3">
-                <div className="bg-[#18B2B0]/10 border border-[#18B2B0]/25 text-[#18B2B0] rounded-lg p-3 text-sm flex flex-col gap-1">
-                  <span className="font-semibold flex items-center gap-1">
+                <div className="bg-[#18B2B0]/10 border border-[#18B2B0]/25 text-[#18B2B0] rounded-xl p-3 text-sm flex flex-col gap-1">
+                  <span className="font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4" />
                     {t('courier.linked_to_tid', { tid: linkedRequestTid || t('courier.loading') })}
                   </span>
@@ -309,7 +312,7 @@ export default function CourierPdfReviewPage() {
                     setLinkedRequestId(null);
                     setLinkedRequestTid(null);
                   }}
-                  className="w-full text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 py-2 rounded-lg transition-colors border border-rose-500/20"
+                  className="w-full text-xs font-bold text-[#E05252] hover:text-[#C93F3F] bg-[#E05252]/10 hover:bg-[#E05252]/15 py-2 rounded-xl transition-colors border border-[#E05252]/25"
                 >
                   {t('courier.request')}
                 </button>
@@ -320,17 +323,17 @@ export default function CourierPdfReviewPage() {
                   {t('courier.request_data')}
                 </p>
                 <div className="relative">
-                  <Search className="absolute right-3 top-2.5 w-4 h-4 text-[#6B7280]" />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
                   <input
                     value={linkQuery}
                     onChange={(e) => setLinkQuery(e.target.value)}
                     placeholder={t('courier.mobile_name_customer_1')}
-                    className="w-full rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] pr-9 pl-3 py-2 text-sm text-[#2D3135] placeholder-[#9CA3AF] focus:border-[#18B2B0] focus:outline-none"
+                    className="courier-input pr-10"
                   />
                 </div>
 
                 {linkQuery && (
-                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg divide-y divide-[#E2E8F0] overflow-hidden max-h-60 overflow-y-auto">
+                  <div className="bg-[#F8FAFC] border border-[rgba(24,178,176,0.16)] rounded-xl divide-y divide-[rgba(226,232,240,0.9)] overflow-hidden max-h-60 overflow-y-auto">
                     {linkResults.length === 0 ? (
                       <div className="p-3 text-xs text-[#6B7280] text-center">
                         {t('courier.no_results')}
@@ -345,7 +348,7 @@ export default function CourierPdfReviewPage() {
                           }}
                           className="w-full text-start p-2.5 hover:bg-[#18B2B0]/05 flex flex-col gap-0.5 transition-colors"
                         >
-                          <span className="text-xs font-semibold text-[#2D3135]">
+                          <span className="text-xs font-bold text-[#2D3135]">
                             {r.customerName || t('courier.customer')}
                           </span>
                           <span className="text-[10px] text-[#6B7280] font-mono">
@@ -359,11 +362,11 @@ export default function CourierPdfReviewPage() {
               </div>
             )}
 
-            <div className="mt-auto pt-4 border-t border-[#E2E8F0] space-y-3">
+            <div className="mt-auto pt-4 border-t border-[rgba(24,178,176,0.16)] space-y-3">
               <button
                 onClick={handleApply}
                 disabled={applying || !linkedRequestId}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#18B2B0] hover:bg-[#149D9B] text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-colors shadow-sm shadow-[#18B2B0]/20"
+                className="w-full courier-btn-primary em-ripple disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {applying ? (
                   <>

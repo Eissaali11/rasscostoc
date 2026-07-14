@@ -129,9 +129,9 @@ export function AddCourierRequestModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#F8FAFC] border border-[#E2E8F0] text-[#2D3135] p-0 shadow-2xl rounded-2xl">
-        <DialogHeader className="p-6 pb-4 border-b border-[#E2E8F0] relative">
-          <DialogTitle className="text-xl font-bold text-[#2D3135] flex items-center gap-2">
+      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-white border-[1.5px] border-[rgba(24,178,176,0.28)] text-[#2D3135] p-0 shadow-[0_20px_50px_rgba(24,178,176,0.12)] rounded-2xl">
+        <DialogHeader className="p-6 pb-4 border-b border-[rgba(24,178,176,0.16)] relative bg-[#F8FAFC]/80">
+          <DialogTitle className="text-xl font-extrabold text-[#2D3135] flex items-center gap-2">
             {t('courier.add_request_new_1')}
           </DialogTitle>
           <DialogDescription className="text-xs text-[#6B7280] mt-1.5">

@@ -439,13 +439,13 @@ export function EditCourierExecutionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border-[#E2E8F0] text-[#2D3135] p-0">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E2E8F0]">
-          <DialogTitle className="text-base font-bold text-[#2D3135] flex items-center gap-2">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border-[1.5px] border-[rgba(24,178,176,0.28)] text-[#2D3135] p-0 rounded-2xl shadow-[0_20px_50px_rgba(24,178,176,0.12)]">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[rgba(24,178,176,0.16)] bg-[#F8FAFC]/80">
+          <DialogTitle className="text-base font-extrabold text-[#2D3135] flex items-center gap-2">
             بيانات التنفيذ الميداني
             {requestId && <span className="text-[#6B7280] font-mono text-xs">#{requestId}</span>}
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-450">
+          <DialogDescription className="text-xs text-[#6B7280]">
             الفني يُجلب تلقائياً من عهدة الجهاز — وليس من اسم التعيين. يمكن إضافة أكثر من جهاز وشريحة.
           </DialogDescription>
         </DialogHeader>

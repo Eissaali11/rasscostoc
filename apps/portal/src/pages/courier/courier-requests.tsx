@@ -1,10 +1,11 @@
 ﻿import { useTranslation } from "@/lib/language";
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { AddCourierRequestModal } from "@/components/add-courier-request-modal";
 import { EditCourierExecutionModal } from "@/components/edit-courier-execution-modal";
+import { motion } from "framer-motion";
 import {
   Search,
   ChevronLeft,
@@ -61,47 +62,47 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   const { t } = useTranslation();
   if (!status)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#6B7280] bg-[#F1F5F9] px-2.5 py-1 rounded-full">
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] px-2.5 py-1 rounded-full border border-[#E2E8F0]">
         <Clock className="w-3 h-3" />
-        {t('courier.verification_3')}
+        {t("courier.verification_3")}
       </span>
     );
 
   const lower = status.toLowerCase();
   if (lower.includes("completed"))
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#18B2B0] bg-[#18B2B0]/12 px-2.5 py-1 rounded-full border border-[#18B2B0]/25">
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/12 px-2.5 py-1 rounded-full border border-[#18B2B0]/25">
         <CheckCircle2 className="w-3 h-3" />
-        {t('courier.completed_5')}
+        {t("courier.completed_5")}
       </span>
     );
 
   if (status === "Not Completed")
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#E05252] bg-[#E05252]/12 px-2.5 py-1 rounded-full border border-[#E05252]/25">
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#E05252] bg-[#E05252]/10 px-2.5 py-1 rounded-full border border-[#E05252]/25">
         <XCircle className="w-3 h-3" />
-        {t('courier.completed_6')}
+        {t("courier.completed_6")}
       </span>
     );
 
   if (status === "Customer Not Answering")
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#4B5563] bg-[#4B5563]/10 px-2.5 py-1 rounded-full border border-[#4B5563]/20">
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#4B5563] bg-[#4B5563]/10 px-2.5 py-1 rounded-full border border-[#4B5563]/20">
         <Phone className="w-3 h-3" />
-        {t('courier.customer_no')}
+        {t("courier.customer_no")}
       </span>
     );
 
   if (status === "In Progress")
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#B45309] bg-[#F4B740]/18 px-2.5 py-1 rounded-full border border-[#F4B740]/35">
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#B45309] bg-[#F4B740]/18 px-2.5 py-1 rounded-full border border-[#F4B740]/35">
         <Clock className="w-3 h-3" />
-        {t('courier.item_15830')}
+        {t("courier.item_15830")}
       </span>
     );
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#6B7280] bg-[#F1F5F9] px-2.5 py-1 rounded-full border border-[#E2E8F0]">
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6B7280] bg-[#F8FAFC] px-2.5 py-1 rounded-full border border-[#E2E8F0]">
       <Clock className="w-3 h-3" />
       {status}
     </span>
@@ -212,16 +213,22 @@ export default function CourierRequestsPage() {
   };
 
   return (
-    <div dir={dir} className="rassco-page space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div dir={dir} className="rassco-page space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-xl font-bold text-[#2D3135] flex items-center gap-2">
-            <Package className="w-5 h-5 text-[#18B2B0]" />
-            {t('courier.verification_requests')}
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-3">
+            <span className="courier-icon-badge">
+              <Package className="w-5 h-5" />
+            </span>
+            {t("courier.verification_requests")}
           </h1>
-          <p className="text-sm text-[#6B7280] mt-0.5">
-            {t('courier.total_review_with_count', { total })}
+          <p className="text-sm text-[#6B7280] mt-1.5 ps-14">
+            {t("courier.total_review_with_count", { total })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -235,193 +242,237 @@ export default function CourierRequestsPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="bg-[#4B5563] hover:bg-[#374151] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+            className="courier-btn-secondary"
           >
-            {importing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Upload className="w-3.5 h-3.5" />
-            )}
-            {t('courier.import_4')}
+            {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {t("courier.import_4")}
           </button>
-          <button
-            onClick={handleExportExcel}
-            className="bg-[#18B2B0] hover:bg-[#149D9B] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-          >
+          <button onClick={handleExportExcel} className="courier-btn-secondary">
             <Download className="w-3.5 h-3.5" />
-            {t('courier.export_2')}
+            {t("courier.export_2")}
           </button>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-[#18B2B0] hover:bg-[#149D9B] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
-          >
-            {t('courier.add_request_new_2')}
+          <button onClick={() => setIsAddModalOpen(true)} className="courier-btn-primary em-ripple">
+            {t("courier.add_request_new_2")}
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Import Summary Results Panel */}
       {importSummary && (
-        <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-4 space-y-3 relative">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="courier-panel courier-panel-static p-5 space-y-3 relative"
+        >
           <button
             onClick={() => setImportSummary(null)}
             className="absolute top-3 left-3 text-[#6B7280] hover:text-[#2D3135]"
           >
             <X className="w-4 h-4" />
           </button>
-          <h3 className="text-sm font-semibold text-[#18B2B0] flex items-center gap-1.5">
+          <h3 className="text-sm font-bold text-[#18B2B0] flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4" />
-            {t('courier.report_import_file')}
+            {t("courier.report_import_file")}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div className="bg-[#F8FAFC] rounded-lg p-2.5 border border-[#E2E8F0]">
-              <div className="text-[#6B7280]">{t('courier.total')}</div>
-              <div className="text-lg font-bold text-[#2D3135] mt-0.5">{importSummary.totalRows}</div>
+            <div className="rounded-xl p-3 border border-[rgba(24,178,176,0.16)] bg-[#F8FAFC]">
+              <div className="text-[#6B7280] font-semibold">{t("courier.total")}</div>
+              <div className="text-lg font-extrabold text-[#2D3135] mt-1">{importSummary.totalRows}</div>
             </div>
-            <div className="bg-[#18B2B0]/10 rounded-lg p-2.5 border border-[#18B2B0]/25">
-              <div className="text-[#18B2B0]">{t('courier.completed_successfully_1')}</div>
-              <div className="text-lg font-bold text-[#18B2B0] mt-0.5">{importSummary.importedCount}</div>
+            <div className="rounded-xl p-3 border border-[#18B2B0]/25 bg-[#18B2B0]/08">
+              <div className="text-[#18B2B0] font-semibold">{t("courier.completed_successfully_1")}</div>
+              <div className="text-lg font-extrabold text-[#18B2B0] mt-1">{importSummary.importedCount}</div>
             </div>
-            <div className="bg-amber-500/10 rounded-lg p-2.5 border border-amber-500/20">
-              <div className="text-amber-400">{t('courier.completed_8')}</div>
-              <div className="text-lg font-bold text-amber-300 mt-0.5">{importSummary.skippedCount}</div>
+            <div className="rounded-xl p-3 border border-[#F4B740]/35 bg-[#F4B740]/12">
+              <div className="text-[#B45309] font-semibold">{t("courier.completed_8")}</div>
+              <div className="text-lg font-extrabold text-[#B45309] mt-1">{importSummary.skippedCount}</div>
             </div>
-            <div className="bg-red-500/10 rounded-lg p-2.5 border border-red-500/20">
-              <div className="text-red-400">{t('courier.completed_9')}</div>
-              <div className="text-lg font-bold text-red-300 mt-0.5">{importSummary.rejectedCount}</div>
+            <div className="rounded-xl p-3 border border-[#E05252]/25 bg-[#E05252]/08">
+              <div className="text-[#E05252] font-semibold">{t("courier.completed_9")}</div>
+              <div className="text-lg font-extrabold text-[#E05252] mt-1">{importSummary.rejectedCount}</div>
             </div>
           </div>
 
           {(importSummary.skipped.length > 0 || importSummary.rejected.length > 0) && (
-            <div className="mt-3 text-xs max-h-40 overflow-y-auto space-y-1.5 border-t border-[#E2E8F0] pt-3">
+            <div className="mt-2 text-xs max-h-40 overflow-y-auto space-y-1.5 border-t border-[rgba(24,178,176,0.14)] pt-3">
               {importSummary.skipped.map((s, idx) => (
-                <div key={`s-${idx}`} className="text-amber-400 flex items-start gap-1">
+                <div key={`s-${idx}`} className="text-[#B45309] flex items-start gap-1">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <span>{t('courier.item_7942')}{s.rowNumber}: {s.error || t('courier.duplicate_3', { var_0: s.data.tid })}</span>
+                  <span>
+                    {t("courier.item_7942")}
+                    {s.rowNumber}: {s.error || t("courier.duplicate_3", { var_0: s.data.tid })}
+                  </span>
                 </div>
               ))}
               {importSummary.rejected.map((r, idx) => (
-                <div key={`r-${idx}`} className="text-red-400 flex items-start gap-1">
+                <div key={`r-${idx}`} className="text-[#E05252] flex items-start gap-1">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <span>{t('courier.item_7942')}{r.rowNumber}: {r.error || t('courier.data_5')}</span>
+                  <span>
+                    {t("courier.item_7942")}
+                    {r.rowNumber}: {r.error || t("courier.data_5")}
+                  </span>
                 </div>
               ))}
             </div>
           )}
+        </motion.div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.04 }}
+        className="courier-toolbar"
+      >
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+          <input
+            value={q}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder={t("courier.search_name_number_serial_1")}
+            className="courier-input pr-10"
+          />
+        </div>
+        <select
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
+          className="courier-input max-w-[220px]"
+        >
+          <option value="">{t("courier.all")}</option>
+          <option value="pending">{t("courier.verification_3")}</option>
+          <option value="Installation Completed">{t("courier.completed_5")}</option>
+          <option value="Not Completed">{t("courier.completed_6")}</option>
+          <option value="Customer Not Answering">{t("courier.customer_no")}</option>
+          <option value="In Progress">{t("courier.item_15830")}</option>
+        </select>
+      </motion.div>
+
+      {(status || reason || q) && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[#6B7280] font-semibold">{t("courier.active")}</span>
+          {status && (
+            <span className="bg-[#18B2B0]/12 text-[#18B2B0] border border-[#18B2B0]/25 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-bold">
+              {t("courier.status_filter_label", {
+                status: status === "pending" ? t("courier.verification_3") : status,
+              })}
+              <button
+                onClick={() => {
+                  setStatus("");
+                  setPage(1);
+                }}
+                className="hover:text-[#149D9B] font-bold cursor-pointer"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {reason && (
+            <span className="bg-[#E05252]/10 text-[#E05252] border border-[#E05252]/25 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-bold">
+              {t("courier.reason_failed_count", { count: reason })}
+              <button
+                onClick={() => {
+                  setReason("");
+                  setPage(1);
+                }}
+                className="font-bold cursor-pointer"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {q && (
+            <span className="bg-[#18B2B0]/10 text-[#18B2B0] border border-[#18B2B0]/20 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-bold">
+              {t("courier.search_count", { count: q })}
+              <button
+                onClick={() => {
+                  setQ("");
+                  setPage(1);
+                }}
+                className="font-bold cursor-pointer"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setStatus("");
+              setReason("");
+              setQ("");
+              setPage(1);
+            }}
+            className="text-[#6B7280] hover:text-[#18B2B0] underline font-semibold cursor-pointer text-xs"
+          >
+            {t("courier.scan_all")}
+          </button>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
-            <input
-              value={q}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder={t('courier.search_name_number_serial_1')}
-              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg pr-10 pl-3 py-2 text-sm text-[#2D3135] placeholder-[#9CA3AF] outline-none focus:border-[#18B2B0]"
-            />
-          </div>
-          <select
-            value={status}
-            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-            className="rassco-glass border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
-          >
-            <option value="">{t('courier.all')}</option>
-            <option value="pending">{t('courier.verification_3')}</option>
-            <option value="Installation Completed">{t('courier.completed_5')}</option>
-            <option value="Not Completed">{t('courier.completed_6')}</option>
-            <option value="Customer Not Answering">{t('courier.customer_no')}</option>
-            <option value="In Progress">{t('courier.item_15830')}</option>
-          </select>
-        </div>
-
-        {(status || reason || q) && (
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[#6B7280]">{t('courier.active')}</span>
-            {status && (
-              <span className="bg-[#18B2B0]/12 text-[#18B2B0] border border-[#18B2B0]/25 px-2 py-1 rounded-md flex items-center gap-1.5">
-                {t('courier.status_filter_label', { status: status === "pending" ? t('courier.verification_3') : status })}
-                <button onClick={() => { setStatus(""); setPage(1); }} className="hover:text-[#18B2B0] font-bold ml-1 cursor-pointer">×</button>
-              </span>
-            )}
-            {reason && (
-              <span className="bg-red-500/15 text-red-400 border border-red-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
-                {t('courier.reason_failed_count', { count: reason })}
-                <button onClick={() => { setReason(""); setPage(1); }} className="hover:text-red-300 font-bold ml-1 cursor-pointer">×</button>
-              </span>
-            )}
-            {q && (
-              <span className="bg-blue-500/15 text-blue-400 border border-blue-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
-                {t('courier.search_count', { count: q })}
-                <button onClick={() => { setQ(""); setPage(1); }} className="hover:text-blue-300 font-bold ml-1 cursor-pointer">×</button>
-              </span>
-            )}
-            <button
-              onClick={() => { setStatus(""); setReason(""); setQ(""); setPage(1); }}
-              className="text-[#6B7280] hover:text-[#2D3135] underline font-medium cursor-pointer text-xs"
-            >
-              {t('courier.scan_all')}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="rassco-glass border border-[#E2E8F0] rounded-xl overflow-hidden shadow">
-        <div className="overflow-x-auto max-h-[58vh]">
-          <table className="w-full text-sm whitespace-nowrap">
-            <thead className="bg-[#F8FAFC] text-[#6B7280] sticky top-0 z-10">
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+        className="courier-panel courier-panel-static"
+      >
+        <div className="courier-table-wrap">
+          <table className="courier-table whitespace-nowrap">
+            <thead>
               <tr>
-                {["#", t('courier.date_2'), "TID", "Terminal ID", t('courier.customer_1'), t('courier.city'), t('courier.technician'), t('courier.status'), t('courier.item_7882')].map((h, i) => (
-                  <th key={i} className="px-4 py-3 text-start font-semibold border-b border-[#E2E8F0]">
-                    {h}
-                  </th>
+                {[
+                  "#",
+                  t("courier.date_2"),
+                  "TID",
+                  "Terminal ID",
+                  t("courier.customer_1"),
+                  t("courier.city"),
+                  t("courier.technician"),
+                  t("courier.status"),
+                  t("courier.item_7882"),
+                ].map((h, i) => (
+                  <th key={i}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
+            <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={9} className="text-center py-16 text-[#6B7280]">
-                    <Loader2 className="animate-spin w-5 h-5 inline-block mr-2" />
-                    {t('courier.loading_ellipsis')}
+                    <Loader2 className="animate-spin w-5 h-5 inline-block me-2 text-[#18B2B0]" />
+                    {t("courier.loading_ellipsis")}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-16 text-[#6B7280]">
-                    {t('courier.no_results_1')}
+                    {t("courier.no_results_1")}
                   </td>
                 </tr>
               ) : (
-                rows.map((r, idx) => (
-                  <tr
-                    key={r.id}
-                    className={`hover:bg-[#374151]/20 transition-colors ${idx % 2 === 0 ? "" : "bg-[#F8FAFC]"}`}
-                  >
-                    <td className="px-4 py-3 text-[#6B7280] text-xs">{r.id}</td>
-                    <td className="px-4 py-3 text-[#4B5563]">{r.date || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-[#18B2B0]">{r.tid || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-[#4B5563]">{r.terminalId || "—"}</td>
-                    <td className="px-4 py-3 text-[#2D3135]">{r.customerName || "—"}</td>
-                    <td className="px-4 py-3 text-[#4B5563]">{r.city || "—"}</td>
-                    <td className="px-4 py-3 text-[#4B5563]">
-                      {r.execution?.salesTechnician || r.tecName || "—"}
-                    </td>
-                    <td className="px-4 py-3">
+                rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="text-[#6B7280] text-xs font-semibold">{r.id}</td>
+                    <td className="text-[#4B5563]">{r.date || "—"}</td>
+                    <td className="font-mono font-semibold text-[#18B2B0]">{r.tid || "—"}</td>
+                    <td className="font-mono text-[#4B5563]">{r.terminalId || "—"}</td>
+                    <td className="font-semibold text-[#2D3135]">{r.customerName || "—"}</td>
+                    <td className="text-[#4B5563]">{r.city || "—"}</td>
+                    <td className="text-[#4B5563]">{r.execution?.salesTechnician || r.tecName || "—"}</td>
+                    <td>
                       <StatusBadge status={r.execution?.installationStatus} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <button
                         onClick={() => {
                           setSelectedRequestId(r.id);
                           setIsEditModalOpen(true);
                         }}
-                        className="text-xs font-medium text-[#18B2B0] hover:text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        className="courier-action-chip"
                       >
-                        {(!r.execution || !r.execution.installationStatus) ? t('courier.submit_data') : t('courier.edit_data_verification')}
+                        {!r.execution || !r.execution.installationStatus
+                          ? t("courier.submit_data")
+                          : t("courier.edit_data_verification")}
                       </button>
                     </td>
                   </tr>
@@ -430,25 +481,22 @@ export default function CourierRequestsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-[#6B7280]">
-        <span>
-          {t('courier.page_of', { page, totalPages })}
-        </span>
+        <span className="font-semibold">{t("courier.page_of", { page, totalPages })}</span>
         <div className="flex gap-2">
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="p-1.5 rounded-lg hover:bg-[#E2E8F0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded-xl border border-[rgba(24,178,176,0.18)] bg-white hover:border-[#18B2B0] hover:text-[#18B2B0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="p-1.5 rounded-lg hover:bg-[#E2E8F0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded-xl border border-[rgba(24,178,176,0.18)] bg-white hover:border-[#18B2B0] hover:text-[#18B2B0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>

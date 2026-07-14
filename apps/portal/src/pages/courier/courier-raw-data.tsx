@@ -1,8 +1,9 @@
 ﻿import { useTranslation } from "@/lib/language";
-import { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 import {
   Search,
   ChevronLeft,
@@ -12,8 +13,6 @@ import {
   Edit2,
   Trash2,
   Upload,
-  Download,
-  AlertCircle,
   X,
   Database
 } from "lucide-react";
@@ -227,19 +226,25 @@ export default function CourierRawDataPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div dir={dir} className="rassco-page space-y-6 text-[#2D3135]">
-      {/* Title block */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
+    <div dir={dir} className="rassco-page space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#2D3135] flex items-center gap-2">
-            <Database className="w-6 h-6 text-[#18B2B0]" />
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-3">
+            <span className="courier-icon-badge">
+              <Database className="w-5 h-5" />
+            </span>
             {t('courier.management_data')}
           </h1>
-          <p className="text-sm text-[#6B7280] mt-1">
+          <p className="text-sm text-[#6B7280] mt-1.5 ps-14">
             {t('courier.submit_data_delivery')}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <input
             ref={fileInputRef}
             type="file"
@@ -250,84 +255,89 @@ export default function CourierRawDataPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="flex items-center gap-2 px-4 py-2 border border-[#E2E8F0] bg-white text-[#2D3135] rounded-xl text-sm font-semibold hover:bg-[#F1F5F9] transition-colors"
+            className="courier-btn-secondary"
           >
             {importing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Upload className="w-4 h-4 text-[#18B2B0]" />
+              <Upload className="w-3.5 h-3.5" />
             )}
             {t('courier.import_2')}
           </button>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 bg-[#18B2B0] text-white rounded-xl text-sm font-semibold hover:bg-[#149D9B] transition-colors shadow-lg shadow-[#18B2B0]/20"
-          >
-            <Plus className="w-4 h-4" />
+          <button onClick={handleOpenAdd} className="courier-btn-primary em-ripple">
+            <Plus className="w-3.5 h-3.5" />
             {t('courier.request_new')}
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Search Filter */}
-      <div className="flex items-center gap-3 max-w-md rassco-glass border border-[#E2E8F0] rounded-xl px-3 py-1.5 focus-within:border-[#18B2B0] transition-colors">
-        <Search className="w-4 h-4 text-[#6B7280] shrink-0" />
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
-          }}
-          placeholder={t('courier.name_technician_1')}
-          className="w-full bg-transparent border-0 text-[#2D3135] text-sm focus:outline-none focus:ring-0 placeholder:text-[#6B7280]"
-        />
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.04 }}
+        className="courier-toolbar"
+      >
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+            placeholder={t('courier.name_technician_1')}
+            className="courier-input pr-10"
+          />
+        </div>
+      </motion.div>
 
-      {/* Table grid */}
-      <div className="rassco-glass border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-right">
-            <thead className="bg-[#F8FAFC] text-[#4B5563] border-b border-[#E2E8F0]">
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+        className="courier-panel courier-panel-static"
+      >
+        <div className="courier-table-wrap">
+          <table className="courier-table whitespace-nowrap">
+            <thead>
               <tr>
-                <th className="p-4 font-semibold">{t('courier.date_2')}</th>
-                <th className="p-4 font-semibold">TID</th>
-                <th className="p-4 font-semibold">Terminal ID</th>
-                <th className="p-4 font-semibold">{t('courier.type')}</th>
-                <th className="p-4 font-semibold">{t('courier.city')}</th>
-                <th className="p-4 font-semibold">{t('courier.customer_1')}</th>
-                <th className="p-4 font-semibold">{t('courier.mobile')}</th>
-                <th className="p-4 font-semibold">{t('courier.name_technician')}</th>
-                <th className="p-4 font-semibold">{t('courier.item_14214')}</th>
+                <th>{t('courier.date_2')}</th>
+                <th>TID</th>
+                <th>Terminal ID</th>
+                <th>{t('courier.type')}</th>
+                <th>{t('courier.city')}</th>
+                <th>{t('courier.customer_1')}</th>
+                <th>{t('courier.mobile')}</th>
+                <th>{t('courier.name_technician')}</th>
+                <th>{t('courier.item_14214')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0] text-[#4B5563]">
+            <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="p-10 text-center text-[#6B7280]">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin text-[#18B2B0]" />
-                      {t('courier.loading_data')}
-                    </div>
+                  <td colSpan={9} className="text-center py-16 text-[#6B7280]">
+                    <Loader2 className="animate-spin w-5 h-5 inline-block me-2 text-[#18B2B0]" />
+                    {t('courier.loading_data')}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-10 text-center text-[#6B7280]">
+                  <td colSpan={9} className="text-center py-16 text-[#6B7280]">
                     {t('courier.no_requests')}
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-[#F8FAFC] transition-colors">
-                    <td className="p-4 whitespace-nowrap">{row.date || "—"}</td>
-                    <td className="p-4 font-mono text-[#18B2B0] whitespace-nowrap">{row.tid || "—"}</td>
-                    <td className="p-4 font-mono whitespace-nowrap">{row.terminalId || "—"}</td>
-                    <td className="p-4 whitespace-nowrap">{row.installationType || "—"}</td>
-                    <td className="p-4 whitespace-nowrap">{row.city || "—"}</td>
-                    <td className="p-4 whitespace-nowrap font-medium text-[#2D3135]">{row.customerName || "—"}</td>
-                    <td className="p-4 font-mono whitespace-nowrap text-xs text-[#6B7280]">{row.mobile || "—"}</td>
-                    <td className="p-4 whitespace-nowrap">{row.tecName || "—"}</td>
-                    <td className="p-4 whitespace-nowrap">
+                  <tr key={row.id}>
+                    <td className="text-[#4B5563]">{row.date || "—"}</td>
+                    <td className="font-mono font-semibold text-[#18B2B0]">{row.tid || "—"}</td>
+                    <td className="font-mono text-[#4B5563]">{row.terminalId || "—"}</td>
+                    <td className="text-[#4B5563]">{row.installationType || "—"}</td>
+                    <td className="text-[#4B5563]">{row.city || "—"}</td>
+                    <td className="font-semibold text-[#2D3135]">{row.customerName || "—"}</td>
+                    <td className="font-mono text-xs text-[#6B7280]">{row.mobile || "—"}</td>
+                    <td className="text-[#4B5563]">{row.tecName || "—"}</td>
+                    <td>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(row)}
@@ -338,7 +348,7 @@ export default function CourierRawDataPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(row.id)}
-                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#E05252] hover:bg-[#E05252]/10 transition-colors"
                           title={t('courier.delete_3')}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -351,37 +361,36 @@ export default function CourierRawDataPage() {
             </tbody>
           </table>
         </div>
+      </motion.div>
 
-        {/* Pagination footer */}
-        <div className="flex items-center justify-between border-t border-[#E2E8F0] p-4 bg-[#F8FAFC]">
-          <span className="text-xs text-[#6B7280]">
-            {t('courier.page_of_with_total', { page, totalPages, total })}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="p-1.5 rounded-lg border border-[#E2E8F0] bg-white text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#6B7280] transition-all"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="p-1.5 rounded-lg border border-[#E2E8F0] bg-white text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#6B7280] transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="flex items-center justify-between text-sm text-[#6B7280]">
+        <span className="font-semibold">
+          {t('courier.page_of_with_total', { page, totalPages, total })}
+        </span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="p-2 rounded-xl border border-[rgba(24,178,176,0.18)] bg-white hover:border-[#18B2B0] hover:text-[#18B2B0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="p-2 rounded-xl border border-[rgba(24,178,176,0.18)] bg-white hover:border-[#18B2B0] hover:text-[#18B2B0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* Add / Edit modal */}
       {(showAdd || editRow) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rassco-glass border border-[#E2E8F0] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-[#E2E8F0] flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#2D3135]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col courier-panel courier-panel-static shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-[rgba(24,178,176,0.16)] flex items-center justify-between">
+              <h3 className="text-lg font-extrabold text-[#2D3135]">
                 {editRow ? t('courier.edit_request', { var_0: editRow.id }) : t('courier.submit_request_new')}
               </h3>
               <button
@@ -389,7 +398,7 @@ export default function CourierRawDataPage() {
                   setShowAdd(false);
                   setEditRow(null);
                 }}
-                className="p-1 rounded-lg text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9]"
+                className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#2D3135] hover:bg-[#18B2B0]/10"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -409,7 +418,7 @@ export default function CourierRawDataPage() {
                       required
                       value={formValues.date || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, date: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -418,7 +427,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.installationType || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, installationType: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -427,7 +436,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.incidentNumber || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, incidentNumber: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -436,7 +445,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.ticketingHolouly || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, ticketingHolouly: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                 </div>
@@ -455,7 +464,7 @@ export default function CourierRawDataPage() {
                       required
                       value={formValues.tid || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, tid: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
+                      className="courier-input font-mono"
                     />
                   </div>
                   <div>
@@ -464,7 +473,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.terminalId || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, terminalId: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
+                      className="courier-input font-mono"
                     />
                   </div>
                   <div>
@@ -473,7 +482,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.sim || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, sim: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -482,7 +491,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.simSn || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, simSn: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
+                      className="courier-input font-mono"
                     />
                   </div>
                   <div>
@@ -491,7 +500,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.idData || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, idData: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
+                      className="courier-input font-mono"
                     />
                   </div>
                   <div>
@@ -500,7 +509,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.otp || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, otp: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -509,7 +518,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.pinCode || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, pinCode: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
+                      className="courier-input font-mono"
                     />
                   </div>
                   <div>
@@ -518,7 +527,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.trsm || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, trsm: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -526,7 +535,7 @@ export default function CourierRawDataPage() {
                     <select
                       value={formValues.vendorType || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, vendorType: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     >
                       <option value="">{t('courier.item_27065')}</option>
                       {lookups?.vendorTypes.map((v) => (
@@ -550,7 +559,7 @@ export default function CourierRawDataPage() {
                     <select
                       value={formValues.city || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, city: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     >
                       <option value="">{t('courier.city_1')}</option>
                       {lookups?.cities.map((c) => (
@@ -566,7 +575,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.cityTec || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, cityTec: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -575,7 +584,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.addressAr || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, addressAr: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                 </div>
@@ -593,7 +602,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.customerName || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, customerName: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -602,7 +611,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.retailerName || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, retailerName: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -611,7 +620,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.tecName || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, tecName: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
+                      className="courier-input"
                     />
                   </div>
                   <div>
@@ -620,7 +629,7 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.mobile || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, mobile: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono text-xs"
+                      className="courier-input font-mono text-xs"
                     />
                   </div>
                   <div>
@@ -629,28 +638,28 @@ export default function CourierRawDataPage() {
                       type="text"
                       value={formValues.mobile2 || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, mobile2: e.target.value }))}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono text-xs"
+                      className="courier-input font-mono text-xs"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-[#E2E8F0]">
+              <div className="flex justify-end gap-3 pt-6 border-t border-[rgba(24,178,176,0.16)]">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAdd(false);
                     setEditRow(null);
                   }}
-                  className="px-4 py-2 border border-[#E2E8F0] text-[#4B5563] rounded-xl text-sm font-semibold hover:bg-white"
+                  className="courier-btn-secondary"
                 >
                   {t('courier.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 bg-[#18B2B0] text-white rounded-xl text-sm font-bold hover:bg-[#149D9B] transition-colors flex items-center gap-2"
+                  className="courier-btn-primary em-ripple"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {t('courier.save_data_1')}

@@ -1,0 +1,242 @@
+/**
+ * Courier enterprise polish — RASSCO identity
+ * Clear borders, professional spacing, soft motion.
+ */
+
+.courier-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid rgba(24, 178, 176, 0.22);
+  border-radius: 20px;
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  overflow: hidden;
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms ease,
+    border-color 260ms ease;
+}
+
+.courier-panel:hover {
+  border-color: rgba(24, 178, 176, 0.38);
+  box-shadow:
+    0 16px 36px rgba(24, 178, 176, 0.1),
+    0 8px 20px rgba(15, 23, 42, 0.05);
+}
+
+.courier-panel-static:hover {
+  transform: none;
+}
+
+.courier-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1.5px solid rgba(24, 178, 176, 0.16);
+  border-radius: 16px;
+}
+
+.courier-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid rgba(24, 178, 176, 0.18);
+  background: #fff;
+  padding: 0.625rem 0.9rem;
+  font-size: 0.875rem;
+  color: #2d3135;
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.courier-input:focus {
+  border-color: #18b2b0;
+  box-shadow: 0 0 0 3px rgba(24, 178, 176, 0.15);
+}
+
+.courier-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 12px;
+  background: #18b2b0;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  padding: 0.625rem 1rem;
+  border: 1.5px solid #18b2b0;
+  box-shadow: 0 8px 18px rgba(24, 178, 176, 0.22);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.courier-btn-primary:hover {
+  background: #149d9b;
+  border-color: #149d9b;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(24, 178, 176, 0.28);
+}
+
+.courier-btn-primary:active {
+  transform: translateY(0);
+}
+
+.courier-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 12px;
+  background: #fff;
+  color: #4b5563;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  padding: 0.625rem 1rem;
+  border: 1.5px solid rgba(24, 178, 176, 0.2);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    color 180ms ease,
+    background 180ms ease;
+}
+
+.courier-btn-secondary:hover {
+  color: #18b2b0;
+  border-color: #18b2b0;
+  background: rgba(24, 178, 176, 0.06);
+  transform: translateY(-1px);
+}
+
+.courier-table-wrap {
+  overflow: auto;
+  max-height: 62vh;
+}
+
+.courier-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+  text-align: start;
+}
+
+.courier-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.95rem 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #4b5563;
+  background: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1.5px solid rgba(24, 178, 176, 0.18);
+  white-space: nowrap;
+}
+
+.courier-table tbody td {
+  padding: 0.9rem 1rem;
+  color: #2d3135;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  vertical-align: middle;
+}
+
+.courier-table tbody tr {
+  transition: background 160ms ease;
+}
+
+.courier-table tbody tr:hover {
+  background: rgba(24, 178, 176, 0.05);
+}
+
+.courier-table tbody tr:nth-child(even) {
+  background: rgba(248, 250, 252, 0.55);
+}
+
+.courier-table tbody tr:nth-child(even):hover {
+  background: rgba(24, 178, 176, 0.06);
+}
+
+.courier-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 1rem;
+  background: rgba(24, 178, 176, 0.12);
+  color: #18b2b0;
+  border: 1.5px solid rgba(24, 178, 176, 0.22);
+  flex-shrink: 0;
+}
+
+.courier-action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #18b2b0;
+  background: rgba(24, 178, 176, 0.1);
+  border: 1.5px solid rgba(24, 178, 176, 0.22);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.courier-action-chip:hover {
+  background: rgba(24, 178, 176, 0.16);
+  border-color: #18b2b0;
+  transform: translateY(-1px);
+}
+
+.courier-export-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid rgba(24, 178, 176, 0.2);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.courier-export-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(24, 178, 176, 0.45);
+  box-shadow:
+    0 16px 32px rgba(24, 178, 176, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.courier-export-card .courier-export-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 178, 176, 0.1);
+  border: 1.5px solid rgba(24, 178, 176, 0.2);
+  color: #18b2b0;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.courier-export-card:hover .courier-export-icon {
+  transform: scale(1.08) rotate(4deg);
+}

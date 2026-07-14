@@ -2,6 +2,7 @@
 @import "./styles/enterprise-motion.css";
 @import "./styles/enterprise-atmosphere.css";
 @import "./styles/enterprise-readability.css";
+@import "./styles/courier-enterprise.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
