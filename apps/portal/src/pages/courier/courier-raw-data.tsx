@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useCourierRenderPerf } from "@/hooks/use-courier-render-perf";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -62,6 +63,7 @@ const PAGE_SIZE = 25;
 export default function CourierRawDataPage() {
   const { t, dir } = useTranslation();
   const { toast } = useToast();
+  useCourierRenderPerf("raw_data");
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);

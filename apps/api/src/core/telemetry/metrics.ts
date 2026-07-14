@@ -93,5 +93,7 @@ export function recordSpanMetric(span: Span): void {
     metrics.recordValue("event_processing_duration_ms", duration);
   } else if (span.name.startsWith("API:")) {
     metrics.recordValue("api_latency_ms", duration);
+  } else if (span.name.startsWith("CourierList")) {
+    metrics.recordValue("courier_list_span_ms", duration);
   }
 }

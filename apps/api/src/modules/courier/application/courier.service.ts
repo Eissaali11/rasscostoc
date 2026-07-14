@@ -28,6 +28,7 @@ import { extractFromPdf } from "./ocr.helper";
 import { parseRawDataWorkbook, buildExportWorkbook } from "./excel.helper";
 import { CompletionGuard, isCompletedStatus } from "./guards/CompletionGuard";
 import { normalizeSerialList } from "./guards/guard.types";
+import { metrics } from "@core/telemetry/metrics";
 import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
@@ -53,6 +54,8 @@ export interface ListFilters {
   dateTo?: string;
   page?: number;
   pageSize?: number;
+  /** When false, skip COUNT(*) (total ≈ page row count). Default true. */
+  includeTotal?: boolean;
 }
 
 export class CourierService {
@@ -88,8 +91,15 @@ export class CourierService {
     return out;
   }
 
-  async listRequests(filters: ListFilters): Promise<{ rows: any[]; total: number }> {
-    return drizzleCourierRepository.listRequests(filters);
+  async listRequests(filters: ListFilters): Promise<{
+    rows: any[];
+    total: number;
+    meta?: { sqlMs: number; countMs: number; rowsMs: number };
+  }> {
+    const t0 = Date.now();
+    const result = await drizzleCourierRepository.listRequests(filters);
+    metrics.recordValue("courier_list_api_ms", Date.now() - t0);
+    return result;
   }
 
   async getRequestById(id: number): Promise<any | null> {
@@ -1278,67 +1288,7 @@ export class CourierService {
   }
 
   async exportRequests(filters: ListFilters): Promise<Buffer> {
-    const conditions = [];
-
-    if (filters.q) {
-      const qLike = `%${filters.q}%`;
-      conditions.push(
-        or(
-          sql`${courierRequests.tid} LIKE ${qLike}`,
-          sql`${courierRequests.terminalId} LIKE ${qLike}`,
-          sql`${courierRequests.customerName} LIKE ${qLike}`,
-          sql`${courierRequests.incidentNumber} LIKE ${qLike}`,
-          sql`${courierRequests.mobile} LIKE ${qLike}`,
-          sql`${courierExecutions.sn} LIKE ${qLike}`,
-          sql`${courierExecutions.simSerial} LIKE ${qLike}`
-        )
-      );
-    }
-    if (filters.city) {
-      conditions.push(eq(courierRequests.city, filters.city));
-    }
-    if (filters.technician) {
-      conditions.push(eq(courierExecutions.salesTechnician, filters.technician));
-    }
-    if (filters.status) {
-      conditions.push(eq(courierExecutions.installationStatus, filters.status));
-    }
-    if (filters.reason) {
-      conditions.push(eq(courierExecutions.responseReasonCode, filters.reason));
-    }
-    if (filters.simType) {
-      conditions.push(eq(courierExecutions.simType, filters.simType));
-    }
-    if (filters.vendor) {
-      conditions.push(eq(courierRequests.vendorType, filters.vendor));
-    }
-    if (filters.priority) {
-      conditions.push(eq(courierExecutions.requestPriorityLevel, filters.priority));
-    }
-    if (filters.dateFrom) {
-      conditions.push(sql`${courierRequests.date} >= ${filters.dateFrom}`);
-    }
-    if (filters.dateTo) {
-      conditions.push(sql`${courierRequests.date} <= ${filters.dateTo}`);
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const rows = await db
-      .select({
-        request: courierRequests,
-        execution: courierExecutions
-      })
-      .from(courierRequests)
-      .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
-      .where(whereClause)
-      .orderBy(desc(courierRequests.id));
-
-    const mappedRows = rows.map((r) => ({
-      ...r.request,
-      execution: r.execution
-    }));
-
+    const mappedRows = await drizzleCourierRepository.listRequestsForExport(filters);
     return buildExportWorkbook(mappedRows);
   }
 

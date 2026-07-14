@@ -22,6 +22,7 @@ import {
   Phone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCourierRenderPerf } from "@/hooks/use-courier-render-perf";
 
 interface Execution {
   id: number;
@@ -114,6 +115,7 @@ const PAGE_SIZE = 25;
 export default function CourierRequestsPage() {
   const { t, dir } = useTranslation();
   const { toast } = useToast();
+  useCourierRenderPerf("verification");
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState(() => {

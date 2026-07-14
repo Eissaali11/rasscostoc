@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useCourierRenderPerf } from "@/hooks/use-courier-render-perf";
 import { motion } from "framer-motion";
 import {
   Loader2,
@@ -85,6 +86,7 @@ const EMPTY_FILTERS = {
 
 export default function CourierReportsPage() {
   const { t, dir } = useTranslation();
+  useCourierRenderPerf("reports");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   const { data: lookups } = useQuery<LookupsResponse>({

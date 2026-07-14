@@ -22,8 +22,17 @@ export class CourierController {
       dateTo: req.query.dateTo as string,
       page: req.query.page ? Number(req.query.page) : 1,
       pageSize: req.query.pageSize ? Number(req.query.pageSize) : 50,
+      includeTotal: req.query.includeTotal === "false" ? false : true,
     };
+    const t0 = Date.now();
     const result = await this.service.listRequests(filters);
+    const apiMs = Date.now() - t0;
+    if (result.meta) {
+      res.setHeader("X-SQL-Time-Ms", String(result.meta.sqlMs));
+      res.setHeader("X-Count-Time-Ms", String(result.meta.countMs));
+      res.setHeader("X-Rows-Time-Ms", String(result.meta.rowsMs));
+    }
+    res.setHeader("X-API-Time-Ms", String(apiMs));
     res.json(result);
   });
 

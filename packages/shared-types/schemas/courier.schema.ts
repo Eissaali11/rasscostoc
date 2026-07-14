@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, serial, real, uuid, jsonb, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, serial, real, uuid, jsonb, doublePrecision, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./organization.schema";
@@ -65,7 +65,17 @@ export const courierRequests = pgTable("courier_requests", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   version: integer("version").default(1).notNull(),
-});
+}, (table) => ({
+  // ERP-001 Package A — list/filter/search indexes
+  courierRequestsTidIdx: index("courier_requests_tid_idx").on(table.tid),
+  courierRequestsTerminalIdIdx: index("courier_requests_terminal_id_idx").on(table.terminalId),
+  courierRequestsIncidentIdx: index("courier_requests_incident_number_idx").on(table.incidentNumber),
+  courierRequestsMobileIdx: index("courier_requests_mobile_idx").on(table.mobile),
+  courierRequestsDateIdx: index("courier_requests_date_idx").on(table.date),
+  courierRequestsCityIdx: index("courier_requests_city_idx").on(table.city),
+  courierRequestsCustomerNameIdx: index("courier_requests_customer_name_idx").on(table.customerName),
+  courierRequestsVendorTypeIdx: index("courier_requests_vendor_type_idx").on(table.vendorType),
+}));
 
 // 5.5. Courier Request Items
 export const courierRequestItems = pgTable("courier_request_items", {
@@ -111,7 +121,16 @@ export const courierExecutions = pgTable("courier_executions", {
   enteredAt: timestamp("entered_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   version: integer("version").default(1).notNull(),
-});
+}, (table) => ({
+  // ERP-001 Package A — list/filter/search indexes
+  courierExecutionsSnIdx: index("courier_executions_sn_idx").on(table.sn),
+  courierExecutionsSimSerialIdx: index("courier_executions_sim_serial_idx").on(table.simSerial),
+  courierExecutionsStatusIdx: index("courier_executions_installation_status_idx").on(table.installationStatus),
+  courierExecutionsTechIdx: index("courier_executions_sales_technician_idx").on(table.salesTechnician),
+  courierExecutionsReasonIdx: index("courier_executions_response_reason_idx").on(table.responseReasonCode),
+  courierExecutionsSimTypeIdx: index("courier_executions_sim_type_idx").on(table.simType),
+  courierExecutionsPriorityIdx: index("courier_executions_priority_idx").on(table.requestPriorityLevel),
+}));
 
 // 7. PDF Reports
 export const courierPdfReports = pgTable("courier_pdf_reports", {

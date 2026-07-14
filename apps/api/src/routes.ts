@@ -42,6 +42,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(metrics.getAllMetrics());
   });
 
+  /** ERP-001 / Sprint 1.5: client timings (Render / Network / TTFB / Paint). */
+  app.post("/api/observability/client-timing", (req, res) => {
+    const body = req.body || {};
+    const page = typeof body.page === "string" ? body.page : "";
+
+    const record = (metricName: string, value: unknown) => {
+      if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value >= 60_000) return;
+      metrics.recordValue(metricName, value);
+      if (page) metrics.recordValue(`${metricName}_${page}`, value);
+    };
+
+    record(typeof body.name === "string" && body.name ? body.name : "courier_client_render_ms", body.renderMs);
+    record("courier_client_network_ms", body.networkMs);
+    record("courier_client_ttfb_ms", body.ttfbMs);
+    record("courier_client_paint_ms", body.paintMs);
+    if (typeof body.transferSize === "number" && body.transferSize > 0 && body.transferSize < 50_000_000) {
+      metrics.recordValue("courier_client_transfer_bytes", body.transferSize);
+    }
+
+    res.status(204).end();
+  });
+
   app.get("/api/observability/spans", (_req, res) => {
     res.json(getRecentSpans());
   });

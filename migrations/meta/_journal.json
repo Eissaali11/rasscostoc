@@ -120,6 +120,27 @@
       "when": 1783720967057,
       "tag": "0016_windy_wiccan",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784500000000,
+      "tag": "0017_courier_consumable_qtys",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1784500001000,
+      "tag": "0018_erp001_courier_perf_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1784500002000,
+      "tag": "0019_erp001_courier_pattern_ops_indexes",
+      "breakpoints": true
     }
   ]
 }

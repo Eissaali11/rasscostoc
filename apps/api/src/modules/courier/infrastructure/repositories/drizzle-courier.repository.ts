@@ -18,6 +18,12 @@ import {
 import { eq, and, or, sql, desc, count } from "drizzle-orm";
 import type { ICourierRepository } from "../../domain/repositories/courier.repository.interface";
 import type { ListFilters } from "../../application/courier.service";
+import {
+  buildCourierListConditions,
+  courierListExecutionColumns,
+  courierListRequestColumns,
+} from "../courier-list-query";
+import { metrics } from "@core/telemetry/metrics";
 
 export class DrizzleCourierRepository implements ICourierRepository {
   async findRequestById(id: number, tx?: any): Promise<CourierRequest | null> {
@@ -64,94 +70,142 @@ export class DrizzleCourierRepository implements ICourierRepository {
     return row || null;
   }
 
-  async listRequests(filters: ListFilters): Promise<{ rows: any[]; total: number }> {
+  async listRequests(filters: ListFilters): Promise<{
+    rows: any[];
+    total: number;
+    meta?: { sqlMs: number; countMs: number; rowsMs: number };
+  }> {
     const page = filters.page && filters.page > 0 ? filters.page : 1;
     const pageSize = filters.pageSize && filters.pageSize > 0 ? filters.pageSize : 50;
     const offset = (page - 1) * pageSize;
+    const includeTotal = filters.includeTotal !== false;
 
-    const conditions = [];
+    const { whereClause, needsExecutionJoin } = buildCourierListConditions(filters);
 
-    if (filters.q) {
-      const qLike = `%${filters.q}%`;
-      conditions.push(
-        or(
-          sql`${courierRequests.tid} LIKE ${qLike}`,
-          sql`${courierRequests.terminalId} LIKE ${qLike}`,
-          sql`${courierRequests.customerName} LIKE ${qLike}`,
-          sql`${courierRequests.incidentNumber} LIKE ${qLike}`,
-          sql`${courierRequests.mobile} LIKE ${qLike}`,
-          sql`${courierExecutions.sn} LIKE ${qLike}`,
-          sql`${courierExecutions.simSerial} LIKE ${qLike}`
-        )
-      );
-    }
-    if (filters.city) {
-      conditions.push(eq(courierRequests.city, filters.city));
-    }
-    if (filters.technician) {
-      conditions.push(eq(courierExecutions.salesTechnician, filters.technician));
-    }
-    if (filters.status) {
-      if (filters.status === "pending") {
-        conditions.push(or(sql`${courierExecutions.installationStatus} IS NULL`, sql`${courierExecutions.installationStatus} = ''`));
-      } else if (filters.status === "Installation Completed") {
-        conditions.push(or(
-          eq(courierExecutions.installationStatus, "Installation Completed"),
-          eq(courierExecutions.installationStatus, "Installation Completed - NL")
-        ));
-      } else {
-        conditions.push(eq(courierExecutions.installationStatus, filters.status));
-      }
-    }
-    if (filters.reason) {
-      conditions.push(eq(courierExecutions.responseReasonCode, filters.reason));
-    }
-    if (filters.simType) {
-      conditions.push(eq(courierExecutions.simType, filters.simType));
-    }
-    if (filters.vendor) {
-      conditions.push(eq(courierRequests.vendorType, filters.vendor));
-    }
-    if (filters.priority) {
-      conditions.push(eq(courierExecutions.requestPriorityLevel, filters.priority));
-    }
-    if (filters.dateFrom) {
-      conditions.push(sql`${courierRequests.date} >= ${filters.dateFrom}`);
-    }
-    if (filters.dateTo) {
-      conditions.push(sql`${courierRequests.date} <= ${filters.dateTo}`);
-    }
+    const listSelect = {
+      ...courierListRequestColumns,
+      executionId: courierListExecutionColumns.id,
+      executionRequestId: courierListExecutionColumns.requestId,
+      installationStatus: courierListExecutionColumns.installationStatus,
+      salesTechnician: courierListExecutionColumns.salesTechnician,
+      sn: courierListExecutionColumns.sn,
+      simSerial: courierListExecutionColumns.simSerial,
+      simType: courierListExecutionColumns.simType,
+      deliveryDate: courierListExecutionColumns.deliveryDate,
+      responseDate: courierListExecutionColumns.responseDate,
+      responseReasonCode: courierListExecutionColumns.responseReasonCode,
+      requestPriorityLevel: courierListExecutionColumns.requestPriorityLevel,
+      executionTime: courierListExecutionColumns.time,
+    };
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const t0 = Date.now();
 
-    const [totalRes] = await db
-      .select({ count: count() })
+    const rowsQuery = db
+      .select(listSelect)
       .from(courierRequests)
       .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
-      .where(whereClause);
-
-    const rows = await db
-      .select({
-        request: courierRequests,
-        execution: courierExecutions,
-        createdByName: users.fullName
-      })
-      .from(courierRequests)
-      .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
-      .leftJoin(users, eq(users.id, courierRequests.createdBy))
       .where(whereClause)
       .orderBy(desc(courierRequests.id))
       .limit(pageSize)
       .offset(offset);
 
+    let countMs = 0;
+    let rowsMs = 0;
+    let total = 0;
+    let rows: Awaited<typeof rowsQuery>;
+
+    if (includeTotal) {
+      const countStarted = Date.now();
+      const countPromise = needsExecutionJoin
+        ? db
+            .select({ count: count() })
+            .from(courierRequests)
+            .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
+            .where(whereClause)
+        : db.select({ count: count() }).from(courierRequests).where(whereClause);
+
+      const rowsStarted = Date.now();
+      const [totalRes, rowRes] = await Promise.all([countPromise, rowsQuery]);
+      countMs = Date.now() - countStarted;
+      rowsMs = Date.now() - rowsStarted;
+      total = Number(totalRes[0]?.count || 0);
+      rows = rowRes;
+    } else {
+      const rowsStarted = Date.now();
+      rows = await rowsQuery;
+      rowsMs = Date.now() - rowsStarted;
+      total = rows.length;
+    }
+
+    const sqlMs = Date.now() - t0;
+    metrics.recordValue("courier_list_sql_ms", sqlMs);
+    metrics.recordValue("courier_list_count_ms", countMs);
+    metrics.recordValue("courier_list_rows_ms", rowsMs);
+
     return {
       rows: rows.map((r) => ({
-        ...r.request,
-        created_by_name: r.createdByName,
-        execution: r.execution
+        id: r.id,
+        date: r.date,
+        installationType: r.installationType,
+        sim: r.sim,
+        tid: r.tid,
+        otp: r.otp,
+        ticketingHolouly: r.ticketingHolouly,
+        incidentNumber: r.incidentNumber,
+        pinCode: r.pinCode,
+        trsm: r.trsm,
+        terminalId: r.terminalId,
+        simSn: r.simSn,
+        idData: r.idData,
+        vendorType: r.vendorType,
+        city: r.city,
+        cityTec: r.cityTec,
+        customerName: r.customerName,
+        retailerName: r.retailerName,
+        addressAr: r.addressAr,
+        addressEn: r.addressEn,
+        mobile: r.mobile,
+        mobile2: r.mobile2,
+        tecName: r.tecName,
+        version: r.version,
+        execution: r.executionId
+          ? {
+              id: r.executionId,
+              requestId: r.executionRequestId,
+              installationStatus: r.installationStatus,
+              salesTechnician: r.salesTechnician,
+              sn: r.sn,
+              simSerial: r.simSerial,
+              simType: r.simType,
+              deliveryDate: r.deliveryDate,
+              responseDate: r.responseDate,
+              responseReasonCode: r.responseReasonCode,
+              requestPriorityLevel: r.requestPriorityLevel,
+              time: r.executionTime,
+            }
+          : null,
       })),
-      total: totalRes?.count || 0
+      total,
+      meta: { sqlMs, countMs, rowsMs },
     };
+  }
+
+  async listRequestsForExport(filters: ListFilters): Promise<any[]> {
+    const { whereClause } = buildCourierListConditions(filters);
+    const rows = await db
+      .select({
+        request: courierRequests,
+        execution: courierExecutions,
+      })
+      .from(courierRequests)
+      .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
+      .where(whereClause)
+      .orderBy(desc(courierRequests.id));
+
+    return rows.map((r) => ({
+      ...r.request,
+      execution: r.execution,
+    }));
   }
 
   async updateRequest(id: number, requestData: any, expectedVersion?: number, tx?: any): Promise<CourierRequest | null> {

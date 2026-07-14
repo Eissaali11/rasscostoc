@@ -5,7 +5,13 @@ export interface ICourierRepository {
   findRequestById(id: number, tx?: any): Promise<CourierRequest | null>;
   findRequestWithDetails(id: number, tx?: any): Promise<any | null>;
   findExecutionByRequestId(requestId: number, tx?: any): Promise<CourierExecution | null>;
-  listRequests(filters: ListFilters): Promise<{ rows: any[]; total: number }>;
+  listRequests(filters: ListFilters): Promise<{
+    rows: any[];
+    total: number;
+    meta?: { sqlMs: number; countMs: number; rowsMs: number };
+  }>;
+  /** Full filtered set for Excel export (no pagination). */
+  listRequestsForExport(filters: ListFilters): Promise<any[]>;
   updateRequest(id: number, requestData: any, expectedVersion?: number, tx?: any): Promise<CourierRequest | null>;
   updateExecution(requestId: number, executionData: any, expectedVersion?: number, tx?: any): Promise<CourierExecution | null>;
   insertRequest(requestData: any, tx?: any): Promise<CourierRequest>;
