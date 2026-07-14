@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+﻿import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -83,8 +83,8 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div className="flex gap-2">
-      <span className="text-slate-500 text-sm min-w-[140px]">{label}</span>
-      <span className="text-slate-200 text-sm font-medium">{value}</span>
+      <span className="text-[#6B7280] text-sm min-w-[140px]">{label}</span>
+      <span className="text-[#2D3135] text-sm font-medium">{value}</span>
     </div>
   );
 }
@@ -322,7 +322,7 @@ export default function CourierRequestDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
+      <div className="flex items-center justify-center h-64 text-[#6B7280]">
         <Loader2 className="animate-spin w-6 h-6 mr-2" />
         <span>جاري التحميل...</span>
       </div>
@@ -331,7 +331,7 @@ export default function CourierRequestDetailPage() {
 
   if (!request) {
     return (
-      <div className="text-center py-20 text-slate-500">
+      <div className="text-center py-20 text-[#6B7280]">
         الطلب غير موجود
       </div>
     );
@@ -339,27 +339,27 @@ export default function CourierRequestDetailPage() {
 
   const statusStyle =
     currentForm.installationStatus?.includes("Completed")
-      ? "text-emerald-400"
+      ? "text-[#18B2B0]"
       : currentForm.installationStatus === "Not Completed"
       ? "text-red-400"
       : "text-amber-400";
 
   return (
-    <div dir="rtl" className="space-y-6 max-w-5xl">
+    <div dir="rtl" className="rassco-page space-y-6 max-w-5xl">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <Link href="/courier/requests" className="hover:text-slate-200 transition-colors">
+      <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+        <Link href="/courier/requests" className="hover:text-[#2D3135] transition-colors">
           قائمة الطلبات
         </Link>
         <ArrowRight className="w-4 h-4" />
-        <span className="text-slate-200 font-mono">#{request.id}</span>
+        <span className="text-[#2D3135] font-mono">#{request.id}</span>
       </div>
 
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <Package className="w-5 h-5 text-emerald-400" />
+          <h1 className="text-xl font-bold text-[#2D3135] flex items-center gap-2">
+            <Package className="w-5 h-5 text-[#18B2B0]" />
             تفاصيل الطلب #{request.id}
           </h1>
           {currentForm.installationStatus && (
@@ -375,7 +375,7 @@ export default function CourierRequestDetailPage() {
         {phase === 1 ? (
           <button
             onClick={handleNextPhase}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-[#18B2B0] hover:bg-[#149D9B] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
           >
             التالي (بيانات التنفيذ)
             <ChevronLeft className="w-4 h-4" />
@@ -384,14 +384,14 @@ export default function CourierRequestDetailPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setPhase(1)}
-              className="bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+              className="bg-[#4B5563] hover:bg-[#374151] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
             >
               السابق
             </button>
             <button
               onClick={handleSave}
               disabled={!isDirty || mutation.isPending}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+              className="flex items-center gap-2 bg-[#18B2B0] hover:bg-[#149D9B] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
               {mutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -406,8 +406,8 @@ export default function CourierRequestDetailPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Request Raw Data */}
-        <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl p-6 shadow space-y-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide border-b border-slate-700/50 pb-2 mb-4">
+        <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-6 shadow space-y-3">
+          <h2 className="text-sm font-semibold text-[#4B5563] uppercase tracking-wide border-b border-[#E2E8F0] pb-2 mb-4">
             بيانات الطلب الأصلية
           </h2>
           <DetailRow label="التاريخ" value={request.date} />
@@ -430,31 +430,31 @@ export default function CourierRequestDetailPage() {
         </div>
 
         {/* Execution Form Wizard */}
-        <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl p-6 shadow space-y-4 flex flex-col justify-between min-h-[500px]">
+        <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-6 shadow space-y-4 flex flex-col justify-between min-h-[500px]">
           <div>
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide border-b border-slate-700/50 pb-2 mb-4">
+            <h2 className="text-sm font-semibold text-[#4B5563] uppercase tracking-wide border-b border-[#E2E8F0] pb-2 mb-4">
               {phase === 1 ? "شاشة التحقق والاعتماد (المرحلة الأولى)" : "بيانات التنفيذ (المرحلة الثانية)"}
             </h2>
 
             {/* Premium Step Indicator */}
-            <div className="flex items-center justify-between mb-6 bg-[#102222] p-3 rounded-lg border border-slate-700/30">
+            <div className="flex items-center justify-between mb-6 bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
               <button
                 type="button"
                 onClick={() => setPhase(1)}
                 className="flex items-center gap-2 cursor-pointer"
               >
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${phase === 1 ? 'bg-emerald-500 text-slate-900 shadow shadow-emerald-500/50' : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'}`}>1</span>
-                <span className={`text-xs font-semibold transition-all ${phase === 1 ? 'text-slate-100' : 'text-slate-400 hover:text-slate-300'}`}>شاشة التحقق</span>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${phase === 1 ? 'bg-[#18B2B0] text-white shadow shadow-[#18B2B0]/30' : 'bg-[#18B2B0]/20 text-[#18B2B0] hover:bg-[#18B2B0]/30'}`}>1</span>
+                <span className={`text-xs font-semibold transition-all ${phase === 1 ? 'text-[#2D3135]' : 'text-[#6B7280] hover:text-[#4B5563]'}`}>شاشة التحقق</span>
               </button>
-              <div className="flex-1 mx-4 h-0.5 bg-slate-700/50"></div>
+              <div className="flex-1 mx-4 h-0.5 bg-[#E2E8F0]"></div>
               <button
                 type="button"
                 disabled={!currentForm.installationStatus}
                 onClick={() => setPhase(2)}
                 className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${phase === 2 ? 'bg-emerald-500 text-slate-900 shadow shadow-emerald-500/50' : 'bg-slate-700/50 text-slate-400'}`}>2</span>
-                <span className={`text-xs font-semibold transition-all ${phase === 2 ? 'text-slate-100' : 'text-slate-400'}`}>بيانات التنفيذ</span>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${phase === 2 ? 'bg-[#18B2B0] text-white shadow shadow-[#18B2B0]/30' : 'bg-[#E2E8F0] text-[#6B7280]'}`}>2</span>
+                <span className={`text-xs font-semibold transition-all ${phase === 2 ? 'text-[#2D3135]' : 'text-[#6B7280]'}`}>بيانات التنفيذ</span>
               </button>
             </div>
 
@@ -463,11 +463,11 @@ export default function CourierRequestDetailPage() {
               <div className="space-y-4">
                 {/* 1. Request Priority Level */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">مستوى أولوية الطلب</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">مستوى أولوية الطلب</label>
                   <select
                     value={currentForm.requestPriorityLevel || ""}
                     onChange={(e) => handleChange("requestPriorityLevel", e.target.value)}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                   >
                     <option value="">اختر الأولوية</option>
                     <option value="Low">منخفض</option>
@@ -479,11 +479,11 @@ export default function CourierRequestDetailPage() {
 
                 {/* 2. Action / إجراء الطلب */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">إجراء الطلب</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">إجراء الطلب</label>
                   <select
                     value={currentForm.pushBack || ""}
                     onChange={(e) => handleChange("pushBack", e.target.value)}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                   >
                     <option value="">بدون إجراء</option>
                     <option value="Return to Tech">إعادة للفني</option>
@@ -494,11 +494,11 @@ export default function CourierRequestDetailPage() {
 
                 {/* 3. Installation Status */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">حالة التركيب *</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">حالة التركيب *</label>
                   <select
                     value={currentForm.installationStatus || ""}
                     onChange={(e) => handleChange("installationStatus", e.target.value)}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                   >
                     <option value="">اختر الحالة</option>
                     <option value="Installation Completed">مكتمل</option>
@@ -510,23 +510,23 @@ export default function CourierRequestDetailPage() {
 
                 {/* 4. Response Date */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">تاريخ الرد (تاريخ المراجعة)</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">تاريخ الرد (تاريخ المراجعة)</label>
                   <input
                     type="date"
                     value={currentForm.responseDate || ""}
                     onChange={(e) => handleChange("responseDate", e.target.value)}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                   />
                 </div>
 
                 {/* 5. Client Notes / ملاحظات العميل */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">ملاحظات العميل / المشرف</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">ملاحظات العميل / المشرف</label>
                   <textarea
                     value={currentForm.customerNotes || ""}
                     onChange={(e) => handleChange("customerNotes", e.target.value)}
                     rows={4}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 resize-none font-sans"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] placeholder-[#9CA3AF] outline-none focus:border-[#18B2B0] resize-none font-sans"
                     placeholder="أي ملاحظات أو تعليقات تخص العميل أو مستوى الخدمة..."
                   />
                 </div>
@@ -536,7 +536,7 @@ export default function CourierRequestDetailPage() {
               <div className="space-y-4">
 
                 {!completingStatus ? (
-                  <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2.5">
+                  <div className="flex items-start gap-2 bg-amber-500/10 border border-[#F4B740]/35 rounded-lg px-3 py-2.5">
                     <Info className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-amber-300">طلب غير مكتمل — بدون سيريالات وبدون خصم</p>
@@ -563,11 +563,11 @@ export default function CourierRequestDetailPage() {
                 {/* Device SN — with lookup */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs text-slate-400 font-medium">الرقم التسلسلي للجهاز (SN) *</label>
+                    <label className="block text-xs text-[#6B7280] font-medium">الرقم التسلسلي للجهاز (SN) *</label>
                     <button
                       type="button"
                       onClick={() => { setExtraDevices((p) => [...p, ""]); setIsDirty(true); }}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      className="text-xs text-[#18B2B0] hover:text-[#18B2B0] flex items-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> إضافة جهاز
                     </button>
@@ -585,12 +585,12 @@ export default function CourierRequestDetailPage() {
                       }}
                       onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "device"); }}
                       placeholder="أدخل أو امسح الرقم التسلسلي..."
-                      className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 font-mono"
+                      className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] placeholder-[#9CA3AF] outline-none focus:border-[#18B2B0] font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => { if (currentForm.sn?.trim()) doSerialLookup(currentForm.sn.trim(), "device"); }}
-                      className="bg-emerald-700/40 hover:bg-emerald-700/60 border border-emerald-700/40 text-emerald-300 px-3 rounded-lg transition-colors"
+                      className="bg-[#18B2B0]/15 hover:bg-[#149D9B]/60 border border-[#18B2B0]/30 text-[#18B2B0] px-3 rounded-lg transition-colors"
                     >
                       {snLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                     </button>
@@ -598,7 +598,7 @@ export default function CourierRequestDetailPage() {
                   {deviceLookup && (
                     <div className={`mt-1.5 flex items-center gap-2 text-xs px-2 py-1 rounded-md ${
                       deviceLookup.found && deviceLookup.inActiveCustody
-                        ? "bg-emerald-500/10 text-emerald-400"
+                        ? "bg-[#18B2B0]/10 text-[#18B2B0]"
                         : "bg-red-500/10 text-red-400"
                     }`}>
                       {deviceLookup.found && deviceLookup.inActiveCustody
@@ -620,7 +620,7 @@ export default function CourierRequestDetailPage() {
                           setIsDirty(true);
                         }}
                         placeholder={`جهاز إضافي ${idx + 2}`}
-                        className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono outline-none focus:border-emerald-500/60"
+                        className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] font-mono outline-none focus:border-[#18B2B0]"
                       />
                       <button
                         type="button"
@@ -636,11 +636,11 @@ export default function CourierRequestDetailPage() {
                 {/* SIM Serial — with lookup */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs text-slate-400 font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
+                    <label className="block text-xs text-[#6B7280] font-medium">الرقم التسلسلي للشريحة (ICCID)</label>
                     <button
                       type="button"
                       onClick={() => { setExtraSims((p) => [...p, ""]); setIsDirty(true); }}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      className="text-xs text-[#18B2B0] hover:text-[#18B2B0] flex items-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> إضافة شريحة
                     </button>
@@ -658,12 +658,12 @@ export default function CourierRequestDetailPage() {
                       }}
                       onBlur={(e) => { if (e.target.value.trim()) doSerialLookup(e.target.value.trim(), "sim"); }}
                       placeholder="89..."
-                      className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/60 font-mono"
+                      className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] placeholder-[#9CA3AF] outline-none focus:border-[#18B2B0] font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => { if (currentForm.simSerial?.trim()) doSerialLookup(currentForm.simSerial.trim(), "sim"); }}
-                      className="bg-emerald-700/40 hover:bg-emerald-700/60 border border-emerald-700/40 text-emerald-300 px-3 rounded-lg transition-colors"
+                      className="bg-[#18B2B0]/15 hover:bg-[#149D9B]/60 border border-[#18B2B0]/30 text-[#18B2B0] px-3 rounded-lg transition-colors"
                     >
                       {simLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                     </button>
@@ -671,7 +671,7 @@ export default function CourierRequestDetailPage() {
                   {simLookup && (
                     <div className={`mt-1.5 flex items-center gap-2 text-xs px-2 py-1 rounded-md ${
                       simLookup.found && simLookup.inActiveCustody
-                        ? "bg-emerald-500/10 text-emerald-400"
+                        ? "bg-[#18B2B0]/10 text-[#18B2B0]"
                         : "bg-red-500/10 text-red-400"
                     }`}>
                       {simLookup.found && simLookup.inActiveCustody
@@ -693,7 +693,7 @@ export default function CourierRequestDetailPage() {
                           setIsDirty(true);
                         }}
                         placeholder={`شريحة إضافية ${idx + 2}`}
-                        className="flex-1 bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono outline-none focus:border-emerald-500/60"
+                        className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] font-mono outline-none focus:border-[#18B2B0]"
                       />
                       <button
                         type="button"
@@ -708,11 +708,11 @@ export default function CourierRequestDetailPage() {
 
                 {/* SIM Type — auto from lookup, still editable */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">نوع الشريحة</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">نوع الشريحة</label>
                   <select
                     value={currentForm.simType || ""}
                     onChange={(e) => handleChange("simType", e.target.value)}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                   >
                     <option value="">اختر النوع</option>
                     {lookups?.simTypes.map((s) => (
@@ -723,28 +723,28 @@ export default function CourierRequestDetailPage() {
 
                 {/* Technician — READ-ONLY from serial custody; warn if assignment differs */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium flex items-center gap-1">
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium flex items-center gap-1">
                     <Lock className="w-3 h-3" /> الفني المسؤول (من عهدة الجهاز)
                   </label>
-                  <div className={`bg-[#102222]/50 border rounded-lg px-3 py-2 text-sm font-medium flex items-center gap-2 ${
-                    deviceLookup?.technician ? "border-emerald-700/40 text-emerald-300" : "border-slate-700/30 text-slate-400"
+                  <div className={`bg-[#F8FAFC] border rounded-lg px-3 py-2 text-sm font-medium flex items-center gap-2 ${
+                    deviceLookup?.technician ? "border-[#18B2B0]/30 text-[#18B2B0]" : "border-[#E2E8F0] text-[#6B7280]"
                   }`}>
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      deviceLookup?.technician ? "bg-emerald-500 animate-pulse" : "bg-slate-600"
+                      deviceLookup?.technician ? "bg-[#18B2B0] animate-pulse" : "bg-[#6B7280]"
                     }`} />
                     {deviceLookup?.technician
                       ? <>
                           👤 {deviceLookup.technician.fullName}
-                          <span className="text-xs text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded ml-auto">
+                          <span className="text-xs text-[#6B7280] font-mono bg-[#F8FAFC] px-1.5 py-0.5 rounded ml-auto">
                             {deviceLookup.technician.technicianCode ?? deviceLookup.technician.username}
                           </span>
                         </>
-                      : <span className="text-slate-500 text-xs">امسح رقم الجهاز لتحديد الفني تلقائياً من العهدة</span>
+                      : <span className="text-[#6B7280] text-xs">امسح رقم الجهاز لتحديد الفني تلقائياً من العهدة</span>
                     }
                   </div>
                   {request.tecName && (
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      تعيين الطلب (مرجعي فقط): <span className="text-slate-400">{request.tecName}</span>
+                    <p className="mt-1 text-[11px] text-[#6B7280]">
+                      تعيين الطلب (مرجعي فقط): <span className="text-[#6B7280]">{request.tecName}</span>
                       {deviceLookup?.technician ? (
                         request.tecName.replace(/_/g, " ").toLowerCase() !==
                           (deviceLookup.technician.fullName || "").toLowerCase() && (
@@ -766,32 +766,32 @@ export default function CourierRequestDetailPage() {
                 {/* Delivery Date & Time */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1.5 font-medium">تاريخ التنفيذ</label>
+                    <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">تاريخ التنفيذ</label>
                     <input
                       type="date"
                       value={currentForm.deliveryDate || ""}
                       onChange={(e) => handleChange("deliveryDate", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1.5 font-medium">وقت التنفيذ</label>
+                    <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">وقت التنفيذ</label>
                     <input
                       type="time"
                       value={currentForm.time || ""}
                       onChange={(e) => handleChange("time", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                 </div>
 
                 {/* Paper Roll */}
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1.5 font-medium">رول الورق</label>
+                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">رول الورق</label>
                   <select
                     value={currentForm.paperRoll || ""}
                     onChange={(e) => handleChange("paperRoll", e.target.value)}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                   >
                     <option value="">اختر</option>
                     <option value="Yes">نعم</option>
@@ -802,11 +802,11 @@ export default function CourierRequestDetailPage() {
                 {/* Failure Reason (conditional) */}
                 {currentForm.installationStatus === "Not Completed" && (
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1.5 font-medium">سبب الفشل *</label>
+                    <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">سبب الفشل *</label>
                     <select
                       value={currentForm.responseReasonCode || ""}
                       onChange={(e) => handleChange("responseReasonCode", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">اختر السبب</option>
                       {lookups?.failureReasons.map((r) => (
@@ -822,14 +822,14 @@ export default function CourierRequestDetailPage() {
           </div>
 
           {/* Wizard Action Buttons */}
-          <div className="flex items-center justify-between border-t border-slate-700/30 pt-4 mt-6">
+          <div className="flex items-center justify-between border-t border-[#E2E8F0] pt-4 mt-6">
             {phase === 1 ? (
               <>
                 <div />
                 <button
                   type="button"
                   onClick={handleNextPhase}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="bg-[#18B2B0] hover:bg-[#149D9B] text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   التالي (بيانات التنفيذ)
                   <ChevronLeft className="w-4 h-4" />
@@ -840,7 +840,7 @@ export default function CourierRequestDetailPage() {
                 <button
                   type="button"
                   onClick={() => setPhase(1)}
-                  className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="bg-[#4B5563] hover:bg-[#374151] text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                   السابق (بيانات التحقق)
@@ -849,7 +849,7 @@ export default function CourierRequestDetailPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={!isDirty || mutation.isPending}
-                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="bg-[#18B2B0] hover:bg-[#149D9B] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   {mutation.isPending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -866,21 +866,21 @@ export default function CourierRequestDetailPage() {
 
       {/* Auto-deduction Info Banner */}
       {completingStatus ? (
-        <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-4">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-3 bg-[#18B2B0]/10 border border-[#18B2B0]/25 rounded-xl p-4">
+          <CheckCircle2 className="w-5 h-5 text-[#18B2B0] mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-emerald-400">خصم تلقائي من المخزون والعهدة المسلسلة</p>
-            <p className="text-xs text-emerald-400/70 mt-0.5">
+            <p className="text-sm font-semibold text-[#18B2B0]">خصم تلقائي من المخزون والعهدة المسلسلة</p>
+            <p className="text-xs text-[#18B2B0]/70 mt-0.5">
               عند الحفظ بحالة "مكتمل"، سيتم خصم كل الأجهزة والشرائح المُدخلة تلقائياً من عهدة الفني (Scan-Out).
             </p>
           </div>
         </div>
       ) : currentForm.installationStatus ? (
-        <div className="flex items-start gap-3 bg-slate-800/40 border border-slate-700/40 rounded-xl p-4">
-          <Info className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-3 rassco-glass border border-[#E2E8F0] rounded-xl p-4">
+          <Info className="w-5 h-5 text-[#6B7280] mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-slate-300">بدون خصم من العهدة</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm font-semibold text-[#4B5563]">بدون خصم من العهدة</p>
+            <p className="text-xs text-[#6B7280] mt-0.5">
               الحالة غير مكتملة — الحفظ يحدّث الطلب فقط دون طلب سيريالات ودون خصم مخزون.
             </p>
           </div>

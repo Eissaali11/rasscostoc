@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -112,9 +112,9 @@ function isCompletedStatus(status?: string | null) {
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex gap-2 border-b border-slate-700/20 pb-1 text-xs">
+    <div className="flex gap-2 border-b border-[#E2E8F0]/20 pb-1 text-xs">
       <span className="text-slate-450 min-w-[120px]">{label}:</span>
-      <span className="text-slate-200 font-medium">{value}</span>
+      <span className="text-[#2D3135] font-medium">{value}</span>
     </div>
   );
 }
@@ -125,7 +125,7 @@ function LookupBadge({ lookup }: { lookup: SerialLookupResult | null }) {
   return (
     <div
       className={`mt-1 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${
-        ok ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+        ok ? "bg-[#18B2B0]/10 text-[#18B2B0]" : "bg-red-500/10 text-red-400"
       }`}
     >
       {ok ? <BadgeCheck className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
@@ -371,10 +371,10 @@ export function EditCourierExecutionModal({
   };
 
   const statusBorder = completing
-    ? "border-emerald-500/40"
+    ? "border-[#18B2B0]/40"
     : currentForm.installationStatus === "Not Completed"
       ? "border-red-500/40"
-      : "border-slate-700/50";
+      : "border-[#E2E8F0]";
 
   const renderSerialList = (role: "device" | "sim") => {
     const rows = role === "device" ? deviceRows : simRows;
@@ -392,7 +392,7 @@ export function EditCourierExecutionModal({
           <button
             type="button"
             onClick={() => setRows((prev) => [...prev, newRow()])}
-            className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+            className="text-[10px] text-[#18B2B0] hover:text-[#18B2B0] flex items-center gap-1"
           >
             <Plus className="w-3 h-3" />
             إضافة {role === "device" ? "جهاز" : "شريحة"}
@@ -408,14 +408,14 @@ export function EditCourierExecutionModal({
                   if (e.target.value.trim()) doSerialLookup(row.id, e.target.value.trim(), role);
                 }}
                 placeholder={`${placeholder}${rows.length > 1 ? ` (${idx + 1})` : ""}`}
-                className="flex-1 bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                className="flex-1 rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
               />
               <button
                 type="button"
                 onClick={() => {
                   if (row.value.trim()) doSerialLookup(row.id, row.value.trim(), role);
                 }}
-                className="bg-emerald-700/40 border border-emerald-700/40 text-emerald-300 px-2 rounded-lg"
+                className="bg-[#18B2B0]/15 border border-[#18B2B0]/30 text-[#18B2B0] px-2 rounded-lg"
               >
                 {row.loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
               </button>
@@ -439,11 +439,11 @@ export function EditCourierExecutionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[#0f1c1c] border-slate-700/60 text-slate-100 p-0">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-750">
-          <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border-[#E2E8F0] text-[#2D3135] p-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E2E8F0]">
+          <DialogTitle className="text-base font-bold text-[#2D3135] flex items-center gap-2">
             بيانات التنفيذ الميداني
-            {requestId && <span className="text-slate-500 font-mono text-xs">#{requestId}</span>}
+            {requestId && <span className="text-[#6B7280] font-mono text-xs">#{requestId}</span>}
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-450">
             الفني يُجلب تلقائياً من عهدة الجهاز — وليس من اسم التعيين. يمكن إضافة أكثر من جهاز وشريحة.
@@ -451,17 +451,17 @@ export function EditCourierExecutionModal({
         </DialogHeader>
 
         {requestLoading ? (
-          <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
+          <div className="flex items-center justify-center py-16 text-[#6B7280] gap-2">
             <Loader2 className="animate-spin w-5 h-5" />
             <span className="text-sm">جاري التحميل...</span>
           </div>
         ) : !request ? (
-          <div className="text-center py-16 text-slate-500 text-sm">الطلب غير موجود</div>
+          <div className="text-center py-16 text-[#6B7280] text-sm">الطلب غير موجود</div>
         ) : (
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[#0b1717] border border-slate-750 rounded-xl p-3 space-y-1.5">
-                <p className="text-[10px] font-bold text-slate-500 mb-2">بيانات الطلب</p>
+              <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-3 space-y-1.5">
+                <p className="text-[10px] font-bold text-[#6B7280] mb-2">بيانات الطلب</p>
                 <DetailRow label="العميل" value={request.customerName} />
                 <DetailRow label="المدينة" value={request.city} />
                 <DetailRow label="تعيين الطلب" value={request.tecName} />
@@ -469,31 +469,31 @@ export function EditCourierExecutionModal({
                 <DetailRow label="Terminal" value={request.terminalId} />
               </div>
 
-              <div className="bg-[#0b1717] border border-slate-750 rounded-xl p-3">
+              <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-3">
                   <div
                     className={`flex items-center gap-1.5 text-[10px] font-semibold ${
-                      phase === 1 ? "text-emerald-400" : "text-slate-500"
+                      phase === 1 ? "text-[#18B2B0]" : "text-[#6B7280]"
                     }`}
                   >
                     <span
                       className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                        phase === 1 ? "bg-emerald-600 text-white" : "bg-slate-700"
+                        phase === 1 ? "bg-[#18B2B0] text-white" : "bg-[#4B5563] text-white"
                       }`}
                     >
                       1
                     </span>
                     التحقق
                   </div>
-                  <div className="flex-1 h-px bg-slate-700" />
+                  <div className="flex-1 h-px bg-[#4B5563]" />
                   <div
                     className={`flex items-center gap-1.5 text-[10px] font-semibold ${
-                      phase === 2 ? "text-emerald-400" : "text-slate-500"
+                      phase === 2 ? "text-[#18B2B0]" : "text-[#6B7280]"
                     }`}
                   >
                     <span
                       className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                        phase === 2 ? "bg-emerald-600 text-white" : "bg-slate-700"
+                        phase === 2 ? "bg-[#18B2B0] text-white" : "bg-[#4B5563] text-white"
                       }`}
                     >
                       2
@@ -510,7 +510,7 @@ export function EditCourierExecutionModal({
                         <select
                           value={currentForm.installationStatus || ""}
                           onChange={(e) => handleChange("installationStatus", e.target.value)}
-                          className={`w-full bg-[#0b1717] border ${statusBorder} rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60`}
+                          className={`w-full bg-white border ${statusBorder} rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]`}
                         >
                           <option value="">اختر الحالة</option>
                           <option value="Installation Completed">مكتمل</option>
@@ -527,7 +527,7 @@ export function EditCourierExecutionModal({
                           value={currentForm.customerNotes || ""}
                           onChange={(e) => handleChange("customerNotes", e.target.value)}
                           rows={3}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 resize-none"
+                          className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] resize-none"
                           placeholder="ملاحظات التركيب..."
                         />
                       </div>
@@ -544,7 +544,7 @@ export function EditCourierExecutionModal({
                             <select
                               value={currentForm.simType || ""}
                               onChange={(e) => handleChange("simType", e.target.value)}
-                              className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                             >
                               <option value="">اختر النوع</option>
                               {lookups?.simTypes.map((s) => (
@@ -560,16 +560,16 @@ export function EditCourierExecutionModal({
                               <Lock className="w-3 h-3" /> الفني المسؤول (من عهدة الجهاز)
                             </label>
                             <div
-                              className={`bg-[#0b1717]/40 border rounded-lg px-2.5 py-1.5 text-xs flex items-center gap-1.5 ${
+                              className={`bg-[#F8FAFC] border rounded-lg px-2.5 py-1.5 text-xs flex items-center gap-1.5 ${
                                 primaryDeviceLookup?.technician
-                                  ? "border-emerald-700/40 text-emerald-300"
-                                  : "border-slate-750 text-slate-500"
+                                  ? "border-[#18B2B0]/30 text-[#18B2B0]"
+                                  : "border-[#E2E8F0] text-[#6B7280]"
                               }`}
                             >
                               {primaryDeviceLookup?.technician ? (
                                 <>
                                   👤 {primaryDeviceLookup.technician.fullName}
-                                  <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-1 py-0.5 rounded ml-auto">
+                                  <span className="text-[10px] text-[#6B7280] font-mono bg-[#F8FAFC] px-1 py-0.5 rounded ml-auto">
                                     {primaryDeviceLookup.technician.technicianCode ??
                                       primaryDeviceLookup.technician.username}
                                   </span>
@@ -579,14 +579,14 @@ export function EditCourierExecutionModal({
                               )}
                             </div>
                             {request.tecName && (
-                              <p className="mt-1 text-[10px] text-slate-500">
+                              <p className="mt-1 text-[10px] text-[#6B7280]">
                                 تعيين الطلب (مرجعي): {request.tecName}
                               </p>
                             )}
                           </div>
                         </>
                       ) : (
-                        <div className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2.5">
+                        <div className="flex items-start gap-2 rounded-lg border border-[#F4B740]/35 bg-amber-500/10 px-3 py-2.5">
                           <Info className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                           <div>
                             <p className="text-[11px] font-semibold text-amber-300">
@@ -606,7 +606,7 @@ export function EditCourierExecutionModal({
                             type="date"
                             value={currentForm.deliveryDate || ""}
                             onChange={(e) => handleChange("deliveryDate", e.target.value)}
-                            className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                            className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                           />
                         </div>
                         <div>
@@ -615,7 +615,7 @@ export function EditCourierExecutionModal({
                             type="time"
                             value={currentForm.time || ""}
                             onChange={(e) => handleChange("time", e.target.value)}
-                            className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                            className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                           />
                         </div>
                       </div>
@@ -625,7 +625,7 @@ export function EditCourierExecutionModal({
                         <select
                           value={currentForm.paperRoll || ""}
                           onChange={(e) => handleChange("paperRoll", e.target.value)}
-                          className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                          className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                         >
                           <option value="">اختر</option>
                           <option value="Yes">نعم</option>
@@ -639,7 +639,7 @@ export function EditCourierExecutionModal({
                           <select
                             value={currentForm.responseReasonCode || ""}
                             onChange={(e) => handleChange("responseReasonCode", e.target.value)}
-                            className="w-full bg-[#0b1717] border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                            className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                           >
                             <option value="">اختر السبب</option>
                             {lookups?.failureReasons.map((r) => (
@@ -654,14 +654,14 @@ export function EditCourierExecutionModal({
                   )}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-750 pt-3 mt-4">
+                <div className="flex items-center justify-between border-t border-[#E2E8F0] pt-3 mt-4">
                   {phase === 1 ? (
                     <>
                       <div />
                       <button
                         type="button"
                         onClick={handleNextPhase}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
+                        className="bg-[#18B2B0] hover:bg-[#149D9B] text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
                       >
                         التالي (التنفيذ الميداني)
                         <ChevronLeft className="w-3.5 h-3.5" />
@@ -672,7 +672,7 @@ export function EditCourierExecutionModal({
                       <button
                         type="button"
                         onClick={() => setPhase(1)}
-                        className="bg-slate-750 hover:bg-slate-700 text-white text-[10px] font-semibold px-3 py-2 rounded-lg flex items-center gap-1"
+                        className="bg-[#4B5563] hover:bg-[#374151] text-white text-[10px] font-semibold px-3 py-2 rounded-lg flex items-center gap-1"
                       >
                         <ChevronRight className="w-3.5 h-3.5" />
                         السابق (التحقق)
@@ -681,7 +681,7 @@ export function EditCourierExecutionModal({
                         type="button"
                         onClick={handleSave}
                         disabled={mutation.isPending}
-                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
+                        className="bg-[#18B2B0] hover:bg-[#149D9B] disabled:opacity-50 text-white text-[10px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1"
                       >
                         {mutation.isPending ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -697,21 +697,21 @@ export function EditCourierExecutionModal({
             </div>
 
             {completing ? (
-              <div className="flex items-start gap-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-3.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-450 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2.5 bg-[#18B2B0]/10 border border-[#18B2B0]/25 rounded-xl p-3.5">
+                <CheckCircle2 className="w-4 h-4 text-[#18B2B0] mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-emerald-400">خصم تلقائي نشط</p>
-                  <p className="text-[10px] text-emerald-450/70 mt-0.5">
+                  <p className="text-xs font-semibold text-[#18B2B0]">خصم تلقائي نشط</p>
+                  <p className="text-[10px] text-[#18B2B0]/70 mt-0.5">
                     عند الإكمال سيُخصم كل جهاز وشريحة مدخلة من عهدة الفني الظاهر أعلاه.
                   </p>
                 </div>
               </div>
             ) : currentForm.installationStatus ? (
-              <div className="flex items-start gap-2.5 bg-slate-800/50 border border-slate-700/40 rounded-xl p-3.5">
-                <Info className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5">
+                <Info className="w-4 h-4 text-[#6B7280] mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-slate-300">بدون خصم من العهدة</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
+                  <p className="text-xs font-semibold text-[#4B5563]">بدون خصم من العهدة</p>
+                  <p className="text-[10px] text-[#6B7280] mt-0.5">
                     الحالة غير مكتملة — الحفظ يغلق/يحدّث الطلب فقط دون طلب سيريالات ودون خصم مخزون.
                   </p>
                 </div>

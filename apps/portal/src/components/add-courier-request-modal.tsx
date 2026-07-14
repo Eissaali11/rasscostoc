@@ -1,4 +1,4 @@
-import { useTranslation } from "@/lib/language";
+﻿import { useTranslation } from "@/lib/language";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -129,19 +129,19 @@ export function AddCourierRequestModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#142d2d] border border-slate-700/60 text-slate-100 p-0 shadow-2xl rounded-2xl">
-        <DialogHeader className="p-6 pb-4 border-b border-slate-700/40 relative">
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#F8FAFC] border border-[#E2E8F0] text-[#2D3135] p-0 shadow-2xl rounded-2xl">
+        <DialogHeader className="p-6 pb-4 border-b border-[#E2E8F0] relative">
+          <DialogTitle className="text-xl font-bold text-[#2D3135] flex items-center gap-2">
             {t('courier.add_request_new_1')}
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-400 mt-1.5">
+          <DialogDescription className="text-xs text-[#6B7280] mt-1.5">
             {t('courier.data_customer_request_new')}
           </DialogDescription>
         </DialogHeader>
 
         {lookupsLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
-            <Loader2 className="animate-spin w-8 h-8 text-emerald-450" />
+          <div className="flex flex-col items-center justify-center py-20 text-[#6B7280] gap-2">
+            <Loader2 className="animate-spin w-8 h-8 text-[#18B2B0]" />
             <span className="text-sm">{t('courier.loading_1')}</span>
           </div>
         ) : (
@@ -150,40 +150,40 @@ export function AddCourierRequestModal({
               
               {/* Section 1: Basic Operational Data */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[#18B2B0] uppercase tracking-wide flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5" />
                   {t('courier.data_4')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.date_6')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.date_6')}</label>
                     <input
                       type="date"
                       required
                       value={form.date}
                       onChange={(e) => handleChange("date", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">TID *</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">TID *</label>
                     <input
                       type="text"
                       required
                       placeholder={t('courier.enter_tid_code')}
                       value={form.tid}
                       onChange={(e) => handleChange("tid", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">Terminal ID</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">Terminal ID</label>
                     <input
                       type="text"
                       placeholder={t('courier.enter_terminal_id')}
                       value={form.terminalId}
                       onChange={(e) => handleChange("terminalId", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                 </div>
@@ -191,63 +191,63 @@ export function AddCourierRequestModal({
 
               {/* Section 2: Customer Info */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[#18B2B0] uppercase tracking-wide flex items-center gap-2">
                   <User className="w-3.5 h-3.5" />
                   {t('courier.data_customer_1')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.name_customer_2')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.name_customer_2')}</label>
                     <input
                       type="text"
                       required
                       placeholder={t('courier.name_customer_received')}
                       value={form.customerName}
                       onChange={(e) => handleChange("customerName", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.name_2')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.name_2')}</label>
                     <input
                       type="text"
                       placeholder={t('courier.name_3')}
                       value={form.retailerName}
                       onChange={(e) => handleChange("retailerName", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.number_mobile_2')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.number_mobile_2')}</label>
                     <input
                       type="text"
                       required
                       placeholder="05xxxxxxxx"
                       value={form.mobile}
                       onChange={(e) => handleChange("mobile", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.number_mobile_3')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.number_mobile_3')}</label>
                     <input
                       type="text"
                       placeholder="05xxxxxxxx"
                       value={form.mobile2}
                       onChange={(e) => handleChange("mobile2", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.city_2')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.city_2')}</label>
                     <select
                       required
                       value={form.city}
                       onChange={(e) => handleChange("city", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">{t('courier.city_1')}</option>
                       {lookups?.cities.map((c) => (
@@ -260,30 +260,30 @@ export function AddCourierRequestModal({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.item_23936')}</label>
+                  <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.item_23936')}</label>
                   <textarea
                     placeholder={t('courier.delivery')}
                     value={form.addressAr}
                     onChange={(e) => handleChange("addressAr", e.target.value)}
                     rows={2}
-                    className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 resize-none"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] resize-none"
                   />
                 </div>
               </div>
 
               {/* Section 3: Technical / Hardware Info */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[#18B2B0] uppercase tracking-wide flex items-center gap-2">
                   <Cpu className="w-3.5 h-3.5" />
                   {t('courier.data_devices')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.type')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.type')}</label>
                     <select
                       value={form.installationType}
                       onChange={(e) => handleChange("installationType", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     >
                       <option value="New Install">{t('courier.new')}</option>
                       <option value="Replacement">{t('courier.item_12327')}</option>
@@ -292,11 +292,11 @@ export function AddCourierRequestModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.type_device_1')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.type_device_1')}</label>
                     <select
                       value={form.vendorType}
                       onChange={(e) => handleChange("vendorType", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">{t('courier.item_27065')}</option>
                       {lookups?.vendorTypes.map((v) => (
@@ -307,11 +307,11 @@ export function AddCourierRequestModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.type_sim_1')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.type_sim_1')}</label>
                     <select
                       value={form.sim}
                       onChange={(e) => handleChange("sim", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">{t('courier.sim_2')}</option>
                       {lookups?.simTypes.map((s) => (
@@ -325,55 +325,55 @@ export function AddCourierRequestModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.item_5051')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.item_5051')}</label>
                     <input
                       type="text"
                       placeholder={t('courier.verification_4')}
                       value={form.otp}
                       onChange={(e) => handleChange("otp", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.number_4')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.number_4')}</label>
                     <input
                       type="text"
                       placeholder="Incident No."
                       value={form.incidentNumber}
                       onChange={(e) => handleChange("incidentNumber", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">TRSM</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">TRSM</label>
                     <input
                       type="text"
                       placeholder="TRSM code"
                       value={form.trsm}
                       onChange={(e) => handleChange("trsm", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.item_5039')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.item_5039')}</label>
                     <input
                       type="text"
                       placeholder="PIN code"
                       value={form.pinCode}
                       onChange={(e) => handleChange("pinCode", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.technician_admin')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.technician_admin')}</label>
                     <select
                       required
                       value={form.tecName}
                       onChange={(e) => handleChange("tecName", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">{t('courier.technician_3')}</option>
                       {lookups?.technicians.map((t) => (
@@ -384,13 +384,13 @@ export function AddCourierRequestModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">{t('courier.number_serial_7')}</label>
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">{t('courier.number_serial_7')}</label>
                     <input
                       type="text"
                       placeholder="ICCID Serial"
                       value={form.simSn}
                       onChange={(e) => handleChange("simSn", e.target.value)}
-                      className="w-full bg-[#102222] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-500/60 font-mono"
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                 </div>
@@ -399,18 +399,18 @@ export function AddCourierRequestModal({
             </div>
 
             {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-700/40">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E2E8F0]">
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
+                className="bg-[#F8FAFC] hover:bg-[#4B5563] border border-[#E2E8F0] text-[#4B5563] hover:text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
               >
                 {t('courier.cancel_undo_1')}
               </button>
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-lg shadow-emerald-500/10 cursor-pointer"
+                className="flex items-center gap-2 bg-[#18B2B0] hover:bg-[#149D9B] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-lg shadow-[#18B2B0]/20 cursor-pointer"
               >
                 {mutation.isPending ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

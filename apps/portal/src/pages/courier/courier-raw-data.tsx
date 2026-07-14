@@ -1,4 +1,4 @@
-import { useTranslation } from "@/lib/language";
+﻿import { useTranslation } from "@/lib/language";
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -227,15 +227,15 @@ export default function CourierRawDataPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div dir={dir} className="space-y-6 text-slate-100">
+    <div dir={dir} className="rassco-page space-y-6 text-[#2D3135]">
       {/* Title block */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-700/60 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Database className="w-6 h-6 text-cyan-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-[#2D3135] flex items-center gap-2">
+            <Database className="w-6 h-6 text-[#18B2B0]" />
             {t('courier.management_data')}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[#6B7280] mt-1">
             {t('courier.submit_data_delivery')}
           </p>
         </div>
@@ -250,18 +250,18 @@ export default function CourierRawDataPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-600 bg-slate-800/40 text-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-[#E2E8F0] bg-white text-[#2D3135] rounded-xl text-sm font-semibold hover:bg-[#F1F5F9] transition-colors"
           >
             {importing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Upload className="w-4 h-4 text-cyan-400" />
+              <Upload className="w-4 h-4 text-[#18B2B0]" />
             )}
             {t('courier.import_2')}
           </button>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-slate-950 rounded-xl text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/10"
+            className="flex items-center gap-2 px-4 py-2 bg-[#18B2B0] text-white rounded-xl text-sm font-semibold hover:bg-[#149D9B] transition-colors shadow-lg shadow-[#18B2B0]/20"
           >
             <Plus className="w-4 h-4" />
             {t('courier.request_new')}
@@ -270,8 +270,8 @@ export default function CourierRawDataPage() {
       </div>
 
       {/* Search Filter */}
-      <div className="flex items-center gap-3 max-w-md bg-[#1a3636] border border-slate-700/60 rounded-xl px-3 py-1.5 focus-within:border-cyan-400/80 transition-colors">
-        <Search className="w-4 h-4 text-slate-400 shrink-0" />
+      <div className="flex items-center gap-3 max-w-md rassco-glass border border-[#E2E8F0] rounded-xl px-3 py-1.5 focus-within:border-[#18B2B0] transition-colors">
+        <Search className="w-4 h-4 text-[#6B7280] shrink-0" />
         <input
           value={q}
           onChange={(e) => {
@@ -279,15 +279,15 @@ export default function CourierRawDataPage() {
             setPage(1);
           }}
           placeholder={t('courier.name_technician_1')}
-          className="w-full bg-transparent border-0 text-slate-100 text-sm focus:outline-none focus:ring-0 placeholder:text-slate-500"
+          className="w-full bg-transparent border-0 text-[#2D3135] text-sm focus:outline-none focus:ring-0 placeholder:text-[#6B7280]"
         />
       </div>
 
       {/* Table grid */}
-      <div className="bg-[#1a3636] border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl">
+      <div className="rassco-glass border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-right">
-            <thead className="bg-[#102222] text-slate-300 border-b border-slate-700/60">
+            <thead className="bg-[#F8FAFC] text-[#4B5563] border-b border-[#E2E8F0]">
               <tr>
                 <th className="p-4 font-semibold">{t('courier.date_2')}</th>
                 <th className="p-4 font-semibold">TID</th>
@@ -300,45 +300,45 @@ export default function CourierRawDataPage() {
                 <th className="p-4 font-semibold">{t('courier.item_14214')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#E2E8F0] text-[#4B5563]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="p-10 text-center text-slate-400">
+                  <td colSpan={9} className="p-10 text-center text-[#6B7280]">
                     <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                      <Loader2 className="w-5 h-5 animate-spin text-[#18B2B0]" />
                       {t('courier.loading_data')}
                     </div>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-10 text-center text-slate-500">
+                  <td colSpan={9} className="p-10 text-center text-[#6B7280]">
                     {t('courier.no_requests')}
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-800/20 transition-colors">
+                  <tr key={row.id} className="hover:bg-[#F8FAFC] transition-colors">
                     <td className="p-4 whitespace-nowrap">{row.date || "—"}</td>
-                    <td className="p-4 font-mono text-cyan-400 whitespace-nowrap">{row.tid || "—"}</td>
+                    <td className="p-4 font-mono text-[#18B2B0] whitespace-nowrap">{row.tid || "—"}</td>
                     <td className="p-4 font-mono whitespace-nowrap">{row.terminalId || "—"}</td>
                     <td className="p-4 whitespace-nowrap">{row.installationType || "—"}</td>
                     <td className="p-4 whitespace-nowrap">{row.city || "—"}</td>
-                    <td className="p-4 whitespace-nowrap font-medium text-slate-200">{row.customerName || "—"}</td>
-                    <td className="p-4 font-mono whitespace-nowrap text-xs text-slate-400">{row.mobile || "—"}</td>
+                    <td className="p-4 whitespace-nowrap font-medium text-[#2D3135]">{row.customerName || "—"}</td>
+                    <td className="p-4 font-mono whitespace-nowrap text-xs text-[#6B7280]">{row.mobile || "—"}</td>
                     <td className="p-4 whitespace-nowrap">{row.tecName || "—"}</td>
                     <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(row)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#18B2B0] hover:bg-[#18B2B0]/10 transition-colors"
                           title={t('courier.edit_2')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(row.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title={t('courier.delete_3')}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -353,22 +353,22 @@ export default function CourierRawDataPage() {
         </div>
 
         {/* Pagination footer */}
-        <div className="flex items-center justify-between border-t border-slate-700/60 p-4 bg-[#102222]">
-          <span className="text-xs text-slate-400">
+        <div className="flex items-center justify-between border-t border-[#E2E8F0] p-4 bg-[#F8FAFC]">
+          <span className="text-xs text-[#6B7280]">
             {t('courier.page_of_with_total', { page, totalPages, total })}
           </span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="p-1.5 rounded-lg border border-slate-700 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-800/40 disabled:hover:text-slate-400 transition-all"
+              className="p-1.5 rounded-lg border border-[#E2E8F0] bg-white text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#6B7280] transition-all"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-1.5 rounded-lg border border-slate-700 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-800/40 disabled:hover:text-slate-400 transition-all"
+              className="p-1.5 rounded-lg border border-[#E2E8F0] bg-white text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#6B7280] transition-all"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -379,9 +379,9 @@ export default function CourierRawDataPage() {
       {/* Add / Edit modal */}
       {(showAdd || editRow) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#1a3636] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-700/60 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">
+          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rassco-glass border border-[#E2E8F0] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-[#E2E8F0] flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#2D3135]">
                 {editRow ? t('courier.edit_request', { var_0: editRow.id }) : t('courier.submit_request_new')}
               </h3>
               <button
@@ -389,7 +389,7 @@ export default function CourierRawDataPage() {
                   setShowAdd(false);
                   setEditRow(null);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                className="p-1 rounded-lg text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -398,45 +398,45 @@ export default function CourierRawDataPage() {
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Group 1: Request Info */}
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#18B2B0] mb-3 border-r-2 border-[#18B2B0] pr-2">
                   {t('courier.data_request')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.date_2')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.date_2')}</label>
                     <input
                       type="date"
                       required
                       value={formValues.date || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, date: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.type')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.type')}</label>
                     <input
                       type="text"
                       value={formValues.installationType || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, installationType: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.number')}</label>
                     <input
                       type="text"
                       value={formValues.incidentNumber || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, incidentNumber: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_15966')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.item_15966')}</label>
                     <input
                       type="text"
                       value={formValues.ticketingHolouly || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, ticketingHolouly: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                 </div>
@@ -444,89 +444,89 @@ export default function CourierRawDataPage() {
 
               {/* Group 2: Device & SIM */}
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#18B2B0] mb-3 border-r-2 border-[#18B2B0] pr-2">
                   {t('courier.data_device')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_1')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.number_1')}</label>
                     <input
                       type="text"
                       required
                       value={formValues.tid || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, tid: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_2')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.number_2')}</label>
                     <input
                       type="text"
                       value={formValues.terminalId || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, terminalId: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.sim')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.sim')}</label>
                     <input
                       type="text"
                       value={formValues.sim || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, sim: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_serial')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.number_serial')}</label>
                     <input
                       type="text"
                       value={formValues.simSn || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, simSn: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">ID Data</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">ID Data</label>
                     <input
                       type="text"
                       value={formValues.idData || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, idData: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.verification_1')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.verification_1')}</label>
                     <input
                       type="text"
                       value={formValues.otp || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, otp: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_5039')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.item_5039')}</label>
                     <input
                       type="text"
                       value={formValues.pinCode || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, pinCode: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">TRSM</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">TRSM</label>
                     <input
                       type="text"
                       value={formValues.trsm || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, trsm: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_20713')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.item_20713')}</label>
                     <select
                       value={formValues.vendorType || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, vendorType: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">{t('courier.item_27065')}</option>
                       {lookups?.vendorTypes.map((v) => (
@@ -541,16 +541,16 @@ export default function CourierRawDataPage() {
 
               {/* Group 3: Location */}
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#18B2B0] mb-3 border-r-2 border-[#18B2B0] pr-2">
                   {t('courier.signed')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.city')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.city')}</label>
                     <select
                       value={formValues.city || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, city: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     >
                       <option value="">{t('courier.city_1')}</option>
                       {lookups?.cities.map((c) => (
@@ -561,21 +561,21 @@ export default function CourierRawDataPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.city_technician')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.city_technician')}</label>
                     <input
                       type="text"
                       value={formValues.cityTec || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, cityTec: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.item_23895')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.item_23895')}</label>
                     <input
                       type="text"
                       value={formValues.addressAr || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, addressAr: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                 </div>
@@ -583,74 +583,74 @@ export default function CourierRawDataPage() {
 
               {/* Group 4: Customer */}
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 border-r-2 border-cyan-400 pr-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#18B2B0] mb-3 border-r-2 border-[#18B2B0] pr-2">
                   {t('courier.data_customer')}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.name_customer')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.name_customer')}</label>
                     <input
                       type="text"
                       value={formValues.customerName || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, customerName: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.name')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.name')}</label>
                     <input
                       type="text"
                       value={formValues.retailerName || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, retailerName: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.name_delivery')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.name_delivery')}</label>
                     <input
                       type="text"
                       value={formValues.tecName || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, tecName: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_mobile')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.number_mobile')}</label>
                     <input
                       type="text"
                       value={formValues.mobile || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, mobile: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono text-xs"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">{t('courier.number_mobile_1')}</label>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.number_mobile_1')}</label>
                     <input
                       type="text"
                       value={formValues.mobile2 || ""}
                       onChange={(e) => setFormValues((v) => ({ ...v, mobile2: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/80 font-mono text-xs"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0] font-mono text-xs"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-slate-700/60">
+              <div className="flex justify-end gap-3 pt-6 border-t border-[#E2E8F0]">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAdd(false);
                     setEditRow(null);
                   }}
-                  className="px-4 py-2 border border-slate-700 text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-800/40"
+                  className="px-4 py-2 border border-[#E2E8F0] text-[#4B5563] rounded-xl text-sm font-semibold hover:bg-white"
                 >
                   {t('courier.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 bg-cyan-500 text-slate-950 rounded-xl text-sm font-bold hover:bg-cyan-400 transition-colors flex items-center gap-2"
+                  className="px-6 py-2 bg-[#18B2B0] text-white rounded-xl text-sm font-bold hover:bg-[#149D9B] transition-colors flex items-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {t('courier.save_data_1')}

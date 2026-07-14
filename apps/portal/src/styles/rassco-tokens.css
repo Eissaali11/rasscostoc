@@ -206,8 +206,8 @@
 }
 
 /**
- * Contrast fix for light cards/surfaces only.
- * Dark courier pages (bg-[#0f…]) keep white text unchanged.
+ * Contrast fix for light cards/surfaces.
+ * Courier pages now use the RASSCO light glass system (no dark shell overrides).
  */
 .rassco-light-surface
   :is(.bg-white, .bg-card, .rassco-card, [class~="shadow-card"], .bg-rassco-card)

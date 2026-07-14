@@ -1,4 +1,4 @@
-import { useTranslation } from "@/lib/language";
+﻿import { useTranslation } from "@/lib/language";
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -61,7 +61,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   const { t } = useTranslation();
   if (!status)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 bg-slate-700/40 px-2.5 py-1 rounded-full">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#6B7280] bg-[#F1F5F9] px-2.5 py-1 rounded-full">
         <Clock className="w-3 h-3" />
         {t('courier.verification_3')}
       </span>
@@ -70,7 +70,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   const lower = status.toLowerCase();
   if (lower.includes("completed"))
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/25">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#18B2B0] bg-[#18B2B0]/12 px-2.5 py-1 rounded-full border border-[#18B2B0]/25">
         <CheckCircle2 className="w-3 h-3" />
         {t('courier.completed_5')}
       </span>
@@ -78,7 +78,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 
   if (status === "Not Completed")
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2.5 py-1 rounded-full border border-red-500/25">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#E05252] bg-[#E05252]/12 px-2.5 py-1 rounded-full border border-[#E05252]/25">
         <XCircle className="w-3 h-3" />
         {t('courier.completed_6')}
       </span>
@@ -86,7 +86,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 
   if (status === "Customer Not Answering")
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 bg-indigo-500/15 px-2.5 py-1 rounded-full border border-indigo-500/25">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#4B5563] bg-[#4B5563]/10 px-2.5 py-1 rounded-full border border-[#4B5563]/20">
         <Phone className="w-3 h-3" />
         {t('courier.customer_no')}
       </span>
@@ -94,14 +94,14 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 
   if (status === "In Progress")
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/25">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[#B45309] bg-[#F4B740]/18 px-2.5 py-1 rounded-full border border-[#F4B740]/35">
         <Clock className="w-3 h-3" />
         {t('courier.item_15830')}
       </span>
     );
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 bg-slate-700/15 px-2.5 py-1 rounded-full border border-slate-700/25">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#6B7280] bg-[#F1F5F9] px-2.5 py-1 rounded-full border border-[#E2E8F0]">
       <Clock className="w-3 h-3" />
       {status}
     </span>
@@ -212,15 +212,15 @@ export default function CourierRequestsPage() {
   };
 
   return (
-    <div dir={dir} className="space-y-5">
+    <div dir={dir} className="rassco-page space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <Package className="w-5 h-5 text-emerald-400" />
+          <h1 className="text-xl font-bold text-[#2D3135] flex items-center gap-2">
+            <Package className="w-5 h-5 text-[#18B2B0]" />
             {t('courier.verification_requests')}
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-sm text-[#6B7280] mt-0.5">
             {t('courier.total_review_with_count', { total })}
           </p>
         </div>
@@ -235,7 +235,7 @@ export default function CourierRequestsPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="bg-[#284b63] hover:bg-[#1f3a4d] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+            className="bg-[#4B5563] hover:bg-[#374151] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
           >
             {importing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -246,14 +246,14 @@ export default function CourierRequestsPage() {
           </button>
           <button
             onClick={handleExportExcel}
-            className="bg-[#3c6e71] hover:bg-[#2d5355] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+            className="bg-[#18B2B0] hover:bg-[#149D9B] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" />
             {t('courier.export_2')}
           </button>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
+            className="bg-[#18B2B0] hover:bg-[#149D9B] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
           >
             {t('courier.add_request_new_2')}
           </button>
@@ -262,25 +262,25 @@ export default function CourierRequestsPage() {
 
       {/* Import Summary Results Panel */}
       {importSummary && (
-        <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl p-4 space-y-3 relative">
+        <div className="rassco-glass border border-[#E2E8F0] rounded-xl p-4 space-y-3 relative">
           <button
             onClick={() => setImportSummary(null)}
-            className="absolute top-3 left-3 text-slate-400 hover:text-slate-200"
+            className="absolute top-3 left-3 text-[#6B7280] hover:text-[#2D3135]"
           >
             <X className="w-4 h-4" />
           </button>
-          <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-[#18B2B0] flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4" />
             {t('courier.report_import_file')}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div className="bg-[#142d2d] rounded-lg p-2.5 border border-slate-700/30">
-              <div className="text-slate-400">{t('courier.total')}</div>
-              <div className="text-lg font-bold text-slate-200 mt-0.5">{importSummary.totalRows}</div>
+            <div className="bg-[#F8FAFC] rounded-lg p-2.5 border border-[#E2E8F0]">
+              <div className="text-[#6B7280]">{t('courier.total')}</div>
+              <div className="text-lg font-bold text-[#2D3135] mt-0.5">{importSummary.totalRows}</div>
             </div>
-            <div className="bg-emerald-500/10 rounded-lg p-2.5 border border-emerald-500/20">
-              <div className="text-emerald-400">{t('courier.completed_successfully_1')}</div>
-              <div className="text-lg font-bold text-emerald-300 mt-0.5">{importSummary.importedCount}</div>
+            <div className="bg-[#18B2B0]/10 rounded-lg p-2.5 border border-[#18B2B0]/25">
+              <div className="text-[#18B2B0]">{t('courier.completed_successfully_1')}</div>
+              <div className="text-lg font-bold text-[#18B2B0] mt-0.5">{importSummary.importedCount}</div>
             </div>
             <div className="bg-amber-500/10 rounded-lg p-2.5 border border-amber-500/20">
               <div className="text-amber-400">{t('courier.completed_8')}</div>
@@ -293,7 +293,7 @@ export default function CourierRequestsPage() {
           </div>
 
           {(importSummary.skipped.length > 0 || importSummary.rejected.length > 0) && (
-            <div className="mt-3 text-xs max-h-40 overflow-y-auto space-y-1.5 border-t border-slate-700/30 pt-3">
+            <div className="mt-3 text-xs max-h-40 overflow-y-auto space-y-1.5 border-t border-[#E2E8F0] pt-3">
               {importSummary.skipped.map((s, idx) => (
                 <div key={`s-${idx}`} className="text-amber-400 flex items-start gap-1">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -315,18 +315,18 @@ export default function CourierRequestsPage() {
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
             <input
               value={q}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder={t('courier.search_name_number_serial_1')}
-              className="w-full bg-[#1a3636] border border-slate-700/50 rounded-lg pr-10 pl-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/60"
+              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg pr-10 pl-3 py-2 text-sm text-[#2D3135] placeholder-[#9CA3AF] outline-none focus:border-[#18B2B0]"
             />
           </div>
           <select
             value={status}
             onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-            className="bg-[#1a3636] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/60"
+            className="rassco-glass border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
           >
             <option value="">{t('courier.all')}</option>
             <option value="pending">{t('courier.verification_3')}</option>
@@ -339,11 +339,11 @@ export default function CourierRequestsPage() {
 
         {(status || reason || q) && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-slate-400">{t('courier.active')}</span>
+            <span className="text-[#6B7280]">{t('courier.active')}</span>
             {status && (
-              <span className="bg-emerald-500/15 text-emerald-450 border border-emerald-500/20 px-2 py-1 rounded-md flex items-center gap-1.5">
+              <span className="bg-[#18B2B0]/12 text-[#18B2B0] border border-[#18B2B0]/25 px-2 py-1 rounded-md flex items-center gap-1.5">
                 {t('courier.status_filter_label', { status: status === "pending" ? t('courier.verification_3') : status })}
-                <button onClick={() => { setStatus(""); setPage(1); }} className="hover:text-emerald-300 font-bold ml-1 cursor-pointer">×</button>
+                <button onClick={() => { setStatus(""); setPage(1); }} className="hover:text-[#18B2B0] font-bold ml-1 cursor-pointer">×</button>
               </span>
             )}
             {reason && (
@@ -360,7 +360,7 @@ export default function CourierRequestsPage() {
             )}
             <button
               onClick={() => { setStatus(""); setReason(""); setQ(""); setPage(1); }}
-              className="text-slate-400 hover:text-slate-200 underline font-medium cursor-pointer text-xs"
+              className="text-[#6B7280] hover:text-[#2D3135] underline font-medium cursor-pointer text-xs"
             >
               {t('courier.scan_all')}
             </button>
@@ -369,29 +369,29 @@ export default function CourierRequestsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#1a3636] border border-slate-700/50 rounded-xl overflow-hidden shadow">
+      <div className="rassco-glass border border-[#E2E8F0] rounded-xl overflow-hidden shadow">
         <div className="overflow-x-auto max-h-[58vh]">
           <table className="w-full text-sm whitespace-nowrap">
-            <thead className="bg-[#142d2d] text-slate-400 sticky top-0 z-10">
+            <thead className="bg-[#F8FAFC] text-[#6B7280] sticky top-0 z-10">
               <tr>
                 {["#", t('courier.date_2'), "TID", "Terminal ID", t('courier.customer_1'), t('courier.city'), t('courier.technician'), t('courier.status'), t('courier.item_7882')].map((h, i) => (
-                  <th key={i} className="px-4 py-3 text-start font-semibold border-b border-slate-700/50">
+                  <th key={i} className="px-4 py-3 text-start font-semibold border-b border-[#E2E8F0]">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/30">
+            <tbody className="divide-y divide-[#E2E8F0]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-16 text-slate-500">
+                  <td colSpan={9} className="text-center py-16 text-[#6B7280]">
                     <Loader2 className="animate-spin w-5 h-5 inline-block mr-2" />
                     {t('courier.loading_ellipsis')}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-16 text-slate-500">
+                  <td colSpan={9} className="text-center py-16 text-[#6B7280]">
                     {t('courier.no_results_1')}
                   </td>
                 </tr>
@@ -399,15 +399,15 @@ export default function CourierRequestsPage() {
                 rows.map((r, idx) => (
                   <tr
                     key={r.id}
-                    className={`hover:bg-slate-700/20 transition-colors ${idx % 2 === 0 ? "" : "bg-slate-800/10"}`}
+                    className={`hover:bg-[#374151]/20 transition-colors ${idx % 2 === 0 ? "" : "bg-[#F8FAFC]"}`}
                   >
-                    <td className="px-4 py-3 text-slate-500 text-xs">{r.id}</td>
-                    <td className="px-4 py-3 text-slate-300">{r.date || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-400">{r.tid || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-slate-300">{r.terminalId || "—"}</td>
-                    <td className="px-4 py-3 text-slate-200">{r.customerName || "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">{r.city || "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">
+                    <td className="px-4 py-3 text-[#6B7280] text-xs">{r.id}</td>
+                    <td className="px-4 py-3 text-[#4B5563]">{r.date || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-[#18B2B0]">{r.tid || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-[#4B5563]">{r.terminalId || "—"}</td>
+                    <td className="px-4 py-3 text-[#2D3135]">{r.customerName || "—"}</td>
+                    <td className="px-4 py-3 text-[#4B5563]">{r.city || "—"}</td>
+                    <td className="px-4 py-3 text-[#4B5563]">
                       {r.execution?.salesTechnician || r.tecName || "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -419,7 +419,7 @@ export default function CourierRequestsPage() {
                           setSelectedRequestId(r.id);
                           setIsEditModalOpen(true);
                         }}
-                        className="text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        className="text-xs font-medium text-[#18B2B0] hover:text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                       >
                         {(!r.execution || !r.execution.installationStatus) ? t('courier.submit_data') : t('courier.edit_data_verification')}
                       </button>
@@ -433,7 +433,7 @@ export default function CourierRequestsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-slate-400">
+      <div className="flex items-center justify-between text-sm text-[#6B7280]">
         <span>
           {t('courier.page_of', { page, totalPages })}
         </span>
@@ -441,14 +441,14 @@ export default function CourierRequestsPage() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="p-1.5 rounded-lg hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#E2E8F0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="p-1.5 rounded-lg hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#E2E8F0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
