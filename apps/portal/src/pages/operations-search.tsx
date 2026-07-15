@@ -134,23 +134,23 @@ const withdrawnStatusUi: Record<
 > = {
   pending: {
     text: t('common.pending_review'),
-    className: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
-    markerClass: "bg-amber-400",
+    className: "bg-amber-50 border border-amber-200 text-amber-700",
+    markerClass: "bg-amber-500",
   },
   approved: {
     text: t('common.ok'),
-    className: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
-    markerClass: "bg-emerald-400",
+    className: "bg-emerald-50 border border-emerald-200 text-emerald-700",
+    markerClass: "bg-emerald-500",
   },
   rejected: {
     text: t('common.item_9566'),
-    className: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
-    markerClass: "bg-rose-400",
+    className: "bg-rose-50 border border-rose-200 text-rose-700",
+    markerClass: "bg-rose-500",
   },
   maintenance: {
     text: t('common.item_19172'),
-    className: "bg-orange-500/15 text-orange-300 border border-orange-500/30",
-    markerClass: "bg-orange-400",
+    className: "bg-orange-50 border border-orange-200 text-orange-700",
+    markerClass: "bg-orange-500",
   },
 };
 
@@ -160,18 +160,18 @@ const receivedStatusUi: Record<
 > = {
   pending: {
     text: t('common.pending_review'),
-    className: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
-    markerClass: "bg-amber-400",
+    className: "bg-amber-50 border border-amber-200 text-amber-700",
+    markerClass: "bg-amber-500",
   },
   approved: {
     text: t('common.ok_1'),
-    className: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
-    markerClass: "bg-emerald-400",
+    className: "bg-emerald-50 border border-emerald-200 text-emerald-700",
+    markerClass: "bg-emerald-500",
   },
   rejected: {
     text: t('common.rejected'),
-    className: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
-    markerClass: "bg-rose-400",
+    className: "bg-rose-50 border border-rose-200 text-rose-700",
+    markerClass: "bg-rose-500",
   },
 };
 
@@ -181,13 +181,13 @@ const transferStatusUi: Record<
 > = {
   accepted: {
     text: t('common.completed'),
-    className: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
-    markerClass: "bg-emerald-400",
+    className: "bg-emerald-50 border border-emerald-200 text-emerald-700",
+    markerClass: "bg-emerald-500",
   },
   rejected: {
     text: t('common.rejected'),
-    className: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
-    markerClass: "bg-rose-400",
+    className: "bg-rose-50 border border-rose-200 text-rose-700",
+    markerClass: "bg-rose-500",
   },
 };
 
@@ -251,7 +251,7 @@ function rankSearchResults(results: SearchResultItem[], query: string): SearchRe
 }
 
 export default function OperationsSearchPage() {
-  const { t } = useTranslation();
+  const { t, dir } = useTranslation();
   const [, setLocation] = useLocation();
 
   const [searchInput, setSearchInput] = useState("");
@@ -622,44 +622,44 @@ export default function OperationsSearchPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-900/50 backdrop-blur-md p-6">
+    <div className="space-y-8 text-rassco-text" dir={dir}>
+      <section className="rassco-glass p-6">
         <form onSubmit={handleSearchSubmit} className="space-y-4">
           <div className="relative group">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-cyan-300 transition-transform group-focus-within:scale-110" />
+              <Search className="h-5 w-5 text-[#18B2B0] transition-transform group-focus-within:scale-110" />
             </div>
 
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              className="h-16 pr-12 pl-36 bg-slate-900/70 border-cyan-400/20 focus-visible:ring-cyan-400/70 text-lg text-slate-100 placeholder:text-slate-400"
+              className="h-16 pr-12 pl-36 bg-white border-[rgba(24,178,176,0.15)] focus-visible:ring-[#18B2B0] text-lg text-[#2D3135] placeholder:text-[#6B7280]"
               placeholder={t('common.serial_number_operation_name_1')}
             />
 
             <div className="absolute inset-y-0 left-2 flex items-center">
-              <Button type="submit" className="bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold px-6">
+              <Button type="submit" className="bg-[#18B2B0] hover:bg-[#149d9b] text-white font-bold px-6">
                 {t('common.search_4')}
               </Button>
             </div>
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[#6B7280]">
             {t('dashboard.search_number_number_details')}
           </p>
         </form>
       </section>
 
       {submittedQuery ? (
-        <section className="rounded-2xl border border-cyan-500/20 bg-slate-900/50 backdrop-blur-md p-6 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/10 pb-4">
+        <section className="rassco-glass p-6 space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(24,178,176,0.15)] pb-4">
             <div className="flex items-center gap-3">
-              <div className="size-11 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 flex items-center justify-center">
+              <div className="size-11 rounded-xl bg-[rgba(24,178,176,0.08)] border border-[rgba(24,178,176,0.22)] text-[#18B2B0] flex items-center justify-center">
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-xl font-black text-white">{t('common.results_search_1')}{submittedQuery}</h3>
-                <p className="text-xs text-slate-400">{t('common.results')}{results.length}</p>
+                <h3 className="text-xl font-black text-[#2D3135]">{t('common.results_search_1')}{submittedQuery}</h3>
+                <p className="text-xs text-[#6B7280]">{t('common.results')}{results.length}</p>
               </div>
             </div>
 
@@ -668,7 +668,7 @@ export default function OperationsSearchPage() {
               variant="outline"
               onClick={exportToExcel}
               disabled={!selectedResult}
-              className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
+              className="border-[rgba(24,178,176,0.22)] bg-white text-[#18B2B0] hover:bg-[rgba(24,178,176,0.05)] hover:text-[#149d9b]"
             >
               <Download className="h-4 w-4 ml-2" />
               {t('dashboard.export_2')}
@@ -676,11 +676,11 @@ export default function OperationsSearchPage() {
           </div>
 
           {isLoading ? (
-            <div className="py-10 text-center text-slate-300">{t('common.loading_data_operations')}</div>
+            <div className="py-10 text-center text-[#6B7280]">{t('common.loading_data_operations')}</div>
           ) : error ? (
-            <div className="py-10 text-center text-rose-300">{t('common.error_loading_data_other')}</div>
+            <div className="py-10 text-center text-rose-600">{t('common.error_loading_data_other')}</div>
           ) : !results.length ? (
-            <div className="py-10 text-center text-slate-300">
+            <div className="py-10 text-center text-[#6B7280]">
               {t('dashboard.no_results_search_1')}
             </div>
           ) : (
@@ -694,8 +694,8 @@ export default function OperationsSearchPage() {
                       onClick={() => setSelectedResultId(result.id)}
                       className={
                         selectedResult?.id === result.id
-                          ? "px-3 py-1.5 rounded-lg border border-cyan-400/40 bg-cyan-400/15 text-cyan-200 text-xs font-bold"
-                          : "px-3 py-1.5 rounded-lg border border-slate-700/80 bg-slate-900/70 text-slate-300 text-xs hover:border-cyan-400/30"
+                          ? "px-3 py-1.5 rounded-lg border border-[#18B2B0]/40 bg-[#18B2B0]/15 text-[#18B2B0] text-xs font-bold"
+                          : "px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-[#2D3135] text-xs hover:border-[#18B2B0]/30"
                       }
                     >
                       {result.operationNumber}
@@ -707,57 +707,57 @@ export default function OperationsSearchPage() {
               {selectedResult && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">{t('common.name_6')}</p>
-                      <p className="font-bold text-slate-100">{selectedResult.productName || "-"}</p>
+                    <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-4">
+                      <p className="text-xs text-[#6B7280] mb-1">{t('common.name_6')}</p>
+                      <p className="font-bold text-[#2D3135]">{selectedResult.productName || "-"}</p>
                     </div>
 
-                    <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">{t('common.number_serial_1')}</p>
-                      <p className="font-mono font-bold text-cyan-300 tracking-wider">{selectedResult.serialNumber || "-"}</p>
+                    <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-4">
+                      <p className="text-xs text-[#6B7280] mb-1">{t('common.number_serial_1')}</p>
+                      <p className="font-mono font-bold text-[#18B2B0] tracking-wider">{selectedResult.serialNumber || "-"}</p>
                     </div>
 
-                    <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">{t('common.status_2')}</p>
+                    <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-4">
+                      <p className="text-xs text-[#6B7280] mb-1">{t('common.status_2')}</p>
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${selectedResult.statusClass}`}>
                         {selectedResult.statusText}
                       </span>
                     </div>
 
-                    <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
-                      <p className="text-xs text-slate-400 mb-1">{t('common.date_operation')}</p>
-                      <p className="font-bold text-slate-100">{formatDate(selectedResult.createdAt)}</p>
+                    <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-4">
+                      <p className="text-xs text-[#6B7280] mb-1">{t('common.date_operation')}</p>
+                      <p className="font-bold text-[#2D3135]">{formatDate(selectedResult.createdAt)}</p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="text-lg font-black text-white flex items-center gap-2">
-                      <History className="h-5 w-5 text-cyan-300" />
+                    <h4 className="text-lg font-black text-[#2D3135] flex items-center gap-2">
+                      <History className="h-5 w-5 text-[#18B2B0]" />
                       {t('common.table_operation')}
                     </h4>
 
                     <div className="relative pr-6">
-                      <div className="absolute top-0 bottom-0 right-1.5 w-px bg-cyan-500/20" />
+                      <div className="absolute top-0 bottom-0 right-1.5 w-px bg-[#18B2B0]/20" />
 
                       <div className="space-y-6">
                         {selectedResult.timeline.map((event) => (
                           <div key={event.id} className="relative">
-                            <div className={`absolute -right-0.5 top-1.5 size-3 rounded-full ${event.markerClass} ring-4 ring-cyan-500/10`} />
+                            <div className={`absolute -right-0.5 top-1.5 size-3 rounded-full ${event.markerClass} ring-4 ring-[#18B2B0]/10`} />
 
-                            <div className="mr-5 rounded-xl border border-slate-700/60 bg-slate-900/70 p-4">
+                            <div className="mr-5 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
                               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                <p className="font-bold text-slate-100">{event.title}</p>
-                                <span className="text-xs text-slate-400">{formatDateTime(event.timestamp)}</span>
+                                <p className="font-bold text-[#2D3135]">{event.title}</p>
+                                <span className="text-xs text-[#6B7280]">{formatDateTime(event.timestamp)}</span>
                               </div>
 
-                              <p className="text-sm text-slate-300">{event.description}</p>
+                              <p className="text-sm text-[#2D3135]">{event.description}</p>
 
                               {!!event.tags?.length && (
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {event.tags.map((tag, index) => (
                                     <span
                                       key={`${event.id}-${index}`}
-                                      className="px-2 py-1 rounded bg-slate-950/60 text-[10px] text-slate-400 border border-slate-700/50"
+                                      className="px-2 py-1 rounded bg-[#F8FAFB] text-[10px] text-[#6B7280] border border-slate-100"
                                     >
                                       {tag}
                                     </span>
@@ -771,15 +771,15 @@ export default function OperationsSearchPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                  <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-4 shadow-sm flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
                     <div>
-                      <p className="text-sm text-slate-300 font-semibold">{selectedResult.title}</p>
-                      <p className="text-xs text-slate-400 mt-1">{selectedResult.summary}</p>
+                      <p className="text-sm text-[#2D3135] font-semibold">{selectedResult.title}</p>
+                      <p className="text-xs text-[#6B7280] mt-1">{selectedResult.summary}</p>
                     </div>
 
                     <Button
                       type="button"
-                      className="bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold"
+                      className="bg-[#18B2B0] hover:bg-[#149d9b] text-white font-bold"
                       onClick={() => setLocation(selectedResult.route)}
                     >
                       {t('common.view_details_3')}
@@ -791,43 +791,43 @@ export default function OperationsSearchPage() {
           )}
         </section>
       ) : (
-        <section className="rounded-2xl border border-slate-700/60 bg-slate-900/40 p-8 text-center text-slate-400">
-          <div className="mx-auto w-fit mb-3 rounded-full bg-cyan-500/10 border border-cyan-500/20 p-3">
-            <Search className="h-6 w-6 text-cyan-300" />
+        <section className="rassco-glass p-8 text-center text-[#6B7280]">
+          <div className="mx-auto w-fit mb-3 rounded-full bg-[#18B2B0]/10 border border-[#18B2B0]/20 p-3">
+            <Search className="h-6 w-6 text-[#18B2B0]" />
           </div>
-          <h3 className="text-lg font-bold text-slate-200 mb-2">{t('common.search_operation')}</h3>
-          <p className="text-sm text-slate-400">{t('common.number_serial_number_operation')}</p>
+          <h3 className="text-lg font-bold text-[#2D3135] mb-2">{t('common.search_operation')}</h3>
+          <p className="text-sm text-[#6B7280]">{t('common.number_serial_number_operation')}</p>
         </section>
       )}
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
-          <div className="flex items-center gap-2 mb-1 text-amber-300">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-1 text-amber-600">
             <TriangleAlert className="h-4 w-4" />
             <span className="text-xs font-bold">{t('common.pending_review')}</span>
           </div>
-          <p className="text-sm text-slate-300">{t('common.followup')}</p>
+          <p className="text-sm text-[#2D3135]">{t('common.followup')}</p>
         </div>
 
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
-          <div className="flex items-center gap-2 mb-1 text-emerald-300">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-1 text-emerald-600">
             <CheckCircle2 className="h-4 w-4" />
             <span className="text-xs font-bold">{t('common.item_9572')}</span>
           </div>
-          <p className="text-sm text-slate-300">{t('common.successfully')}</p>
+          <p className="text-sm text-[#2D3135]">{t('common.successfully')}</p>
         </div>
 
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
-          <div className="flex items-center gap-2 mb-1 text-rose-300">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-1 text-rose-600">
             <XCircle className="h-4 w-4" />
             <span className="text-xs font-bold">{t('common.item_9566')}</span>
           </div>
-          <p className="text-sm text-slate-300">{t('common.review_reason')}</p>
+          <p className="text-sm text-[#2D3135]">{t('common.review_reason')}</p>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-900/40 p-4 text-xs text-slate-500 flex items-center gap-2">
-        <Smartphone className="h-4 w-4 text-cyan-300" />
+      <section className="rounded-2xl border border-slate-100 bg-[#F8FAFB] p-4 text-xs text-[#6B7280] flex items-center gap-2">
+        <Smartphone className="h-4 w-4 text-[#18B2B0]" />
         {t('dashboard.search_operations_devices_ware')}
       </section>
     </div>

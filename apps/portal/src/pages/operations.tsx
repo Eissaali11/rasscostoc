@@ -222,14 +222,14 @@ function getSystemOperationCategory(group: GroupedOperation): SystemOperationFil
 
 function getStatusBadge(status: GroupedOperation["status"]) {
   if (status === "pending") {
-    return <span className="px-3 py-1 rounded-full bg-[#00F2FF]/10 text-[#00F2FF] text-[10px] font-bold border border-[#00F2FF]/20">{t('common.pending')}</span>;
+    return <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">{t('common.pending')}</span>;
   }
 
   if (status === "accepted") {
-    return <span className="px-3 py-1 rounded-full bg-[#BC13FE]/10 text-[#BC13FE] text-[10px] font-bold border border-[#BC13FE]/20">{t('common.completed')}</span>;
+    return <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">{t('common.completed')}</span>;
   }
 
-  return <span className="px-3 py-1 rounded-full bg-[#FF8C00]/10 text-[#FF8C00] text-[10px] font-bold border border-[#FF8C00]/20">{t('common.pending_waiting')}</span>;
+  return <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200">{t('common.pending_waiting')}</span>;
 }
 
 function getProgressForGroup(group: GroupedOperation): number {
@@ -241,9 +241,9 @@ function getProgressForGroup(group: GroupedOperation): number {
 }
 
 function getProgressClass(group: GroupedOperation): string {
-  if (group.status === "accepted") return "bg-[#BC13FE] shadow-[0_0_10px_#BC13FE66]";
-  if (group.status === "rejected") return "bg-white/20";
-  return "bg-gradient-to-r from-[#00F2FF] to-[#0077ff] shadow-[0_0_10px_rgba(0,242,255,0.5)]";
+  if (group.status === "accepted") return "bg-[#18B2B0]";
+  if (group.status === "rejected") return "bg-slate-200";
+  return "bg-gradient-to-r from-[#18B2B0] to-[#2cdcd9] shadow-[0_0_10px_rgba(24,178,176,0.2)]";
 }
 
 export default function OperationsPage() {
@@ -1016,8 +1016,8 @@ export default function OperationsPage() {
     return (
         <div className="min-h-[60vh] flex items-center justify-center">
           <div className="text-center">
-            <Loader2 className="mx-auto h-10 w-10 animate-spin text-cyan-300" />
-            <p className="mt-3 text-slate-300">{t('common.loading_operations')}</p>
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-[#18B2B0]" />
+            <p className="mt-3 text-[#6B7280]">{t('common.loading_operations')}</p>
           </div>
         </div>
     );
@@ -1025,28 +1025,27 @@ export default function OperationsPage() {
 
   return (
     <>
-      <div className="-m-8 min-h-[calc(100vh-5rem)] bg-[#0A0D14] text-slate-200 relative overflow-hidden">
+      <div dir={dir} className="-m-8 min-h-[calc(100vh-5rem)] bg-[#F8FAFB] bg-gradient-to-b from-[#F8FAFB] via-[#EEF2F4] to-[#E7ECEF] text-[#2D3135] relative overflow-hidden font-sans">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-cyan-400/5 blur-[120px] rounded-full" />
-          <div className="absolute top-[30%] -right-[15%] w-[40%] h-[40%] bg-purple-500/5 blur-[120px] rounded-full" />
-          <div className="absolute -bottom-[20%] left-[30%] w-[60%] h-[60%] bg-orange-500/5 blur-[150px] rounded-full" />
+          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-[#18B2B0]/5 blur-[120px] rounded-full" />
+          <div className="absolute top-[30%] -right-[15%] w-[40%] h-[40%] bg-[#18B2B0]/3 blur-[120px] rounded-full" />
         </div>
 
         <div className="relative z-10 p-6 md:p-10 space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-light text-white tracking-wide">{t('common.management_2')}<span className="font-bold">{t('common.operations_1')}</span></h2>
-              <p className="text-slate-500 text-sm mt-1 font-light">Global Logistics &amp; Inventory Control Center</p>
+              <h2 className="text-3xl font-light text-[#2D3135] tracking-wide">{t('common.management_2')}<span className="font-extrabold text-[#18B2B0]">{t('common.operations_1')}</span></h2>
+              <p className="text-[#6B7280] text-sm mt-1 font-light">Global Logistics &amp; Inventory Control Center</p>
             </div>
 
-            <div className="inline-flex rounded-full border border-white/10 bg-white/[0.02] p-1">
+            <div className="inline-flex rounded-full border border-[rgba(24,178,176,0.15)] bg-white/60 backdrop-blur-md p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => setOperationView("technicians")}
                 className={
                   operationView === "technicians"
-                    ? "px-4 py-1.5 rounded-full bg-cyan-400/15 text-cyan-300 text-xs font-bold border border-cyan-400/30"
-                    : "px-4 py-1.5 rounded-full text-slate-400 text-xs font-bold"
+                    ? "px-4 py-1.5 rounded-full bg-[#18B2B0] text-white text-xs font-bold shadow-[0_4px_12px_rgba(24,178,176,0.25)]"
+                    : "px-4 py-1.5 rounded-full text-[#6B7280] hover:text-[#2D3135] text-xs font-bold transition-colors"
                 }
               >
                 {t('common.couriers')}
@@ -1056,8 +1055,8 @@ export default function OperationsPage() {
                 onClick={() => setOperationView("warehouses")}
                 className={
                   operationView === "warehouses"
-                    ? "px-4 py-1.5 rounded-full bg-cyan-400/15 text-cyan-300 text-xs font-bold border border-cyan-400/30"
-                    : "px-4 py-1.5 rounded-full text-slate-400 text-xs font-bold"
+                    ? "px-4 py-1.5 rounded-full bg-[#18B2B0] text-white text-xs font-bold shadow-[0_4px_12px_rgba(24,178,176,0.25)]"
+                    : "px-4 py-1.5 rounded-full text-[#6B7280] hover:text-[#2D3135] text-xs font-bold transition-colors"
                 }
               >
                 {t('common.warehouses_1')}
@@ -1068,8 +1067,8 @@ export default function OperationsPage() {
                   onClick={() => setOperationView("system")}
                   className={
                     operationView === "system"
-                      ? "px-4 py-1.5 rounded-full bg-cyan-400/15 text-cyan-300 text-xs font-bold border border-cyan-400/30"
-                      : "px-4 py-1.5 rounded-full text-slate-400 text-xs font-bold"
+                      ? "px-4 py-1.5 rounded-full bg-[#18B2B0] text-white text-xs font-bold shadow-[0_4px_12px_rgba(24,178,176,0.25)]"
+                      : "px-4 py-1.5 rounded-full text-[#6B7280] hover:text-[#2D3135] text-xs font-bold transition-colors"
                   }
                 >
                   {t('common.system')}
@@ -1079,54 +1078,54 @@ export default function OperationsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 flex items-center gap-5">
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-white shrink-0">
-                <Activity className="h-8 w-8" />
+            <div className="rassco-glass p-6 flex items-center gap-5">
+              <div className="size-14 rounded-2xl border border-[rgba(24,178,176,0.22)] bg-[rgba(24,178,176,0.08)] text-[#18B2B0] flex items-center justify-center shrink-0">
+                <Activity className="h-7 w-7" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{t('common.total_operations')}</p>
+                <p className="text-[11px] font-bold text-[#6B7280] tracking-wider uppercase mb-1">{t('common.total_operations')}</p>
                 <div className="flex items-baseline gap-3">
-                  <h3 className="text-3xl font-light text-white tabular-nums">{totalOperationsCount}</h3>
-                  <span className="text-[10px] text-cyan-300 font-bold">+12.4%</span>
+                  <h3 className="text-3xl font-extrabold text-[#2D3135] tabular-nums">{totalOperationsCount}</h3>
+                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">+12.4%</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/[0.02] backdrop-blur-2xl border border-cyan-400/20 rounded-[2rem] p-6 flex items-center gap-5">
-              <div className="p-4 rounded-2xl bg-cyan-400/5 border border-cyan-400/20 text-cyan-300 shrink-0">
-                {operationView === "system" ? <AlertCircle className="h-8 w-8" /> : <Truck className="h-8 w-8" />}
+            <div className="rassco-glass p-6 flex items-center gap-5">
+              <div className="size-14 rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                {operationView === "system" ? <AlertCircle className="h-7 w-7" /> : <Truck className="h-7 w-7" />}
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? t('common.system_2') : t('common.pending')}</p>
+                <p className="text-[11px] font-bold text-[#6B7280] tracking-wider uppercase mb-1">{operationView === "system" ? t('common.system_2') : t('common.pending')}</p>
                 <div className="flex items-baseline gap-3">
-                  <h3 className="text-3xl font-light text-cyan-300 tabular-nums">{operationView === "system" ? systemErrorsCount : pendingOperationsCount}</h3>
-                  <span className="text-[10px] text-slate-400">{operationView === "system" ? "Error" : "Active"}</span>
+                  <h3 className="text-3xl font-extrabold text-[#2D3135] tabular-nums">{operationView === "system" ? systemErrorsCount : pendingOperationsCount}</h3>
+                  <span className="text-[10px] text-[#6B7280]">{operationView === "system" ? "Error" : "Active"}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/[0.02] backdrop-blur-2xl border border-orange-400/20 rounded-[2rem] p-6 flex items-center gap-5">
-              <div className="p-4 rounded-2xl bg-orange-400/5 border border-orange-400/20 text-orange-300 shrink-0">
-                <Hourglass className="h-8 w-8" />
+            <div className="rassco-glass p-6 flex items-center gap-5">
+              <div className="size-14 rounded-2xl border border-orange-200 bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                <Hourglass className="h-7 w-7" />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? t('common.item_11091') : t('common.waiting')}</p>
+                <p className="text-[11px] font-bold text-[#6B7280] tracking-wider uppercase mb-1">{operationView === "system" ? t('common.item_11091') : t('common.waiting')}</p>
                 <div className="flex items-baseline gap-3">
-                  <h3 className="text-3xl font-light text-orange-300 tabular-nums">{waitingOperationsCount}</h3>
-                  <span className="text-[10px] text-slate-400">{operationView === "system" ? "Warn" : "Queue"}</span>
+                  <h3 className="text-3xl font-extrabold text-[#2D3135] tabular-nums">{waitingOperationsCount}</h3>
+                  <span className="text-[10px] text-[#6B7280]">{operationView === "system" ? "Warn" : "Queue"}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/[0.02] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] p-6 flex items-center gap-5">
-              <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 text-purple-300 shrink-0">
-                {operationView === "system" ? <Users className="h-8 w-8" /> : <CheckCircle2 className="h-8 w-8" />}
+            <div className="rassco-glass p-6 flex items-center gap-5">
+              <div className="size-14 rounded-2xl border border-purple-200 bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                {operationView === "system" ? <Users className="h-7 w-7" /> : <CheckCircle2 className="h-7 w-7" />}
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-1">{operationView === "system" ? t('common.item_20785') : t('common.day_1')}</p>
+                <p className="text-[11px] font-bold text-[#6B7280] tracking-wider uppercase mb-1">{operationView === "system" ? t('common.item_20785') : t('common.day_1')}</p>
                 <div className="flex items-baseline gap-3">
-                  <h3 className="text-3xl font-light text-purple-300 tabular-nums">{operationView === "system" ? onlineUsers.length : completedOperationsCount}</h3>
-                  <span className="text-[10px] text-green-400 font-bold">{operationView === "system" ? "Online" : "4.2%"}</span>
+                  <h3 className="text-3xl font-extrabold text-[#2D3135] tabular-nums">{operationView === "system" ? onlineUsers.length : completedOperationsCount}</h3>
+                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{operationView === "system" ? "Online" : "4.2%"}</span>
                 </div>
               </div>
             </div>
@@ -1134,9 +1133,9 @@ export default function OperationsPage() {
 
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="relative w-full lg:max-w-sm" dir={dir}>
-              <Search className="h-4 w-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search className="h-4 w-4 absolute right-4 top-1/2 -translate-y-1/2 text-[#18B2B0]" />
               <Input
-                className="w-full bg-white/[0.02] border border-white/10 rounded-full py-2 pr-11 pl-4 text-sm text-white placeholder:text-slate-600 focus:ring-cyan-400 focus:border-cyan-400"
+                className="w-full bg-white border-[rgba(24,178,176,0.2)] rounded-full py-2 pr-11 pl-4 text-sm text-[#2D3135] placeholder:text-[#6B7280] focus-visible:ring-[#18B2B0]"
                 placeholder={
                   operationView === "technicians"
                     ? t('common.search_couriers')
@@ -1152,7 +1151,7 @@ export default function OperationsPage() {
 
             <Button
               onClick={exportToExcel}
-              className="rounded-full bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10"
+              className="rounded-full bg-white border-[rgba(24,178,176,0.3)] text-[#18B2B0] hover:bg-[rgba(24,178,176,0.08)] hover:text-[#149d9b] font-bold"
               data-testid="button-export-operations"
             >
               <FileDown className="h-4 w-4 ml-2" />
@@ -1177,8 +1176,8 @@ export default function OperationsPage() {
                   onClick={() => setSystemOperationFilter(filterKey)}
                   className={
                     systemOperationFilter === filterKey
-                      ? "px-3 py-1.5 rounded-full bg-cyan-400/15 text-cyan-300 text-xs font-bold border border-cyan-400/30"
-                      : "px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/10 text-slate-400 text-xs font-bold hover:bg-white/[0.05]"
+                      ? "px-3 py-1.5 rounded-full bg-[rgba(24,178,176,0.15)] text-[#18B2B0] text-xs font-bold border border-[rgba(24,178,176,0.3)] shadow-sm"
+                      : "px-3 py-1.5 rounded-full bg-white border border-[rgba(24,178,176,0.12)] text-[#6B7280] text-xs font-bold hover:bg-[#F8FAFB] hover:border-[rgba(24,178,176,0.25)] transition-colors"
                   }
                 >
                   {systemFilterLabels[filterKey]} ({systemCategoryCounts[filterKey]})
@@ -1190,15 +1189,15 @@ export default function OperationsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 space-y-5 order-2 lg:order-1">
               <div className="flex items-end justify-between px-2">
-                <h3 className="text-xl font-light text-white">{t('common.log_operations')}<span className="font-bold">{t('common.item_9527')}</span></h3>
-                <div className="px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-medium border border-white/10">
+                <h3 className="text-xl font-light text-[#2D3135]">{t('common.log_operations')}<span className="font-extrabold text-[#18B2B0]">{t('common.item_9527')}</span></h3>
+                <div className="px-4 py-1.5 rounded-full bg-[rgba(24,178,176,0.08)] text-[#18B2B0] text-xs font-bold border border-[rgba(24,178,176,0.15)]">
                   {operationView === "technicians" ? t('common.couriers') : operationView === "warehouses" ? t('common.warehouses_1') : t('common.system')}
                 </div>
               </div>
 
               <div className="space-y-4">
                 {recentOperations.length === 0 ? (
-                  <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-3xl p-6 text-center text-slate-500">
+                  <div className="rassco-glass p-6 text-center text-[#6B7280]">
                     {operationView === "technicians"
                       ? t('common.no_7')
                       : operationView === "warehouses"
@@ -1214,7 +1213,7 @@ export default function OperationsPage() {
                     return (
                       <div
                         key={group.groupId}
-                        className="bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center gap-5 hover:bg-white/[0.04] transition-all cursor-pointer"
+                        className="rassco-glass p-5 flex flex-col sm:flex-row sm:items-center gap-5 hover:border-[#18B2B0] hover:shadow-[0_12px_32px_rgba(24,178,176,0.1)] transition-all cursor-pointer"
                         role="button"
                         tabIndex={0}
                         onClick={() => openOperationDetails(group)}
@@ -1226,23 +1225,23 @@ export default function OperationsPage() {
                         }}
                       >
                         <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className={`size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 ${
+                          <div className={`size-12 rounded-xl border flex items-center justify-center shrink-0 ${
                             group.status === "accepted"
-                              ? "text-purple-300"
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-600"
                               : group.status === "rejected"
-                                ? "text-orange-300"
-                                : "text-cyan-300"
+                                ? "bg-rose-50 border-rose-200 text-rose-600"
+                                : "bg-amber-50 border-amber-200 text-amber-600"
                           }`}>
                             {group.sourceType === "system-event" ? <Activity className="h-5 w-5" /> : <Package className="h-5 w-5" />}
                           </div>
 
-                          <div className="w-52">
-                            <p className="text-white font-medium text-sm">{group.warehouseName || t('common.operation_warehouse')}</p>
-                            <p className="text-slate-500 text-[10px] tracking-widest mt-1 font-mono">
+                          <div className="w-52 text-right">
+                            <p className="text-[#2D3135] font-bold text-sm">{group.warehouseName || t('common.operation_warehouse')}</p>
+                            <p className="text-[#6B7280] text-[10px] tracking-widest mt-1 font-mono">
                               {group.groupId.slice(0, 18).toUpperCase()}
                             </p>
                             {group.sourceType === "system-event" && group.systemMeta?.description && (
-                              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{group.systemMeta.description}</p>
+                              <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-1">{group.systemMeta.description}</p>
                             )}
                           </div>
                         </div>
@@ -1253,18 +1252,18 @@ export default function OperationsPage() {
 
                         <div className="flex-1 flex flex-col gap-2 w-full">
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-slate-400 uppercase tracking-wider" dir="ltr">Progress</span>
+                            <span className="text-[#6B7280] uppercase tracking-wider" dir="ltr">Progress</span>
                             <span className={`font-bold tabular-nums ${
                               group.status === "accepted"
-                                ? "text-purple-300"
+                                ? "text-emerald-600"
                                 : group.status === "rejected"
-                                  ? "text-slate-300"
-                                  : "text-cyan-300"
+                                  ? "text-rose-600"
+                                  : "text-[#18B2B0]"
                             }`}>
                               {progress}%
                             </span>
                           </div>
-                          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/50">
                             <div className={`h-full rounded-full ${getProgressClass(group)}`} style={{ width: `${progress}%` }} />
                           </div>
                         </div>
@@ -1276,7 +1275,7 @@ export default function OperationsPage() {
                               event.stopPropagation();
                               openOperationDetails(group);
                             }}
-                            className="bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/25"
+                            className="bg-[rgba(24,178,176,0.08)] border border-[rgba(24,178,176,0.25)] text-[#18B2B0] hover:bg-[rgba(24,178,176,0.15)] font-semibold"
                           >
                             {t('common.details_1')}
                           </Button>
@@ -1290,7 +1289,7 @@ export default function OperationsPage() {
                                   acceptOperationGroup(group);
                                 }}
                                 disabled={processingGroupId === group.groupId}
-                                className="bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/30"
+                                className="bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 font-bold"
                               >
                                 {t('common.approve')}
                               </Button>
@@ -1301,7 +1300,7 @@ export default function OperationsPage() {
                                   openRejectDialog(group);
                                 }}
                                 disabled={processingGroupId === group.groupId}
-                                className="bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/30"
+                                className="bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold"
                               >
                                 {t('common.reject')}
                               </Button>
@@ -1311,17 +1310,17 @@ export default function OperationsPage() {
                               <Button
                                 size="sm"
                                 onClick={(event) => event.stopPropagation()}
-                                className="bg-white/5 border border-white/10 text-slate-200 hover:bg-white/10"
+                                className="bg-white border border-slate-200 text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F8FAFB]"
                               >
                                 {t('common.view')}
                               </Button>
                             </Link>
                           ) : group.sourceType === "system-event" ? (
-                            <div className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 text-[10px] font-bold border border-purple-500/20">
+                            <div className="px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold border border-purple-200">
                               {systemFilterLabels[getSystemOperationCategory(group)]}
                             </div>
                           ) : (
-                            <div className="px-3 py-1 rounded-full bg-cyan-400/10 text-cyan-300 text-[10px] font-bold border border-cyan-400/20">
+                            <div className="px-3 py-1 rounded-full bg-cyan-50 text-[#18B2B0] text-[10px] font-bold border border-cyan-200">
                               {t('common.item_15974')}
                             </div>
                           )}
@@ -1334,16 +1333,16 @@ export default function OperationsPage() {
             </div>
 
             <div className="lg:col-span-5 order-1 lg:order-2">
-              <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 h-full min-h-[500px] flex flex-col relative overflow-hidden">
+              <div className="rassco-glass p-8 h-full min-h-[500px] flex flex-col relative overflow-hidden">
                 <div className="flex items-center justify-between mb-8" dir="ltr">
-                  <h3 className="text-lg font-light text-white">
+                  <h3 className="text-lg font-bold text-[#2D3135]">
                     {operationView === "technicians"
                       ? "Major Ongoing Operation"
                       : operationView === "warehouses"
                         ? "Warehouse Transfer Results"
                         : "System Operations Insights"}
                   </h3>
-                  <span className="px-3 py-1 bg-orange-400/10 text-orange-300 text-[9px] font-bold rounded-full border border-orange-400/20 tracking-widest uppercase">
+                  <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[9px] font-bold rounded-full border border-amber-200 tracking-widest uppercase">
                     {operationView === "technicians" ? "Live" : operationView === "warehouses" ? "Results" : "Audit"}
                   </span>
                 </div>
@@ -1351,34 +1350,34 @@ export default function OperationsPage() {
                 {mainOperation ? (
                   <>
                     {operationView === "system" ? (
-                      <div className="flex-1 flex flex-col w-full gap-4">
-                        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-                          <p className="text-slate-400 text-xs mb-1">{t('common.operation_system')}</p>
-                          <p className="text-white font-semibold">{mainOperation.systemMeta?.description || mainOperation.warehouseName || t('common.operation_system_1')}</p>
-                          <p className="text-slate-500 text-xs mt-2">
+                      <div className="flex-1 flex flex-col w-full gap-4 text-right">
+                        <div className="p-4 rounded-2xl bg-[#F8FAFB] border border-[rgba(24,178,176,0.12)]">
+                          <p className="text-[#6B7280] text-xs mb-1">{t('common.operation_system')}</p>
+                          <p className="text-[#2D3135] font-bold">{mainOperation.systemMeta?.description || mainOperation.warehouseName || t('common.operation_system_1')}</p>
+                          <p className="text-[#6B7280] text-xs mt-2">
                             {t('common.executed_by', { name: mainOperation.technicianName || t('common.item_11173'), role: mainOperation.systemMeta?.userRole || "-" })}
                           </p>
                         </div>
 
-                        <div className="flex-1 rounded-2xl bg-white/[0.02] border border-white/10 p-4 overflow-y-auto">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-bold text-white">{t('common.system_1')}</h4>
-                            <span className="text-xs text-cyan-300">{onlineUsers.length}</span>
+                        <div className="flex-1 rounded-2xl bg-white border border-[rgba(24,178,176,0.12)] p-4 overflow-y-auto shadow-inner">
+                          <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                            <h4 className="text-sm font-bold text-[#2D3135]">{t('common.system_1')}</h4>
+                            <span className="text-xs font-bold text-[#18B2B0] bg-[rgba(24,178,176,0.08)] px-2 py-0.5 rounded-full">{onlineUsers.length}</span>
                           </div>
 
                           <div className="space-y-2">
                             {onlineUsers.length === 0 ? (
-                              <div className="text-xs text-slate-500 text-center py-4 border border-dashed border-white/10 rounded-xl">
+                              <div className="text-xs text-[#6B7280] text-center py-4 border border-dashed border-slate-200 rounded-xl">
                                 {t('common.no_5')}
                               </div>
                             ) : (
                               onlineUsers.slice(0, 12).map((systemUser) => (
-                                <div key={systemUser.id} className="flex items-center justify-between p-2.5 rounded-xl bg-black/20 border border-white/5">
-                                  <div>
-                                    <p className="text-sm text-white">{systemUser.fullName}</p>
-                                    <p className="text-[11px] text-slate-500">{systemUser.email}</p>
+                                <div key={systemUser.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFB] border border-slate-100">
+                                  <div className="text-right">
+                                    <p className="text-sm font-semibold text-[#2D3135]">{systemUser.fullName}</p>
+                                    <p className="text-[11px] text-[#6B7280]">{systemUser.email}</p>
                                   </div>
-                                  <span className="text-[10px] text-green-300 border border-green-400/20 px-2 py-0.5 rounded-full bg-green-500/10">
+                                  <span className="text-[10px] text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full bg-emerald-50 font-bold">
                                     {t('common.active_1')}
                                   </span>
                                 </div>
@@ -1390,9 +1389,9 @@ export default function OperationsPage() {
                     ) : (
                     <div className="flex-1 flex flex-col items-center justify-center w-full">
                       <div className="relative size-64 mb-8">
-                        <div className="absolute inset-0 rounded-full bg-orange-400/5 blur-3xl" />
+                        <div className="absolute inset-0 rounded-full bg-[#18B2B0]/5 blur-3xl" />
                         <svg className="size-full -rotate-90" viewBox="0 0 256 256">
-                          <circle cx="128" cy="128" r="115" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                          <circle cx="128" cy="128" r="115" fill="transparent" stroke="rgba(0,0,0,0.03)" strokeWidth="8" />
                           <circle
                             cx="128"
                             cy="128"
@@ -1403,53 +1402,53 @@ export default function OperationsPage() {
                             strokeLinecap="round"
                             strokeDasharray="722"
                             strokeDashoffset={`${722 - (722 * getProgressForGroup(mainOperation)) / 100}`}
-                            className="drop-shadow-[0_0_20px_rgba(255,140,0,0.5)]"
+                            className="drop-shadow-[0_0_12px_rgba(24,178,176,0.25)]"
                           />
                           <defs>
                             <linearGradient id="majorProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#FF8C00" />
-                              <stop offset="100%" stopColor="#D4AF37" />
+                              <stop offset="0%" stopColor="#18B2B0" />
+                              <stop offset="100%" stopColor="#2cdcd9" />
                             </linearGradient>
                           </defs>
                         </svg>
 
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-6xl font-black text-white tracking-tighter tabular-nums">
+                          <span className="text-6xl font-black text-[#2D3135] tracking-tighter tabular-nums">
                             {getProgressForGroup(mainOperation)}
-                            <span className="text-2xl font-light text-slate-400 ml-1">%</span>
+                            <span className="text-2xl font-light text-[#6B7280] ml-1">%</span>
                           </span>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] mt-2">Completion</p>
+                          <p className="text-[10px] text-[#6B7280] uppercase tracking-[0.2em] mt-2">Completion</p>
                         </div>
                       </div>
 
                       <div className="text-center w-full mb-8">
-                        <h4 className="text-2xl font-medium text-white mb-2">
+                        <h4 className="text-2xl font-bold text-[#2D3135] mb-2">
                           {mainOperation.warehouseName || t('common.operation_7')}
                         </h4>
-                        <p className="text-slate-400 text-sm font-light px-4">
+                        <p className="text-[#6B7280] text-sm font-light px-4">
                           {mainOperation.technicianName || t('common.operations_2')} • {t('common.item_5877', { count: mainOperation.items.length })}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 w-full mt-auto">
-                        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center text-center">
-                          <CheckCircle2 className="text-cyan-300 mb-2 h-7 w-7" />
-                          <p className="text-slate-300 text-sm font-bold mb-1">{t('common.item_14330')}</p>
-                          <p className="text-cyan-300 text-xs font-mono">{t('common.completed_8')}{Math.min(100, getProgressForGroup(mainOperation) + 20)}%</p>
+                        <div className="p-4 rounded-2xl bg-[#F8FAFB] border border-slate-100 flex flex-col items-center text-center">
+                          <CheckCircle2 className="text-[#18B2B0] mb-2 h-7 w-7" />
+                          <p className="text-[#2D3135] text-sm font-bold mb-1">{t('common.item_14330')}</p>
+                          <p className="text-[#18B2B0] text-xs font-mono">{t('common.completed_8')}{Math.min(100, getProgressForGroup(mainOperation) + 20)}%</p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center text-center">
-                          <Clock3 className="text-orange-300 mb-2 h-7 w-7" />
-                          <p className="text-slate-300 text-sm font-bold mb-1">{t('common.item_9521')}</p>
-                          <p className="text-orange-300 text-xs font-mono" dir="ltr">{Math.max(8, mainOperation.items.length * 2)} t/h</p>
+                        <div className="p-4 rounded-2xl bg-[#F8FAFB] border border-slate-100 flex flex-col items-center text-center">
+                          <Clock3 className="text-amber-500 mb-2 h-7 w-7" />
+                          <p className="text-[#2D3135] text-sm font-bold mb-1">{t('common.item_9521')}</p>
+                          <p className="text-amber-600 text-xs font-mono" dir="ltr">{Math.max(8, mainOperation.items.length * 2)} t/h</p>
                         </div>
                       </div>
                     </div>
                     )}
                   </>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-slate-500">
+                  <div className="flex-1 flex items-center justify-center text-[#6B7280]">
                     <div className="text-center">
-                      <AlertCircle className="mx-auto h-10 w-10 mb-2" />
+                      <AlertCircle className="mx-auto h-10 w-10 mb-2 text-[#18B2B0]" />
                       {t('dashboard.no_operation')}
                     </div>
                   </div>
@@ -1469,21 +1468,21 @@ export default function OperationsPage() {
           }
         }}
       >
-        <DialogContent className="bg-[#0A0D14]/95 backdrop-blur-xl border-white/20 text-white max-w-2xl">
+        <DialogContent className="bg-white border-[rgba(24,178,176,0.22)] text-[#2D3135] max-w-2xl rounded-2xl shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-cyan-300">{t('common.details_operation_1')}</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-2xl text-[#18B2B0] font-bold">{t('common.details_operation_1')}</DialogTitle>
+            <DialogDescription className="text-[#6B7280]">
               {t('dashboard.info_operation_log_operations')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedDetailsGroup && (
-            <div className="space-y-4">
+            <div className="space-y-4 text-right">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-400 text-sm">{t('common.type_operation')}</span>
+                <span className="text-[#6B7280] text-sm">{t('common.type_operation')}</span>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(selectedDetailsGroup.status)}
-                  <span className="px-3 py-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 text-xs font-bold">
+                  <span className="px-3 py-1 rounded-full border border-[rgba(24,178,176,0.25)] bg-[rgba(24,178,176,0.08)] text-[#18B2B0] text-xs font-bold">
                     {selectedDetailsGroup.sourceType === "system-event"
                       ? systemFilterLabels[getSystemOperationCategory(selectedDetailsGroup)]
                       : getSourceTypeLabel(selectedDetailsGroup)}
@@ -1492,62 +1491,62 @@ export default function OperationsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">{t('common.number_operation')}</p>
-                  <p className="text-white font-medium mt-1 break-all">{selectedDetailsGroup.groupId}</p>
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] px-3 py-2">
+                  <p className="text-[#6B7280] text-xs">{t('common.number_operation')}</p>
+                  <p className="text-[#2D3135] font-semibold mt-1 break-all">{selectedDetailsGroup.groupId}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">{t('common.warehouse_3')}</p>
-                  <p className="text-white font-medium mt-1">
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] px-3 py-2">
+                  <p className="text-[#6B7280] text-xs">{t('common.warehouse_3')}</p>
+                  <p className="text-[#2D3135] font-semibold mt-1">
                     {selectedDetailsGroup.systemMeta?.entityName || selectedDetailsGroup.warehouseName || "-"}
                   </p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">{t('common.item_9575')}</p>
-                  <p className="text-white font-medium mt-1">{selectedDetailsGroup.technicianName || t('common.item_11173')}</p>
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] px-3 py-2">
+                  <p className="text-[#6B7280] text-xs">{t('common.item_9575')}</p>
+                  <p className="text-[#2D3135] font-semibold mt-1">{selectedDetailsGroup.technicianName || t('common.item_11173')}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">{t('common.completed_1')}</p>
-                  <p className="text-white font-medium mt-1">{formatOperationDate(selectedDetailsGroup.createdAt)}</p>
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] px-3 py-2">
+                  <p className="text-[#6B7280] text-xs">{t('common.completed_1')}</p>
+                  <p className="text-[#2D3135] font-semibold mt-1">{formatOperationDate(selectedDetailsGroup.createdAt)}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">{t('common.time_1')}</p>
-                  <p className="text-white font-medium mt-1">{formatOperationDate(selectedDetailsGroup.respondedAt)}</p>
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] px-3 py-2">
+                  <p className="text-[#6B7280] text-xs">{t('common.time_1')}</p>
+                  <p className="text-[#2D3135] font-semibold mt-1">{formatOperationDate(selectedDetailsGroup.respondedAt)}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                  <p className="text-slate-500 text-xs">{t('common.level')}</p>
-                  <p className="text-white font-medium mt-1">{selectedDetailsGroup.systemMeta?.severity || "-"}</p>
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] px-3 py-2">
+                  <p className="text-[#6B7280] text-xs">{t('common.level')}</p>
+                  <p className="text-[#2D3135] font-semibold mt-1">{selectedDetailsGroup.systemMeta?.severity || "-"}</p>
                 </div>
               </div>
 
               {(selectedDetailsGroup.notes || selectedDetailsGroup.systemMeta?.description || selectedDetailsGroup.rejectionReason) && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                  <p className="text-slate-500 text-xs mb-1">{t('common.notes_1')}</p>
-                  <p className="text-slate-200 text-sm leading-6">
+                <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-3">
+                  <p className="text-[#6B7280] text-xs mb-1">{t('common.notes_1')}</p>
+                  <p className="text-[#2D3135] text-sm leading-6">
                     {selectedDetailsGroup.systemMeta?.description || selectedDetailsGroup.notes || "-"}
                   </p>
                   {selectedDetailsGroup.rejectionReason && (
-                    <p className="text-red-300 text-xs mt-2">{t('common.reason_reject')}{selectedDetailsGroup.rejectionReason}</p>
+                    <p className="text-rose-600 text-xs mt-2 font-bold">{t('common.reason_reject')}{selectedDetailsGroup.rejectionReason}</p>
                   )}
                 </div>
               )}
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-slate-500 text-xs mb-2">{t('common.details_items')}</p>
+              <div className="rounded-xl border border-slate-100 bg-[#F8FAFB] p-3">
+                <p className="text-[#6B7280] text-xs mb-2">{t('common.details_items')}</p>
                 {selectedDetailsGroup.items.length === 0 ? (
-                  <p className="text-slate-500 text-sm">{t('common.no_items_operation')}</p>
+                  <p className="text-[#6B7280] text-sm">{t('common.no_items_operation')}</p>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {selectedDetailsGroup.items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs"
+                        className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs"
                       >
-                        <div>
-                          <p className="text-white">{item.itemNameAr}</p>
-                          <p className="text-slate-500 mt-0.5">{item.packagingType}</p>
+                        <div className="text-right">
+                          <p className="text-[#2D3135] font-bold">{item.itemNameAr}</p>
+                          <p className="text-[#6B7280] mt-0.5">{item.packagingType}</p>
                         </div>
-                        <p className="text-cyan-300 font-bold">{item.quantity}</p>
+                        <p className="text-[#18B2B0] font-bold">{item.quantity}</p>
                       </div>
                     ))}
                   </div>
@@ -1559,13 +1558,13 @@ export default function OperationsPage() {
       </Dialog>
 
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="bg-[#0A0D14]/95 backdrop-blur-xl border-red-500/30 text-white">
+        <DialogContent className="bg-white border-rose-200 text-[#2D3135] rounded-2xl shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-red-400 flex items-center gap-2">
+            <DialogTitle className="text-2xl text-rose-600 flex items-center gap-2 font-bold text-right">
               <XCircle className="h-6 w-6" />
               {t('common.reject_operation')}
             </DialogTitle>
-            <DialogDescription className="text-base text-gray-300">
+            <DialogDescription className="text-base text-[#6B7280] text-right">
               {t('dashboard.submit_reason_reject')}
             </DialogDescription>
           </DialogHeader>
@@ -1574,15 +1573,15 @@ export default function OperationsPage() {
             placeholder={t('common.quantity_4')}
             value={rejectionReason}
             onChange={(event) => setRejectionReason(event.target.value)}
-            className="min-h-[120px] bg-white/5 border-white/20 text-white placeholder:text-gray-500 focus:border-red-500"
+            className="min-h-[120px] bg-[#F8FAFB] border-slate-200 text-[#2D3135] placeholder:text-[#6B7280] focus-visible:ring-rose-500"
             data-testid="textarea-rejection-reason"
           />
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex justify-end">
             <Button
               variant="outline"
               onClick={() => setRejectDialogOpen(false)}
-              className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              className="bg-white border-slate-200 text-[#6B7280] hover:bg-[#F8FAFB] hover:text-[#2D3135]"
             >
               {t('common.cancel')}
             </Button>
@@ -1590,7 +1589,7 @@ export default function OperationsPage() {
               variant="destructive"
               onClick={confirmReject}
               disabled={!selectedRejectGroup || processingGroupId === selectedRejectGroup.groupId}
-              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700"
+              className="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 font-bold"
             >
               {t('common.confirm_reject')}
             </Button>

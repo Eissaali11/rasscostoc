@@ -9,6 +9,7 @@ import {
   FetchGeminiHttpClient,
   OpenAiVisionAdapter,
   ClaudeVisionAdapter,
+  GeminiGenerateRequest,
 } from "@stockpro/ai-extraction";
 import { getActiveVisionCredentials } from "../../../ai-engine-settings/contracts";
 import { collectVisionImages } from "./pdf-page-renderer";
@@ -513,7 +514,7 @@ export async function runAiEngineExtraction(
          apiKey: creds.apiKey,
          model: creds.model || "gemini-2.0-flash",
          http: {
-           generateContent: (req) =>
+           generateContent: (req: GeminiGenerateRequest) =>
              baseHttp.generateContent({ ...req, timeoutMs: creds.timeoutMs || 90_000 }),
          },
        });
