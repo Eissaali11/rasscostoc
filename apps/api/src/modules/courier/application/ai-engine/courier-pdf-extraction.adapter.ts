@@ -4,6 +4,15 @@
  * No provider SDKs in Courier — engine only when flag enabled (later).
  */
 
+import {
+  GeminiVisionAdapter,
+  FetchGeminiHttpClient,
+  OpenAiVisionAdapter,
+  ClaudeVisionAdapter,
+} from "@stockpro/ai-extraction";
+import { getActiveVisionCredentials } from "../../../ai-engine-settings/contracts";
+import { collectVisionImages } from "./pdf-page-renderer";
+
 export type DeviceMatchStatus = "matched" | "needs_review" | "unknown";
 
 export type CourierPdfDeviceCard = {
@@ -443,101 +452,94 @@ export async function runAiEngineExtraction(
       return { ok: true, payload };
     }
 
-    const { getActiveVisionCredentials } = await import(
-      "../../../ai-engine-settings/contracts"
-    );
-    const creds = getActiveVisionCredentials();
-    if (!creds.enabled || !creds.apiKey) {
-      return {
-        ok: false,
-        error: "محرك Vision غير مفعّل أو لا يوجد مفتاح API. راجع إعدادات الذكاء الاصطناعي.",
-      };
-    }
-
-    const { collectVisionImages } = await import("./pdf-page-renderer");
-    const imagePayloads = await collectVisionImages(buffer);
-    if (imagePayloads.length === 0) {
-      return {
-        ok: false,
-        error: "تعذّر تحويل صفحات PDF إلى صور للاستخراج. جرّب رفع صورة أو ملف أوضح.",
-      };
-    }
-
-    const systemPrompt = [
-      "You are an expert AI Vision Document understanding model specialized in RASSCO / StockPro installation reports.",
-      "The document is a multi-page PDF or a sequence of page images representing a device installation report.",
-      "",
-      "DOCUMENT LAYOUT & CONTENTS:",
-      "- Page 1: A structured installation form containing text fields like: 'رقم الطلب' (Request Number), 'التاريخ' (Date), 'الوقت' (Time), 'اسم العميل' (Retailer's/Customer Name), 'TID' (Terminal ID), and handwritten Serial Number ('الرقم التسلسلي'). It may also contain a payment receipt (e.g. Mada slip).",
-      "- Page 2, Page 3, etc.: Photographs of physical hardware installations. These include close-ups of the POS device back labels (showing Serial Number / SN) and SIM cards (showing a 19-20 digit ICCID number starting with 8996... printed on the blue/white SIM card body or sticker).",
-      "",
-      "YOUR TASK:",
-      "1. Extract all devices installed. A document can show 1, 2, or more devices. Group data for each device.",
-      "2. For each device, find its physical Serial Number (from the device sticker or form) and map it to its corresponding SIM ICCID (from the blue/white SIM card photo or form). Do NOT mix SIM serial numbers between different devices.",
-      "3. For each device, extract the TID (8-digit number, e.g., 15806680) and the merchant/retailer name.",
-      "4. Extract the general form fields: 'request_number' (رقم الطلب, usually 7 digits, e.g., 2617112), 'date' (usually DD/MM/YYYY, e.g., 12/07/2026), and 'time' (usually HH:MM, e.g., 4:40 or 16:40).",
-      "",
-      "STRICT RULES:",
-      "- Extract data exactly as written. Never invent serials, ICCIDs, dates, or TIDs. If a value is missing or unreadable, set value = null and confidence = 0.",
-      "- Read SIM serial numbers from the photos of the SIM card body/packaging very carefully. Ensure all digits are captured (typically starts with 8996...).",
-      "- If there are multiple devices shown in photos, output one device object in the `devices` array for each distinct physical serial number.",
-    ].join("\n");
-
-    const extractionParams = {
-      device_id: "batch",
-      document_type: "installation_report",
-      schema_version: "courier.multi_device_v1",
-      prompt_version: "courier_pdf_v2",
-      images: imagePayloads.map((_, i) => ({
-        image_id: `page_${i + 1}`,
-        page: i + 1,
-        quality_score: 85,
-      })),
-      image_payloads: imagePayloads,
-      temperature: 0,
-      response_schema: MULTI_DEVICE_VISION_SCHEMA as unknown as Record<string, unknown>,
-      system_prompt: systemPrompt,
-    };
-
-    let result: any;
-
-    if (creds.provider === "gemini") {
-      const { GeminiVisionAdapter, FetchGeminiHttpClient } = await import("@stockpro/ai-extraction");
-      const baseHttp = new FetchGeminiHttpClient();
-      const adapter = new GeminiVisionAdapter({
-        allowLive: true,
-        apiKey: creds.apiKey,
-        model: creds.model || "gemini-2.0-flash",
-        http: {
-          generateContent: (req) =>
-            baseHttp.generateContent({ ...req, timeoutMs: creds.timeoutMs || 90_000 }),
-        },
-      });
-      result = await adapter.extractDevice(extractionParams);
-    } else if (creds.provider === "openai") {
-      const { OpenAiVisionAdapter } = await import("@stockpro/ai-extraction");
-      const adapter = new OpenAiVisionAdapter({
-        allowLive: true,
-        apiKey: creds.apiKey,
-        model: creds.model || "gpt-4o",
-        timeoutMs: creds.timeoutMs || 90_000,
-      });
-      result = await adapter.extractDevice(extractionParams);
-    } else if (creds.provider === "claude") {
-      const { ClaudeVisionAdapter } = await import("@stockpro/ai-extraction");
-      const adapter = new ClaudeVisionAdapter({
-        allowLive: true,
-        apiKey: creds.apiKey,
-        model: creds.model || "claude-3-5-sonnet-latest",
-        timeoutMs: creds.timeoutMs || 90_000,
-      });
-      result = await adapter.extractDevice(extractionParams);
-    } else {
-      return {
-        ok: false,
-        error: `المزود "${creds.provider}" غير مدعوم حاليًا.`,
-      };
-    }
+     const creds = getActiveVisionCredentials();
+     if (!creds.enabled || !creds.apiKey) {
+       return {
+         ok: false,
+         error: "محرك Vision غير مفعّل أو لا يوجد مفتاح API. راجع إعدادات الذكاء الاصطناعي.",
+       };
+     }
+ 
+     const imagePayloads = await collectVisionImages(buffer);
+     if (imagePayloads.length === 0) {
+       return {
+         ok: false,
+         error: "تعذّر تحويل صفحات PDF إلى صور للاستخراج. جرّب رفع صورة أو ملف أوضح.",
+       };
+     }
+ 
+     const systemPrompt = [
+       "You are an expert AI Vision Document understanding model specialized in RASSCO / StockPro installation reports.",
+       "The document is a multi-page PDF or a sequence of page images representing a device installation report.",
+       "",
+       "DOCUMENT LAYOUT & CONTENTS:",
+       "- Page 1: A structured installation form containing text fields like: 'رقم الطلب' (Request Number), 'التاريخ' (Date), 'الوقت' (Time), 'اسم العميل' (Retailer's/Customer Name), 'TID' (Terminal ID), and handwritten Serial Number ('الرقم التسلسلي'). It may also contain a payment receipt (e.g. Mada slip).",
+       "- Page 2, Page 3, etc.: Photographs of physical hardware installations. These include close-ups of the POS device back labels (showing Serial Number / SN) and SIM cards (showing a 19-20 digit ICCID number starting with 8996... printed on the blue/white SIM card body or sticker).",
+       "",
+       "YOUR TASK:",
+       "1. Extract all devices installed. A document can show 1, 2, or more devices. Group data for each device.",
+       "2. For each device, find its physical Serial Number (from the device sticker or form) and map it to its corresponding SIM ICCID (from the blue/white SIM card photo or form). Do NOT mix SIM serial numbers between different devices.",
+       "3. For each device, extract the TID (8-digit number, e.g., 15806680) and the merchant/retailer name.",
+       "4. Extract the general form fields: 'request_number' (رقم الطلب, usually 7 digits, e.g., 2617112), 'date' (usually DD/MM/YYYY, e.g., 12/07/2026), and 'time' (usually HH:MM, e.g., 4:40 or 16:40).",
+       "",
+       "STRICT RULES:",
+       "- Extract data exactly as written. Never invent serials, ICCIDs, dates, or TIDs. If a value is missing or unreadable, set value = null and confidence = 0.",
+       "- Read SIM serial numbers from the photos of the SIM card body/packaging very carefully. Ensure all digits are captured (typically starts with 8996...).",
+       "- If there are multiple devices shown in photos, output one device object in the `devices` array for each distinct physical serial number.",
+     ].join("\n");
+ 
+     const extractionParams = {
+       device_id: "batch",
+       document_type: "installation_report",
+       schema_version: "courier.multi_device_v1",
+       prompt_version: "courier_pdf_v2",
+       images: imagePayloads.map((_, i) => ({
+         image_id: `page_${i + 1}`,
+         page: i + 1,
+         quality_score: 85,
+       })),
+       image_payloads: imagePayloads,
+       temperature: 0,
+       response_schema: MULTI_DEVICE_VISION_SCHEMA as unknown as Record<string, unknown>,
+       system_prompt: systemPrompt,
+     };
+ 
+     let result: any;
+ 
+     if (creds.provider === "gemini") {
+       const baseHttp = new FetchGeminiHttpClient();
+       const adapter = new GeminiVisionAdapter({
+         allowLive: true,
+         apiKey: creds.apiKey,
+         model: creds.model || "gemini-2.0-flash",
+         http: {
+           generateContent: (req) =>
+             baseHttp.generateContent({ ...req, timeoutMs: creds.timeoutMs || 90_000 }),
+         },
+       });
+       result = await adapter.extractDevice(extractionParams);
+     } else if (creds.provider === "openai") {
+       const adapter = new OpenAiVisionAdapter({
+         allowLive: true,
+         apiKey: creds.apiKey,
+         model: creds.model || "gpt-4o",
+         timeoutMs: creds.timeoutMs || 90_000,
+       });
+       result = await adapter.extractDevice(extractionParams);
+     } else if (creds.provider === "claude") {
+       const adapter = new ClaudeVisionAdapter({
+         allowLive: true,
+         apiKey: creds.apiKey,
+         model: creds.model || "claude-3-5-sonnet-latest",
+         timeoutMs: creds.timeoutMs || 90_000,
+       });
+       result = await adapter.extractDevice(extractionParams);
+     } else {
+       return {
+         ok: false,
+         error: `المزود "${creds.provider}" غير مدعوم حاليًا.`,
+       };
+     }
 
     if (!result.ok) {
       console.error(`[ai-engine] Vision failed: ${result.code} — ${result.message}`);
