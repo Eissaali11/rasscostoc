@@ -64,6 +64,94 @@ function classifyGeminiError(
   };
 }
 
+function classifyOpenAiError(
+  message: string,
+): Pick<ConnectionTestResult, "ok" | "code" | "message" | "detail"> {
+  const detail = message.slice(0, 280);
+  const lower = message.toLowerCase();
+  if (
+    message.includes("401") ||
+    message.includes("403") ||
+    lower.includes("invalid api key") ||
+    lower.includes("invalid_api_key") ||
+    lower.includes("incorrect api key")
+  ) {
+    return {
+      ok: false,
+      code: "auth",
+      message: "المفتاح غير صالح أو ليس لديه صلاحية الوصول إلى OpenAI.",
+      detail,
+    };
+  }
+  if (message.includes("429") || lower.includes("quota") || lower.includes("rate limit")) {
+    return {
+      ok: true,
+      code: "quota",
+      message:
+        "الربط صحيح والمفتاح مقبول من OpenAI. الحصة الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة أو قم بشحن الرصيد لاستخدام الاستخراج فورًا.",
+      detail,
+    };
+  }
+  if (lower.includes("abort") || lower.includes("timeout")) {
+    return {
+      ok: false,
+      code: "timeout",
+      message: "انتهت مهلة الاتصال بمزود OpenAI.",
+      detail,
+    };
+  }
+  return {
+    ok: false,
+    code: "provider_error",
+    message: `فشل الاتصال بـ OpenAI: ${message.slice(0, 220)}`,
+    detail,
+  };
+}
+
+function classifyClaudeError(
+  message: string,
+): Pick<ConnectionTestResult, "ok" | "code" | "message" | "detail"> {
+  const detail = message.slice(0, 280);
+  const lower = message.toLowerCase();
+  if (
+    message.includes("401") ||
+    message.includes("403") ||
+    lower.includes("invalid client") ||
+    lower.includes("api-key") ||
+    lower.includes("authentication_error")
+  ) {
+    return {
+      ok: false,
+      code: "auth",
+      message: "المفتاح غير صالح أو ليس لديه صلاحية الوصول إلى Claude (Anthropic).",
+      detail,
+    };
+  }
+  if (message.includes("429") || lower.includes("quota") || lower.includes("rate_limit")) {
+    return {
+      ok: true,
+      code: "quota",
+      message:
+        "الربط صحيح والمفتاح مقبول من Claude. الحصة الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة لاستخدام الاستخراج فورًا.",
+      detail,
+    };
+  }
+  if (lower.includes("abort") || lower.includes("timeout")) {
+    return {
+      ok: false,
+      code: "timeout",
+      message: "انتهت مهلة الاتصال بمزود Claude (Anthropic).",
+      detail,
+    };
+  }
+  return {
+    ok: false,
+    code: "provider_error",
+    message: `فشل الاتصال بـ Claude: ${message.slice(0, 220)}`,
+    detail,
+  };
+}
+
 async function testGeminiConnection(args: {
   apiKey: string;
   model: string;
@@ -123,6 +211,105 @@ async function testGeminiConnection(args: {
   }
 }
 
+async function testOpenAiConnection(args: {
+  apiKey: string;
+  model: string;
+  timeoutMs: number;
+}): Promise<Omit<ConnectionTestResult, "provider" | "model" | "testedAt">> {
+  const started = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), args.timeoutMs);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${args.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: args.model,
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 5,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errorText}`);
+    }
+
+    return {
+      ok: true,
+      latencyMs,
+      code: "ok",
+      message: `الربط يعمل بنجاح مع OpenAI (${args.model}) خلال ${latencyMs}ms.`,
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const raw = err instanceof Error ? err.message : String(err);
+    const classified = classifyOpenAiError(raw);
+    return {
+      latencyMs: Date.now() - started,
+      ...classified,
+    };
+  }
+}
+
+async function testClaudeConnection(args: {
+  apiKey: string;
+  model: string;
+  timeoutMs: number;
+}): Promise<Omit<ConnectionTestResult, "provider" | "model" | "testedAt">> {
+  const started = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), args.timeoutMs);
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": args.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: args.model,
+        max_tokens: 5,
+        messages: [{ role: "user", content: "ping" }],
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errorText}`);
+    }
+
+    return {
+      ok: true,
+      latencyMs,
+      code: "ok",
+      message: `الربط يعمل بنجاح مع Claude (${args.model}) خلال ${latencyMs}ms.`,
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const raw = err instanceof Error ? err.message : String(err);
+    const classified = classifyClaudeError(raw);
+    return {
+      latencyMs: Date.now() - started,
+      ...classified,
+    };
+  }
+}
+
 export function persistConnectionTestResult(result: ConnectionTestResult): void {
   const current = loadAiEngineSettings();
   saveAiEngineSettings({
@@ -156,7 +343,14 @@ export async function testAiEngineConnection(
     };
   }
 
-  if (provider !== "gemini") {
+  let partial: Omit<ConnectionTestResult, "provider" | "model" | "testedAt">;
+  if (provider === "gemini") {
+    partial = await testGeminiConnection({ apiKey, model, timeoutMs });
+  } else if (provider === "openai") {
+    partial = await testOpenAiConnection({ apiKey, model, timeoutMs });
+  } else if (provider === "claude") {
+    partial = await testClaudeConnection({ apiKey, model, timeoutMs });
+  } else {
     return {
       ok: false,
       provider,
@@ -164,11 +358,10 @@ export async function testAiEngineConnection(
       latencyMs: 0,
       testedAt,
       code: "unsupported",
-      message: `اختبار الربط متاح حاليًا لـ Gemini فقط. المزود "${provider}" غير مربوط بعد.`,
+      message: `اختبار الربط غير مدعوم للمزود "${provider}".`,
     };
   }
 
-  const partial = await testGeminiConnection({ apiKey, model, timeoutMs });
   const result: ConnectionTestResult = {
     provider,
     model,
