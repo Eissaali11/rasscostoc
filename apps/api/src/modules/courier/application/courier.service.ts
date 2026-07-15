@@ -810,7 +810,7 @@ export class CourierService {
   /**
    * OCR first; if no devices found, try Vision using admin AI settings (PR-006A-10 Slice 2).
    */
-  private async extractPdfPayload(buffer: Buffer): Promise<{
+  private async extractPdfPayload(buffer: Buffer, forceAi = false): Promise<{
     extraction: { fields: any; overallConfidence: number; rawText: string };
     extractedPayload: ReturnType<typeof buildExtractedPayloadFromOcr>;
     status: string;
@@ -822,10 +822,32 @@ export class CourierService {
     let visionError: string | null = null;
 
     try {
+      const { getActiveVisionCredentials } = await import(
+        "../../ai-engine-settings/contracts"
+      );
+      const creds = getActiveVisionCredentials();
+
+      if (creds.enabled || forceAi) {
+        const aiResult = await runAiEngineExtraction(buffer);
+        if (aiResult.ok) {
+          extractedPayload = aiResult.payload;
+          extraction = {
+            fields: aiResult.payload,
+            overallConfidence:
+              aiResult.payload.devices.reduce((s, d) => s + (d.confidence || 0), 0) /
+                Math.max(1, aiResult.payload.devices.length) || 0,
+            rawText: "[AI Vision] Extracted via configured Gemini provider.",
+          };
+          return { extraction, extractedPayload, status, visionError: null };
+        } else {
+          visionError = aiResult.error;
+        }
+      }
+
       extraction = await extractFromPdf(buffer);
       extractedPayload = buildExtractedPayloadFromOcr(extraction.fields);
 
-      if (!extractedPayload.devices.length) {
+      if (!extractedPayload.devices.length && !creds.enabled && !forceAi) {
         const aiResult = await runAiEngineExtraction(buffer);
         if (aiResult.ok) {
           extractedPayload = aiResult.payload;
@@ -836,6 +858,7 @@ export class CourierService {
                 Math.max(1, aiResult.payload.devices.length) || 0,
             rawText: extraction.rawText || "[AI Vision] Extracted via configured Gemini provider.",
           };
+          visionError = null;
         } else {
           visionError = aiResult.error;
         }
@@ -888,7 +911,7 @@ export class CourierService {
     }
 
     const buffer = fs.readFileSync(filePath);
-    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer);
+    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer, true);
 
     const updated = await this.pdfRepo.updatePdfReport(pdfId, {
       ocrText: extraction.rawText,
