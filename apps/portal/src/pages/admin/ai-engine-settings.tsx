@@ -84,10 +84,10 @@ function ConnectionStatusCard({ result }: { result: ConnectionTestResult | null 
           <div className="rounded-xl border border-[#F4B740]/50 bg-[#FFFBEB] p-3 text-sm text-[#92400E]">
             <div className="flex items-center gap-2 font-bold">
               <AlertTriangle className="h-4 w-4" />
-              تنبيه: الحصة المجانية ممتلئة مؤقتًا
+              تنبيه: حد الاستخدام / الحصة ممتلئة مؤقتًا
             </div>
             <p className="mt-1 text-xs leading-relaxed">
-              هذا لا يعني أن المفتاح خاطئ. Google رفض التنفيذ بسبب حد الاستخدام المجاني فقط.
+              هذا لا يعني أن المفتاح خاطئ. {PROVIDER_LABELS[result.provider] || result.provider} رفض التنفيذ بسبب حد الاستخدام أو نفاد الرصيد/الحصة.
               انتظر إعادة التعبئة أو فعّل الفوترة لاستخراج PDF فورًا.
             </p>
           </div>
