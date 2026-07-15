@@ -1,4 +1,4 @@
-﻿import { useTranslation } from "@/lib/language";
+import { useTranslation } from "@/lib/language";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -43,11 +43,13 @@ function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     applied: "text-[#18B2B0] bg-[#18B2B0]/12 border-[#18B2B0]/25",
     pending: "text-[#B45309] bg-[#F4B740]/18 border-[#F4B740]/35",
+    manual_review: "text-[#8B5CF6] bg-[#8B5CF6]/12 border-[#8B5CF6]/25",
     failed: "text-[#E05252] bg-[#E05252]/10 border-[#E05252]/25",
   };
   const icons: Record<string, typeof CheckCircle2> = {
     applied: CheckCircle2,
     pending: Clock,
+    manual_review: AlertCircle,
     failed: AlertCircle,
   };
   const Icon = icons[status] || FileText;
@@ -58,7 +60,7 @@ function StatusPill({ status }: { status: string }) {
       }`}
     >
       <Icon className="w-3 h-3" />
-      {status}
+      {status === "manual_review" ? "Manual Review" : status}
     </span>
   );
 }

@@ -9,15 +9,15 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--rassco-border, rgba(0,0,0,0.12));
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
     font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
-    font-weight: 400;
-    font-size: 16px;
-    color: var(--rassco-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--rassco-bg, #f8fafc);
+    color: var(--rassco-text, #2D3135);
   }
 
   html {

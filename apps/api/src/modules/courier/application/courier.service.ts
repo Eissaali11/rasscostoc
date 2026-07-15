@@ -810,7 +810,7 @@ export class CourierService {
   /**
    * OCR first; if no devices found, try Vision using admin AI settings (PR-006A-10 Slice 2).
    */
-  private async extractPdfPayload(buffer: Buffer, forceAi = false): Promise<{
+  private async extractPdfPayload(buffer: Buffer, forceAi = false, fileName?: string): Promise<{
     extraction: { fields: any; overallConfidence: number; rawText: string };
     extractedPayload: ReturnType<typeof buildExtractedPayloadFromOcr>;
     status: string;
@@ -828,7 +828,7 @@ export class CourierService {
       const creds = getActiveVisionCredentials();
 
       if (creds.enabled || forceAi) {
-        const aiResult = await runAiEngineExtraction(buffer);
+        const aiResult = await runAiEngineExtraction(buffer, fileName);
         if (aiResult.ok) {
           extractedPayload = aiResult.payload;
           extraction = {
@@ -848,7 +848,7 @@ export class CourierService {
       extractedPayload = buildExtractedPayloadFromOcr(extraction.fields);
 
       if (!extractedPayload.devices.length && !creds.enabled && !forceAi) {
-        const aiResult = await runAiEngineExtraction(buffer);
+        const aiResult = await runAiEngineExtraction(buffer, fileName);
         if (aiResult.ok) {
           extractedPayload = aiResult.payload;
           extraction = {
@@ -874,17 +874,50 @@ export class CourierService {
   }
 
   async uploadPdfReport(fileName: string, storedName: string, buffer: Buffer, uploadedBy: string, requestId?: number): Promise<any> {
-    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer);
+    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer, false, fileName);
+
+    let finalRequestId = requestId || null;
+    if (!finalRequestId) {
+      const payloadAny = extractedPayload as any;
+      if (payloadAny.request_number?.value) {
+        const parsedId = parseInt(payloadAny.request_number.value, 10);
+        if (!isNaN(parsedId)) {
+          const req = await this.requestsRepo.findRequestById(parsedId);
+          if (req) {
+            finalRequestId = req.id;
+          }
+        }
+      }
+      if (!finalRequestId && payloadAny.tid?.value) {
+        const req = await this.requestsRepo.findRequestByTid(payloadAny.tid.value);
+        if (req) {
+          finalRequestId = req.id;
+        }
+      }
+    }
+
+    let finalStatus = status;
+    if (status === "pending") {
+      const payloadAny = extractedPayload as any;
+      const isMissingCritical = 
+        !finalRequestId || 
+        !payloadAny.sn?.value || 
+        !payloadAny.sim_serial?.value || 
+        !payloadAny.tid?.value;
+      if (isMissingCritical) {
+        finalStatus = "manual_review";
+      }
+    }
 
     const newReport = await this.pdfRepo.insertPdfReport({
-      requestId: requestId || null,
+      requestId: finalRequestId,
       fileName,
       filePath: storedName,
       uploadedBy,
       ocrText: extraction.rawText,
       extractedJson: JSON.stringify(extractedPayload),
       overallConfidence: extraction.overallConfidence,
-      status
+      status: finalStatus
     });
 
     return {
@@ -892,7 +925,7 @@ export class CourierService {
       fields: extractedPayload,
       devices: extractedPayload.devices,
       overallConfidence: extraction.overallConfidence,
-      status,
+      status: finalStatus,
       extraction_source: extractedPayload.extraction_source,
       visionError,
     };
@@ -911,19 +944,53 @@ export class CourierService {
     }
 
     const buffer = fs.readFileSync(filePath);
-    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer, true);
+    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer, true, report.fileName);
+
+    let finalRequestId = report.requestId;
+    if (!finalRequestId) {
+      const payloadAny = extractedPayload as any;
+      if (payloadAny.request_number?.value) {
+        const parsedId = parseInt(payloadAny.request_number.value, 10);
+        if (!isNaN(parsedId)) {
+          const req = await this.requestsRepo.findRequestById(parsedId);
+          if (req) {
+            finalRequestId = req.id;
+          }
+        }
+      }
+      if (!finalRequestId && payloadAny.tid?.value) {
+        const req = await this.requestsRepo.findRequestByTid(payloadAny.tid.value);
+        if (req) {
+          finalRequestId = req.id;
+        }
+      }
+    }
+
+    let finalStatus = status === "failed" ? "failed" : report.status === "applied" ? report.status : "pending";
+    if (finalStatus === "pending") {
+      const payloadAny = extractedPayload as any;
+      const isMissingCritical = 
+        !finalRequestId || 
+        !payloadAny.sn?.value || 
+        !payloadAny.sim_serial?.value || 
+        !payloadAny.tid?.value;
+      if (isMissingCritical) {
+        finalStatus = "manual_review";
+      }
+    }
 
     const updated = await this.pdfRepo.updatePdfReport(pdfId, {
       ocrText: extraction.rawText,
       extractedJson: JSON.stringify(extractedPayload),
       overallConfidence: extraction.overallConfidence,
-      status: status === "failed" ? "failed" : report.status === "applied" ? report.status : "pending",
+      status: finalStatus,
+      requestId: finalRequestId,
     });
 
     return {
       id: updated.id,
       fields: extractedPayload,
-      devices: extractedPayload.devices,
+      devices: updated.status === "failed" ? [] : extractedPayload.devices,
       overallConfidence: extraction.overallConfidence,
       status: updated.status,
       extraction_source: extractedPayload.extraction_source,
