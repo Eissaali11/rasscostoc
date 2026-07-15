@@ -65,33 +65,39 @@ function ConnectionStatusCard({ result }: { result: ConnectionTestResult | null 
 
   const isQuota = result.code === "quota";
 
-  // Key validated (including 429 quota): connection is correct.
+  if (isQuota) {
+    return (
+      <div className="rounded-xl border border-[#F4B740]/30 bg-[#FFFBEB] p-4 space-y-2">
+        <div className="flex items-center gap-2 text-[#92400E] font-bold text-sm">
+          <AlertTriangle className="h-5 w-5 text-[#F59E0B]" />
+          الربط معطّل مؤقتًا — الحصة ممتلئة أو لا يوجد رصيد
+        </div>
+        <p className="text-sm text-[#78350F]">{result.message}</p>
+        {result.detail ? (
+          <p className="text-[11px] font-mono text-[#92400E]/70 break-all" dir="ltr">
+            {result.detail}
+          </p>
+        ) : null}
+        <p className="text-xs text-[#64748B]" dir="ltr">
+          {PROVIDER_LABELS[result.provider] || result.provider} · {result.model} · {new Date(result.testedAt).toLocaleString()}
+        </p>
+      </div>
+    );
+  }
+
+  // Key validated: connection is correct.
   if (result.ok) {
     return (
-      <div className="space-y-3">
-        <div className="rounded-xl border border-[#18B2B0]/30 bg-[#18B2B0]/8 p-4 space-y-1">
-          <div className="flex items-center gap-2 text-[#0F766E] font-bold text-sm">
-            <CheckCircle2 className="h-5 w-5" />
-            الربط صحيح — المفتاح مقبول
-          </div>
-          <p className="text-sm text-[#334155]">{result.message}</p>
-          <p className="text-xs text-[#64748B]" dir="ltr">
-            {result.provider} · {result.model} · {new Date(result.testedAt).toLocaleString()}
-            {result.latencyMs ? ` · ${result.latencyMs}ms` : ""}
-          </p>
+      <div className="rounded-xl border border-[#18B2B0]/30 bg-[#18B2B0]/8 p-4 space-y-1">
+        <div className="flex items-center gap-2 text-[#0F766E] font-bold text-sm">
+          <CheckCircle2 className="h-5 w-5" />
+          الربط صحيح — المفتاح مقبول
         </div>
-        {isQuota ? (
-          <div className="rounded-xl border border-[#F4B740]/50 bg-[#FFFBEB] p-3 text-sm text-[#92400E]">
-            <div className="flex items-center gap-2 font-bold">
-              <AlertTriangle className="h-4 w-4" />
-              تنبيه: حد الاستخدام / الحصة ممتلئة مؤقتًا
-            </div>
-            <p className="mt-1 text-xs leading-relaxed">
-              هذا لا يعني أن المفتاح خاطئ. {PROVIDER_LABELS[result.provider] || result.provider} رفض التنفيذ بسبب حد الاستخدام أو نفاد الرصيد/الحصة.
-              انتظر إعادة التعبئة أو فعّل الفوترة لاستخراج PDF فورًا.
-            </p>
-          </div>
-        ) : null}
+        <p className="text-sm text-[#334155]">{result.message}</p>
+        <p className="text-xs text-[#64748B]" dir="ltr">
+          {PROVIDER_LABELS[result.provider] || result.provider} · {result.model} · {new Date(result.testedAt).toLocaleString()}
+          {result.latencyMs ? ` · ${result.latencyMs}ms` : ""}
+        </p>
       </div>
     );
   }
@@ -109,7 +115,7 @@ function ConnectionStatusCard({ result }: { result: ConnectionTestResult | null 
         </p>
       ) : null}
       <p className="text-xs text-[#64748B]" dir="ltr">
-        {result.provider} · {result.model} · {new Date(result.testedAt).toLocaleString()}
+        {PROVIDER_LABELS[result.provider] || result.provider} · {result.model} · {new Date(result.testedAt).toLocaleString()}
       </p>
     </div>
   );

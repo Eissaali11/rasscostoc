@@ -38,13 +38,13 @@ function classifyGeminiError(
     };
   }
   // 429 = Google accepted the API key; only free-tier quota is exhausted.
-  // For connection tests this means the key/link is VALID.
+  // For connection tests this means the key/link is VALID but currently unusable.
   if (message.includes("429") || lower.includes("quota") || lower.includes("rate")) {
     return {
-      ok: true,
+      ok: false,
       code: "quota",
       message:
-        "الربط صحيح والمفتاح مقبول من Gemini. الحصة المجانية الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة أو فعّل الفوترة لاستخدام الاستخراج فورًا.",
+        "المفتاح صحيح ومقبول من Gemini، ولكن الحصة المجانية الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة أو فعّل الفوترة لاستخدام الاستخراج فورًا.",
       detail,
     };
   }
@@ -85,10 +85,10 @@ function classifyOpenAiError(
   }
   if (message.includes("429") || lower.includes("quota") || lower.includes("rate limit")) {
     return {
-      ok: true,
+      ok: false,
       code: "quota",
       message:
-        "الربط صحيح والمفتاح مقبول من OpenAI. الحصة الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة أو قم بشحن الرصيد لاستخدام الاستخراج فورًا.",
+        "المفتاح صحيح ومقبول من OpenAI، ولكن الحصة الحالية ممتلئة مؤقتًا أو لا يوجد رصيد كافٍ — قم بشحن الرصيد في حساب OpenAI الخاص بك لاستخدام الاستخراج فورًا.",
       detail,
     };
   }
@@ -129,10 +129,10 @@ function classifyClaudeError(
   }
   if (message.includes("429") || lower.includes("quota") || lower.includes("rate_limit")) {
     return {
-      ok: true,
+      ok: false,
       code: "quota",
       message:
-        "الربط صحيح والمفتاح مقبول من Claude. الحصة الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة لاستخدام الاستخراج فورًا.",
+        "المفتاح صحيح ومقبول من Claude، ولكن الحصة الحالية ممتلئة مؤقتًا — انتظر إعادة التعبئة أو شحن الرصيد لاستخدام الاستخراج فورًا.",
       detail,
     };
   }
