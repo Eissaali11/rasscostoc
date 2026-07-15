@@ -518,11 +518,11 @@ export default function ItemTypesManagement() {
   if (user?.role !== 'admin') {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-          <Card className="bg-red-500/10 border-red-500/20 max-w-md w-full">
+          <Card className="bg-white border-slate-200 shadow-sm max-w-md w-full">
             <CardContent className="p-8 text-center">
-              <Package className="h-16 w-16 text-red-400 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">غير مصرح</h2>
-              <p className="text-gray-400">هذه الصفحة متاحة فقط لمدير النظام</p>
+              <Package className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-slate-800 mb-2">غير مصرح</h2>
+              <p className="text-slate-500">هذه الصفحة متاحة فقط لمدير النظام</p>
             </CardContent>
           </Card>
       </div>
@@ -538,8 +538,8 @@ export default function ItemTypesManagement() {
       >
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">إدارة الأصناف</h1>
-            <p className="text-slate-400">إضافة الأصناف يدويًا أو استيرادها من Excel فقط</p>
+            <h1 className="text-3xl font-bold text-slate-800 mb-2 tracking-tight">إدارة الأصناف</h1>
+            <p className="text-slate-500">إضافة الأصناف يدويًا أو استيرادها من Excel فقط</p>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -551,7 +551,7 @@ export default function ItemTypesManagement() {
               onChange={handleExcelInputChange}
             />
 
-            <Button asChild variant="outline" className="border-slate-600 bg-slate-800/60 hover:bg-slate-700 text-slate-200">
+            <Button asChild variant="outline" className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
               <Link href="/system-logs">
                 <ScrollText className="h-4 w-4 ml-2" />
                 سجل النظام
@@ -563,7 +563,7 @@ export default function ItemTypesManagement() {
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
               disabled={isImportingExcel}
-              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+              className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
             >
               <Upload className="h-4 w-4 ml-2" />
               {isImportingExcel ? "جاري استيراد Excel..." : "استيراد Excel"}
@@ -575,7 +575,7 @@ export default function ItemTypesManagement() {
                 resetForm();
                 setIsDialogOpen(true);
               }}
-              className="bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold"
+              className="bg-[#18B2B0] hover:bg-[#149d9b] text-white font-bold shadow-[0_4px_12px_rgba(24,178,176,0.2)]"
             >
               <Plus className="h-4 w-4 ml-2" />
               إضافة صنف جديد
@@ -583,23 +583,23 @@ export default function ItemTypesManagement() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-700/60 bg-slate-900/40 backdrop-blur-xl p-4 sm:p-5 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur-md p-4 sm:p-5 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between shadow-sm">
           <div className="relative w-full lg:max-w-md">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="بحث عن صنف، معرف، أو فئة..."
-              className="pr-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
+              className="pr-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700">
+            <Button variant="outline" className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
               <Filter className="h-4 w-4 ml-2" />
               تصفية
             </Button>
-            <Button variant="outline" className="border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700" onClick={handleExportCsv}>
+            <Button variant="outline" className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={handleExportCsv}>
               <Download className="h-4 w-4 ml-2" />
               تصدير
             </Button>
@@ -607,54 +607,54 @@ export default function ItemTypesManagement() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl overflow-hidden">
-            <div className="h-1 bg-cyan-400/80" />
+          <Card className="rounded-2xl bg-white border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="h-1 bg-[#18B2B0]/80" />
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400 mb-1">الأصناف النشطة</p>
-                <p className="text-3xl font-bold text-white">{stats.active}</p>
+                <p className="text-sm text-slate-500 mb-1">الأصناف النشطة</p>
+                <p className="text-3xl font-extrabold text-slate-900">{stats.active}</p>
               </div>
-              <div className="size-12 rounded-xl bg-cyan-400/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+              <div className="size-12 rounded-xl bg-[#18B2B0]/10 border border-[#18B2B0]/20 flex items-center justify-center text-[#18B2B0]">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl overflow-hidden">
+          <Card className="rounded-2xl bg-white border-slate-200/80 shadow-sm overflow-hidden">
             <div className="h-1 bg-amber-400/80" />
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400 mb-1">أصناف مخفية</p>
-                <p className="text-3xl font-bold text-white">{stats.lowVisibility}</p>
+                <p className="text-sm text-slate-500 mb-1">أصناف مخفية</p>
+                <p className="text-3xl font-extrabold text-slate-900">{stats.lowVisibility}</p>
               </div>
-              <div className="size-12 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-300">
+              <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
                 <AlertTriangle className="h-6 w-6" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl overflow-hidden">
+          <Card className="rounded-2xl bg-white border-slate-200/80 shadow-sm overflow-hidden">
             <div className="h-1 bg-red-400/80" />
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400 mb-1">أصناف غير مفعلة</p>
-                <p className="text-3xl font-bold text-white">{stats.inactive}</p>
+                <p className="text-sm text-slate-500 mb-1">أصناف غير مفعلة</p>
+                <p className="text-3xl font-extrabold text-slate-900">{stats.inactive}</p>
               </div>
-              <div className="size-12 rounded-xl bg-red-400/15 border border-red-400/30 flex items-center justify-center text-red-300">
+              <div className="size-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-600">
                 <Ban className="h-6 w-6" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="rounded-2xl bg-slate-900/45 border-slate-700/60 backdrop-blur-xl overflow-hidden">
-          <CardHeader className="border-b border-slate-700/60 bg-slate-900/40">
-            <CardTitle className="text-white flex items-center justify-between gap-3">
+        <Card className="rounded-2xl bg-white border-slate-200/80 shadow-sm overflow-hidden">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+            <CardTitle className="text-slate-800 flex items-center justify-between gap-3">
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-cyan-300" />
+                <Package className="h-5 w-5 text-[#18B2B0]" />
                 قائمة الأصناف
               </span>
-              <Badge className="bg-cyan-400/15 text-cyan-300 border-cyan-400/25">
+              <Badge className="bg-[#18B2B0]/10 text-[#18B2B0] border-[#18B2B0]/20">
                 {filteredItemTypes.length} / {stats.total}
               </Badge>
             </CardTitle>
@@ -664,27 +664,27 @@ export default function ItemTypesManagement() {
             {isLoading ? (
               <div className="p-6 space-y-3">
                 {[1, 2, 3, 4].map((idx) => (
-                  <Skeleton key={idx} className="h-12 bg-slate-800/60" />
+                  <Skeleton key={idx} className="h-12 bg-slate-100" />
                 ))}
               </div>
             ) : filteredItemTypes.length === 0 ? (
               <div className="p-12 text-center">
-                <Package className="h-14 w-14 text-slate-600 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-white mb-2">لا توجد أصناف مطابقة</h3>
-                <p className="text-slate-400">أضف صنفًا يدويًا أو استورد ملف Excel ثم حدّث البحث</p>
+                <Package className="h-14 w-14 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-slate-800 mb-2">لا توجد أصناف مطابقة</h3>
+                <p className="text-slate-500">أضف صنفًا يدويًا أو استورد ملف Excel ثم حدّث البحث</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-700/60 hover:bg-transparent bg-slate-900/25">
-                      <TableHead className="text-right text-slate-400">الصنف</TableHead>
-                      <TableHead className="text-right text-slate-400">الفئة</TableHead>
-                      <TableHead className="text-right text-slate-400">وحدات/كرتون</TableHead>
-                      <TableHead className="text-right text-slate-400">الحالة</TableHead>
-                      <TableHead className="text-right text-slate-400">الظهور</TableHead>
-                      <TableHead className="text-right text-slate-400">الترتيب</TableHead>
-                      <TableHead className="text-right text-slate-400">الإجراءات</TableHead>
+                    <TableRow className="border-slate-100 hover:bg-transparent bg-slate-50/75">
+                      <TableHead className="text-right text-slate-500 font-bold">الصنف</TableHead>
+                      <TableHead className="text-right text-slate-500 font-bold">الفئة</TableHead>
+                      <TableHead className="text-right text-slate-500 font-bold">وحدات/كرتون</TableHead>
+                      <TableHead className="text-right text-slate-500 font-bold">الحالة</TableHead>
+                      <TableHead className="text-right text-slate-500 font-bold">الظهور</TableHead>
+                      <TableHead className="text-right text-slate-500 font-bold">الترتيب</TableHead>
+                      <TableHead className="text-right text-slate-500 font-bold">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -693,24 +693,24 @@ export default function ItemTypesManagement() {
                       const CatIcon = catInfo.icon;
 
                       return (
-                        <TableRow key={item.id} className="border-slate-700/50 hover:bg-slate-800/35 transition-colors">
+                        <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
                           <TableCell>
                             <div className="flex flex-col">
-                              <Link href={`/item-types/${item.id}/details`} className="font-bold text-white hover:text-cyan-300 transition-colors w-fit">
+                              <Link href={`/item-types/${item.id}/details`} className="font-bold text-slate-800 hover:text-[#18B2B0] transition-colors w-fit">
                                 {item.nameAr}
                               </Link>
-                              <span className="text-xs text-slate-400 font-mono" dir="ltr">SKU: {item.id}</span>
+                              <span className="text-xs text-slate-500 font-mono" dir="ltr">SKU: {item.id}</span>
                             </div>
                           </TableCell>
 
                           <TableCell>
-                            <Badge className="bg-cyan-400/15 text-cyan-300 border-cyan-400/25">
+                            <Badge className="bg-[#18B2B0]/10 text-[#18B2B0] border-[#18B2B0]/20">
                               <CatIcon className="h-3 w-3 ml-1" />
                               {catInfo.nameAr}
                             </Badge>
                           </TableCell>
 
-                          <TableCell className="text-white font-semibold">{item.unitsPerBox}</TableCell>
+                          <TableCell className="text-slate-700 font-medium">{item.unitsPerBox}</TableCell>
 
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -721,7 +721,7 @@ export default function ItemTypesManagement() {
                                 }
                                 className="data-[state=checked]:bg-emerald-500"
                               />
-                              <span className={`text-xs font-bold ${item.isActive ? "text-emerald-400" : "text-red-400"}`}>
+                              <span className={`text-xs font-bold ${item.isActive ? "text-emerald-600" : "text-red-500"}`}>
                                 {item.isActive ? "مفعل" : "غير مفعل"}
                               </span>
                             </div>
@@ -734,21 +734,21 @@ export default function ItemTypesManagement() {
                                 onCheckedChange={(checked) =>
                                   toggleVisibilityMutation.mutate({ id: item.id, isVisible: checked })
                                 }
-                                className="data-[state=checked]:bg-cyan-500"
+                                className="data-[state=checked]:bg-[#18B2B0]"
                               />
-                              <span className={`text-xs font-bold ${item.isVisible ? "text-cyan-300" : "text-slate-400"}`}>
+                              <span className={`text-xs font-bold ${item.isVisible ? "text-[#18B2B0]" : "text-slate-500"}`}>
                                 {item.isVisible ? "مرئي" : "مخفي"}
                               </span>
                             </div>
                           </TableCell>
 
                           <TableCell>
-                            <Badge variant="outline" className="border-slate-600 text-slate-300">{item.sortOrder}</Badge>
+                            <Badge variant="outline" className="border-slate-200 text-slate-600">{item.sortOrder}</Badge>
                           </TableCell>
 
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <Button asChild variant="ghost" size="sm" className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/10">
+                              <Button asChild variant="ghost" size="sm" className="text-[#18B2B0] hover:text-[#149d9b] hover:bg-[#18B2B0]/10">
                                 <Link href={`/item-types/${item.id}/details`}>
                                   <ArrowUpLeft className="h-4 w-4" />
                                 </Link>
@@ -758,7 +758,7 @@ export default function ItemTypesManagement() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEdit(item)}
-                                className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/10"
+                                className="text-[#18B2B0] hover:text-[#149d9b] hover:bg-[#18B2B0]/10"
                               >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
@@ -776,12 +776,12 @@ export default function ItemTypesManagement() {
       </motion.div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-[#1A1A24] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">
+            <DialogTitle className="text-xl text-slate-800">
               {editingItem ? 'تعديل الصنف' : 'إضافة صنف جديد'}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-slate-500">
               {editingItem ? 'قم بتعديل بيانات الصنف' : 'أدخل بيانات الصنف الجديد'}
             </DialogDescription>
           </DialogHeader>
@@ -789,52 +789,52 @@ export default function ItemTypesManagement() {
           <div className="space-y-4 py-4">
             {!editingItem && (
               <div className="space-y-2">
-                <Label className="text-gray-300">المعرف (ID) - اختياري</Label>
+                <Label className="text-slate-600 font-semibold">المعرف (ID) - اختياري</Label>
                 <Input
                   value={formData.id}
                   onChange={(e) => setFormData({ ...formData, id: e.target.value })}
                   placeholder="اتركه فارغاً للإنشاء التلقائي"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
                   dir="ltr"
                 />
-                <p className="text-xs text-gray-500">اتركه فارغاً وسيتم إنشاء معرف تلقائي</p>
+                <p className="text-xs text-slate-500">اتركه فارغاً وسيتم إنشاء معرف تلقائي</p>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-gray-300">الاسم العربي</Label>
+                <Label className="text-slate-600 font-semibold">الاسم العربي</Label>
                 <Input
                   value={formData.nameAr}
                   onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
                   placeholder="اسم الصنف بالعربي"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">الاسم الإنجليزي</Label>
+                <Label className="text-slate-600 font-semibold">الاسم الإنجليزي</Label>
                 <Input
                   value={formData.nameEn}
                   onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                   placeholder="Item Name"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
                   dir="ltr"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">الفئة</Label>
+              <Label className="text-slate-600 font-semibold">الفئة</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                <SelectTrigger className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1A1A24] border-white/10">
+                <SelectContent className="bg-white border-slate-200">
                   {CATEGORIES.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id} className="text-white hover:bg-white/10">
+                    <SelectItem key={cat.id} value={cat.id} className="text-slate-800 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900">
                       {cat.nameAr} ({cat.nameEn})
                     </SelectItem>
                   ))}
@@ -844,22 +844,22 @@ export default function ItemTypesManagement() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-gray-300">وحدات لكل كرتون</Label>
+                <Label className="text-slate-600 font-semibold">وحدات لكل كرتون</Label>
                 <Input
                   type="number"
                   value={formData.unitsPerBox}
                   onChange={(e) => setFormData({ ...formData, unitsPerBox: parseInt(e.target.value) || 0 })}
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
                   min={1}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">ترتيب العرض</Label>
+                <Label className="text-slate-600 font-semibold">ترتيب العرض</Label>
                 <Input
                   type="number"
                   value={formData.sortOrder}
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
                   min={0}
                 />
               </div>
