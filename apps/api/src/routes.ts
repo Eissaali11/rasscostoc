@@ -5,6 +5,7 @@ import { registerIdentityRoutes } from "@modules/identity/presentation/routes/in
 import { registerInventoryRoutes } from "@modules/inventory/presentation/routes/index";
 import { registerAccountingRoutes } from "@modules/accounting/presentation/routes/accounting.routes";
 import { registerCourierRoutes } from "@modules/courier/presentation/routes/courier.routes";
+import { registerAiEngineSettingsRoutes } from "@modules/ai-engine-settings/ai-engine-settings.routes";
 import { readinessManager } from "@core/telemetry/readiness";
 import { metrics } from "@core/telemetry/metrics";
 import { getRecentSpans } from "@core/telemetry/tracer";
@@ -90,6 +91,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register courier routes
   registerCourierRoutes(app);
+
+  // Register async job routes
+  const { registerJobRoutes } = await import("@core/jobs/jobs.routes");
+  registerJobRoutes(app);
+
+  // AI Engine provider settings (admin) — PR-006A-10
+  registerAiEngineSettingsRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

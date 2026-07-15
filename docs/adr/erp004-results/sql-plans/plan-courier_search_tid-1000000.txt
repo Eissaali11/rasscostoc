@@ -1,0 +1,7 @@
+Index Scan using courier_requests_tid_pattern_idx on public.courier_requests cr  (cost=0.42..8.44 rows=1 width=641) (actual time=0.126..0.127 rows=1.00 loops=1)
+  Output: id, date, installation_type, sim, tid, otp, ticketing_holouly, incident_number, pin_code, trsm, terminal_id, sim_sn, id_data, vendor_type, city, city_tec, customer_name, retailer_name, address_ar, address_en, mobile, mobile2, tec_name, created_by, created_at, updated_at, version
+  Index Cond: (cr.tid = 'TID00015000'::text)
+  Index Searches: 1
+  Buffers: shared read=4
+Planning Time: 0.297 ms
+Execution Time: 0.155 ms

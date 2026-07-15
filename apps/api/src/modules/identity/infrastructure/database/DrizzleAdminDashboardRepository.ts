@@ -4,7 +4,7 @@ import type {
   TechnicianWithBothInventories,
   TechnicianWithFixedInventory,
 } from '@shared/schema';
-import { sql, eq, desc } from 'drizzle-orm';
+import { sql, eq, desc, inArray } from 'drizzle-orm';
 import type { IAdminDashboardRepository } from '@stockpro/contracts';
 import { getDatabase } from '@core/database/connection';
 import {
@@ -64,6 +64,7 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
         totalMobilySim: sql<number>`COALESCE(SUM(${technicianFixedInventories.mobilySimBoxes} + ${technicianFixedInventories.mobilySimUnits}), 0)`,
         totalStcSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.stcSimBoxes} + ${technicianFixedInventories.stcSimUnits}), 0)`,
         totalZainSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.zainSimBoxes} + ${technicianFixedInventories.zainSimUnits}), 0)`,
+        totalLebaraSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.lebaraBoxes} + ${technicianFixedInventories.lebaraUnits}), 0)`,
         techniciansWithCriticalStock: sql<number>`0`,
         techniciansWithWarningStock: sql<number>`0`,
         techniciansWithGoodStock: sql<number>`COUNT(*)`,
@@ -80,6 +81,7 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
       totalMobilySim: Number(summary?.totalMobilySim || 0),
       totalStcSim: Number(summary?.totalStcSim || 0),
       totalZainSim: Number(summary?.totalZainSim || 0),
+      totalLebaraSim: Number(summary?.totalLebaraSim || 0),
       techniciansWithCriticalStock: Number(summary?.techniciansWithCriticalStock || 0),
       techniciansWithWarningStock: Number(summary?.techniciansWithWarningStock || 0),
       techniciansWithGoodStock: Number(summary?.techniciansWithGoodStock || 0),
@@ -99,19 +101,38 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
       .where(eq(users.role, 'technician'))
       .orderBy(users.fullName);
 
-    const result: TechnicianWithBothInventories[] = [];
-    for (const tech of technicians) {
-      const fixedEntries = await this.db
+    if (technicians.length === 0) return [];
+
+    const ids = technicians.map((tech) => tech.technicianId);
+    const [allFixed, allMoving] = await Promise.all([
+      this.db
         .select()
         .from(technicianFixedInventoryEntries)
-        .where(eq(technicianFixedInventoryEntries.technicianId, tech.technicianId));
-
-      const movingEntries = await this.db
+        .where(inArray(technicianFixedInventoryEntries.technicianId, ids)),
+      this.db
         .select()
         .from(technicianMovingInventoryEntries)
-        .where(eq(technicianMovingInventoryEntries.technicianId, tech.technicianId));
+        .where(inArray(technicianMovingInventoryEntries.technicianId, ids)),
+    ]);
 
-      result.push({
+    const fixedByTech = new Map<string, typeof allFixed>();
+    for (const entry of allFixed) {
+      const list = fixedByTech.get(entry.technicianId) || [];
+      list.push(entry);
+      fixedByTech.set(entry.technicianId, list);
+    }
+
+    const movingByTech = new Map<string, typeof allMoving>();
+    for (const entry of allMoving) {
+      const list = movingByTech.get(entry.technicianId) || [];
+      list.push(entry);
+      movingByTech.set(entry.technicianId, list);
+    }
+
+    return technicians.map((tech) => {
+      const fixedEntries = fixedByTech.get(tech.technicianId) || [];
+      const movingEntries = movingByTech.get(tech.technicianId) || [];
+      return {
         technicianId: tech.technicianId,
         technicianName: tech.fullName,
         city: tech.city || 'غير محدد',
@@ -119,10 +140,8 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
         fixedInventory: fixedEntries.length ? { entries: fixedEntries } : null,
         movingInventory: movingEntries.length ? { entries: movingEntries } : null,
         alertLevel: 'good' as const,
-      });
-    }
-
-    return result;
+      };
+    });
   }
 
   async getInventoryRequests(): Promise<InventoryRequest[]> {

@@ -5,32 +5,20 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertTriangle,
   ArrowLeft,
-  Bell,
   Boxes,
   ChevronLeft,
-  ChevronDown,
-  ChevronUp,
   Download,
-  Filter,
   Handshake,
   MapPin,
+  RefreshCw,
   Search,
-  TrendingDown,
-  TrendingUp,
   Truck,
+  Warehouse,
   XCircle,
   CheckCircle,
   XCircle as XCircleIcon,
@@ -40,14 +28,10 @@ import {
   Cable,
   Plug,
   AlertCircle,
-  Calendar,
-  User,
   Activity,
   FileText,
   ShieldCheck,
   Settings,
-  Clock,
-  Info,
 } from "lucide-react";
 import { exportTechnicianToExcel } from "@/lib/exportToExcel";
 import { useToast } from "@/hooks/use-toast";
@@ -192,10 +176,6 @@ type ReceivedDevice = {
 
 type InventoryTab = "all" | "fixed" | "moving";
 
-function arNumber(value: number): string {
-  return new Intl.NumberFormat("ar-SA").format(value);
-}
-
 function formatDateTime(value?: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -265,12 +245,8 @@ function getStockStatus(total: number): { label: string; className: string } {
   };
 }
 
-function clampPercent(value: number): number {
-  return Math.max(0, Math.min(100, value));
-}
-
 export default function TechnicianDetailsPage() {
-  const { t, dir } = useTranslation();
+  const { t, dir, formatNumber } = useTranslation();
   const [, params] = useRoute("/technician-details/:id");
   const technicianId = params?.id;
   const { user } = useAuth();
@@ -280,7 +256,6 @@ export default function TechnicianDetailsPage() {
   const [activeTab, setActiveTab] = useState<InventoryTab>("all");
   const [activeSerialTab, setActiveSerialTab] = useState<"active" | "history">("active");
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   // Scanned Device Modal & Approval states
   const [selectedDevice, setSelectedDevice] = useState<ReceivedDevice | null>(null);
@@ -592,20 +567,9 @@ export default function TechnicianDetailsPage() {
     };
   }, [products, searchTerm]);
 
-  const activeRows = rowsByTab[activeTab];
-
-  const expandedRow =
-    activeRows.find((row) => row.id === expandedProductId) ||
-    activeRows[0] ||
-    null;
-
   const lowStockAlertsCount = products.filter((product) => product.grandTotal < 10).length;
   const inventoryAccuracy =
     products.length > 0 ? (products.filter((product) => product.grandTotal > 0).length / products.length) * 100 : 0;
-
-  const movementBars = expandedRow
-    ? [45, 62, 88, 73, 58, 95, 70].map((ratio) => Math.max(16, Math.round((expandedRow.total * ratio) / Math.max(expandedRow.total, 1))))
-    : [40, 55, 80, 60, 48, 76, 52];
 
   const canTransferToWarehouse = user?.role === "admin" || user?.role === "supervisor";
 
@@ -849,14 +813,14 @@ export default function TechnicianDetailsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6" dir={dir}>
-        <Skeleton className="h-28 w-full rounded-2xl" />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
+        <Skeleton className="h-16 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
         </div>
-        <Skeleton className="h-[420px] w-full rounded-2xl" />
+        <Skeleton className="h-[420px] rounded-xl" />
       </div>
     );
   }
@@ -878,551 +842,566 @@ export default function TechnicianDetailsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-4" dir={dir}>
-      {/* Hero identity */}
-      <header className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1a3636] p-6 shadow-lg">
-        <div className="pointer-events-none absolute -left-16 -top-20 size-56 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-10 bottom-0 size-40 rounded-full bg-emerald-400/5 blur-3xl" />
-
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-lg font-black tracking-wide text-cyan-200 shadow-inner">
-              {technicianInitials}
-            </div>
-            <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-400/80">
-                {t('inventory.technician_3')}
-              </p>
-              <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-                {technicianName}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-950/40 px-2.5 py-1">
-                  <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-                  {city || t('common.city')}
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
-                  <Smartphone className="h-3.5 w-3.5" />
-                  {t('common.active_custody_count', { count: arNumber(serializedItems.length) })}
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-cyan-300">
-                  <Truck className="h-3.5 w-3.5" />
-                  {t('common.delivered_count_label', { count: arNumber(deliveryLogCount) })}
-                </span>
-              </div>
-            </div>
+    <div className="space-y-8" dir={dir}>
+      {/* Page header — matches item details */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-lg font-black tracking-wide text-cyan-200 shadow-inner">
+            {technicianInitials}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {canTransferToWarehouse ? (
-              <Link href="/operations">
-                <Button className="bg-cyan-400 px-5 font-bold text-slate-950 hover:bg-cyan-300">
-                  <Truck className="ml-2 h-4 w-4" />
-                  {t('common.transfer_1')}
-                </Button>
-              </Link>
-            ) : null}
-            <Button
-              onClick={handleExport}
-              variant="outline"
-              className="border-slate-600/80 bg-slate-950/30 text-cyan-300 hover:bg-cyan-400/10"
-              data-testid="button-export"
-            >
-              <Download className="ml-2 h-4 w-4" />
-              {t('inventory.export_excel')}
-            </Button>
-            <Link href="/home">
-              <Button variant="outline" className="border-slate-600 text-slate-200 hover:bg-slate-800">
-                <ArrowLeft className="ml-2 h-4 w-4" />
-                {t('common.item_6366')}
-              </Button>
-            </Link>
+          <div>
+            <h2 className="text-3xl font-black text-slate-100 tracking-tight">{technicianName}</h2>
+            <p className="text-slate-400 mt-1 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-cyan-400" />
+                {city || t("common.city")}
+              </span>
+              <span className="text-slate-600">·</span>
+              <span>{t("inventory.technician_3")}</span>
+            </p>
+            <p className="text-xs text-cyan-300 mt-1">
+              {t("common.active_custody_count", { count: formatNumber(serializedItems.length) })}
+              {" · "}
+              {t("common.delivered_count_label", { count: formatNumber(deliveryLogCount) })}
+            </p>
           </div>
         </div>
-      </header>
+        <div className="flex gap-3 flex-wrap">
+          {canTransferToWarehouse ? (
+            <Link href="/operations">
+              <Button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-400 text-slate-900 font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-cyan-400/20">
+                <Truck className="h-4 w-4" />
+                {t("common.transfer_1")}
+              </Button>
+            </Link>
+          ) : null}
+          <Button
+            onClick={handleExport}
+            variant="outline"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-400/10 text-cyan-300 border-cyan-400/20 font-bold text-sm hover:bg-cyan-400/20"
+            data-testid="button-export"
+          >
+            <Download className="h-4 w-4" />
+            {t("inventory.export_excel")}
+          </Button>
+          <Link href="/admin-inventory-overview">
+            <Button variant="outline" className="inline-flex items-center gap-2 border-slate-700 text-slate-200 hover:bg-slate-800">
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              {t("common.item_6366")}
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-      {/* KPI strip */}
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          {
-            label: t('common.total_inventory'),
-            value: grandTotal,
-            hint: t('common.item_20140', { var_0: arNumber(Number(inventoryAccuracy.toFixed(1))) }),
-            icon: Boxes,
-            accent: "cyan",
-            width: inventoryAccuracy,
-            trendUp: true,
-          },
-          {
-            label: t('common.boxes_1'),
-            value: totalBoxes,
-            hint: t('common.item_12168', { var_0: arNumber(Number(movingBoxesShare.toFixed(1))) }),
-            icon: Handshake,
-            accent: "emerald",
-            width: movingBoxesShare,
-            trendUp: true,
-          },
-          {
-            label: t('common.item_22330'),
-            value: totalFixed,
-            hint: t('common.total_5', { var_0: arNumber(Number(fixedShare.toFixed(1))) }),
-            icon: MapPin,
-            accent: "sky",
-            width: fixedShare,
-            trendUp: true,
-          },
-          {
-            label: t('common.item_24017'),
-            value: totalMoving,
-            hint: t('common.total_5', { var_0: arNumber(Number(movingShare.toFixed(1))) }),
-            icon: Truck,
-            accent: "amber",
-            width: movingShare,
-            trendUp: false,
-          },
-        ].map((card) => {
-          const Icon = card.icon;
-          const accentMap: Record<string, { bar: string; iconBg: string; icon: string; border: string }> = {
-            cyan: { bar: "bg-cyan-400", iconBg: "bg-cyan-400/10", icon: "text-cyan-300", border: "hover:border-cyan-400/40" },
-            emerald: { bar: "bg-emerald-400", iconBg: "bg-emerald-400/10", icon: "text-emerald-300", border: "hover:border-emerald-400/40" },
-            sky: { bar: "bg-sky-400", iconBg: "bg-sky-400/10", icon: "text-sky-300", border: "hover:border-sky-400/40" },
-            amber: { bar: "bg-amber-400", iconBg: "bg-amber-400/10", icon: "text-amber-300", border: "hover:border-amber-400/40" },
-          };
-          const a = accentMap[card.accent];
-          return (
-            <div
-              key={card.label}
-              className={`relative overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/45 p-5 backdrop-blur-xl transition-all duration-300 ${a.border} hover:shadow-lg`}
-            >
-              <div className={`absolute inset-x-0 top-0 h-1 ${a.bar} opacity-80`} />
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <p className="mb-1 text-sm text-slate-400">{card.label}</p>
-                  <h3 className="text-3xl font-black tracking-tight text-slate-50">{arNumber(card.value)}</h3>
-                </div>
-                <div className={`flex size-11 items-center justify-center rounded-xl ${a.iconBg} ${a.icon}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
-                <div className={`h-full ${a.bar}`} style={{ width: `${clampPercent(card.width)}%` }} />
-              </div>
-              <div className={`mt-3 flex items-center gap-1 text-xs ${a.icon}`}>
-                {card.trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {card.hint}
-              </div>
+      {/* KPI cards — same Card pattern as item page */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-slate-900/60 border-cyan-400/10">
+          <CardContent className="p-6">
+            <p className="text-slate-400 text-sm font-medium mb-2">{t("common.total_inventory")}</p>
+            <div className="flex items-end gap-3">
+              <h3 className="text-3xl font-black text-slate-100 tabular-nums" dir="ltr">
+                {formatNumber(grandTotal)}
+              </h3>
+              <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 mb-1">
+                {formatNumber(Number(inventoryAccuracy.toFixed(1)))}%
+              </span>
             </div>
-          );
-        })}
-      </section>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-900/60 border-cyan-400/10">
+          <CardContent className="p-6">
+            <p className="text-slate-400 text-sm font-medium mb-2">{t("common.boxes_1")}</p>
+            <div className="flex items-end gap-3">
+              <h3 className="text-3xl font-black text-slate-100 tabular-nums" dir="ltr">
+                {formatNumber(totalBoxes)}
+              </h3>
+              <span className="text-cyan-300 text-xs font-bold mb-1">
+                {formatNumber(Number(movingBoxesShare.toFixed(1)))}%
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-900/60 border-cyan-400/10">
+          <CardContent className="p-6">
+            <p className="text-slate-400 text-sm font-medium mb-2">{t("common.item_22330")}</p>
+            <div className="flex items-end gap-3">
+              <h3 className="text-3xl font-black text-slate-100 tabular-nums" dir="ltr">
+                {formatNumber(totalFixed)}
+              </h3>
+              <span className="text-cyan-300 text-xs font-bold mb-1">
+                {formatNumber(Number(fixedShare.toFixed(1)))}%
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-900/60 border-orange-500/20">
+          <CardContent className="p-6">
+            <p className="text-slate-400 text-sm font-medium mb-2">{t("common.item_24017")}</p>
+            <div className="flex items-end gap-3">
+              <h3 className="text-3xl font-black text-slate-100 tabular-nums" dir="ltr">
+                {formatNumber(totalMoving)}
+              </h3>
+              <span className="text-orange-400 text-sm font-bold flex items-center gap-1 mb-1">
+                <AlertTriangle className="h-3 w-3" />
+                {formatNumber(Number(movingShare.toFixed(1)))}%
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/40 shadow-sm backdrop-blur-xl">
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as InventoryTab)}
-          className="w-full"
-        >
-          <div className="flex flex-col gap-4 border-b border-slate-700/60 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-100">{t('common.item_19128')}</h2>
-              <p className="text-xs text-slate-400">{t('common.type_2')}</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <TabsList className="w-full justify-start rounded-xl border border-slate-700/60 bg-slate-950/50 p-1 sm:w-auto">
-                <TabsTrigger value="all" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">{t('common.all')}</TabsTrigger>
-                <TabsTrigger value="fixed" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">{t('common.item_6308')}</TabsTrigger>
-                <TabsTrigger value="moving" className="rounded-lg px-4 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">{t('common.item_7952')}</TabsTrigger>
-              </TabsList>
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={t('common.search_12')}
-                  className="border-slate-700 bg-slate-950/50 pr-10 text-slate-200"
-                />
-              </div>
-            </div>
+      {/* Search */}
+      <div className="mb-2">
+        <div className="relative group max-w-md">
+          <div className="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none">
+            <Search className="h-4 w-4 text-cyan-300/60" />
           </div>
+          <Input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="w-full py-3 pe-11 ps-4 rounded-xl text-sm text-slate-100 bg-slate-900/60 border-cyan-400/20"
+            placeholder={t("common.search_12")}
+          />
+        </div>
+      </div>
 
-          {["all", "fixed", "moving"].map((tabValue) => {
-            const tab = tabValue as InventoryTab;
-            const rows = rowsByTab[tab];
+      {/* Inventory tabs + table */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as InventoryTab)}
+        className="w-full"
+      >
+        <TabsList className="bg-transparent border-b border-cyan-400/10 mb-6 rounded-none p-0 h-auto gap-8 w-full justify-start">
+          <TabsTrigger
+            value="all"
+            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+          >
+            <Boxes className="h-4 w-4 shrink-0" />
+            {t("common.all")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="fixed"
+            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+          >
+            <Warehouse className="h-4 w-4 shrink-0" />
+            {t("common.item_6308")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="moving"
+            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+          >
+            <Truck className="h-4 w-4 shrink-0" />
+            {t("common.item_7952")}
+          </TabsTrigger>
+        </TabsList>
 
-            return (
-              <TabsContent value={tab} key={tab} className="m-0">
+        {(["all", "fixed", "moving"] as InventoryTab[]).map((tab) => {
+          const rows = rowsByTab[tab];
+          return (
+            <TabsContent value={tab} key={tab} className="m-0">
+              <div className="rounded-xl overflow-hidden border border-cyan-400/10 shadow-2xl shadow-black/20 bg-slate-900/60">
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-slate-800 bg-slate-950/50 hover:bg-slate-950/50">
-                        <TableHead className="text-right text-slate-400">{t('common.name_6')}</TableHead>
-                        <TableHead className="text-center text-slate-400">{t('common.boxes')}</TableHead>
-                        <TableHead className="text-center text-slate-400">{t('common.units_1')}</TableHead>
-                        <TableHead className="text-center text-slate-400">{t('common.total_2')}</TableHead>
-                        <TableHead className="text-center text-slate-400">{t('common.status')}</TableHead>
-                        <TableHead className="text-center text-slate-400">{t('common.item_14214')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <table className="w-full text-start border-collapse">
+                    <thead>
+                      <tr className="bg-cyan-400/5 border-b border-cyan-400/10">
+                        <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider">{t("common.name_6")}</th>
+                        <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.boxes")}</th>
+                        <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.units_1")}</th>
+                        <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.total_2")}</th>
+                        <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.status")}</th>
+                        <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.item_14214")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-cyan-400/5">
                       {rows.length === 0 ? (
-                        <TableRow className="border-slate-800">
-                          <TableCell colSpan={6} className="py-12 text-center text-slate-500">
-                            {t('common.no_results_1')}
-                          </TableCell>
-                        </TableRow>
+                        <tr>
+                          <td className="px-6 py-8 text-center text-slate-400" colSpan={6}>
+                            {t("common.no_results_1")}
+                          </td>
+                        </tr>
                       ) : (
                         rows.map((row) => {
                           const ItemIcon = row.icon;
                           const status = getStockStatus(row.total);
                           const imageUrl = getProductImage(row);
-                          const isHot = row.total > 0;
-
                           return (
-                            <TableRow
+                            <tr
                               key={row.id}
-                              className={`border-slate-800/70 transition-colors ${isHot ? "hover:bg-cyan-400/[0.04]" : "opacity-80 hover:bg-slate-800/30"}`}
+                              className="hover:bg-cyan-400/5 transition-colors group"
                             >
-                              <TableCell>
+                              <td className="px-6 py-5">
                                 <div className="flex items-center gap-3">
                                   <div
-                                    className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-900"
+                                    className="relative w-12 h-12 rounded-xl border border-slate-700 bg-slate-950/60 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-200"
                                     style={{ color: row.color }}
                                   >
                                     {imageUrl ? (
-                                      <img src={imageUrl} alt={row.nameAr} className="h-full w-full object-contain p-0.5" />
+                                      <img src={imageUrl} alt={row.nameAr} className="w-10 h-10 object-contain" />
                                     ) : (
-                                      <ItemIcon className="h-4 w-4" />
+                                      <ItemIcon className="w-5 h-5" />
                                     )}
                                   </div>
                                   <div>
-                                    <p className="font-semibold text-slate-100">{row.nameAr}</p>
-                                    <p className="text-[11px] text-slate-500">{row.nameEn}</p>
+                                    <p className="text-sm font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">
+                                      {row.nameAr}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500">{row.nameEn}</p>
                                   </div>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums text-slate-300">{arNumber(row.boxes)}</TableCell>
-                              <TableCell className="text-center tabular-nums text-slate-300">{arNumber(row.units)}</TableCell>
-                              <TableCell className="text-center text-base font-bold tabular-nums text-slate-50">{arNumber(row.total)}</TableCell>
-                              <TableCell className="text-center">
-                                <Badge className={status.className}>{status.label}</Badge>
-                              </TableCell>
-                              <TableCell className="text-center">
+                              </td>
+                              <td className="px-6 py-5 text-center tabular-nums text-slate-300" dir="ltr">
+                                {formatNumber(row.boxes)}
+                              </td>
+                              <td className="px-6 py-5 text-center tabular-nums text-slate-300" dir="ltr">
+                                {formatNumber(row.units)}
+                              </td>
+                              <td className="px-6 py-5 text-center text-base font-black tabular-nums text-slate-50" dir="ltr">
+                                {formatNumber(row.total)}
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${status.className}`}>
+                                  {status.label}
+                                </span>
+                              </td>
+                              <td className="px-6 py-5 text-center">
                                 <Button
                                   asChild
                                   variant="outline"
                                   size="sm"
-                                  className="border-slate-700 text-slate-300 hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300"
+                                  className="border-cyan-400/20 bg-cyan-400/5 text-cyan-300 hover:bg-cyan-400/15 font-bold text-xs"
                                 >
                                   <Link href={`/technician-details/${technicianId}/item/${row.id}`}>
-                                    <span className="ml-1">{t('common.details_4')}</span>
+                                    <span className="me-1">{t("common.details_4")}</span>
                                     <ChevronLeft className="h-4 w-4" />
                                   </Link>
                                 </Button>
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                            </tr>
                           );
                         })
                       )}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 </div>
-              </TabsContent>
-            );
-          })}
-        </Tabs>
-
-        {expandedRow ? (
-          <div className="grid grid-cols-1 gap-5 border-t border-slate-800 bg-slate-950/30 p-5 md:grid-cols-3">
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-cyan-300">{t('common.details_5')}</h4>
-              <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-3">
-                <span className="text-sm text-slate-400">{t('common.inventory_1')}</span>
-                <span className="font-bold text-slate-100">{arNumber(expandedRow.fixedTotal)}</span>
+                <div className="bg-cyan-400/5 px-6 py-4 border-t border-cyan-400/10 flex items-center justify-between">
+                  <p className="text-xs text-slate-500">
+                    {t("common.view")} {formatNumber(rows.length)} {t("common.item_1")}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-cyan-300/80">
+                    <Boxes className="h-3.5 w-3.5" />
+                    {t("common.item_19128")}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-3">
-                <span className="text-sm text-slate-400">{t('common.inventory_2')}</span>
-                <span className="font-bold text-slate-100">{arNumber(expandedRow.movingTotal)}</span>
-              </div>
-            </div>
+            </TabsContent>
+          );
+        })}
+      </Tabs>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-cyan-300">{t('common.transaction')}</h4>
-              <div className="flex h-28 items-end gap-2 px-1 pb-1">
-                {movementBars.map((value, index) => (
-                  <div
-                    key={`${expandedRow.id}-bar-${index}`}
-                    className={`w-full rounded-t-md transition-all ${index === 2 || index === 5 ? "bg-cyan-300" : "bg-cyan-400/30"}`}
-                    style={{ height: `${clampPercent(value)}%` }}
-                  />
-                ))}
-              </div>
-            </div>
+      {/* Serial custody */}
+      <section className="space-y-6">
+        <div>
+          <h3 className="text-xl font-black text-slate-100 tracking-tight flex items-center gap-2">
+            <span className="flex size-9 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10">
+              <Smartphone className="h-4 w-4 text-cyan-400" />
+            </span>
+            {t("common.item_52592")}
+          </h3>
+          <p className="text-xs text-slate-400 mt-1.5 ms-11">{t("inventory.system_active_devices")}</p>
+        </div>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-cyan-300">{t('common.item_12787')}</h4>
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
-                {t('inventory.inventory_details')}
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      {/* v3 serial custody */}
-      <section className="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/40 p-5 shadow-sm backdrop-blur-xl sm:p-6">
         <Tabs value={activeSerialTab} onValueChange={(val) => setActiveSerialTab(val as "active" | "history")} className="w-full">
-          <div className="mb-5 flex flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h3 className="flex items-center gap-2 text-xl font-bold text-slate-100">
-                <span className="flex size-9 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10">
-                  <Smartphone className="h-4 w-4 text-cyan-400" />
-                </span>
-                {t('common.item_52592')}
-              </h3>
-              <p className="mt-1.5 text-xs text-slate-400">
-                {t('inventory.system_active_devices')}
-              </p>
-            </div>
-
-            <TabsList className="h-auto w-full justify-start rounded-xl border border-slate-700/70 bg-slate-950/50 p-1 md:w-auto">
-              <TabsTrigger
-                value="active"
-                className="gap-2 rounded-lg px-4 py-2 data-[state=active]:border data-[state=active]:border-emerald-400/30 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300"
-              >
-                {t('common.active_4')}
-                <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
-                  {arNumber(serializedItems.length)}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="history"
-                className="gap-2 rounded-lg px-4 py-2 data-[state=active]:border data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/15 data-[state=active]:text-cyan-300"
-              >
-                {t('common.log_1')}
-                <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-300">
-                  {arNumber(deliveryLogCount)}
-                </span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="bg-transparent border-b border-cyan-400/10 mb-6 rounded-none p-0 h-auto gap-8 w-full justify-start">
+            <TabsTrigger
+              value="active"
+              className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+            >
+              <Handshake className="h-4 w-4 shrink-0" />
+              {t("common.active_4")}
+              <span className="rounded-md bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-cyan-300" dir="ltr">
+                {formatNumber(serializedItems.length)}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+            >
+              <Truck className="h-4 w-4 shrink-0" />
+              {t("common.log_1")}
+              <span className="rounded-md bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-cyan-300" dir="ltr">
+                {formatNumber(deliveryLogCount)}
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="active" className="m-0">
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/30">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
-                    <TableHead className="text-right text-slate-400">{t('common.name_7')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.number_serial_3')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.sim')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.status_4')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.category')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.date_receive')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {serializedItems.length === 0 ? (
-                    <TableRow className="border-slate-800/60">
-                      <TableCell colSpan={6} className="py-14 text-center">
-                        <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                          <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-500">
-                            <Boxes className="h-5 w-5" />
-                          </div>
-                          <p className="font-semibold text-slate-300">{t('common.no_8')}</p>
-                          <p className="text-xs text-slate-500">{t('common.devices_log')}</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    serializedItems.map((item) => {
-                      let statusLabel = t('common.item_27159');
-                      let statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-
-                      let categoryLabel = t('common.devices_9');
-                      if (item.itemTypeCategory === "sim") {
-                        categoryLabel = t('common.sim_3');
-                      } else if (item.itemTypeCategory === "papers") {
-                        categoryLabel = t('common.paper_1');
-                      } else if (item.itemTypeCategory === "accessories") {
-                        categoryLabel = t('common.item_9545_1');
-                      }
-
-                      return (
-                        <TableRow key={item.id} className="group border-slate-800 transition-colors hover:bg-cyan-400/[0.04]">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
-                              <div>
-                                <p className="text-sm font-bold text-slate-200 transition-colors group-hover:text-cyan-300">{item.itemTypeName || t('common.item_17641')}</p>
-                                <p className="text-xs text-slate-500">{item.itemTypeCategory || "Serialized Item"}</p>
-                              </div>
+            <div className="rounded-xl overflow-hidden border border-cyan-400/10 shadow-2xl shadow-black/20 bg-slate-900/60">
+              <div className="overflow-x-auto">
+                <table className="w-full text-start border-collapse">
+                  <thead>
+                    <tr className="bg-cyan-400/5 border-b border-cyan-400/10">
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider">{t("common.name_7")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.number_serial_3")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.sim")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.status_4")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.category")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.date_receive")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-cyan-400/5">
+                    {serializedItems.length === 0 ? (
+                      <tr>
+                        <td className="px-6 py-14 text-center" colSpan={6}>
+                          <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                            <div className="flex size-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/5 text-slate-500">
+                              <Boxes className="h-5 w-5" />
                             </div>
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-xs text-slate-300">
-                            <span className="rounded-md border border-slate-800 bg-slate-900 px-2.5 py-1">{item.serialNumber}</span>
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-xs text-slate-300">
-                            {item.itemTypeCategory === "sim" ? item.carrierName || t('common.sim_1') : item.barcode || "-"}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge className={`${statusColor} px-2.5 py-0.5 text-xs font-bold`}>{statusLabel}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center text-xs text-slate-300">{categoryLabel}</TableCell>
-                          <TableCell className="text-center text-xs text-slate-400">{formatDateTime(item.createdAt)}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                            <p className="font-semibold text-slate-300">{t("common.no_8")}</p>
+                            <p className="text-xs text-slate-500">{t("common.devices_log")}</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      serializedItems.map((item) => {
+                        const statusLabel = t("common.item_27159");
+                        const statusColor = "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20";
+                        let categoryLabel = t("common.devices_9");
+                        if (item.itemTypeCategory === "sim") categoryLabel = t("common.sim_3");
+                        else if (item.itemTypeCategory === "papers") categoryLabel = t("common.paper_1");
+                        else if (item.itemTypeCategory === "accessories") categoryLabel = t("common.item_9545_1");
+
+                        return (
+                          <tr key={item.id} className="hover:bg-cyan-400/5 transition-colors group">
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-3">
+                                {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
+                                <div>
+                                  <p className="text-sm font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">
+                                    {item.itemTypeName || t("common.item_17641")}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500">{item.itemTypeCategory || "Serialized Item"}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5 text-center">
+                              <span className="font-mono text-xs text-cyan-300 bg-cyan-400/5 px-2 py-1 rounded">{item.serialNumber}</span>
+                            </td>
+                            <td className="px-6 py-5 text-center font-mono text-xs text-slate-300">
+                              {item.itemTypeCategory === "sim" ? item.carrierName || t("common.sim_1") : item.barcode || "-"}
+                            </td>
+                            <td className="px-6 py-5 text-center">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${statusColor}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5 text-center text-xs text-slate-300">{categoryLabel}</td>
+                            <td className="px-6 py-5 text-center">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-400 bg-slate-800/50 border border-slate-700/50">
+                                {formatDateTime(item.createdAt)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="bg-cyan-400/5 px-6 py-4 border-t border-cyan-400/10">
+                <p className="text-xs text-slate-500">
+                  {t("common.view")} {formatNumber(serializedItems.length)} {t("common.item_1")}
+                </p>
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="history" className="m-0">
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/30">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
-                    <TableHead className="text-right text-slate-400">{t('common.name_7')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.number_serial_3')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.number_device_1')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.status_4')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.type_warehouse')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.date_operations')}</TableHead>
-                    <TableHead className="text-center text-slate-400">{t('common.item_14214')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {deliveryLogCount === 0 ? (
-                    <TableRow className="border-slate-800/60">
-                      <TableCell colSpan={7} className="py-14 text-center">
-                        <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                          <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-500">
-                            <Truck className="h-5 w-5" />
+            <div className="rounded-xl overflow-hidden border border-cyan-400/10 shadow-2xl shadow-black/20 bg-slate-900/60">
+              <div className="overflow-x-auto">
+                <table className="w-full text-start border-collapse">
+                  <thead>
+                    <tr className="bg-cyan-400/5 border-b border-cyan-400/10">
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider">{t("common.name_7")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.number_serial_3")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.number_device_1")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.status_4")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.type_warehouse")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.date_operations")}</th>
+                      <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t("common.item_14214")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-cyan-400/5">
+                    {deliveryLogCount === 0 ? (
+                      <tr>
+                        <td className="px-6 py-14 text-center" colSpan={7}>
+                          <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                            <div className="flex size-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/5 text-slate-500">
+                              <Truck className="h-5 w-5" />
+                            </div>
+                            <p className="font-semibold text-slate-300">{t("common.no_9")}</p>
+                            <p className="text-xs text-slate-500">{t("common.requests_devices")}</p>
                           </div>
-                          <p className="font-semibold text-slate-300">{t('common.no_9')}</p>
-                          <p className="text-xs text-slate-500">{t('common.requests_devices')}</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <>
-                      {deliveredItems.map((item) => {
-                        let categoryLabel = t('common.devices_9');
-                        if (item.itemTypeCategory === "sim") categoryLabel = t('common.sim_3');
-                        else if (item.itemTypeCategory === "papers") categoryLabel = t('common.paper_1');
-                        else if (item.itemTypeCategory === "accessories") categoryLabel = t('common.item_9545_1');
+                        </td>
+                      </tr>
+                    ) : (
+                      <>
+                        {deliveredItems.map((item) => {
+                          let categoryLabel = t("common.devices_9");
+                          if (item.itemTypeCategory === "sim") categoryLabel = t("common.sim_3");
+                          else if (item.itemTypeCategory === "papers") categoryLabel = t("common.paper_1");
+                          else if (item.itemTypeCategory === "accessories") categoryLabel = t("common.item_9545_1");
 
-                        return (
-                          <TableRow key={`v3-${item.movementId || item.id}`} className="border-slate-800 hover:bg-cyan-400/5 transition-colors group">
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
-                                <div>
-                                  <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{item.itemTypeName || t('common.item_17641')}</p>
-                                  <p className="text-xs text-slate-500">
-                                    {item.referenceId ? t('common.request_1', { var_0: item.referenceId }) : categoryLabel}
-                                  </p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center font-mono text-xs text-slate-300">
-                              <span className="bg-slate-900 px-2.5 py-1 rounded border border-slate-800">{item.serialNumber}</span>
-                            </TableCell>
-                            <TableCell className="text-center text-slate-300 font-mono text-xs">
-                              {item.itemTypeCategory === "sim" ? item.carrierName || "-" : item.barcode || "-"}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-black text-xs px-2.5 py-0.5">
-                                {t('common.completed_2')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center text-slate-300 text-xs">{t('common.item_16253')}</TableCell>
-                            <TableCell className="text-center text-slate-400 text-xs">
-                              {formatDateTime(item.deliveredAt || item.createdAt)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px]">{t('common.item_9632')}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {legacyDeliveredDevices
-                        .filter((d) => !deliveredItems.some((i) => i.serialNumber === d.serialNumber))
-                        .map((device) => {
-                          const matchedType = itemTypes?.find((t) => t.id === device.itemTypeId);
-                          const itemName = matchedType?.nameAr || (device.terminalId ? t('common.device_3', { var_0: device.terminalId }) : t('common.device_1'));
                           return (
-                            <TableRow
-                              key={`legacy-${device.id}`}
-                              onClick={() => {
-                                setSelectedDevice(device);
-                                setActiveStepIndex(3);
-                                setAdminNotesText("");
-                              }}
-                              className="border-slate-800 hover:bg-cyan-400/5 transition-colors cursor-pointer group"
-                            >
-                              <TableCell>
+                            <tr key={`v3-${item.movementId || item.id}`} className="hover:bg-cyan-400/5 transition-colors group">
+                              <td className="px-6 py-5">
                                 <div className="flex items-center gap-3">
-                                  {renderProductImage(matchedType?.category || "other", matchedType?.nameAr || "", matchedType?.nameEn || "", device.simCardType)}
+                                  {renderProductImage(item.itemTypeCategory || "other", item.itemTypeName || "", "", item.carrierName)}
                                   <div>
-                                    <p className="font-bold text-slate-200 text-sm group-hover:text-cyan-300 transition-colors">{itemName}</p>
-                                    <p className="text-xs text-slate-500">{matchedType?.nameEn || "Legacy"}</p>
+                                    <p className="text-sm font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">
+                                      {item.itemTypeName || t("common.item_17641")}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500">
+                                      {item.referenceId ? t("common.request_1", { var_0: item.referenceId }) : categoryLabel}
+                                    </p>
                                   </div>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-xs text-slate-300">
-                                <span className="bg-slate-900 px-2.5 py-1 rounded border border-slate-800">{device.serialNumber}</span>
-                              </TableCell>
-                              <TableCell className="text-center text-slate-300 font-mono text-xs">{device.terminalId || "-"}</TableCell>
-                              <TableCell className="text-center">
-                                <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-black text-xs px-2.5 py-0.5">
-                                  {t('common.completed_2')}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center text-slate-300 text-xs">
-                                {device.inventoryType === "moving" ? t('common.item_24030') : t('common.item_14327')}
-                              </TableCell>
-                              <TableCell className="text-center text-slate-400 text-xs">
-                                {formatDateTime(device.updatedAt || device.createdAt)}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 text-xs font-bold">
-                                  {t('common.view_details_2')}
-                                </Button>
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                <span className="font-mono text-xs text-cyan-300 bg-cyan-400/5 px-2 py-1 rounded">{item.serialNumber}</span>
+                              </td>
+                              <td className="px-6 py-5 text-center font-mono text-xs text-slate-300">
+                                {item.itemTypeCategory === "sim" ? item.carrierName || "-" : item.barcode || "-"}
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                                  {t("common.completed_2")}
+                                </span>
+                              </td>
+                              <td className="px-6 py-5 text-center text-xs text-slate-300">{t("common.item_16253")}</td>
+                              <td className="px-6 py-5 text-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-400 bg-slate-800/50 border border-slate-700/50">
+                                  {formatDateTime(item.deliveredAt || item.createdAt)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-300 bg-slate-800 border border-slate-700">
+                                  {t("common.item_9632")}
+                                </span>
+                              </td>
+                            </tr>
                           );
                         })}
-                    </>
-                  )}
-                </TableBody>
-              </Table>
+                        {legacyDeliveredDevices
+                          .filter((d) => !deliveredItems.some((i) => i.serialNumber === d.serialNumber))
+                          .map((device) => {
+                            const matchedType = itemTypes?.find((type) => type.id === device.itemTypeId);
+                            const itemName =
+                              matchedType?.nameAr ||
+                              (device.terminalId ? t("common.device_3", { var_0: device.terminalId }) : t("common.device_1"));
+                            return (
+                              <tr
+                                key={`legacy-${device.id}`}
+                                onClick={() => {
+                                  setSelectedDevice(device);
+                                  setActiveStepIndex(3);
+                                  setAdminNotesText("");
+                                }}
+                                className="hover:bg-cyan-400/5 transition-colors cursor-pointer group"
+                              >
+                                <td className="px-6 py-5">
+                                  <div className="flex items-center gap-3">
+                                    {renderProductImage(
+                                      matchedType?.category || "other",
+                                      matchedType?.nameAr || "",
+                                      matchedType?.nameEn || "",
+                                      device.simCardType
+                                    )}
+                                    <div>
+                                      <p className="text-sm font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">{itemName}</p>
+                                      <p className="text-[10px] text-slate-500">{matchedType?.nameEn || "Legacy"}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className="font-mono text-xs text-cyan-300 bg-cyan-400/5 px-2 py-1 rounded">{device.serialNumber}</span>
+                                </td>
+                                <td className="px-6 py-5 text-center font-mono text-xs text-slate-300">{device.terminalId || "-"}</td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                                    {t("common.completed_2")}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5 text-center text-xs text-slate-300">
+                                  {device.inventoryType === "moving" ? t("common.item_24030") : t("common.item_14327")}
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-400 bg-slate-800/50 border border-slate-700/50">
+                                    {formatDateTime(device.updatedAt || device.createdAt)}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 text-xs font-bold">
+                                    {t("common.view_details_2")}
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="bg-cyan-400/5 px-6 py-4 border-t border-cyan-400/10">
+                <p className="text-xs text-slate-500">
+                  {t("common.view")} {formatNumber(deliveryLogCount)} {t("common.item_1")}
+                </p>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
       </section>
 
-      <footer className="grid grid-cols-1 gap-4 pb-2 md:grid-cols-2">
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-400/20 bg-slate-900/45 p-5 backdrop-blur-xl">
-          <div>
-            <h5 className="mb-1 text-sm text-slate-400">{t('common.inventory_3')}</h5>
-            <p className="text-2xl font-black text-slate-100">{arNumber(Number(inventoryAccuracy.toFixed(1)))}%</p>
-          </div>
-          <div className="flex size-14 items-center justify-center rounded-2xl border-2 border-emerald-400/60 text-xs font-bold text-emerald-300">
-            {inventoryAccuracy >= 85 ? t('common.item_7959') : inventoryAccuracy >= 60 ? t('common.item_6350') : t('common.item_9546')}
+      {/* Footer strips — item page style */}
+      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="rounded-xl p-4 flex items-center justify-between border border-cyan-400/10 bg-slate-900/60">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded bg-cyan-400/10 text-cyan-300">
+              <RefreshCw className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400">{t("common.inventory_3")}</p>
+              <p className="text-sm font-black text-slate-100 tabular-nums" dir="ltr">
+                {formatNumber(Number(inventoryAccuracy.toFixed(1)))}%
+                <span className="ms-2 text-[10px] font-bold text-emerald-400">
+                  {inventoryAccuracy >= 85
+                    ? t("common.item_7959")
+                    : inventoryAccuracy >= 60
+                      ? t("common.item_6350")
+                      : t("common.item_9546")}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center justify-between rounded-2xl border border-amber-400/20 bg-slate-900/45 p-5 backdrop-blur-xl">
-          <div>
-            <h5 className="mb-1 text-sm text-slate-400">{t('common.inventory_4')}</h5>
-            <p className="text-2xl font-black text-amber-300">{arNumber(lowStockAlertsCount)}{t('common.item_7942')}</p>
+        <div className="rounded-xl p-4 flex items-center justify-between border border-orange-500/20 bg-slate-900/60">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded bg-orange-500/10 text-orange-400">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400">{t("common.inventory_4")}</p>
+              <p className="text-sm font-black text-amber-300 tabular-nums" dir="ltr">
+                {formatNumber(lowStockAlertsCount)}
+                {t("common.item_7942")}
+              </p>
+            </div>
           </div>
-          <Button variant="outline" className="border-amber-400/30 text-amber-200 hover:bg-amber-500/10">
-            {t('common.review')}
-          </Button>
+          <button type="button" className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">
+            {t("common.review")}
+          </button>
         </div>
-      </footer>
+      </div>
 
       {/* Dialog modal for Scanned Device Details */}
       <Dialog open={!!selectedDevice} onOpenChange={(open) => !open && setSelectedDevice(null)}>

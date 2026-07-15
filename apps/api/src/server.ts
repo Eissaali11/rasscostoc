@@ -7,7 +7,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "@core/utils/vite";
 import { errorHandler } from "@core/errors/errorHandler";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { initializeEventSubscribers } from "@core/bootstrap/events";
+import { initializeEventSubscribers } from "./composition/events";
 import { readinessManager } from "@core/telemetry/readiness";
 import { configService } from "@core/config/config.service";
 import { featureFlagService } from "@core/services/feature-flags.service";
@@ -35,6 +35,10 @@ async function startServer() {
     const { outboxWorker } = await import("@core/outbox/outbox.worker");
     outboxWorker.start();
     readinessManager.setOutboxWorkerStarted(true);
+
+    // Start Asynchronous Job Worker
+    const { jobsWorker } = await import("@core/jobs/jobs.worker");
+    jobsWorker.start();
 
     // 2. Programmatically apply Drizzle migrations on startup
     // migrations/ lives at monorepo root, two levels above apps/api/src

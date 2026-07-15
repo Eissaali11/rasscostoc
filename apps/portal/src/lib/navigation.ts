@@ -180,6 +180,13 @@ export const navigationRegistry: NavigationItem[] = [
     labelKey: "nav.item-types",
     icon: Shapes,
     roles: [ROLES.ADMIN]
+  },
+  {
+    id: "ai-engine-settings",
+    href: "/ai-engine/settings",
+    labelKey: "nav.ai-engine-settings",
+    icon: BrainCircuit,
+    roles: [ROLES.ADMIN]
   }
 ];
 

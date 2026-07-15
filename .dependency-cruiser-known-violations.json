@@ -212,21 +212,7 @@
       "name": "controller-should-not-depend-on-repository-or-drizzle"
     }
   },
-  {
-    "type": "dependency",
-    "from": "apps/api/src/modules/courier/domain/repositories/courier.repository.interface.ts",
-    "to": "apps/api/src/modules/courier/application/courier.service.ts",
-    "unresolvedTo": "../../application/courier.service",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "domain-should-not-depend-on-application-presentation-infrastructure"
-    }
-  },
+
   {
     "type": "dependency",
     "from": "apps/api/src/modules/inventory/domain/custody-engine.ts",

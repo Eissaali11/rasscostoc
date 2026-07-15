@@ -1,0 +1,21 @@
+{
+  "tCalls": 4513,
+  "hardUI": 8,
+  "hardSamples": [
+    "apps/portal/src/features/product-details/lifecycle.helpers.ts:43: if (warehouseName.includes(\"رئيس\") || warehouseName.includes(\"main\")) {",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:25: rollPaper: { name: \"Roll Paper\", nameAr: \"ورق\" },",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:26: stickers: { name: \"Stickers\", nameAr: \"ملصقات\" },",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:27: newBatteries: { name: \"Batteries\", nameAr: \"بطاريات\" },",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:28: mobilySim: { name: \"Mobily SIM\", nameAr: \"موبايلي\" },",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:30: zainSim: { name: \"Zain SIM\", nameAr: \"زين\" },",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:31: lebaraSim: { name: \"Lebara SIM\", nameAr: \"ليبارا\" },",
+    "apps/portal/src/features/warehouse-details/transfer-helpers.ts:32: lebara: { name: \"Lebara SIM\", nameAr: \"ليبارا\" },"
+  ],
+  "shell": {
+    "titleKey": true,
+    "changeLanguage": true,
+    "dirDynamic": true,
+    "labelKey": true,
+    "languageToggle": true
+  }
+}

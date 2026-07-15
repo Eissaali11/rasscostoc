@@ -1,6 +1,6 @@
 {
-  "name": "StockPro - نظام إدارة المخزون",
-  "short_name": "StockPro",
+  "name": "RASSCO",
+  "short_name": "RASSCO",
   "description": "نظام شامل لإدارة مخزون المندوبين مع تتبع مزدوج للمخزون (الثابت والمتحرك) وإدارة المستودعات",
   "lang": "ar",
   "dir": "rtl",

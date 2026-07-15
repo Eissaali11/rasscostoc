@@ -45,7 +45,8 @@
     "accounting": "Accounting & Finance",
     "logs": "System Audit Logs",
     "backup": "Backup Management",
-    "item-types": "Item Types Management"
+    "item-types": "Item Types Management",
+    "ai-engine-settings": "AI Engine Settings"
   },
   "titles": {
     "home": "Home",
@@ -90,12 +91,31 @@
     "courier_audit": "Audit Log",
     "courier_settings": "Settings",
     "courier_observability": "System Observability",
+    "ai_review": "AI Review Workspace",
     "admin": "Users & Regions",
     "users": "User Management",
     "fixed_inventory": "Technicians Fixed Inventory",
     "backup": "Backup Management",
     "item_types": "Item Types",
-    "item_type_details": "Item Type Details"
+    "item_type_details": "Item Type Details",
+    "ai_engine_settings": "AI Connection Settings"
+  },
+  "ai_engine_settings": {
+    "subtitle": "Add an API key and select provider/model for scanned PDF extraction",
+    "enable": "Enable Vision Engine",
+    "enable_hint": "When enabled, the system uses the saved key and model (local only until production approval)",
+    "provider": "AI Provider",
+    "model": "Model",
+    "api_key": "API Key",
+    "api_key_placeholder": "Paste API key here",
+    "api_key_keep": "Leave empty to keep the current key",
+    "current_key": "Saved key",
+    "timeout": "Request timeout (ms)",
+    "last_updated": "Last updated",
+    "save": "Save settings",
+    "clear_key": "Clear key",
+    "saved": "AI engine settings saved",
+    "security_note": "The key is encrypted on the server and never shown in full in the UI. Do not store production keys in unapproved environments."
   },
   "messages": {
     "success": "Operation completed successfully",

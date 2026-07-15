@@ -1,0 +1,303 @@
+{
+  "scope": "LOCAL SLICE 1 — single device only",
+  "startedAt": "2026-07-14T10:21:10.077Z",
+  "finalResult": "PASS",
+  "steps": {
+    "server": {
+      "ok": true,
+      "health": 200
+    },
+    "login": {
+      "ok": true,
+      "role": "admin",
+      "username": "admin"
+    },
+    "createdRequest": {
+      "id": 31737,
+      "tid": "TV24470477",
+      "terminal_id": "TERM470477",
+      "installation_status": null
+    },
+    "before": {
+      "requestId": 31737,
+      "requestStatus": null,
+      "technicianName": "عيسى القحطاني1",
+      "technicianUsername": "eissa",
+      "technicianCode": null,
+      "techOwnerId": "a7a0f8fb-a383-4677-88bb-b1e6628937d9",
+      "inventoryCount": 43912,
+      "sn": "449623603",
+      "sim": null,
+      "tid": "TV24470477",
+      "deviceCustody": {
+        "status": "IN_TRANSIT_CUSTODY",
+        "current_owner_id": "a7a0f8fb-a383-4677-88bb-b1e6628937d9"
+      },
+      "simCustody": null
+    },
+    "upload": {
+      "status": 200,
+      "ok": true,
+      "pdfId": 11,
+      "extraction_source": "ocr",
+      "devices": [
+        {
+          "device_index": 1,
+          "sn": "449623603",
+          "sim_serial": null,
+          "tid": "TV24470477",
+          "merchant": "Local Validation Merchant",
+          "confidence": 95,
+          "match": {
+            "technician_name": null,
+            "technician_code": null,
+            "status": "unknown",
+            "confidence": null
+          }
+        }
+      ],
+      "overallConfidence": 79,
+      "bodyPreview": {
+        "id": 11,
+        "fields": {
+          "tid": {
+            "value": "TV24470477",
+            "confidence": 95,
+            "source": "text_layer"
+          },
+          "sn": {
+            "value": "449623603",
+            "confidence": 95,
+            "source": "text_layer"
+          },
+          "sim_serial": {
+            "value": null,
+            "confidence": 0,
+            "source": "none"
+          },
+          "date": {
+            "value": "07/14/2026",
+            "confidence": 95,
+            "source": "text_layer"
+          },
+          "time": {
+            "value": "01:00 PM",
+            "confidence": 95,
+            "source": "text_layer"
+          },
+          "retailer_name": {
+            "value": "Local Validation Merchant",
+            "confidence": 95,
+            "source": "text_layer"
+          },
+          "devices": [
+            {
+              "device_index": 1,
+              "sn": "449623603",
+              "sim_serial": null,
+              "tid": "TV24470477",
+              "merchant": "Local Validation Merchant",
+              "confidence": 95,
+              "match": {
+                "technician_name": null,
+                "technician_code": null,
+                "status": "unknown",
+                "confidence": null
+              }
+            }
+          ],
+          "extraction_source": "ocr"
+        },
+        "devices": [
+          {
+            "device_index": 1,
+            "sn": "449623603",
+            "sim_serial": null,
+            "tid": "TV24470477",
+            "merchant": "Local Validation Merchant",
+            "confidence": 95,
+            "match": {
+              "technician_name": null,
+              "technician_code": null,
+              "status": "unknown",
+              "confidence": null
+            }
+          }
+        ],
+        "overallConfidence": 79,
+        "status": "pending",
+        "extraction_source": "ocr"
+      }
+    },
+    "reviewGet": {
+      "status": 200,
+      "deviceCardCount": 1,
+      "devices": [
+        {
+          "device_index": 1,
+          "sn": "449623603",
+          "sim_serial": null,
+          "tid": "TV24470477",
+          "merchant": "Local Validation Merchant",
+          "confidence": 95,
+          "match": {
+            "technician_name": null,
+            "technician_code": null,
+            "status": "unknown",
+            "confidence": null
+          }
+        }
+      ],
+      "extractedSn": "449623603",
+      "extractedSim": null,
+      "extractedTid": "TV24470477",
+      "duplicateCards": false,
+      "fieldsEditableAssumption": true
+    },
+    "serialLookup": {
+      "status": 200,
+      "found": true,
+      "technician": {
+        "id": "a7a0f8fb-a383-4677-88bb-b1e6628937d9",
+        "fullName": "عيسى القحطاني1",
+        "username": "eissa",
+        "technicianCode": null
+      },
+      "custodyStatus": "IN_TRANSIT_CUSTODY",
+      "matchResult": "matched"
+    },
+    "complete": {
+      "status": 200,
+      "ok": true,
+      "body": {
+        "id": 31737,
+        "date": null,
+        "installationType": null,
+        "sim": null,
+        "tid": "TV24470477",
+        "otp": null,
+        "ticketingHolouly": null,
+        "incidentNumber": null,
+        "pinCode": null,
+        "trsm": null,
+        "terminalId": "TERM470477",
+        "simSn": null,
+        "idData": null,
+        "vendorType": null,
+        "city": "RIYADH",
+        "cityTec": null,
+        "customerName": "Slice1 Local Validation",
+        "retailerName": null,
+        "addressAr": null,
+        "addressEn": null,
+        "mobile": null,
+        "mobile2": null,
+        "tecName": "عيسى القحطاني1",
+        "createdBy": "e4fbd48e-8d5c-4ddc-ba9b-8556c4559d7f",
+        "createdAt": "2026-07-14T10:21:10.480Z",
+        "updatedAt": "2026-07-14T10:21:10.480Z",
+        "version": 1,
+        "created_by_name": "مدير النظام",
+        "execution": {
+          "id": 10117,
+          "requestId": 31737,
+          "requestPriorityLevel": null,
+          "pushBack": null,
+          "installationStatus": "Installation Completed - NL",
+          "paperRoll": "Yes",
+          "time": "13:00",
+          "deliveryDate": "2026-07-14",
+          "responseDate": null,
+          "sn": "449623603",
+          "simSerial": null,
+          "simType": null,
+          "customerNotes": null,
+          "extraField1": null,
+          "extraField2": null,
+          "responseReasonCode": null,
+          "salesTechnician": "عيسى القحطاني1",
+          "technicianCode": "eissa",
+          "extractionConfidence": null,
+          "enteredBy": "e4fbd48e-8d5c-4ddc-ba9b-8556c4559d7f",
+          "enteredAt": "2026-07-14T10:21:10.577Z",
+          "updatedAt": "2026-07-14T10:21:10.577Z",
+          "version": 1
+        },
+        "items": [
+          {
+            "id": 4759,
+            "requestId": 31737,
+            "itemType": "POS",
+            "inventoryItemId": null,
+            "serialNumber": "449623603",
+            "simSerial": null,
+            "quantity": 1,
+            "status": "RECEIVED",
+            "scannedAt": "2026-07-14T10:21:10.575Z",
+            "receivedAt": "2026-07-14T10:21:10.575Z",
+            "installedAt": null,
+            "deliveredAt": null,
+            "technicianId": "a7a0f8fb-a383-4677-88bb-b1e6628937d9",
+            "createdAt": "2026-07-14T13:21:10.576Z",
+            "updatedAt": "2026-07-14T13:21:10.576Z"
+          }
+        ],
+        "pdf": {
+          "id": 11,
+          "status": "applied",
+          "requestId": 31737
+        }
+      }
+    },
+    "completeIdempotency": {
+      "status": 400,
+      "ok": false,
+      "body": {
+        "success": false,
+        "message": "هذا التقرير مُطبَّق بالفعل"
+      },
+      "stoppedIfDuplicate": true
+    },
+    "after": {
+      "inventoryCount": 43911,
+      "deviceCustody": {
+        "status": "DELIVERED",
+        "current_owner_id": null
+      },
+      "simCustody": null,
+      "execution": {
+        "request_id": 31737,
+        "sn": "449623603",
+        "sim_serial": null,
+        "installation_status": "Installation Completed - NL",
+        "sales_technician": "عيسى القحطاني1",
+        "technician_code": "eissa",
+        "version": 1
+      },
+      "pdfReport": {
+        "id": 11,
+        "status": "applied",
+        "request_id": 31737
+      },
+      "inventoryDelta": 1
+    }
+  },
+  "browserErrors": "N/A (API-driven validation)",
+  "serverErrors": [],
+  "endedAt": "2026-07-14T10:21:10.899Z",
+  "summary": {
+    "pdfId": 11,
+    "extracted": {
+      "sn": "449623603",
+      "sim": null,
+      "tid": "TV24470477"
+    },
+    "technicianMatched": "عيسى القحطاني1",
+    "matchResult": "matched",
+    "completionApiStatus": 200,
+    "executionCreated": true,
+    "custodyBefore": 43912,
+    "custodyAfter": 43911,
+    "deviceStatusAfter": "DELIVERED"
+  }
+}

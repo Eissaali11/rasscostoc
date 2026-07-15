@@ -685,6 +685,7 @@ export class MemStorage implements IStorage {
       totalMobilySim: allInventories.reduce((sum, inv) => sum + inv.mobilySimBoxes + inv.mobilySimUnits, 0),
       totalStcSim: allInventories.reduce((sum, inv) => sum + inv.stcSimBoxes + inv.stcSimUnits, 0),
       totalZainSim: allInventories.reduce((sum, inv) => sum + inv.zainSimBoxes + inv.zainSimUnits, 0),
+      totalLebaraSim: allInventories.reduce((sum, inv) => sum + inv.lebaraBoxes + inv.lebaraUnits, 0),
       techniciansWithCriticalStock: 0,
       techniciansWithWarningStock: 0,
       techniciansWithGoodStock: allInventories.length,

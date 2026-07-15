@@ -2,11 +2,12 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "@core/errors/errorHandler";
 import { CourierService } from "../../application/courier.service";
 import { ValidationError, NotFoundError } from "@core/errors/AppError";
+import { ensureDevicesInExtractedJson } from "../../application/ai-engine/courier-pdf-extraction.adapter";
 import fs from "fs";
 import path from "path";
 
 export class CourierController {
-  private readonly service = new CourierService();
+  constructor(private readonly service: CourierService) {}
 
   getRequests = asyncHandler(async (req: Request, res: Response) => {
     const filters = {
@@ -170,6 +171,13 @@ export class CourierController {
     res.json(result);
   });
 
+  reextractPdf = asyncHandler(async (req: Request, res: Response) => {
+    const pdfId = Number(req.params.id);
+    if (isNaN(pdfId)) throw new ValidationError("Invalid PDF ID");
+    const result = await this.service.reextractPdfReport(pdfId);
+    res.json(result);
+  });
+
   applyPdf = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
     const pdfId = Number(req.params.id);
@@ -184,6 +192,34 @@ export class CourierController {
       req.body.fields,
       req.body.confidence,
       user.id
+    );
+
+    res.json(result);
+  });
+
+  /** PR-006A-9 — Complete via saveExecution + CompletionGuard */
+  completePdf = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const pdfId = Number(req.params.id);
+    const requestId = Number(req.body.request_id);
+
+    if (isNaN(pdfId)) throw new ValidationError("Invalid PDF ID");
+    if (isNaN(requestId)) throw new ValidationError("Invalid request ID");
+    if (!Array.isArray(req.body.devices)) {
+      throw new ValidationError("devices array is required");
+    }
+
+    const result = await this.service.completePdfReport(
+      pdfId,
+      requestId,
+      {
+        devices: req.body.devices,
+        deliveryDate: req.body.deliveryDate ?? req.body.delivery_date ?? null,
+        time: req.body.time ?? null,
+        paperRoll: req.body.paperRoll ?? req.body.paper_roll ?? "Yes",
+        version: req.body.version,
+      },
+      user.id,
     );
 
     res.json(result);
@@ -214,7 +250,9 @@ export class CourierController {
 
     res.json({
       ...result,
-      extractedJson: JSON.parse(result.extractedJson || "{}")
+      extractedJson: ensureDevicesInExtractedJson(
+        JSON.parse(result.extractedJson || "{}"),
+      ),
     });
   });
 
@@ -238,6 +276,7 @@ export class CourierController {
   });
 
   exportExcel = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
     const filters = {
       q: req.query.q as string,
       city: req.query.city as string,
@@ -250,6 +289,22 @@ export class CourierController {
       dateFrom: req.query.dateFrom as string,
       dateTo: req.query.dateTo as string
     };
+
+    const count = await this.service.countRequests(filters);
+
+    if (count > 10000) {
+      const { jobsRepository } = await import("@core/jobs/jobs.repository");
+      const jobId = await jobsRepository.createJob({
+        type: "EXPORT_EXCEL",
+        ownerId: user.id,
+        payload: JSON.stringify({ filters }),
+      });
+      return res.status(202).json({
+        async: true,
+        jobId,
+        message: "تم بدء عملية تصدير البيانات في الخلفية نظراً لكبر حجم البيانات المطلوب تصديرها. يمكنك تتبع حالة العملية وتنزيل الملف عند اكتمالها.",
+      });
+    }
 
     const buffer = await this.service.exportRequests(filters);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

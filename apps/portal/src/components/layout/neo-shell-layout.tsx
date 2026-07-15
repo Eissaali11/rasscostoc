@@ -29,11 +29,6 @@ interface InventoryRequest {
   status: "pending" | "approved" | "rejected";
 }
 
-interface ReceivedDeviceRequest {
-  id: string;
-  status: "pending" | "approved" | "rejected";
-}
-
 interface WarehouseTransfer {
   id: string;
   requestId?: string;
@@ -74,13 +69,18 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
   const isAdminOrSupervisor = user?.role === "admin" || user?.role === "supervisor";
   const isTechnician = user?.role === "technician";
 
-  const { data: requests = [] } = useQuery<InventoryRequest[]>({
-    queryKey: user?.role === "admin" ? ["/api/inventory-requests"] : ["/api/supervisor/inventory-requests"],
+  type PendingCountResponse = { count: number };
+
+  const { data: pendingRequestsCount } = useQuery<PendingCountResponse>({
+    queryKey:
+      user?.role === "admin"
+        ? ["/api/inventory-requests/pending/count"]
+        : ["/api/supervisor/inventory-requests/pending/count"],
     enabled: isAdminOrSupervisor,
   });
 
-  const { data: receivedDevices = [] } = useQuery<ReceivedDeviceRequest[]>({
-    queryKey: ["/api/received-devices"],
+  const { data: pendingReceivedDevicesCount } = useQuery<PendingCountResponse>({
+    queryKey: ["/api/received-devices/pending/count"],
     enabled: isAdminOrSupervisor,
   });
 
@@ -109,8 +109,7 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
   }, [isTechnician, transfers]);
 
   const pendingNotificationsCount = isAdminOrSupervisor
-    ? requests.filter((request) => request.status === "pending").length +
-      receivedDevices.filter((device) => device.status === "pending").length
+    ? (pendingRequestsCount?.count || 0) + (pendingReceivedDevicesCount?.count || 0)
     : groupedTransfers.filter((group) => group.status === "pending").length +
       myInventoryRequests.filter((request) => request.status === "pending").length;
 
@@ -203,15 +202,16 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
             className="flex items-center gap-3 min-w-0 group"
             aria-label="RASSCO"
           >
-            <div className="h-12 w-12 rounded-2xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.25)] flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-white/50 p-1.5">
+            <div className="h-12 w-12 rounded-[18px] bg-white/95 shadow-[0_10px_24px_rgba(0,0,0,0.28)] flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-white/40 p-1">
               <img
                 src={logoIcon}
-                alt=""
+                alt="RASSCO"
                 className="h-full w-full object-contain"
+                draggable={false}
               />
             </div>
             <div className="min-w-0 flex flex-col leading-tight">
-              <span className="text-[17px] font-extrabold tracking-[0.12em] text-white group-hover:text-[#18B2B0] transition-colors">
+              <span className="text-[17px] font-extrabold tracking-[0.14em] text-white group-hover:text-[#18B2B0] transition-colors">
                 RASSCO
               </span>
               <span className="text-[11px] text-white/65 truncate mt-0.5">
@@ -236,7 +236,7 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-white">{user?.fullName || t("user")}</span>
               <span className="text-xs text-white/65">
-                {getRoleLabel(user?.role || "technician", language)}
+                {getRoleLabel(user?.role || "technician")}
               </span>
             </div>
           </div>
@@ -353,13 +353,14 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
 
           <Link
             href="/home"
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-20"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-20 rounded-2xl px-3 py-1.5 hover:bg-[rgba(24,178,176,0.08)] transition-colors"
             aria-label="RASSCO Home"
           >
             <img
               src={logoHorizontal}
               alt="RASSCO"
-              className="h-9 sm:h-10 w-auto max-w-[150px] sm:max-w-[168px] object-contain"
+              className="h-10 sm:h-11 w-auto max-w-[168px] sm:max-w-[200px] object-contain drop-shadow-[0_2px_8px_rgba(15,23,42,0.08)]"
+              draggable={false}
             />
           </Link>
 

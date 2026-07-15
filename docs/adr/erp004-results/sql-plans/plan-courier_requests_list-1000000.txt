@@ -1,0 +1,54 @@
+Limit  (cost=12375.57..12378.48 rows=25 width=650) (actual time=284.507..293.106 rows=25.00 loops=1)
+  Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+  Buffers: shared hit=5574 read=4084 written=175
+  ->  Gather Merge  (cost=12375.57..21296.44 rows=76596 width=650) (actual time=284.491..293.087 rows=25.00 loops=1)
+        Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=5574 read=4084 written=175
+        ->  Sort  (cost=11375.55..11455.33 rows=31915 width=650) (actual time=239.335..239.500 rows=25.00 loops=3)
+              Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+              Sort Key: cr.created_at DESC
+              Sort Method: top-N heapsort  Memory: 34kB
+              Buffers: shared hit=5574 read=4084 written=175
+              Worker 0:  actual time=218.046..218.049 rows=25.00 loops=1
+                Sort Method: top-N heapsort  Memory: 35kB
+                Buffers: shared hit=1150 read=1301 written=57
+              Worker 1:  actual time=220.416..220.420 rows=25.00 loops=1
+                Sort Method: top-N heapsort  Memory: 34kB
+                Buffers: shared hit=1207 read=1367 written=73
+              ->  Parallel Hash Left Join  (cost=3689.00..10474.93 rows=31915 width=650) (actual time=41.382..167.941 rows=100000.00 loops=3)
+                    Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+                    Inner Unique: true
+                    Hash Cond: (cr.id = ce.request_id)
+                    Buffers: shared hit=5562 read=4082 written=175
+                    Worker 0:  actual time=18.580..147.861 rows=100768.00 loops=1
+                      Buffers: shared hit=1143 read=1301 written=57
+                    Worker 1:  actual time=21.835..148.075 rows=100673.00 loops=1
+                      Buffers: shared hit=1202 read=1365 written=73
+                    ->  Parallel Seq Scan on public.courier_requests cr  (cost=0.00..6702.15 rows=31915 width=641) (actual time=0.712..66.089 rows=100000.00 loops=3)
+                          Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version
+                          Buffers: shared hit=2301 read=4082 written=175
+                          Worker 0:  actual time=0.808..68.311 rows=100768.00 loops=1
+                            Buffers: shared hit=843 read=1301 written=57
+                          Worker 1:  actual time=1.211..66.666 rows=100673.00 loops=1
+                            Buffers: shared hit=777 read=1365 written=73
+                    ->  Parallel Hash  (cost=3451.22..3451.22 rows=19022 width=13) (actual time=40.470..40.471 rows=50000.00 loops=3)
+                          Output: ce.installation_status, ce.request_id
+                          Buckets: 262144 (originally 65536)  Batches: 1 (originally 1)  Memory Usage: 10688kB
+                          Buffers: shared hit=3261
+                          Worker 0:  actual time=17.710..17.711 rows=13800.00 loops=1
+                            Buffers: shared hit=300
+                          Worker 1:  actual time=20.597..20.598 rows=19544.00 loops=1
+                            Buffers: shared hit=425
+                          ->  Parallel Seq Scan on public.courier_executions ce  (cost=0.00..3451.22 rows=19022 width=13) (actual time=0.021..14.817 rows=50000.00 loops=3)
+                                Output: ce.installation_status, ce.request_id
+                                Buffers: shared hit=3261
+                                Worker 0:  actual time=0.020..6.404 rows=13800.00 loops=1
+                                  Buffers: shared hit=300
+                                Worker 1:  actual time=0.025..7.512 rows=19544.00 loops=1
+                                  Buffers: shared hit=425
+Planning:
+  Buffers: shared hit=17 read=7 dirtied=1 written=7
+Planning Time: 1.382 ms
+Execution Time: 293.187 ms

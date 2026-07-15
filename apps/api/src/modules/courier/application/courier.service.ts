@@ -1,30 +1,15 @@
-import { db } from "@server/core/config/db";
-import { drizzleCourierRepository } from "../infrastructure/repositories/drizzle-courier.repository";
-import {
-  courierRequests,
-  courierExecutions,
-  courierPdfReports,
-  courierCities,
-  courierSimTypes,
-  courierVendorTypes,
-  courierFailureReasons,
-  courierAuditLogs,
-  users,
-  items,
-  itemTypes,
-  courierRequestItems,
-  inventoryTransactions,
-  itemHistoryLogs,
-  type CourierRequest,
-  type CourierExecution,
-  type CourierPdfReport,
-  type CourierRequestItem,
-  courierExecutionAttempts,
-  type CourierExecutionAttempt
-} from "@shared/schema";
-import { eq, and, or, sql, desc, count, inArray } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
+import type { ListFilters, CourierRequestItem, CourierExecutionAttempt } from "../domain/courier.types";
 import { devicesContainer } from "@server/composition/devices.container";
 import { extractFromPdf } from "./ocr.helper";
+import {
+  buildCompleteExecutionPayload,
+  buildExtractedPayloadFromOcr,
+  ensureDevicesInExtractedJson,
+  runAiEngineExtraction,
+  type CompleteDeviceInput,
+} from "./ai-engine/courier-pdf-extraction.adapter";
 import { parseRawDataWorkbook, buildExportWorkbook } from "./excel.helper";
 import { CompletionGuard, isCompletedStatus } from "./guards/CompletionGuard";
 import { normalizeSerialList } from "./guards/guard.types";
@@ -34,6 +19,12 @@ import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
 import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
+import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
+import type { ICourierExecutionsRepository } from "../domain/repositories/ICourierExecutionsRepository";
+import type { ICourierPdfRepository } from "../domain/repositories/ICourierPdfRepository";
+import type { ICourierDashboardReadRepository } from "../domain/repositories/ICourierDashboardReadRepository";
+import type { ICourierInventoryPort } from "../domain/repositories/ICourierInventoryPort";
+import type { ICourierUnitOfWork } from "../domain/repositories/ICourierUnitOfWork";
 
 const ACTIVE_CUSTODY_STATUSES = [
   "IN_TRANSIT_CUSTODY",
@@ -41,24 +32,19 @@ const ACTIVE_CUSTODY_STATUSES = [
   "IN_TRANSIT",
 ] as const;
 
-export interface ListFilters {
-  q?: string;
-  city?: string;
-  technician?: string;
-  status?: string;
-  reason?: string;
-  simType?: string;
-  vendor?: string;
-  priority?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  page?: number;
-  pageSize?: number;
-  /** When false, skip COUNT(*) (total ≈ page row count). Default true. */
-  includeTotal?: boolean;
-}
+// Re-export for backwards compatibility with any existing consumers
+export type { ListFilters } from "../domain/courier.types";
 
 export class CourierService {
+  constructor(
+    private readonly uow: ICourierUnitOfWork,
+    private readonly requestsRepo: ICourierRequestsRepository,
+    private readonly executionsRepo: ICourierExecutionsRepository,
+    private readonly pdfRepo: ICourierPdfRepository,
+    private readonly dashboardRepo: ICourierDashboardReadRepository,
+    private readonly inventoryPort: ICourierInventoryPort
+  ) {}
+
   /**
    * Keep only columns that may be written from the portal/Flutter execution form.
    * Strips id/requestId/enteredAt/updatedAt/version and any unknown keys.
@@ -97,22 +83,22 @@ export class CourierService {
     meta?: { sqlMs: number; countMs: number; rowsMs: number };
   }> {
     const t0 = Date.now();
-    const result = await drizzleCourierRepository.listRequests(filters);
+    const result = await this.requestsRepo.listRequests(filters);
     metrics.recordValue("courier_list_api_ms", Date.now() - t0);
     return result;
   }
 
   async getRequestById(id: number): Promise<any | null> {
-    return drizzleCourierRepository.findRequestWithDetails(id);
+    return this.requestsRepo.findRequestWithDetails(id);
   }
 
   async createRequest(data: any, createdBy: string): Promise<any> {
-    const newReq = await drizzleCourierRepository.insertRequest({
+    const newReq = await this.requestsRepo.insertRequest({
       ...data,
       createdBy
     });
 
-    await drizzleCourierRepository.insertAuditLog({
+    await this.dashboardRepo.insertAuditLog({
       tableName: "requests",
       recordId: newReq.id,
       action: "create",
@@ -125,17 +111,17 @@ export class CourierService {
   async updateRequest(id: number, data: any, updatedBy: string): Promise<any> {
     const { version, ...updateFields } = data;
 
-    const updatedReq = await drizzleCourierRepository.updateRequest(id, updateFields, version);
+    const updatedReq = await this.requestsRepo.updateRequest(id, updateFields, version);
 
     if (!updatedReq) {
-      const exists = await drizzleCourierRepository.findRequestById(id);
+      const exists = await this.requestsRepo.findRequestById(id);
       if (exists) {
         throw new OptimisticLockException("courier_requests", id, version, exists.version);
       }
       return null;
     }
 
-    await drizzleCourierRepository.insertAuditLog({
+    await this.dashboardRepo.insertAuditLog({
       tableName: "requests",
       recordId: id,
       action: "update",
@@ -146,10 +132,10 @@ export class CourierService {
   }
 
   async deleteRequest(id: number, deletedBy: string): Promise<boolean> {
-    const success = await drizzleCourierRepository.deleteRequest(id);
+    const success = await this.requestsRepo.deleteRequest(id);
     if (!success) return false;
 
-    await drizzleCourierRepository.insertAuditLog({
+    await this.dashboardRepo.insertAuditLog({
       tableName: "requests",
       recordId: id,
       action: "delete",
@@ -160,7 +146,7 @@ export class CourierService {
   }
 
   async getRequestItems(requestId: number): Promise<CourierRequestItem[]> {
-    return drizzleCourierRepository.findRequestItems(requestId);
+    return this.requestsRepo.findRequestItems(requestId);
   }
 
   async assignRequestItems(
@@ -168,7 +154,7 @@ export class CourierService {
     itemsData: { itemType: string; serialNumber?: string; simSerial?: string; quantity?: number }[],
     actorId: string
   ): Promise<CourierRequestItem[]> {
-    const request = await drizzleCourierRepository.findRequestById(requestId);
+    const request = await this.requestsRepo.findRequestById(requestId);
     if (!request) {
       throw new Error("الطلب غير موجود");
     }
@@ -183,66 +169,62 @@ export class CourierService {
     }));
 
     let result: CourierRequestItem[];
-    await db.transaction(async (tx) => {
+    await this.uow.execute(async (ctx) => {
       // 1. Delete existing items for this request to override/assign fresh
-      await tx
-        .delete(courierRequestItems)
-        .where(eq(courierRequestItems.requestId, requestId));
+      await ctx.requestsRepository.deleteRequestItems(requestId);
 
       // 2. Insert new request items
-      result = await drizzleCourierRepository.insertRequestItems(newItems, tx);
+      result = await ctx.requestsRepository.insertRequestItems(newItems);
 
       // 3. Create or update execution status to ASSIGNED
-      const existingExecution = await drizzleCourierRepository.findExecutionByRequestId(requestId, tx);
+      const existingExecution = await ctx.executionsRepository.findExecutionByRequestId(requestId);
       if (existingExecution) {
-        await drizzleCourierRepository.updateExecution(
+        await ctx.executionsRepository.updateExecution(
           requestId,
           { installationStatus: "ASSIGNED", enteredBy: actorId },
-          existingExecution.version,
-          tx
+          existingExecution.version
         );
       } else {
-        await drizzleCourierRepository.insertExecution({
+        await ctx.executionsRepository.insertExecution({
           requestId,
           installationStatus: "ASSIGNED",
           enteredBy: actorId,
-        }, tx);
+        });
       }
 
       // Log Audit
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "courier_request_items",
         recordId: requestId,
         action: "assign",
         changedBy: actorId,
-      }, tx);
+      });
     });
 
     return result!;
   }
 
   async acceptRequest(requestId: number, actorId: string): Promise<any> {
-    const existingExecution = await drizzleCourierRepository.findExecutionByRequestId(requestId);
-    await db.transaction(async (tx) => {
+    const existingExecution = await this.executionsRepo.findExecutionByRequestId(requestId);
+    await this.uow.execute(async (ctx) => {
       if (existingExecution) {
-        await drizzleCourierRepository.updateExecution(
+        await ctx.executionsRepository.updateExecution(
           requestId,
           { installationStatus: "ACCEPTED", enteredBy: actorId },
-          existingExecution.version,
-          tx
+          existingExecution.version
         );
       } else {
-        await drizzleCourierRepository.insertExecution({
+        await ctx.executionsRepository.insertExecution({
           requestId,
           installationStatus: "ACCEPTED",
           enteredBy: actorId,
-        }, tx);
+        });
       }
 
       // Auto-create request items if none exist yet (V14 Quantity-only flow)
-      const existingItems = await drizzleCourierRepository.findRequestItems(requestId, tx);
+      const existingItems = await ctx.requestsRepository.findRequestItems(requestId);
       if (existingItems.length === 0) {
-        const request = await drizzleCourierRepository.findRequestById(requestId, tx);
+        const request = await ctx.requestsRepository.findRequestById(requestId);
         if (request) {
           const itemsToCreate: any[] = [];
 
@@ -283,22 +265,21 @@ export class CourierService {
           }
 
           if (itemsToCreate.length > 0) {
-            await drizzleCourierRepository.insertRequestItems(itemsToCreate, tx);
+            await ctx.requestsRepository.insertRequestItems(itemsToCreate);
             console.log(`[AcceptRequest] Auto-created ${itemsToCreate.length} request items for request ${requestId}`);
           }
         }
       }
 
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "requests",
         recordId: requestId,
         action: "accept",
         changedBy: actorId,
-      }, tx);
+      });
     });
 
     return this.getRequestById(requestId);
-
   }
 
   async scanRequestItem(
@@ -322,7 +303,7 @@ export class CourierService {
     };
 
     // 1. Search inside request items for PENDING_RECEIPT item
-    const requestItems = await drizzleCourierRepository.findRequestItems(requestId);
+    const requestItems = await this.requestsRepo.findRequestItems(requestId);
     
     // Find matching item (by serialNumber or simSerial — any equivalent form)
     const matchingItem = requestItems.find(
@@ -331,7 +312,7 @@ export class CourierService {
 
     if (matchingItem) {
       // Update item to RECEIVED
-      const updated = await drizzleCourierRepository.updateRequestItem(matchingItem.id, {
+      const updated = await this.requestsRepo.updateRequestItem(matchingItem.id, {
         status: "RECEIVED",
         scannedAt: new Date(),
         receivedAt: new Date(),
@@ -339,9 +320,9 @@ export class CourierService {
       });
 
       // Update execution status to RECEIVING if not already there
-      const execution = await drizzleCourierRepository.findExecutionByRequestId(requestId);
+      const execution = await this.executionsRepo.findExecutionByRequestId(requestId);
       if (execution && execution.installationStatus !== "RECEIVING") {
-        await drizzleCourierRepository.updateExecution(
+        await this.executionsRepo.updateExecution(
           requestId,
           { installationStatus: "RECEIVING" },
           execution.version
@@ -368,18 +349,7 @@ export class CourierService {
     }
 
     // 3. Check if assigned to another active request
-    const otherRequestItems = await db
-      .select()
-      .from(courierRequestItems)
-      .where(
-        and(
-          or(
-            inArray(courierRequestItems.serialNumber, candidates),
-            inArray(courierRequestItems.simSerial, candidates)
-          ),
-          eq(courierRequestItems.status, "PENDING_RECEIPT")
-        )
-      );
+    const otherRequestItems = await this.requestsRepo.findRequestItemsBySerials(candidates, "PENDING_RECEIPT");
 
     if (otherRequestItems.length > 0) {
       return {
@@ -400,12 +370,12 @@ export class CourierService {
     itemStatuses?: { itemId: number; status: string; serialNumber?: string; simSerial?: string }[],
     sessionMetadata?: any
   ): Promise<any> {
-    const requestItems = await drizzleCourierRepository.findRequestItems(requestId);
+    const requestItems = await this.requestsRepo.findRequestItems(requestId);
     if (requestItems.length === 0) {
       throw new Error("لا توجد عناصر مخصصة لهذا الطلب");
     }
 
-    await db.transaction(async (tx) => {
+    await this.uow.execute(async (ctx) => {
       // 1. Update items in itemStatuses if provided (for progressive receiving)
       if (itemStatuses && itemStatuses.length > 0) {
         // Validate uniqueness of serial numbers in the input list
@@ -421,23 +391,11 @@ export class CourierService {
         for (const itemStat of itemStatuses) {
           const serial = (itemStat.serialNumber || itemStat.simSerial || "").trim();
           if (serial.length > 0) {
-            const [alreadyAssigned] = await tx
-              .select()
-              .from(courierRequestItems)
-              .where(
-                and(
-                  or(
-                    eq(courierRequestItems.serialNumber, serial),
-                    eq(courierRequestItems.simSerial, serial)
-                  ),
-                  eq(courierRequestItems.status, "RECEIVED"),
-                  sql`${courierRequestItems.id} != ${itemStat.itemId}`
-                )
-              )
-              .limit(1);
+            const alreadyAssigned = await ctx.requestsRepository.findRequestItemsBySerials([serial], "RECEIVED");
+            const otherAssigned = alreadyAssigned.find(a => a.id !== itemStat.itemId);
 
-            if (alreadyAssigned) {
-              throw new AppError(`الرقم التسلسلي ${serial} مستخدم بالفعل ومستلم في الطلب رقم ${alreadyAssigned.requestId}`, 400);
+            if (otherAssigned) {
+              throw new AppError(`الرقم التسلسلي ${serial} مستخدم بالفعل ومستلم في الطلب رقم ${otherAssigned.requestId}`, 400);
             }
           }
         }
@@ -447,18 +405,12 @@ export class CourierService {
           if (itemStat.serialNumber) updateFields.serialNumber = itemStat.serialNumber;
           if (itemStat.simSerial) updateFields.simSerial = itemStat.simSerial;
 
-          await tx
-            .update(courierRequestItems)
-            .set(updateFields)
-            .where(eq(courierRequestItems.id, itemStat.itemId));
+          await ctx.requestsRepository.updateRequestItem(itemStat.itemId, updateFields);
         }
       }
 
       // Re-fetch items inside transaction to get latest statuses
-      const latestItems = await tx
-        .select()
-        .from(courierRequestItems)
-        .where(eq(courierRequestItems.requestId, requestId));
+      const latestItems = await ctx.requestsRepository.findRequestItems(requestId);
 
       const receivedCount = latestItems.filter(item => item.status === "RECEIVED").length;
       const totalCount = latestItems.length;
@@ -473,33 +425,28 @@ export class CourierService {
 
       // Update execution status & store sessionMetadata in extraField1
       const stringifiedMetadata = sessionMetadata ? JSON.stringify(sessionMetadata) : null;
-      const existingExecution = await drizzleCourierRepository.findExecutionByRequestId(requestId, tx);
+      const existingExecution = await ctx.executionsRepository.findExecutionByRequestId(requestId);
       if (existingExecution) {
-        await drizzleCourierRepository.updateExecution(
+        await ctx.executionsRepository.updateExecution(
           requestId,
           { 
             installationStatus: newStatus, 
             enteredBy: actorId, 
             extraField1: stringifiedMetadata 
           },
-          existingExecution.version,
-          tx
+          existingExecution.version
         );
       } else {
-        await drizzleCourierRepository.insertExecution({
+        await ctx.executionsRepository.insertExecution({
           requestId,
           installationStatus: newStatus,
           enteredBy: actorId,
           extraField1: stringifiedMetadata,
-        }, tx);
+        });
       }
 
       // Fetch request once to resolve device/SIM types if minting is needed
-      const [reqData] = await tx
-        .select()
-        .from(courierRequests)
-        .where(eq(courierRequests.id, requestId))
-        .limit(1);
+      const reqData = await ctx.requestsRepository.findRequestById(requestId);
 
       // 2. Transfer Custody / Mint items in Inventory Engine
       for (const item of latestItems) {
@@ -507,37 +454,18 @@ export class CourierService {
           const serial = item.serialNumber || item.simSerial;
           if (serial) {
             // Central Serial Engine: resolve existing row by any equivalent serial form
-            const invItem = await SerialRecognitionService.findItemBySerial(serial, tx);
+            const invItem = await ctx.inventoryPort.findItemBySerial(serial);
 
             if (invItem) {
               const oldStatus = invItem.status;
 
-              // Update item status & current owner
-              await tx
-                .update(items)
-                .set({
-                  status: "RECEIVED_BY_TECHNICIAN",
-                  currentOwnerId: actorId,
-                  updatedAt: new Date(),
-                })
-                .where(eq(items.id, invItem.id));
-
-              // Record inventory transaction
-              await tx.insert(inventoryTransactions).values({
+              // Update item status & current owner & Record transaction & item history log
+              await ctx.inventoryPort.transferCustodyToTechnician({
                 itemId: invItem.id,
-                transactionType: "TRANSFER",
-                destinationOwnerId: actorId,
-                orderNumber: requestId.toString(),
-                notes: `استلام عهدة بالطلب رقم ${requestId}`,
-              });
-
-              // Record item history log
-              await tx.insert(itemHistoryLogs).values({
-                itemId: invItem.id,
-                fromStatus: oldStatus,
-                toStatus: "RECEIVED_BY_TECHNICIAN",
-                changedById: actorId,
-                notes: `تحويل عهدة للفني بالمسح الضوئي - طلب رقم ${requestId}`,
+                technicianId: actorId,
+                requestId,
+                oldStatus,
+                newStatus: "RECEIVED_BY_TECHNICIAN"
               });
             } else {
               // MINTING: first scan in quantity-only flow — normalize before storage
@@ -555,91 +483,56 @@ export class CourierService {
                 else hintItemTypeId = "stcSim";
               }
 
-              const stored = await SerialRecognitionService.normalizeForStorage(
+              const stored = await ctx.inventoryPort.normalizeSerial(
                 serial,
-                hintItemTypeId,
-                tx
+                hintItemTypeId
               );
 
               // Persist normalized form on request item for downstream deduction/guards
               if (item.serialNumber) {
-                await tx
-                  .update(courierRequestItems)
-                  .set({ serialNumber: stored.normalizedSerial })
-                  .where(eq(courierRequestItems.id, item.id));
+                await ctx.requestsRepository.updateRequestItem(item.id, { serialNumber: stored.normalizedSerial });
               } else if (item.simSerial) {
-                await tx
-                  .update(courierRequestItems)
-                  .set({ simSerial: stored.normalizedSerial })
-                  .where(eq(courierRequestItems.id, item.id));
+                await ctx.requestsRepository.updateRequestItem(item.id, { simSerial: stored.normalizedSerial });
               }
 
-              const [newItem] = await tx
-                .insert(items)
-                .values({
-                  itemTypeId: stored.itemTypeId,
-                  serialNumber: stored.normalizedSerial,
-                  barcode: stored.normalizedSerial,
-                  status: "RECEIVED_BY_TECHNICIAN",
-                  currentOwnerId: actorId,
-                  warehouseId: null,
-                  carrierName: stored.carrierName,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                })
-                .returning();
-
-              if (newItem) {
-                // Record inventory transaction
-                await tx.insert(inventoryTransactions).values({
-                  itemId: newItem.id,
-                  transactionType: "INTAKE",
-                  destinationOwnerId: actorId,
-                  orderNumber: requestId.toString(),
-                  notes: `تسجيل أصل جديد بالمسح الضوئي - طلب رقم ${requestId}`,
-                });
-
-                // Record item history log
-                await tx.insert(itemHistoryLogs).values({
-                  itemId: newItem.id,
-                  fromStatus: "NONE",
-                  toStatus: "RECEIVED_BY_TECHNICIAN",
-                  changedById: actorId,
-                  notes: `إنشاء أصل جديد عهدة للفني لأول مرة - طلب رقم ${requestId}`,
-                });
-              }
+              await ctx.inventoryPort.mintAndAssignToTechnician({
+                serial: stored.normalizedSerial,
+                itemTypeId: stored.itemTypeId,
+                carrierName: stored.carrierName,
+                technicianId: actorId,
+                requestId
+              });
             }
           }
         }
       }
 
       // Log Audit
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "requests",
         recordId: requestId,
         action: `confirm_receiving_${newStatus.toLowerCase()}`,
         changedBy: actorId,
-      }, tx);
+      });
     });
 
     return this.getRequestById(requestId);
   }
 
   async startTask(requestId: number, actorId: string): Promise<any> {
-    const requestItems = await drizzleCourierRepository.findRequestItems(requestId);
-    const execution = await drizzleCourierRepository.findExecutionByRequestId(requestId);
+    const requestItems = await this.requestsRepo.findRequestItems(requestId);
+    const execution = await this.executionsRepo.findExecutionByRequestId(requestId);
 
     if (!execution) {
       throw new Error("الطلب غير مستلم بعد أو لا توجد جلسة استلام");
     }
 
-    await db.transaction(async (tx) => {
+    await this.uow.execute(async (ctx) => {
       // 1. Update execution status to IN_TRANSIT
-      await drizzleCourierRepository.updateExecution(
+      await ctx.executionsRepository.updateExecution(
         requestId,
         { installationStatus: "IN_TRANSIT", enteredBy: actorId },
-        execution.version,
-        tx
+        execution.version
       );
 
       // 2. Transition items from RECEIVED_BY_TECHNICIAN to IN_TRANSIT
@@ -647,31 +540,15 @@ export class CourierService {
         if (item.status === "RECEIVED") {
           const serial = item.serialNumber || item.simSerial;
           if (serial) {
-            const invItem = await SerialRecognitionService.findItemBySerial(serial, tx);
+            const invItem = await ctx.inventoryPort.findItemBySerial(serial);
 
             if (invItem && invItem.status === "RECEIVED_BY_TECHNICIAN") {
-              await tx
-                .update(items)
-                .set({
-                  status: "IN_TRANSIT",
-                  updatedAt: new Date(),
-                })
-                .where(eq(items.id, invItem.id));
-
-              await tx.insert(inventoryTransactions).values({
+              await ctx.inventoryPort.transferCustodyToTechnician({
                 itemId: invItem.id,
-                transactionType: "TRANSFER",
-                destinationOwnerId: actorId,
-                orderNumber: requestId.toString(),
-                notes: `بدء مهمة التوصيل بالطلب رقم ${requestId}`,
-              });
-
-              await tx.insert(itemHistoryLogs).values({
-                itemId: invItem.id,
-                fromStatus: "RECEIVED_BY_TECHNICIAN",
-                toStatus: "IN_TRANSIT",
-                changedById: actorId,
-                notes: `مغادرة المستودع والبدء بالتوصيل - طلب رقم ${requestId}`,
+                technicianId: actorId,
+                requestId,
+                oldStatus: "RECEIVED_BY_TECHNICIAN",
+                newStatus: "IN_TRANSIT"
               });
             }
           }
@@ -679,12 +556,12 @@ export class CourierService {
       }
 
       // Log Audit
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "requests",
         recordId: requestId,
         action: "start_task",
         changedBy: actorId,
-      }, tx);
+      });
     });
 
     return this.getRequestById(requestId);
@@ -692,8 +569,8 @@ export class CourierService {
 
   async saveExecution(requestId: number, data: any, enteredBy: string): Promise<any> {
     // Check if execution exists
-    const existing = await drizzleCourierRepository.findExecutionByRequestId(requestId);
-    const request = await drizzleCourierRepository.findRequestById(requestId);
+    const existing = await this.executionsRepo.findExecutionByRequestId(requestId);
+    const request = await this.requestsRepo.findRequestById(requestId);
 
     if (!request) {
       throw new Error("الطلب غير موجود");
@@ -727,6 +604,9 @@ export class CourierService {
       executionData: { ...sanitized, deviceSerials, simSerials },
       request,
       existingExecution: existing ?? null,
+      requestsRepo: this.requestsRepo,
+      dashboardRepo: this.dashboardRepo,
+      inventoryPort: this.inventoryPort,
     });
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -736,13 +616,12 @@ export class CourierService {
     }
 
     let result: any;
-    await db.transaction(async (tx) => {
+    await this.uow.execute(async (ctx) => {
       if (existing) {
-        result = await drizzleCourierRepository.updateExecution(
+        result = await ctx.executionsRepository.updateExecution(
           requestId,
           { ...sanitized, enteredBy },
-          version,
-          tx
+          version
         );
 
         if (!result) {
@@ -754,23 +633,22 @@ export class CourierService {
           );
         }
       } else {
-        result = await drizzleCourierRepository.insertExecution(
+        result = await ctx.executionsRepository.insertExecution(
           {
             ...sanitized,
             requestId,
             enteredBy,
-          },
-          tx
+          }
         );
       }
 
       // Log audit
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "executions",
         recordId: requestId,
         action: existing ? "update" : "create",
         changedBy: enteredBy
-      }, tx);
+      });
 
       // Publish ExecutionSavedEvent (inside tx so it is saved to outbox atomically)
       const eventBus = EventBus.getInstance();
@@ -781,7 +659,7 @@ export class CourierService {
           execution: result,
           request,
         }),
-        tx
+        ctx.tx
       );
     });
 
@@ -824,7 +702,7 @@ export class CourierService {
       // Still try DB lookup
     }
 
-    const item = await SerialRecognitionService.findItemBySerial(rawSerial);
+    const item = await this.inventoryPort.findItemBySerial(rawSerial);
 
     if (!item) {
       return {
@@ -847,16 +725,7 @@ export class CourierService {
       };
     }
 
-    const [itemTypeRow] = await db
-      .select({
-        id: itemTypes.id,
-        nameAr: itemTypes.nameAr,
-        nameEn: itemTypes.nameEn,
-        category: itemTypes.category,
-      })
-      .from(itemTypes)
-      .where(eq(itemTypes.id, item.itemTypeId))
-      .limit(1);
+    const itemTypeRow = await this.inventoryPort.findItemTypeById(item.itemTypeId);
 
     const carrierName = itemTypeRow
       ? SerialRecognitionService.resolveCarrierName(
@@ -873,38 +742,15 @@ export class CourierService {
       technicianCode: string | null;
     } | null = null;
     if (item.currentOwnerId) {
-      const [tech] = await db
-        .select({
-          id: users.id,
-          fullName: users.fullName,
-          username: users.username,
-          technicianCode: users.technicianCode,
-        })
-        .from(users)
-        .where(eq(users.id, item.currentOwnerId))
-        .limit(1);
+      const tech = await this.inventoryPort.findUserById(item.currentOwnerId);
       if (tech) technician = tech;
     }
 
-    const [linkedRequestItem] = await db
-      .select({
-        requestId: courierRequestItems.requestId,
-        itemId: courierRequestItems.id,
-        itemType: courierRequestItems.itemType,
-        status: courierRequestItems.status,
-      })
-      .from(courierRequestItems)
-      .where(
-        or(
-          eq(courierRequestItems.serialNumber, item.serialNumber),
-          eq(courierRequestItems.simSerial, item.serialNumber)
-        )
-      )
-      .limit(1);
+    const linkedRequestItem = await this.inventoryPort.findLinkedRequestItemBySerial(item.serialNumber);
 
     let linkedRequest: any = null;
     if (linkedRequestItem?.requestId) {
-      const req = await drizzleCourierRepository.findRequestById(linkedRequestItem.requestId);
+      const req = await this.requestsRepo.findRequestById(linkedRequestItem.requestId);
       if (req) {
         linkedRequest = {
           requestId: req.id,
@@ -946,202 +792,235 @@ export class CourierService {
   }
 
   async getLookups(): Promise<any> {
-    return drizzleCourierRepository.getLookups();
+    return this.requestsRepo.getLookups();
   }
 
   async getDashboardStats(): Promise<any> {
-    // Total Requests
-    const [totalRes] = await db.select({ count: count() }).from(courierRequests);
-    
-    // Status distribution
-    const statusCounts = await db
-      .select({
-        status: courierExecutions.installationStatus,
-        count: count()
-      })
-      .from(courierExecutions)
-      .groupBy(courierExecutions.installationStatus);
-
-    // Failures reasons distribution
-    const failureCounts = await db
-      .select({
-        reason: courierExecutions.responseReasonCode,
-        count: count()
-      })
-      .from(courierExecutions)
-      .where(sql`${courierExecutions.responseReasonCode} IS NOT NULL`)
-      .groupBy(courierExecutions.responseReasonCode);
-
-    return {
-      totalRequests: totalRes?.count || 0,
-      statuses: statusCounts.reduce((acc: any, curr) => {
-        if (curr.status) acc[curr.status] = curr.count;
-        return acc;
-      }, {}),
-      failures: failureCounts.reduce((acc: any, curr) => {
-        if (curr.reason) acc[curr.reason] = curr.count;
-        return acc;
-      }, {})
-    };
+    return this.dashboardRepo.getDashboardStats();
   }
 
   async getAiMonitorStats(): Promise<any> {
-    const [totalReports] = await db.select({ count: count() }).from(courierPdfReports);
-    const [appliedReports] = await db.select({ count: count() }).from(courierPdfReports).where(eq(courierPdfReports.status, "applied"));
-    
-    const [avgConf] = await db
-      .select({
-        avg: sql<number>`AVG(overall_confidence)`
-      })
-      .from(courierPdfReports)
-      .where(sql`overall_confidence IS NOT NULL`);
-
-    return {
-      totalProcessed: totalReports?.count || 0,
-      totalApplied: appliedReports?.count || 0,
-      averageConfidence: avgConf?.avg ? Math.round(Number(avgConf.avg)) : 0
-    };
+    return this.dashboardRepo.getAiMonitorStats();
   }
 
   async listAuditLogs(): Promise<any[]> {
-    return db
-      .select({
-        id: courierAuditLogs.id,
-        tableName: courierAuditLogs.tableName,
-        recordId: courierAuditLogs.recordId,
-        action: courierAuditLogs.action,
-        fieldName: courierAuditLogs.fieldName,
-        oldValue: courierAuditLogs.oldValue,
-        newValue: courierAuditLogs.newValue,
-        changedBy: users.fullName,
-        changedAt: courierAuditLogs.changedAt
-      })
-      .from(courierAuditLogs)
-      .leftJoin(users, eq(users.id, courierAuditLogs.changedBy))
-      .orderBy(desc(courierAuditLogs.changedAt))
-      .limit(100);
+    return this.dashboardRepo.listAuditLogs(100);
   }
 
-  async uploadPdfReport(fileName: string, storedName: string, buffer: Buffer, uploadedBy: string, requestId?: number): Promise<any> {
-    let extraction;
+  /**
+   * OCR first; if no devices found, try Vision using admin AI settings (PR-006A-10 Slice 2).
+   */
+  private async extractPdfPayload(buffer: Buffer): Promise<{
+    extraction: { fields: any; overallConfidence: number; rawText: string };
+    extractedPayload: ReturnType<typeof buildExtractedPayloadFromOcr>;
+    status: string;
+    visionError: string | null;
+  }> {
     let status = "pending";
+    let extraction;
+    let extractedPayload: ReturnType<typeof buildExtractedPayloadFromOcr>;
+    let visionError: string | null = null;
+
     try {
       extraction = await extractFromPdf(buffer);
+      extractedPayload = buildExtractedPayloadFromOcr(extraction.fields);
+
+      if (!extractedPayload.devices.length) {
+        const aiResult = await runAiEngineExtraction(buffer);
+        if (aiResult.ok) {
+          extractedPayload = aiResult.payload;
+          extraction = {
+            fields: aiResult.payload,
+            overallConfidence:
+              aiResult.payload.devices.reduce((s, d) => s + (d.confidence || 0), 0) /
+                Math.max(1, aiResult.payload.devices.length) || 0,
+            rawText: extraction.rawText || "[AI Vision] Extracted via configured Gemini provider.",
+          };
+        } else {
+          visionError = aiResult.error;
+        }
+      }
     } catch (err) {
       status = "failed";
       extraction = { fields: {}, overallConfidence: 0, rawText: (err as Error).message };
+      extractedPayload = buildExtractedPayloadFromOcr({});
+      visionError = (err as Error).message;
     }
 
-    const [newReport] = await db
-      .insert(courierPdfReports)
-      .values({
-        requestId: requestId || null,
-        fileName,
-        filePath: storedName,
-        uploadedBy,
-        ocrText: extraction.rawText,
-        extractedJson: JSON.stringify(extraction.fields),
-        overallConfidence: extraction.overallConfidence,
-        status
-      })
-      .returning();
+    return { extraction, extractedPayload, status, visionError };
+  }
+
+  async uploadPdfReport(fileName: string, storedName: string, buffer: Buffer, uploadedBy: string, requestId?: number): Promise<any> {
+    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer);
+
+    const newReport = await this.pdfRepo.insertPdfReport({
+      requestId: requestId || null,
+      fileName,
+      filePath: storedName,
+      uploadedBy,
+      ocrText: extraction.rawText,
+      extractedJson: JSON.stringify(extractedPayload),
+      overallConfidence: extraction.overallConfidence,
+      status
+    });
 
     return {
       id: newReport.id,
-      fields: extraction.fields,
+      fields: extractedPayload,
+      devices: extractedPayload.devices,
       overallConfidence: extraction.overallConfidence,
-      status
+      status,
+      extraction_source: extractedPayload.extraction_source,
+      visionError,
+    };
+  }
+
+  async reextractPdfReport(pdfId: number): Promise<any> {
+    const report = await this.getPdfReportById(pdfId);
+    if (!report) {
+      throw new NotFoundError("PDF Report not found");
+    }
+
+    const uploadDir = path.join(process.cwd(), "uploads", "pdf");
+    const filePath = path.join(uploadDir, report.filePath);
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundError("File not found on disk");
+    }
+
+    const buffer = fs.readFileSync(filePath);
+    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer);
+
+    const updated = await this.pdfRepo.updatePdfReport(pdfId, {
+      ocrText: extraction.rawText,
+      extractedJson: JSON.stringify(extractedPayload),
+      overallConfidence: extraction.overallConfidence,
+      status: status === "failed" ? "failed" : report.status === "applied" ? report.status : "pending",
+    });
+
+    return {
+      id: updated.id,
+      fields: extractedPayload,
+      devices: extractedPayload.devices,
+      overallConfidence: extraction.overallConfidence,
+      status: updated.status,
+      extraction_source: extractedPayload.extraction_source,
+      extractedJson: extractedPayload,
+      visionError,
+    };
+  }
+
+  async completePdfReport(
+    pdfId: number,
+    requestId: number,
+    body: {
+      devices: CompleteDeviceInput[];
+      deliveryDate?: string | null;
+      time?: string | null;
+      paperRoll?: string | null;
+      version?: number;
+    },
+    enteredBy: string,
+  ): Promise<any> {
+    const report = await this.getPdfReportById(pdfId);
+    if (!report) {
+      throw new NotFoundError("PDF Report not found");
+    }
+    if (report.status === "applied") {
+      throw new AppError("هذا التقرير مُطبَّق بالفعل", 400);
+    }
+
+    const devices = Array.isArray(body.devices) ? body.devices : [];
+    if (devices.length === 0) {
+      throw new AppError("لا توجد أجهزة للإكمال", 400);
+    }
+
+    const hasSerial = devices.some((d) => (d.sn ?? "").trim() || (d.sim_serial ?? "").trim());
+    if (!hasSerial) {
+      throw new AppError("يجب إدخال رقم جهاز أو شريحة واحد على الأقل", 400);
+    }
+
+    const executionPayload = buildCompleteExecutionPayload({
+      devices,
+      deliveryDate: body.deliveryDate,
+      time: body.time,
+      paperRoll: body.paperRoll,
+      version: body.version,
+    });
+
+    const saved = await this.saveExecution(requestId, executionPayload, enteredBy);
+
+    await this.pdfRepo.updatePdfReport(pdfId, {
+      status: "applied",
+      requestId,
+    });
+
+    await this.dashboardRepo.insertAuditLog({
+      tableName: "pdf_reports",
+      recordId: pdfId,
+      action: "complete",
+      changedBy: enteredBy,
+    });
+
+    return {
+      ...saved,
+      pdf: { id: pdfId, status: "applied", requestId },
     };
   }
 
   async applyPdfReport(pdfId: number, requestId: number, fields: any, confidence: any, uploadedBy: string): Promise<any> {
-    // 1. Get existing execution
-    const [existing] = await db
-      .select()
-      .from(courierExecutions)
-      .where(eq(courierExecutions.requestId, requestId))
-      .limit(1);
-
+    const existing = await this.executionsRepo.findExecutionByRequestId(requestId);
     const merged: Record<string, any> = { ...existing };
-    
-    // Fields list to copy from PDF
     const execFields = [
       "requestPriorityLevel", "pushBack", "installationStatus", "paperRoll",
       "time", "deliveryDate", "responseDate", "sn", "simSerial", "simType",
       "customerNotes", "extraField1", "extraField2", "responseReasonCode",
       "salesTechnician", "technicianCode"
     ];
-
     for (const f of execFields) {
       if (f in fields) merged[f] = fields[f];
     }
 
     let result: any;
     let pdfRequest: any;
-    await db.transaction(async (tx) => {
+    await this.uow.execute(async (ctx) => {
       if (existing) {
         const version = fields.version;
-        let whereClause = eq(courierExecutions.requestId, requestId);
-        if (version !== undefined) {
-          whereClause = and(whereClause, eq(courierExecutions.version, version)) as any;
-        }
-
-        [result] = await tx
-          .update(courierExecutions)
-          .set({
+        result = await ctx.executionsRepository.updateExecution(
+          requestId,
+          {
             ...merged,
             extractionConfidence: JSON.stringify(confidence),
             enteredBy: uploadedBy,
-            updatedAt: new Date(),
-            version: sql`version + 1`
-          })
-          .where(whereClause)
-          .returning();
+          },
+          version
+        );
 
         if (!result) {
           throw new OptimisticLockException("courier_executions", existing.id, version, existing.version);
         }
       } else {
-        [result] = await tx
-          .insert(courierExecutions)
-          .values({
-            requestId,
-            ...merged,
-            extractionConfidence: JSON.stringify(confidence),
-            enteredBy: uploadedBy,
-            enteredAt: new Date(),
-            updatedAt: new Date()
-          })
-          .returning();
+        result = await ctx.executionsRepository.insertExecution({
+          requestId,
+          ...merged,
+          extractionConfidence: JSON.stringify(confidence),
+          enteredBy: uploadedBy,
+        });
       }
 
-      // Update PDF status
-      await tx
-        .update(courierPdfReports)
-        .set({
-          status: "applied",
-          requestId
-        })
-        .where(eq(courierPdfReports.id, pdfId));
+      await ctx.pdfRepository.updatePdfReport(pdfId, {
+        status: "applied",
+        requestId
+      });
 
-      // Audit log
-      await tx.insert(courierAuditLogs).values({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "executions",
         recordId: requestId,
         action: existing ? "update" : "create",
         changedBy: uploadedBy,
-        changedAt: new Date()
       });
 
-      [pdfRequest] = await tx
-        .select()
-        .from(courierRequests)
-        .where(eq(courierRequests.id, requestId))
-        .limit(1);
+      pdfRequest = await ctx.requestsRepository.findRequestById(requestId);
 
-
-
-      // Publish ExecutionSavedEvent (inside tx so it is saved to outbox atomically)
       if (pdfRequest) {
         const eventBus = EventBus.getInstance();
         await eventBus.publish(
@@ -1151,7 +1030,7 @@ export class CourierService {
             execution: result,
             request: pdfRequest,
           }),
-          tx
+          ctx.tx
         );
       }
     });
@@ -1160,62 +1039,32 @@ export class CourierService {
       throw new Error("Failed to save execution from PDF report: database returned no rows.");
     }
 
-    // ─── Workflow Engine ──────────────────────────────────────────────────────
     const isCompleted = isCompletedStatus(merged.installationStatus);
     if (isCompleted && pdfRequest) {
-        const workflowResult = await CourierWorkflow.execute({
-          requestId,
-          actorId: uploadedBy,
-          execution: result,
-          request: pdfRequest,
-        });
+      const workflowResult = await CourierWorkflow.execute({
+        requestId,
+        actorId: uploadedBy,
+        execution: result,
+        request: pdfRequest,
+      });
 
-        if (workflowResult.sideEffectErrors.length > 0) {
-          console.warn(
-            `[Workflow] PDF apply for request ${requestId} completed with warnings:`,
-            workflowResult.sideEffectErrors
-          );
-        }
+      if (workflowResult.sideEffectErrors.length > 0) {
+        console.warn(
+          `[Workflow] PDF apply for request ${requestId} completed with warnings:`,
+          workflowResult.sideEffectErrors
+        );
       }
+    }
 
     return this.getRequestById(requestId);
   }
 
   async getPdfReports(): Promise<any[]> {
-    return db
-      .select({
-        id: courierPdfReports.id,
-        requestId: courierPdfReports.requestId,
-        fileName: courierPdfReports.fileName,
-        filePath: courierPdfReports.filePath,
-        uploadedByName: users.fullName,
-        uploadedAt: courierPdfReports.uploadedAt,
-        status: courierPdfReports.status,
-        overallConfidence: courierPdfReports.overallConfidence
-      })
-      .from(courierPdfReports)
-      .leftJoin(users, eq(users.id, courierPdfReports.uploadedBy))
-      .orderBy(desc(courierPdfReports.id))
-      .limit(100);
+    return this.pdfRepo.listPdfReports();
   }
 
   async getPdfReportById(id: number): Promise<any | null> {
-    const [report] = await db
-      .select({
-        id: courierPdfReports.id,
-        requestId: courierPdfReports.requestId,
-        fileName: courierPdfReports.fileName,
-        filePath: courierPdfReports.filePath,
-        uploadedBy: courierPdfReports.uploadedBy,
-        uploadedAt: courierPdfReports.uploadedAt,
-        status: courierPdfReports.status,
-        extractedJson: courierPdfReports.extractedJson,
-        overallConfidence: courierPdfReports.overallConfidence
-      })
-      .from(courierPdfReports)
-      .where(eq(courierPdfReports.id, id))
-      .limit(1);
-    return report || null;
+    return this.pdfRepo.findPdfReportById(id);
   }
 
   async importRawRequests(buffer: Buffer, createdBy: string): Promise<any> {
@@ -1227,11 +1076,7 @@ export class CourierService {
       const data = item.data;
       // Prevent duplicate TID/Terminal ID
       if (data.tid) {
-        const [existing] = await db
-          .select()
-          .from(courierRequests)
-          .where(eq(courierRequests.tid, data.tid))
-          .limit(1);
+        const existing = await this.requestsRepo.findRequestByTid(data.tid);
         if (existing) {
           skippedList.push({
             rowNumber: item.rowNumber,
@@ -1242,36 +1087,33 @@ export class CourierService {
         }
       }
 
-      const [newRequest] = await db
-        .insert(courierRequests)
-        .values({
-          date: data.date,
-          installationType: data.installationType,
-          sim: data.sim,
-          tid: data.tid,
-          otp: data.otp,
-          ticketingHolouly: data.ticketingHolouly,
-          incidentNumber: data.incidentNumber,
-          pinCode: data.pinCode,
-          trsm: data.trsm,
-          terminalId: data.terminalId,
-          simSn: data.simSn,
-          idData: data.idData,
-          vendorType: data.vendorType,
-          city: data.city,
-          cityTec: data.cityTec,
-          customerName: data.customerName,
-          retailerName: data.retailerName,
-          addressAr: data.addressAr,
-          addressEn: data.addressEn,
-          mobile: data.mobile,
-          mobile2: data.mobile2,
-          tecName: data.tecName,
-          createdBy,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .returning();
+      const newRequest = await this.requestsRepo.insertRequest({
+        date: data.date,
+        installationType: data.installationType,
+        sim: data.sim,
+        tid: data.tid,
+        otp: data.otp,
+        ticketingHolouly: data.ticketingHolouly,
+        incidentNumber: data.incidentNumber,
+        pinCode: data.pinCode,
+        trsm: data.trsm,
+        terminalId: data.terminalId,
+        simSn: data.simSn,
+        idData: data.idData,
+        vendorType: data.vendorType,
+        city: data.city,
+        cityTec: data.cityTec,
+        customerName: data.customerName,
+        retailerName: data.retailerName,
+        addressAr: data.addressAr,
+        addressEn: data.addressEn,
+        mobile: data.mobile,
+        mobile2: data.mobile2,
+        tecName: data.tecName,
+        createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
 
       importedList.push({ rowNumber: item.rowNumber, id: newRequest.id, tid: newRequest.tid });
     }
@@ -1288,33 +1130,36 @@ export class CourierService {
   }
 
   async exportRequests(filters: ListFilters): Promise<Buffer> {
-    const mappedRows = await drizzleCourierRepository.listRequestsForExport(filters);
+    const mappedRows = await this.requestsRepo.listRequestsForExport(filters);
     return buildExportWorkbook(mappedRows);
   }
 
+  async countRequests(filters: ListFilters): Promise<number> {
+    return this.requestsRepo.countRequests(filters);
+  }
+
   async startRoute(requestId: number, actorId: string): Promise<any> {
-    return db.transaction(async (tx) => {
-      const request = await drizzleCourierRepository.findRequestById(requestId, tx);
+    return this.uow.execute(async (ctx) => {
+      const request = await ctx.requestsRepository.findRequestById(requestId);
       if (!request) throw new NotFoundError("Request not found");
 
-      const execution = await drizzleCourierRepository.findExecutionByRequestId(requestId, tx);
+      const execution = await ctx.executionsRepository.findExecutionByRequestId(requestId);
       if (!execution) throw new NotFoundError("Execution not found");
 
-      const updatedExecution = await drizzleCourierRepository.updateExecution(
+      const updatedExecution = await ctx.executionsRepository.updateExecution(
         requestId,
         {
           installationStatus: "ON_ROUTE",
           updatedAt: new Date()
         },
-        execution.version,
-        tx
+        execution.version
       );
 
       if (!updatedExecution) {
         throw new OptimisticLockException("courier_executions", execution.id, execution.version);
       }
 
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "courier_executions",
         recordId: execution.id,
         fieldName: "installation_status",
@@ -1322,35 +1167,34 @@ export class CourierService {
         newValue: "ON_ROUTE",
         action: "START_ROUTE",
         changedBy: actorId
-      }, tx);
+      });
 
       return { success: true, status: "ON_ROUTE" };
     });
   }
 
   async arriveCustomer(requestId: number, actorId: string): Promise<any> {
-    return db.transaction(async (tx) => {
-      const request = await drizzleCourierRepository.findRequestById(requestId, tx);
+    return this.uow.execute(async (ctx) => {
+      const request = await ctx.requestsRepository.findRequestById(requestId);
       if (!request) throw new NotFoundError("Request not found");
 
-      const execution = await drizzleCourierRepository.findExecutionByRequestId(requestId, tx);
+      const execution = await ctx.executionsRepository.findExecutionByRequestId(requestId);
       if (!execution) throw new NotFoundError("Execution not found");
 
-      const updatedExecution = await drizzleCourierRepository.updateExecution(
+      const updatedExecution = await ctx.executionsRepository.updateExecution(
         requestId,
         {
           installationStatus: "ARRIVED",
           updatedAt: new Date()
         },
-        execution.version,
-        tx
+        execution.version
       );
 
       if (!updatedExecution) {
         throw new OptimisticLockException("courier_executions", execution.id, execution.version);
       }
 
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "courier_executions",
         recordId: execution.id,
         fieldName: "installation_status",
@@ -1358,35 +1202,34 @@ export class CourierService {
         newValue: "ARRIVED",
         action: "ARRIVE_CUSTOMER",
         changedBy: actorId
-      }, tx);
+      });
 
       return { success: true, status: "ARRIVED" };
     });
   }
 
   async startInstallation(requestId: number, actorId: string): Promise<any> {
-    return db.transaction(async (tx) => {
-      const request = await drizzleCourierRepository.findRequestById(requestId, tx);
+    return this.uow.execute(async (ctx) => {
+      const request = await ctx.requestsRepository.findRequestById(requestId);
       if (!request) throw new NotFoundError("Request not found");
 
-      const execution = await drizzleCourierRepository.findExecutionByRequestId(requestId, tx);
+      const execution = await ctx.executionsRepository.findExecutionByRequestId(requestId);
       if (!execution) throw new NotFoundError("Execution not found");
 
-      const updatedExecution = await drizzleCourierRepository.updateExecution(
+      const updatedExecution = await ctx.executionsRepository.updateExecution(
         requestId,
         {
           installationStatus: "INSTALLING",
           updatedAt: new Date()
         },
-        execution.version,
-        tx
+        execution.version
       );
 
       if (!updatedExecution) {
         throw new OptimisticLockException("courier_executions", execution.id, execution.version);
       }
 
-      await drizzleCourierRepository.insertAuditLog({
+      await ctx.dashboardRepository.insertAuditLog({
         tableName: "courier_executions",
         recordId: execution.id,
         fieldName: "installation_status",
@@ -1394,14 +1237,14 @@ export class CourierService {
         newValue: "INSTALLING",
         action: "START_INSTALLATION",
         changedBy: actorId
-      }, tx);
+      });
 
       return { success: true, status: "INSTALLING" };
     });
   }
 
   async getExecutionAttempts(requestId: number): Promise<CourierExecutionAttempt[]> {
-    return drizzleCourierRepository.findExecutionAttempts(requestId);
+    return this.executionsRepo.findExecutionAttempts(requestId);
   }
 
   async createExecutionAttempt(
@@ -1424,19 +1267,19 @@ export class CourierService {
       customerSignature?: string;
     }
   ): Promise<any> {
-    return db.transaction(async (tx) => {
-      const request = await drizzleCourierRepository.findRequestById(requestId, tx);
+    return this.uow.execute(async (ctx) => {
+      const request = await ctx.requestsRepository.findRequestById(requestId);
       if (!request) throw new NotFoundError("Request not found");
 
-      const execution = await drizzleCourierRepository.findExecutionByRequestId(requestId, tx);
+      const execution = await ctx.executionsRepository.findExecutionByRequestId(requestId);
       if (!execution) throw new NotFoundError("Execution not found");
 
       // 1. Determine attempt number
-      const existingAttempts = await drizzleCourierRepository.findExecutionAttempts(requestId, tx);
+      const existingAttempts = await ctx.executionsRepository.findExecutionAttempts(requestId);
       const attemptNumber = existingAttempts.length + 1;
 
       // 2. Insert Execution Attempt row
-      const attempt = await drizzleCourierRepository.insertExecutionAttempt({
+      const attempt = await ctx.executionsRepository.insertExecutionAttempt({
         requestId,
         attemptNumber,
         status: data.status,
@@ -1454,14 +1297,14 @@ export class CourierService {
         evidencePhotos: data.evidencePhotos || null,
         customerSignature: data.customerSignature || null,
         enteredBy: actorId,
-      }, tx);
+      });
 
       // 3. Handle attempt status transitions
       if (data.status === "SUCCESS") {
         const finalStatus = "Installation Completed";
 
         // Update execution with details
-        const updatedExecution = await drizzleCourierRepository.updateExecution(
+        const updatedExecution = await ctx.executionsRepository.updateExecution(
           requestId,
           {
             installationStatus: finalStatus,
@@ -1473,8 +1316,7 @@ export class CourierService {
             extraField2: data.customerSignature || execution.extraField2,
             updatedAt: new Date()
           },
-          execution.version,
-          tx
+          execution.version
         );
 
         if (!updatedExecution) {
@@ -1482,18 +1324,18 @@ export class CourierService {
         }
 
         // Update request items status to INSTALLED
-        const items = await drizzleCourierRepository.findRequestItems(requestId, tx);
+        const items = await ctx.requestsRepository.findRequestItems(requestId);
         for (const item of items) {
           if (item.status === "RECEIVED") {
-            await drizzleCourierRepository.updateRequestItem(item.id, {
+            await ctx.requestsRepository.updateRequestItem(item.id, {
               status: "INSTALLED",
               installedAt: new Date(),
               deliveredAt: new Date(),
-            }, tx);
+            });
           }
         }
 
-        await drizzleCourierRepository.insertAuditLog({
+        await ctx.dashboardRepository.insertAuditLog({
           tableName: "courier_executions",
           recordId: execution.id,
           fieldName: "installation_status",
@@ -1501,7 +1343,7 @@ export class CourierService {
           newValue: finalStatus,
           action: "SUBMIT_EXECUTION_SUCCESS",
           changedBy: actorId
-        }, tx);
+        });
 
         // Publish ExecutionCompletedEvent to trigger InventoryEngine auto-deduction
         const eventBus = EventBus.getInstance();
@@ -1511,12 +1353,13 @@ export class CourierService {
             actorId,
             execution: updatedExecution,
             request,
-          })
+          }),
+          ctx.tx
         );
       } else {
         const finalStatus = data.failureReasonCode || "FAILED_ATTEMPT";
 
-        const updatedExecution = await drizzleCourierRepository.updateExecution(
+        const updatedExecution = await ctx.executionsRepository.updateExecution(
           requestId,
           {
             installationStatus: finalStatus,
@@ -1524,15 +1367,14 @@ export class CourierService {
             customerNotes: data.notes || execution.customerNotes,
             updatedAt: new Date()
           },
-          execution.version,
-          tx
+          execution.version
         );
 
         if (!updatedExecution) {
           throw new OptimisticLockException("courier_executions", execution.id, execution.version);
         }
 
-        await drizzleCourierRepository.insertAuditLog({
+        await ctx.dashboardRepository.insertAuditLog({
           tableName: "courier_executions",
           recordId: execution.id,
           fieldName: "installation_status",
@@ -1540,11 +1382,11 @@ export class CourierService {
           newValue: finalStatus,
           action: "SUBMIT_EXECUTION_FAILURE",
           changedBy: actorId
-        }, tx);
+        });
       }
 
       return attempt;
     });
   }
-}
 
+}

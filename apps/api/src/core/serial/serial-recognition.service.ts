@@ -147,7 +147,7 @@ export class SerialRecognitionService {
       }
     }
 
-    return [...candidates].filter(Boolean);
+    return Array.from(candidates).filter(Boolean);
   }
 
   /**

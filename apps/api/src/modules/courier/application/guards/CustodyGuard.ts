@@ -11,9 +11,6 @@
  * Serials are matched via Central Serial Engine (prefixed or stored forms).
  */
 
-import { db } from "@server/core/config/db";
-import { items, courierAuditLogs, courierRequestItems } from "@shared/schema";
-import { and, eq, inArray, or } from "drizzle-orm";
 import {
   GuardValidationError,
   isCompletedStatus,
@@ -76,22 +73,14 @@ export class CustodyGuard {
     for (const entry of serialEntries) {
       const candidates = await SerialRecognitionService.buildStoredSerialCandidates(entry.raw);
 
-      const [item] = await db
-        .select({
-          id: items.id,
-          serialNumber: items.serialNumber,
-          status: items.status,
-          currentOwnerId: items.currentOwnerId,
-        })
-        .from(items)
-        .where(
-          and(
-            inArray(items.serialNumber, candidates),
-            eq(items.currentOwnerId, techUser.id),
-            inArray(items.status, [...ACTIVE_CUSTODY_STATUSES])
-          )
-        )
-        .limit(1);
+      let item: any = null;
+      for (const candidate of candidates) {
+        const found = await ctx.inventoryPort.findItemBySerial(candidate);
+        if (found && found.currentOwnerId === techUser.id && (ACTIVE_CUSTODY_STATUSES as readonly string[]).includes(found.status)) {
+          item = found;
+          break;
+        }
+      }
 
       if (!item) {
         await CustodyGuard.writeAuditFailure(ctx, techUser, entry.raw);
@@ -126,24 +115,16 @@ export class CustodyGuard {
       );
     }
 
+    const requestItems = await ctx.requestsRepo.findRequestItems(requestId);
+
     // Auto-bind when portal closes without Flutter pre-assigning request items
     for (const entry of resolved.filter((r) => r.role === "device")) {
-      const [link] = await db
-        .select({ id: courierRequestItems.id })
-        .from(courierRequestItems)
-        .where(
-          and(
-            eq(courierRequestItems.requestId, requestId),
-            or(
-              eq(courierRequestItems.serialNumber, entry.serialNumber),
-              eq(courierRequestItems.simSerial, entry.serialNumber)
-            )
-          )
-        )
-        .limit(1);
+      const link = requestItems.find(
+        (item: any) => item.serialNumber === entry.serialNumber || item.simSerial === entry.serialNumber
+      );
 
       if (!link) {
-        await db.insert(courierRequestItems).values({
+        await ctx.requestsRepo.insertRequestItems([{
           requestId,
           itemType: "POS",
           serialNumber: entry.serialNumber,
@@ -152,27 +133,17 @@ export class CustodyGuard {
           scannedAt: new Date(),
           receivedAt: new Date(),
           technicianId: techUser.id,
-        });
+        }]);
       }
     }
 
     for (const entry of resolved.filter((r) => r.role === "sim")) {
-      const [simLink] = await db
-        .select({ id: courierRequestItems.id })
-        .from(courierRequestItems)
-        .where(
-          and(
-            eq(courierRequestItems.requestId, requestId),
-            or(
-              eq(courierRequestItems.simSerial, entry.serialNumber),
-              eq(courierRequestItems.serialNumber, entry.serialNumber)
-            )
-          )
-        )
-        .limit(1);
+      const simLink = requestItems.find(
+        (item: any) => item.simSerial === entry.serialNumber || item.serialNumber === entry.serialNumber
+      );
 
       if (!simLink) {
-        await db.insert(courierRequestItems).values({
+        await ctx.requestsRepo.insertRequestItems([{
           requestId,
           itemType: "SIM",
           simSerial: entry.serialNumber,
@@ -181,7 +152,7 @@ export class CustodyGuard {
           scannedAt: new Date(),
           receivedAt: new Date(),
           technicianId: techUser.id,
-        });
+        }]);
       }
     }
   }
@@ -193,7 +164,7 @@ export class CustodyGuard {
   ): Promise<void> {
     const { requestId, enteredBy, existingExecution } = ctx;
     try {
-      await db.insert(courierAuditLogs).values({
+      await ctx.dashboardRepo.insertAuditLog({
         tableName: "executions",
         recordId: requestId,
         fieldName: "status",
@@ -201,7 +172,6 @@ export class CustodyGuard {
         newValue: `فشل التحقق: الرقم التسلسلي ${serial} ليس في عهدة الفني ${techUser.fullName}`,
         action: "verification_failed",
         changedBy: enteredBy,
-        changedAt: new Date(),
       });
     } catch {
       // Non-critical

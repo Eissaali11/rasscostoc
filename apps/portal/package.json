@@ -26,7 +26,8 @@
     "@stockpro/theme": "*",
     "@stockpro/ui": "*",
     "@stockpro/navigation": "*",
-    "@stockpro/shared-types": "*"
+    "@stockpro/shared-types": "*",
+    "@stockpro/ai-review-ui": "*"
   },
   "devDependencies": {
     "@types/react": "^18.3.11",

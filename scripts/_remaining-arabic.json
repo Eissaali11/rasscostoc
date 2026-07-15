@@ -1,0 +1,1192 @@
+[
+  {
+    "file": "apps/portal/src/pages/courier/courier-audit-log.tsx",
+    "line": 75,
+    "text": "{t('courier.completed_2')} <span className=\"font-semibold text-cyan-400\">{total}</span> حركة نظام وتعديل."
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-pdf-review.tsx",
+    "line": 301,
+    "text": "مرتبط بـ TID: {linkedRequestTid || t('courier.loading')}"
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-raw-data.tsx",
+    "line": 358,
+    "text": "الصفحة {t('courier.item_4292', { count: page })}{totalPages} (إجمالي {t('courier.log_1', { count: total })})"
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-request-detail.tsx",
+    "line": 482,
+    "text": "{/* 2. Action / إجراء الطلب */}"
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-request-detail.tsx",
+    "line": 524,
+    "text": "{/* 5. Client Notes / ملاحظات العميل */}"
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-request-detail.tsx",
+    "line": 559,
+    "text": "الجهاز ({deviceLookup?.technician?.fullName}) والشريحة ({simLookup?.technician?.fullName}) ينتميان لفنيين مختلفين."
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-request-detail.tsx",
+    "line": 754,
+    "text": "⚠ الخصم من عهدة: {deviceLookup.technician.fullName} — وليس من اسم التعيين."
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-request-detail.tsx",
+    "line": 876,
+    "text": "عند الحفظ بحالة t('courier.completed_5')، سيتم خصم كل الأجهزة والشرائح المُدخلة تلقائياً من عهدة الفني (Scan-Out)."
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-requests.tsx",
+    "line": 224,
+    "text": "{t('courier.total_review')} <span className=\"text-slate-200 font-medium\">{total}</span> طلب"
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-requests.tsx",
+    "line": 345,
+    "text": "الحالة: {status === \"pending\" ? t('courier.verification_3') : status}"
+  },
+  {
+    "file": "apps/portal/src/pages/courier/courier-requests.tsx",
+    "line": 438,
+    "text": "صفحة {t('courier.item_4292', { count: page })}{totalPages}"
+  },
+  {
+    "file": "apps/portal/src/pages/dashboard.tsx",
+    "line": 486,
+    "text": "مرحباً بك مجدداً، {user?.fullName || t('dashboard.supervisor')}. إليك نظرة شاملة على عمليات المخزون ومؤشرات الأداء."
+  },
+  {
+    "file": "apps/portal/src/pages/dashboard.tsx",
+    "line": 1296,
+    "text": "أهلاً بك، {user?.fullName || t('dashboard.technician')}. تابع عهدتك الثابتة والمتحركة وقدم طلبات المخزون الجديدة."
+  },
+  {
+    "file": "apps/portal/src/pages/fixed-inventory-dashboard.tsx",
+    "line": 213,
+    "text": "⚠️ تنبيه: {t('inventory.item_33113', { count: summary.techniciansWithCriticalStock })}!"
+  },
+  {
+    "file": "apps/portal/src/pages/notifications.tsx",
+    "line": 965,
+    "text": "المندوب: {technicianNameById.get(device.technicianId) || t('notifications.item_9013', { var_0: device.technicianId.slice(0, 8) })}"
+  },
+  {
+    "file": "apps/portal/src/pages/notifications.tsx",
+    "line": 1534,
+    "text": "هل تريد قبول {t('notifications.item_7419', { count: selectedBatchIds.length })}"
+  },
+  {
+    "file": "apps/portal/src/pages/notifications.tsx",
+    "line": 1563,
+    "text": "يرجى إدخال سبب رفض {t('notifications.request_4', { count: selectedBatchIds.length })}"
+  },
+  {
+    "file": "apps/portal/src/pages/operation-details.tsx",
+    "line": 684,
+    "text": "نقل مخزون داخلي - {operationGroup.warehouseName || t('common.warehouse_1')} إلى {operationGroup.technicianName || t('common.technician')}"
+  },
+  {
+    "file": "apps/portal/src/pages/operations-search.tsx",
+    "line": 124,
+    "text": "if (/(صيانة|maintenance|تحويل\\s*للصيانة)/i.test(combined)) return \"maintenance\";"
+  },
+  {
+    "file": "apps/portal/src/pages/operations-search.tsx",
+    "line": 125,
+    "text": "if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) return \"rejected\";"
+  },
+  {
+    "file": "apps/portal/src/pages/operations-search.tsx",
+    "line": 126,
+    "text": "if (/(موافق|تمت\\s*الموافقة|approved|accept|مقبول)/i.test(combined)) return \"approved\";"
+  },
+  {
+    "file": "apps/portal/src/pages/operations.tsx",
+    "line": 1359,
+    "text": "المنفذ: {mainOperation.technicianName || t('common.item_11173')} • {mainOperation.systemMeta?.userRole || \"-\"}"
+  },
+  {
+    "file": "apps/portal/src/pages/product-smart-add.tsx",
+    "line": 276,
+    "text": "description: t('inventory.done_save_var_0_failedcount', { var_0: t('common.item_10652', { count: successCount  })، وفشل ${failedCount}` : \"\""
+  },
+  {
+    "file": "apps/portal/src/pages/ReceivedDeviceDetails.tsx",
+    "line": 1019,
+    "text": "تاريخ الرفع: {deliveryProof.createdAt ? `${formatDate(deliveryProof.createdAt.toISOString())} - ${formatTime(deliveryProof.createdAt.toISOSt"
+  },
+  {
+    "file": "apps/portal/src/pages/ReceivedDeviceDetails.tsx",
+    "line": 1065,
+    "text": "تاريخ الرفع: {receiptFormProof.createdAt ? `${formatDate(receiptFormProof.createdAt.toISOString())} - ${formatTime(receiptFormProof.createdA"
+  },
+  {
+    "file": "apps/portal/src/pages/ReceivedDeviceDetails.tsx",
+    "line": 1186,
+    "text": "ملاحظات {actionType === \"reject\" ? t('verification.item_9642') : t('verification.item_12773')}"
+  },
+  {
+    "file": "apps/portal/src/pages/ReceivedDevicesReview.tsx",
+    "line": 627,
+    "text": "<>مادة: {getItemName(selectedDevice.itemTypeId, selectedDevice.terminalId)} - {selectedDevice.serialNumber}</>"
+  },
+  {
+    "file": "apps/portal/src/pages/ReceivedDevicesReview.tsx",
+    "line": 635,
+    "text": "ملاحظات {actionType === 'reject' ? t('verification.item_9642') : t('verification.item_12773')}"
+  },
+  {
+    "file": "apps/portal/src/pages/technician-details.tsx",
+    "line": 906,
+    "text": "عهدة نشطة: {arNumber(serializedItems.length)}"
+  },
+  {
+    "file": "apps/portal/src/pages/technician-details.tsx",
+    "line": 910,
+    "text": "مسلَّم: {arNumber(deliveryLogCount)}"
+  },
+  {
+    "file": "apps/portal/src/pages/transaction-history.tsx",
+    "line": 405,
+    "text": "الصفحة {t('common.item_4292', { count: transactionData.page })}{transactionData.totalPages}"
+  },
+  {
+    "file": "apps/portal/src/pages/transfer-details.tsx",
+    "line": 423,
+    "text": "التاريخ: {new Date(transferDetail.createdAt).toLocaleDateString('en-US', {"
+  },
+  {
+    "file": "apps/portal/src/pages/transfer-details.tsx",
+    "line": 431,
+    "text": "الوقت: {new Date(transferDetail.createdAt).toLocaleTimeString('en-US', {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices-all.tsx",
+    "line": 75,
+    "text": "if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices-all.tsx",
+    "line": 79,
+    "text": "if (/(موافق|تمت\\s*الموافقة|approved|accept|مقبول)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices-management.tsx",
+    "line": 75,
+    "text": "if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices-management.tsx",
+    "line": 79,
+    "text": "if (/(موافق|تمت\\s*الموافقة|approved|accept|مقبول)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices.tsx",
+    "line": 66,
+    "text": "if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices.tsx",
+    "line": 70,
+    "text": "if (/(موافق|تمت\\s*الموافقة|approved|accept|مقبول)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices.tsx",
+    "line": 80,
+    "text": "if (/(تالف|كسر|مكسور|ضرر|damag|broken|fault)/i.test(source)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices.tsx",
+    "line": 84,
+    "text": "if (/(عدم\\s*تطابق|مختلف|wrong|mismatch|خطأ)/i.test(source)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/withdrawn-devices.tsx",
+    "line": 327,
+    "text": "{analytics.monthlyDelta >= 0 ? \"+\" : \"\"}{analytics.monthlyDelta}% عن الشهر السابق"
+  },
+  {
+    "file": "apps/portal/src/pages/WithdrawnDeviceDetails.tsx",
+    "line": 81,
+    "text": "if (/(صيانة|maintenance|تحويل\\s*للصيانة)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/WithdrawnDeviceDetails.tsx",
+    "line": 85,
+    "text": "if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/pages/WithdrawnDeviceDetails.tsx",
+    "line": 89,
+    "text": "if (/(موافق|تمت\\s*الموافقة|approved|accept|مقبول)/i.test(combined)) {"
+  },
+  {
+    "file": "apps/portal/src/components/add-stock-modal.tsx",
+    "line": 106,
+    "text": "إضافة كمية جديدة من \"{selectedItem?.name}\" إلى المخزون"
+  },
+  {
+    "file": "apps/portal/src/components/add-technician-modal.tsx",
+    "line": 132,
+    "text": "{/* عرض معلومات المندوب المسجل */}"
+  },
+  {
+    "file": "apps/portal/src/components/dashboard/GlobalInventoryChart.tsx",
+    "line": 161,
+    "text": "المجموع: {(payload[0]?.value || 0) + (payload[1]?.value || 0) + (payload[2]?.value || 0)}"
+  },
+  {
+    "file": "apps/portal/src/components/dashboard/stats-kpi-card.tsx",
+    "line": 54,
+    "text": "{trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}% من الشهر الماضي"
+  },
+  {
+    "file": "apps/portal/src/components/edit-courier-execution-modal.tsx",
+    "line": 401,
+    "text": "إضافة {role === \"device\" ? t('courier.device_1') : t('courier.sim_1')}"
+  },
+  {
+    "file": "apps/portal/src/components/edit-item-modal.tsx",
+    "line": 114,
+    "text": "تعديل بيانات \"{selectedItem?.name}\""
+  },
+  {
+    "file": "apps/portal/src/components/header.tsx",
+    "line": 46,
+    "text": "<span className=\"hidden sm:inline\">{t('common.system_4')}</span>إدارة المخزون"
+  },
+  {
+    "file": "apps/portal/src/components/inventory-table.tsx",
+    "line": 335,
+    "text": "هذا الإجراء لا يمكن التراجع عنه. سيتم حذف \"{selectedItem?.name}\" من المخزون نهائياً."
+  },
+  {
+    "file": "apps/portal/src/components/sidebar.tsx",
+    "line": 100,
+    "text": "تقرير المخزون - ${new Date().toLocaleDateString('ar-SA')}"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 238,
+    "text": "{ width: 25 },  // اسم المندوب"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 239,
+    "text": "{ width: 18 },  // المدينة"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 243,
+    "text": "{ width: 14 },  // أوراق رول"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 244,
+    "text": "{ width: 16 },  // ملصقات مداى"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 245,
+    "text": "{ width: 16 },  // بطاريات جديدة"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 246,
+    "text": "{ width: 16 },  // موبايلي"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 248,
+    "text": "{ width: 14 },  // زين"
+  },
+  {
+    "file": "apps/portal/src/components/technicians-table.tsx",
+    "line": 249,
+    "text": "{ width: 35 },  // ملاحظات"
+  },
+  {
+    "file": "apps/portal/src/components/transfer-from-warehouse-modal.tsx",
+    "line": 312,
+    "text": "نقل أصناف من {t('warehouse.item_13877', { count: warehouseName })}"
+  },
+  {
+    "file": "apps/portal/src/components/transfer-from-warehouse-modal.tsx",
+    "line": 443,
+    "text": "متاح: {t('warehouse.item_10609', { count: availableBoxes })}{t('warehouse.unit_1', { count: availableUnits })}"
+  },
+  {
+    "file": "apps/portal/src/components/transfer-from-warehouse-modal.tsx",
+    "line": 554,
+    "text": "يوجد {t('warehouse.inventory', { count: overflowItemsCount })}"
+  },
+  {
+    "file": "apps/portal/src/components/withdraw-from-technician-modal.tsx",
+    "line": 580,
+    "text": "{item.barcode} • المتاح: {item.availableForSupply}"
+  },
+  {
+    "file": "apps/portal/src/components/withdrawal-modal.tsx",
+    "line": 162,
+    "text": "(متوفر: {selectedItemData.quantity})"
+  },
+  {
+    "file": "apps/portal/src/features/product-details/lifecycle.helpers.ts",
+    "line": 71,
+    "text": "locationBuilder: (row) => row.warehouseName || `مستودع المنطقة${row.regionId ? ` (${row.regionId})` : \"\"}`,"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 64,
+    "text": "return 'أجهزة';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 66,
+    "text": "return 'شرائح';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 68,
+    "text": "return 'أوراق';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 77,
+    "text": "return 'متوفر';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 79,
+    "text": "return 'منخفض';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 81,
+    "text": "return 'نافد';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 89,
+    "text": "companyName = 'نظام إدارة المخزون',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 90,
+    "text": "reportTitle = 'تقرير المخزون الشامل'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 93,
+    "text": "const worksheet = workbook.addWorksheet('تقرير المخزون');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 119,
+    "text": "dateCell.value = `تاريخ التقرير: ${currentDate}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 123,
+    "text": "const headerRow = worksheet.addRow(['#', 'اسم الصنف', 'النوع', 'الكمية', 'الوحدة', 'الحد الأدنى', 'اسم المندوب', 'المدينة', 'الحالة', 'المنط"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 145,
+    "text": "item.regionName || 'غير محدد'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 163,
+    "text": "worksheet.addRow(['📊 الإحصائيات']).font = { bold: true, size: 12 };"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 164,
+    "text": "worksheet.addRow(['إجمالي الأصناف:', inventory.length]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 165,
+    "text": "worksheet.addRow(['الأصناف المتوفرة:', inventory.filter(i => i.status === 'available').length]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 166,
+    "text": "worksheet.addRow(['الأصناف المنخفضة:', inventory.filter(i => i.status === 'low').length]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 167,
+    "text": "worksheet.addRow(['الأصناف النافدة:', inventory.filter(i => i.status === 'out').length]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 168,
+    "text": "worksheet.addRow(['إجمالي الكميات:', inventory.reduce((sum, item) => sum + item.quantity, 0)]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 172,
+    "text": "const fileName = `تقرير_المخزون_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 192,
+    "text": "const worksheet = workbook.addWorksheet('تقرير المستودعات');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 241,
+    "text": "dateCell.value = `تاريخ التقرير: ${arabicDate} - الساعة: ${time}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 250,
+    "text": "const headers: string[] = ['#', 'اسم المستودع', 'الموقع', 'الحالة'];"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 252,
+    "text": "headers.push(`${it.nameAr} (صناديق)`);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 253,
+    "text": "headers.push(`${it.nameAr} (قطع)`);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 255,
+    "text": "headers.push('إجمالي الأصناف');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 292,
+    "text": "warehouse.isActive ? 'نشط' : 'غير نشط',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 320,
+    "text": "const totalRowData: (string | number)[] = ['', 'الإجمالي', '', ''];"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 351,
+    "text": "const statsHeaderRow = worksheet.addRow(['الإحصائيات العامة']);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 367,
+    "text": "addStat('إجمالي المستودعات', warehouses.length);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 368,
+    "text": "addStat('المستودعات النشطة', totalActive);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 369,
+    "text": "addStat('المستودعات غير النشطة', totalInactive);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 370,
+    "text": "addStat('إجمالي عدد الأصناف', grandTotalItems);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 372,
+    "text": "addStat(`${it.nameAr} (إجمالي)`, totalsBoxes[it.id] + totalsUnits[it.id]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 379,
+    "text": "const fileName = `تقرير_المستودعات_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 386,
+    "text": "companyName = 'نظام إدارة المخزون - RAS Saudi',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 387,
+    "text": "reportTitle = 'تقرير المستودعات الشامل'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 395,
+    "text": "const worksheet = workbook.addWorksheet('تقرير المستودعات');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 440,
+    "text": "dateCell.value = `تاريخ التقرير: ${arabicDate} - الساعة: ${time}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 454,
+    "text": "'اسم المستودع',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 455,
+    "text": "'الموقع',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 456,
+    "text": "'الحالة',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 457,
+    "text": "'N950 (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 458,
+    "text": "'N950 (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 459,
+    "text": "'I9000s (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 460,
+    "text": "'I9000s (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 461,
+    "text": "'I9100 (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 462,
+    "text": "'I9100 (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 463,
+    "text": "'ورق حراري (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 464,
+    "text": "'ورق حراري (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 465,
+    "text": "'ملصقات (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 466,
+    "text": "'ملصقات (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 467,
+    "text": "'بطاريات (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 468,
+    "text": "'بطاريات (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 469,
+    "text": "'موبايلي (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 470,
+    "text": "'موبايلي (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 471,
+    "text": "'STC (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 472,
+    "text": "'STC (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 473,
+    "text": "'زين (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 474,
+    "text": "'زين (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 475,
+    "text": "'ليبارا (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 476,
+    "text": "'ليبارا (قطع)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 477,
+    "text": "'إجمالي الأصناف'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 565,
+    "text": "warehouse.isActive ? 'نشط' : 'غير نشط',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 602,
+    "text": "'الإجمالي',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 647,
+    "text": "'إجمالي الصناديق',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 718,
+    "text": "const statsHeaderRow = worksheet.addRow(['الإحصائيات العامة']);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 738,
+    "text": "'إجمالي المستودعات',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 740,
+    "text": "'N950 (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 742,
+    "text": "'I9000s (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 744,
+    "text": "'I9100 (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 766,
+    "text": "'ورق حراري (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 768,
+    "text": "'ملصقات (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 770,
+    "text": "'بطاريات (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 772,
+    "text": "'موبايلي (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 794,
+    "text": "'STC (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 796,
+    "text": "'زين (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 798,
+    "text": "'ليبارا (صناديق)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 800,
+    "text": "'المستودعات النشطة',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 804,
+    "text": "'المستودعات غير النشطة',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 831,
+    "text": "const unitsSheet = workbook.addWorksheet('الوحدات - Units');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 854,
+    "text": "unitsSubtitleCell.value = 'تقرير الوحدات - Units Report';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 866,
+    "text": "unitsDateCell.value = `تاريخ التقرير: ${arabicDate} - الساعة: ${time}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 880,
+    "text": "'اسم المستودع',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 881,
+    "text": "'الموقع',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 885,
+    "text": "'ورق حراري',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 886,
+    "text": "'ملصقات',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 887,
+    "text": "'بطاريات',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 888,
+    "text": "'موبايلي',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 890,
+    "text": "'زين',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 891,
+    "text": "'ليبارا'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 943,
+    "text": "'الإجمالي',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 991,
+    "text": "const unitsStatsHeaderRow = unitsSheet.addRow(['الإحصائيات العامة - Units Statistics']);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1011,
+    "text": "'إجمالي الوحدات',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1015,
+    "text": "'N950 (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1017,
+    "text": "'I9000s (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1019,
+    "text": "'I9100 (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1041,
+    "text": "'ورق حراري (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1043,
+    "text": "'ملصقات (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1045,
+    "text": "'بطاريات (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1047,
+    "text": "'موبايلي (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1069,
+    "text": "'STC (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1071,
+    "text": "'زين (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1073,
+    "text": "'ليبارا (وحدات)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1098,
+    "text": "const fileName = `تقرير_المستودعات_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1169,
+    "text": "const companyName = 'نظام إدارة المخزون - RAS Saudi';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1231,
+    "text": "const totalColumns = itemTypeCount + 2; // +2 for 'الصنف' and 'الإجمالي'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1263,
+    "text": "infoCell.value = `المدينة: ${data.city} | التاريخ: ${arabicDate} - ${time}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1278,
+    "text": "headerValues = ['الصنف', ...data.itemTypes!.map(it => it.nameAr), 'الإجمالي'];"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1281,
+    "text": "'الصنف', 'N950', 'I9000s', 'I9100', 'ورق حراري', 'ملصقات',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1282,
+    "text": "'بطاريات', 'موبايلي', 'STC', 'زين', 'ليبارا', 'الإجمالي'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1309,
+    "text": "boxesValues = ['صناديق'];"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1323,
+    "text": "'صناديق',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1347,
+    "text": "unitsValues = ['قطع'];"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1361,
+    "text": "'قطع',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1391,
+    "text": "'المخزون الثابت - Fixed',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1392,
+    "text": "'تقرير مخزون المندوب',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1399,
+    "text": "'المخزون المتحرك - Moving',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1400,
+    "text": "'تقرير المخزون المتحرك',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1407,
+    "text": "const fileName = `تقرير_مخزون_المندوب_${data.technicianName}_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1454,
+    "text": "const companyName = 'نظام إدارة المخزون - RAS Saudi';"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1464,
+    "text": "const inventorySheet = workbook.addWorksheet('المخزون');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1481,
+    "text": "subtitleCell.value = `تقرير مخزون المستودع: ${data.warehouse.name}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1493,
+    "text": "locationCell.value = `الموقع: ${data.warehouse.location}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1505,
+    "text": "dateCell.value = `تاريخ التقرير: ${arabicDate} - ${time}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1512,
+    "text": "const headerRow = inventorySheet.addRow(['#', 'الصنف', 'الكراتين', 'الوحدات', 'الإجمالي']);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1573,
+    "text": "{ name: 'ورق الطباعة', boxes: inv?.rollPaperBoxes || 0, units: inv?.rollPaperUnits || 0 },"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1574,
+    "text": "{ name: 'الملصقات', boxes: inv?.stickersBoxes || 0, units: inv?.stickersUnits || 0 },"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1575,
+    "text": "{ name: 'البطاريات', boxes: inv?.newBatteriesBoxes || 0, units: inv?.newBatteriesUnits || 0 },"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1576,
+    "text": "{ name: 'موبايلي SIM', boxes: inv?.mobilySimBoxes || 0, units: inv?.mobilySimUnits || 0 },"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1578,
+    "text": "{ name: 'زين SIM', boxes: inv?.zainSimBoxes || 0, units: inv?.zainSimUnits || 0 },"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1579,
+    "text": "{ name: 'ليبارا SIM', boxes: inv?.lebaraBoxes || 0, units: inv?.lebaraUnits || 0 },"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1608,
+    "text": "const totalRow = inventorySheet.addRow(['', 'الإجمالي', totalBoxes, totalUnits, totalBoxes + totalUnits]);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1635,
+    "text": "const transfersSheet = workbook.addWorksheet('سجل النقل');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1640,
+    "text": "transferTitleCell.value = `سجل عمليات النقل - ${data.warehouse.name}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1652,
+    "text": "transferDateCell.value = `تاريخ التقرير: ${arabicDate} - ${time}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1659,
+    "text": "const transferHeaderRow = transfersSheet.addRow(['المندوب', 'الأصناف المنقولة', 'الحالة', 'التاريخ', 'الملاحظات']);"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1708,
+    "text": "const fileName = `تقرير_مخزون_${data.warehouse.name}_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1714,
+    "text": "companyName = 'نظام إدارة المخزون',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1715,
+    "text": "reportTitle = 'تقرير سجل عمليات النظام'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1718,
+    "text": "const worksheet = workbook.addWorksheet('سجل النظام');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1744,
+    "text": "dateCell.value = `تاريخ التقرير: ${currentDate}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1750,
+    "text": "'التاريخ',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1751,
+    "text": "'المستخدم',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1752,
+    "text": "'الدور',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1753,
+    "text": "'العملية',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1754,
+    "text": "'نوع الكيان',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1755,
+    "text": "'اسم الكيان',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1756,
+    "text": "'المستوى',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1757,
+    "text": "'الوصف'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1798,
+    "text": "const fileName = `سجل_عمليات_النظام_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1804,
+    "text": "companyName = 'نظام إدارة المخزون - RAS Saudi',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1805,
+    "text": "reportTitle = 'تقرير الأجهزة المسحوبة والمرتجعة الشامل'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1812,
+    "text": "const worksheet = workbook.addWorksheet('الأجهزة المرتجعة');"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1838,
+    "text": "dateCell.value = `تاريخ التقرير: ${currentDate}`;"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1847,
+    "text": "'المدينة (City)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1848,
+    "text": "'اسم الفني (Tec Name)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1849,
+    "text": "'رقم الجهاز (Terminal ID)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1850,
+    "text": "'الرقم التسلسلي للجهاز (serial number)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1851,
+    "text": "'البطارية سليمة ام لا (Battery)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1852,
+    "text": "'كابل الشاحن (charger cable)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1853,
+    "text": "'رأس الشاحن (charger head)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1854,
+    "text": "'وجود شريحة الاتصال في الجهاز (SIM)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1855,
+    "text": "'نوع شريحة الاتصال (SIM card type)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1856,
+    "text": "'يرجى ذكر الضرر ان وجد (damage part)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1857,
+    "text": "'ملاحظات (Notes)',"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1859,
+    "text": "'إجمالي عدد الأجهزة (Total Terminal ID)'"
+  },
+  {
+    "file": "apps/portal/src/lib/exportToExcel.ts",
+    "line": 1929,
+    "text": "const fileName = `تقرير_الأجهزة_المسحوبة_${new Date().toISOString().split('T')[0]}.xlsx`;"
+  },
+  {
+    "file": "apps/portal/src/lib/queryClient.ts",
+    "line": 111,
+    "text": "throw new Error('فشل الاتصال بالسيرفر. يرجى التحقق من الاتصال بالإنترنت أو الاتصال بالدعم الفني.');"
+  },
+  {
+    "file": "apps/portal/src/lib/queryClient.ts",
+    "line": 163,
+    "text": "throw new Error(\"تم استلام HTML بدل JSON من السيرفر. تحقق من مسارات API أو إعادة تشغيل الخادم.\");"
+  },
+  {
+    "file": "apps/portal/src/lib/queryClient.ts",
+    "line": 170,
+    "text": "throw new Error('فشل الاتصال بالسيرفر. يرجى التحقق من الاتصال بالإنترنت أو الاتصال بالدعم الفني.');"
+  }
+]

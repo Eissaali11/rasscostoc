@@ -1,0 +1,7 @@
+Index Scan using courier_executions_sim_serial_pattern_idx on public.courier_executions ce  (cost=0.41..8.43 rows=1 width=520) (actual time=0.137..0.138 rows=1.00 loops=1)
+  Output: id, request_id, request_priority_level, push_back, installation_status, paper_roll, "time", delivery_date, response_date, sn, sim_serial, sim_type, customer_notes, extra_field_1, extra_field_2, response_reason_code, sales_technician, technician_code, extraction_confidence, entered_by, entered_at, updated_at, version, paper_roll_qty, stickers_qty, nulip_cards_qty
+  Index Cond: (ce.sim_serial = 'SIM0000015000'::text)
+  Index Searches: 1
+  Buffers: shared hit=1 read=3
+Planning Time: 0.470 ms
+Execution Time: 0.175 ms

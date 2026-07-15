@@ -7,7 +7,7 @@
 
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionCompletedEvent, InventoryDeductionFailedEvent } from "@core/events/events";
-import { InventoryEngine } from "../../../courier/application/inventory/inventory.engine";
+import { createInventoryEngine } from "../../../courier/contracts";
 import { idempotencyService } from "@core/idempotency/idempotency.service";
 import { tracer } from "@core/telemetry/tracer";
 import { db } from "@core/config/db";
@@ -91,7 +91,7 @@ export class InventorySubscriber {
             const span = tracer.startSpan("InventoryDeduction", { requestId, actorId, technicianCode });
 
             try {
-              const engine = InventoryEngine.createDefault();
+              const engine = createInventoryEngine();
               const deductionResult = await engine.deduct({
                 requestId,
                 actorId,

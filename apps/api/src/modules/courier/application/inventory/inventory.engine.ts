@@ -12,18 +12,17 @@
  * Dependencies are injected via static factory — concrete adapters live in /infrastructure/adapters/.
  */
 
-import { db } from "@server/core/config/db";
-import { users, items } from "@shared/schema";
-import { eq, or, inArray } from "drizzle-orm";
 import type { IGeneralInventoryRepository } from "./IGeneralInventoryRepository";
 import type { ISerializedInventoryRepository } from "./ISerializedInventoryRepository";
 import type { DeductionContext, DeductionResult } from "./inventory.engine.types";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
+import type { ICourierInventoryPort } from "../../domain/repositories/ICourierInventoryPort";
 
 export class InventoryEngine {
   constructor(
     private readonly generalInventory: IGeneralInventoryRepository,
-    private readonly serializedInventory: ISerializedInventoryRepository
+    private readonly serializedInventory: ISerializedInventoryRepository,
+    private readonly inventoryPort: ICourierInventoryPort
   ) {}
 
   /**
@@ -38,7 +37,7 @@ export class InventoryEngine {
     };
 
     // Prefer serial owner as technician identity (assignment names are unreliable)
-    const resolved = await InventoryEngine.resolveTechnician(ctx);
+    const resolved = await this.resolveTechnician(ctx);
     if (resolved) {
       ctx.technicianCode = resolved.username;
       (ctx as any).technicianId = resolved.id;
@@ -69,24 +68,25 @@ export class InventoryEngine {
   /**
    * Resolve technician: 1) owner of first serial in custody list, 2) username/fullName/code match.
    */
-  static async resolveTechnician(
+  async resolveTechnician(
     ctx: DeductionContext
   ): Promise<{ id: string; username: string; fullName: string } | null> {
     for (const serial of ctx.serialsForCustody) {
       if (!serial?.trim()) continue;
       const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serial);
       if (candidates.length === 0) continue;
-      const [item] = await db
-        .select({ currentOwnerId: items.currentOwnerId })
-        .from(items)
-        .where(inArray(items.serialNumber, candidates))
-        .limit(1);
+
+      let item: any = null;
+      for (const candidate of candidates) {
+        const found = await this.inventoryPort.findItemBySerial(candidate);
+        if (found) {
+          item = found;
+          break;
+        }
+      }
+
       if (item?.currentOwnerId) {
-        const [tech] = await db
-          .select({ id: users.id, username: users.username, fullName: users.fullName })
-          .from(users)
-          .where(eq(users.id, item.currentOwnerId))
-          .limit(1);
+        const tech = await this.inventoryPort.findUserById(item.currentOwnerId);
         if (tech) return tech;
       }
     }
@@ -94,18 +94,7 @@ export class InventoryEngine {
     const code = ctx.technicianCode?.trim();
     if (!code) return null;
 
-    const [techUser] = await db
-      .select({ id: users.id, username: users.username, fullName: users.fullName })
-      .from(users)
-      .where(
-        or(
-          eq(users.username, code),
-          eq(users.fullName, code),
-          eq(users.technicianCode, code)
-        )
-      )
-      .limit(1);
-
+    const techUser = await this.inventoryPort.findUserByCodeOrUsername(code);
     return techUser ?? null;
   }
 
@@ -116,11 +105,7 @@ export class InventoryEngine {
     if (ctx.devices.length === 0) return;
 
     try {
-      const [actor] = await db
-        .select({ id: users.id, username: users.username, role: users.role, regionId: users.regionId })
-        .from(users)
-        .where(eq(users.id, ctx.actorId))
-        .limit(1);
+      const actor = await this.inventoryPort.findUserById(ctx.actorId);
 
       await this.generalInventory.deductTechnicianInventory({
         technicianCode: ctx.technicianCode,
@@ -130,7 +115,7 @@ export class InventoryEngine {
           id: ctx.actorId,
           username: actor?.username ?? "system",
           role: actor?.role ?? "admin",
-          regionId: actor?.regionId ?? null,
+          regionId: actor?.regionId ? String(actor.regionId) : null,
         },
       });
 
@@ -150,7 +135,7 @@ export class InventoryEngine {
     let techUserId = techId;
 
     if (!techUserId) {
-      const resolved = await InventoryEngine.resolveTechnician(ctx);
+      const resolved = await this.resolveTechnician(ctx);
       techUserId = resolved?.id;
       if (resolved) ctx.technicianCode = resolved.username;
     }
@@ -182,14 +167,5 @@ export class InventoryEngine {
         result.errors.push(`[InventoryEngine] ScanOut failed for "${serial}": ${err.message}`);
       }
     }
-  }
-
-  static createDefault(): InventoryEngine {
-    const { DevicesServiceAdapter } = require("../../infrastructure/adapters/DevicesServiceAdapter");
-    const { SerializedItemsAdapter } = require("../../infrastructure/adapters/SerializedItemsAdapter");
-    return new InventoryEngine(
-      new DevicesServiceAdapter(),
-      new SerializedItemsAdapter()
-    );
   }
 }

@@ -6,9 +6,6 @@
  *   2. Fallback: technicianCode / salesTechnician / request.tecName (exact + fuzzy).
  */
 
-import { db } from "@server/core/config/db";
-import { users, items } from "@shared/schema";
-import { or, eq, inArray, ilike } from "drizzle-orm";
 import { GuardValidationError, isCompletedStatus, type GuardContext, type TechUser } from "./guard.types";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
@@ -34,18 +31,17 @@ export class TechnicianGuard {
     if (rawSn) {
       const candidates = await SerialRecognitionService.buildStoredSerialCandidates(rawSn);
       if (candidates.length > 0) {
-        const [item] = await db
-          .select({ id: items.id, currentOwnerId: items.currentOwnerId, status: items.status })
-          .from(items)
-          .where(inArray(items.serialNumber, candidates))
-          .limit(1);
+        let item: any = null;
+        for (const candidate of candidates) {
+          const found = await ctx.inventoryPort.findItemBySerial(candidate);
+          if (found && found.currentOwnerId) {
+            item = found;
+            break;
+          }
+        }
 
         if (item?.currentOwnerId) {
-          const [techUser] = await db
-            .select({ id: users.id, username: users.username, fullName: users.fullName })
-            .from(users)
-            .where(eq(users.id, item.currentOwnerId))
-            .limit(1);
+          const techUser = await ctx.inventoryPort.findUserById(item.currentOwnerId);
 
           if (techUser) {
             if (!(ACTIVE_CUSTODY_STATUSES as readonly string[]).includes(item.status)) {
@@ -72,37 +68,12 @@ export class TechnicianGuard {
       );
     }
 
-    const [techUser] = await db
-      .select({
-        id: users.id,
-        username: users.username,
-        fullName: users.fullName,
-      })
-      .from(users)
-      .where(
-        or(
-          eq(users.username, technicianCode),
-          eq(users.fullName, technicianCode),
-          eq(users.technicianCode, technicianCode)
-        )
-      )
-      .limit(1);
-
+    const techUser = await ctx.inventoryPort.findUserByCodeOrUsername(technicianCode);
     if (techUser) return techUser;
 
     const labels = TechnicianGuard.normalizeTechLabel(String(technicianCode));
     for (const label of labels) {
-      const [fuzzy] = await db
-        .select({ id: users.id, username: users.username, fullName: users.fullName })
-        .from(users)
-        .where(
-          or(
-            ilike(users.fullName, `%${label}%`),
-            ilike(users.username, `%${label}%`),
-            ilike(users.technicianCode, `%${label}%`)
-          )
-        )
-        .limit(1);
+      const fuzzy = await ctx.inventoryPort.findUserByFuzzyName(label);
       if (fuzzy) return fuzzy;
     }
 

@@ -20,11 +20,22 @@ export default defineConfig({
       : []),
   ],
   resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "apps/portal", "src"),
-      "@shared": path.resolve(import.meta.dirname, "packages/shared-types"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
-    },
+    alias: [
+      {
+        find: "@stockpro/ai-review-ui/styles.css",
+        replacement: path.resolve(
+          import.meta.dirname,
+          "packages/ai-review-ui/src/styles/workspace.css",
+        ),
+      },
+      {
+        find: "@stockpro/ai-review-ui",
+        replacement: path.resolve(import.meta.dirname, "packages/ai-review-ui/src/index.ts"),
+      },
+      { find: "@", replacement: path.resolve(import.meta.dirname, "apps/portal", "src") },
+      { find: "@shared", replacement: path.resolve(import.meta.dirname, "packages/shared-types") },
+      { find: "@assets", replacement: path.resolve(import.meta.dirname, "attached_assets") },
+    ],
   },
   root: path.resolve(import.meta.dirname, "apps/portal"),
   build: {
@@ -34,6 +45,7 @@ export default defineConfig({
   server: {
     fs: {
       strict: true,
+      allow: [path.resolve(import.meta.dirname)],
       deny: ["**/.*"],
     },
   },

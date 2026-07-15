@@ -1,0 +1,542 @@
+﻿apps/api/src/core/serial/serial-recognition.service.ts(150,16): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+apps/api/src/core/storage/MemStorage.ts(678,5): error TS2741: Property 'totalLebaraSim' is missing in type '{ totalN950: number; totalI9000s: number; totalI9100: number; totalRollPaper: number; totalStickers: number; totalNewBatteries: number; totalMobilySim: number; totalStcSim: number; totalZainSim: number; techniciansWithCriticalStock: number; techniciansWithWarningStock: number; techniciansWithGoodStock: number; }' but required in type 'FixedInventorySummary'.
+apps/api/src/modules/courier/application/courier.service.ts(726,51): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+apps/api/src/modules/courier/application/courier.service.ts(867,27): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+apps/api/src/modules/courier/application/excel.helper.ts(278,26): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+apps/api/src/modules/courier/application/guards/CustodyGuard.ts(131,27): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+apps/api/src/modules/identity/infrastructure/database/DrizzleAdminDashboardRepository.ts(73,5): error TS2741: Property 'totalLebaraSim' is missing in type '{ totalN950: number; totalI9000s: number; totalI9100: number; totalRollPaper: number; totalStickers: number; totalNewBatteries: number; totalMobilySim: number; totalStcSim: number; totalZainSim: number; techniciansWithCriticalStock: number; techniciansWithWarningStock: number; techniciansWithGoodStock: number; }' but required in type 'FixedInventorySummary'.
+apps/portal/src/components/add-courier-request-modal.tsx(99,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(99,77): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(108,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(108,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(119,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(119,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(123,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(123,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(134,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(137,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(144,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(154,20): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(158,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(172,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(182,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(195,20): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(199,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(203,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(210,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(213,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(223,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(234,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(244,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(251,41): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(262,89): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(264,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(277,20): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(281,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(287,52): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(288,52): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(289,52): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(290,51): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(294,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(300,41): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(309,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(315,41): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(327,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(330,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(337,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(357,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(370,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(377,41): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(386,91): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(407,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-courier-request-modal.tsx(419,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-item-modal.tsx(36,31): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-item-modal.tsx(37,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-stock-modal.tsx(30,31): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(30,32): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(31,32): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(32,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(33,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(34,33): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(35,33): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(36,37): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(37,37): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(38,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(39,36): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(40,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(41,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(42,37): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(43,37): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(44,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(45,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(46,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-technician-modal.tsx(47,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(148,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(149,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(157,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(158,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(178,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(181,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(224,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(224,56): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(227,20): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(238,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(242,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(257,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(261,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(276,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(296,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(301,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(316,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(320,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(335,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(343,53): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(347,52): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(348,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(349,65): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(350,56): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(351,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(352,53): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(365,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(369,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(384,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(388,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(404,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(408,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(424,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(428,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(451,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(459,46): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-user-modal.tsx(459,65): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(36,27): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(37,37): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(38,33): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(39,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(40,30): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(41,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(42,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/add-withdrawn-device-modal.tsx(43,29): error TS2304: Cannot find name 't'.
+apps/portal/src/components/create-warehouse-modal.tsx(37,27): error TS2304: Cannot find name 't'.
+apps/portal/src/components/create-warehouse-modal.tsx(38,31): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(275,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(277,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(278,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(287,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(288,39): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(307,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(307,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(315,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(315,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(323,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(323,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(329,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(330,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(358,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(358,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(385,39): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(385,64): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(386,45): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(401,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(401,69): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(401,93): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(430,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(448,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(452,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(459,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(462,70): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(467,75): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(468,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(469,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(470,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(489,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(504,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(512,95): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(518,45): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(519,67): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(520,58): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(521,67): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(522,56): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(527,28): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(534,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(546,99): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(552,49): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(563,60): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(581,64): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(586,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(596,32): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(599,32): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(607,97): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(616,97): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(627,95): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(633,45): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(634,48): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(635,47): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(641,97): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(647,47): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(669,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(681,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(694,39): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(694,59): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(706,74): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(708,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(716,72): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-courier-execution-modal.tsx(718,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(111,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(112,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(119,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(120,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(157,25): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(159,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(185,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(194,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(211,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(215,43): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-fixed-inventory-modal.tsx(215,65): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-item-modal.tsx(37,27): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-item-modal.tsx(38,64): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-item-modal.tsx(39,27): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-item-modal.tsx(40,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(108,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(109,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(116,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(117,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(135,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(142,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(149,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(156,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(163,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(170,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(177,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(184,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(191,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(198,13): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(214,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(217,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(253,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(268,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(293,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(302,39): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-fixed-inventory-modal.tsx(302,61): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(30,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(31,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(32,32): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(33,31): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(34,32): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(35,29): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-technician-modal.tsx(36,30): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(119,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(120,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(128,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(129,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(184,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(185,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(191,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(192,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(214,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(217,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(260,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(260,56): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(263,20): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(274,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(278,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(293,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(297,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(312,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(332,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(337,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(352,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(356,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(371,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(379,53): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(383,52): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(384,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(385,65): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(386,56): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(387,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(388,53): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(401,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(405,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(420,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(424,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(440,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(444,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(460,55): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(464,38): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(480,57): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(482,40): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(482,60): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(505,18): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(513,49): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-user-modal.tsx(513,71): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-warehouse-modal.tsx(37,27): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-warehouse-modal.tsx(38,31): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(37,27): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(38,37): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(39,33): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(40,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(41,30): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(42,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(43,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/edit-withdrawn-device-modal.tsx(44,29): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-from-warehouse-modal.tsx(43,35): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(186,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(187,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(199,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(200,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(226,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(227,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(235,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(236,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(262,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(265,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(290,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(294,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(301,71): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(318,28): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(331,28): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(339,24): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(375,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(384,43): error TS2304: Cannot find name 't'.
+apps/portal/src/components/transfer-to-moving-modal.tsx(384,68): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(154,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(155,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(162,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(163,22): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(209,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(212,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(218,21): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(224,30): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(231,31): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(238,59): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(238,108): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(238,159): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(243,16): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(255,84): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(257,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(293,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(299,84): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(301,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(337,26): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(354,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/update-moving-inventory-modal.tsx(362,14): error TS2304: Cannot find name 't'.
+apps/portal/src/components/withdraw-from-technician-modal.tsx(15,34): error TS2304: Cannot find name 't'.
+apps/portal/src/components/withdrawal-modal.tsx(37,29): error TS2304: Cannot find name 't'.
+apps/portal/src/components/withdrawal-modal.tsx(38,31): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(38,38): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(39,50): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(40,50): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(41,50): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(42,50): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(43,50): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(47,111): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(49,111): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(102,28): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(109,28): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(117,41): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(117,65): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(129,24): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(133,96): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(148,24): error TS2304: Cannot find name 't'.
+apps/portal/src/features/products-management/components/products-distribution-table.tsx(152,96): error TS2304: Cannot find name 't'.
+apps/portal/src/lib/exportToExcel.ts(838,35): error TS2373: Parameter 'companyName' cannot reference identifier 'lang' declared after it.
+apps/portal/src/lib/exportToExcel.ts(838,35): error TS2448: Block-scoped variable 'lang' used before its declaration.
+apps/portal/src/lib/exportToExcel.ts(838,35): error TS2454: Variable 'lang' is used before being assigned.
+apps/portal/src/lib/exportToExcel.ts(839,47): error TS2373: Parameter 'reportTitle' cannot reference identifier 'lang' declared after it.
+apps/portal/src/lib/exportToExcel.ts(839,47): error TS2448: Block-scoped variable 'lang' used before its declaration.
+apps/portal/src/lib/exportToExcel.ts(839,47): error TS2454: Variable 'lang' is used before being assigned.
+apps/portal/src/lib/exportToExcel.ts(2172,41): error TS2373: Parameter 'companyName' cannot reference identifier 'lang' declared after it.
+apps/portal/src/lib/exportToExcel.ts(2172,41): error TS2448: Block-scoped variable 'lang' used before its declaration.
+apps/portal/src/lib/exportToExcel.ts(2172,41): error TS2454: Variable 'lang' is used before being assigned.
+apps/portal/src/lib/exportToExcel.ts(2173,42): error TS2373: Parameter 'reportTitle' cannot reference identifier 'lang' declared after it.
+apps/portal/src/lib/exportToExcel.ts(2173,42): error TS2448: Block-scoped variable 'lang' used before its declaration.
+apps/portal/src/lib/exportToExcel.ts(2173,42): error TS2454: Variable 'lang' is used before being assigned.
+apps/portal/src/lib/exportToExcel.ts(2264,35): error TS2373: Parameter 'companyName' cannot reference identifier 'lang' declared after it.
+apps/portal/src/lib/exportToExcel.ts(2264,35): error TS2448: Block-scoped variable 'lang' used before its declaration.
+apps/portal/src/lib/exportToExcel.ts(2264,35): error TS2454: Variable 'lang' is used before being assigned.
+apps/portal/src/lib/exportToExcel.ts(2265,39): error TS2373: Parameter 'reportTitle' cannot reference identifier 'lang' declared after it.
+apps/portal/src/lib/exportToExcel.ts(2265,39): error TS2448: Block-scoped variable 'lang' used before its declaration.
+apps/portal/src/lib/exportToExcel.ts(2265,39): error TS2454: Variable 'lang' is used before being assigned.
+apps/portal/src/pages/accounting-dashboard.tsx(160,72): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(161,34): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(162,36): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(163,37): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(164,38): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(186,41): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(189,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(193,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(256,31): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(257,26): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(258,30): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(259,28): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(260,32): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(261,31): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(262,26): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(263,31): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(264,30): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(293,37): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/accounting-dashboard.tsx(312,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(41,27): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(47,31): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(48,27): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(49,31): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(50,31): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(60,28): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/admin.tsx(74,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/admin.tsx(75,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-audit-log.tsx(32,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-audit-log.tsx(33,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-dashboard.tsx(83,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-dashboard.tsx(84,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-export.tsx(19,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/courier/courier-export.tsx(25,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/courier/courier-export.tsx(31,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/courier/courier-export.tsx(37,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/courier/courier-export.tsx(43,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/courier/courier-export.tsx(51,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-export.tsx(52,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-pdf-review.tsx(56,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-pdf-review.tsx(57,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-pdf-upload.tsx(66,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-pdf-upload.tsx(67,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-raw-data.tsx(64,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-raw-data.tsx(65,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-request-detail.tsx(94,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-request-detail.tsx(95,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-settings.tsx(27,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/courier/courier-settings.tsx(28,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/dashboard.tsx(219,30): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/dashboard.tsx(220,29): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/dashboard.tsx(221,28): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/dashboard.tsx(242,52): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/dashboard.tsx(302,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/dashboard.tsx(303,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/dashboard.tsx(1404,82): error TS2349: This expression is not callable.
+  Type 'WarehouseTransfer' has no call signatures.
+apps/portal/src/pages/dashboard.tsx(1406,69): error TS2349: This expression is not callable.
+  Type 'WarehouseTransfer' has no call signatures.
+apps/portal/src/pages/dashboard.tsx(1406,116): error TS2349: This expression is not callable.
+  Type 'WarehouseTransfer' has no call signatures.
+apps/portal/src/pages/dashboard.tsx(1408,60): error TS2349: This expression is not callable.
+  Type 'WarehouseTransfer' has no call signatures.
+apps/portal/src/pages/employee-detailed-profile-template.tsx(56,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/employee-detailed-profile-template.tsx(57,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(66,16): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(96,26): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(108,45): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(114,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(115,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(684,25): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/employee-edit-profile-template.tsx(704,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/fixed-inventory-dashboard.tsx(44,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/fixed-inventory-dashboard.tsx(45,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/item-type-details.tsx(47,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-type-details.tsx(48,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-type-details.tsx(49,8): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-type-details.tsx(50,16): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-type-details.tsx(55,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-type-details.tsx(59,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-type-details.tsx(63,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-types-management.tsx(66,28): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-types-management.tsx(67,27): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-types-management.tsx(68,24): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/item-types-management.tsx(69,32): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/login.tsx(13,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/login.tsx(14,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/my-fixed-inventory.tsx(49,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/my-fixed-inventory.tsx(50,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/my-moving-inventory.tsx(95,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/my-moving-inventory.tsx(96,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/notifications.tsx(144,10): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/notifications.tsx(152,10): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/notifications.tsx(159,8): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(136,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(141,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(146,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(151,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(162,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(167,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(172,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(183,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations-search.tsx(188,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(128,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(129,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(130,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(131,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(132,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(133,10): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(134,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(135,13): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(136,14): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(140,9): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(141,10): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(142,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(143,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(144,14): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(145,15): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(146,13): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(147,10): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(148,9): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(149,22): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(150,19): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(151,25): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(152,24): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(156,8): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(157,20): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(158,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(159,33): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(160,32): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(199,66): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(206,26): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(207,26): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(212,28): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(212,77): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(216,28): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(216,77): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(225,134): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(229,134): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(232,132): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/operations.tsx(250,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/operations.tsx(251,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/products-management.tsx(102,41): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/profile.tsx(12,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/profile.tsx(13,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(155,20): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(157,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(279,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(284,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(289,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(294,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(305,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(310,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(315,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/ReceivedDeviceDetails.tsx(320,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-details.tsx(243,14): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-details.tsx(250,14): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-details.tsx(257,14): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-details.tsx(263,12): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-details.tsx(273,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/technician-details.tsx(274,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/technician-details.tsx(503,22): error TS2339: Property 'requiresSerial' does not exist on type 'ItemType'.
+apps/portal/src/pages/technician-item-details.tsx(107,15): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(124,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(135,15): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(153,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(154,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(163,15): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(181,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(182,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(191,15): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(208,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(209,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(210,21): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(245,13): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(253,13): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(261,13): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(269,13): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(276,11): error TS2304: Cannot find name 't'.
+apps/portal/src/pages/technician-item-details.tsx(283,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/technician-item-details.tsx(284,11): error TS2451: Cannot redeclare block-scoped variable 't'.
+apps/portal/src/pages/technician-item-details.tsx(353,34): error TS2339: Property 'requiresSerial' does not exist on type 'ItemType'.

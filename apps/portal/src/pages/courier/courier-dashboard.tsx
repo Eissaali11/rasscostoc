@@ -71,10 +71,10 @@ function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
-      className={`rassco-glass p-5 flex items-center gap-4 ${onClick ? "cursor-pointer" : ""}`}
+      className={`courier-stat-card ${onClick ? "cursor-pointer" : ""}`}
     >
       <div
-        className="size-12 rounded-2xl flex items-center justify-center shrink-0"
+        className="courier-stat-card-icon"
         style={{ backgroundColor: `${accent}18`, color: accent }}
       >
         <Icon className="w-6 h-6" />
@@ -190,7 +190,7 @@ export default function CourierDashboardPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="rassco-glass rassco-glass-static p-5 space-y-3"
+        className="courier-panel courier-panel-static p-5 space-y-3"
       >
         <h2 className="text-xs font-bold text-[#18B2B0] uppercase tracking-wide flex items-center gap-1.5">
           <Zap className="w-4 h-4" />
@@ -204,7 +204,7 @@ export default function CourierDashboardPage() {
                 key={btn.label}
                 type="button"
                 onClick={() => setLocation(btn.path)}
-                className="flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-bold bg-white/70 border border-[rgba(24,178,176,0.12)] text-[#2D3135] transition-all duration-300 hover:-translate-y-1 hover:border-[#18B2B0] hover:text-[#18B2B0] hover:shadow-md active:scale-95"
+                className="courier-quick-link"
               >
                 <Icon className="w-4 h-4 text-[#18B2B0]" />
                 <span>{btn.label}</span>
@@ -282,7 +282,7 @@ export default function CourierDashboardPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rassco-glass rassco-glass-static p-6 flex flex-col"
+          className="courier-panel courier-panel-static p-6 flex flex-col"
         >
           <div>
             <h2 className="text-base font-bold text-[#2D3135]">{t("courier.requests_1")}</h2>
@@ -357,7 +357,7 @@ export default function CourierDashboardPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="rassco-glass rassco-glass-static p-6 flex flex-col"
+          className="courier-panel courier-panel-static p-6 flex flex-col"
         >
           <div>
             <h2 className="text-base font-bold text-[#2D3135]">{t("courier.fail_2")}</h2>

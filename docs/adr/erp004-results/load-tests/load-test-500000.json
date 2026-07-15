@@ -1,0 +1,212 @@
+{
+  "list_requests": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 2117,
+      "p50": 2079,
+      "p95": 2114,
+      "p99": 2114,
+      "max": 2114,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 216,
+      "p50": 171,
+      "p95": 204,
+      "p99": 206,
+      "max": 206,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 361,
+      "p50": 265,
+      "p95": 337,
+      "p99": 346,
+      "max": 346,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 640,
+      "p50": 438,
+      "p95": 603,
+      "p99": 617,
+      "max": 617,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "search_tid": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 597,
+      "p50": 460,
+      "p95": 595,
+      "p99": 595,
+      "max": 595,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 1161,
+      "p50": 759,
+      "p95": 1122,
+      "p99": 1156,
+      "max": 1156,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 2363,
+      "p50": 1423,
+      "p95": 2309,
+      "p99": 2353,
+      "max": 2353,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 4647,
+      "p50": 2583,
+      "p95": 4515,
+      "p99": 4620,
+      "max": 4620,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "search_sn": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 753,
+      "p50": 611,
+      "p95": 748,
+      "p99": 748,
+      "max": 748,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 1324,
+      "p50": 811,
+      "p95": 1272,
+      "p99": 1318,
+      "max": 1318,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 2522,
+      "p50": 1452,
+      "p95": 2491,
+      "p99": 2504,
+      "max": 2504,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 4949,
+      "p50": 2873,
+      "p95": 4802,
+      "p99": 4926,
+      "max": 4926,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "lookups": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 195,
+      "p50": 143,
+      "p95": 189,
+      "p99": 189,
+      "max": 189,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 349,
+      "p50": 231,
+      "p95": 330,
+      "p99": 340,
+      "max": 340,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 722,
+      "p50": 466,
+      "p95": 689,
+      "p99": 709,
+      "max": 709,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 1270,
+      "p50": 750,
+      "p95": 1219,
+      "p99": 1247,
+      "max": 1247,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "dashboard_stats": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 122,
+      "p50": 107,
+      "p95": 120,
+      "p99": 120,
+      "max": 120,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 211,
+      "p50": 191,
+      "p95": 207,
+      "p99": 208,
+      "max": 208,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 428,
+      "p50": 401,
+      "p95": 421,
+      "p99": 423,
+      "max": 423,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 876,
+      "p50": 778,
+      "p95": 855,
+      "p99": 869,
+      "max": 869,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  }
+}

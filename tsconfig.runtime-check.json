@@ -17,6 +17,8 @@
     "apps/api/src/storage.ts",
     "apps/api/src/repositories/**",
     "apps/api/src/services/**",
+    "apps/api/src/composition/DrizzleBootstrapDefaultsRepository.ts",
+    "apps/api/src/composition/events.ts",
     "**/*.test.ts"
   ]
 }

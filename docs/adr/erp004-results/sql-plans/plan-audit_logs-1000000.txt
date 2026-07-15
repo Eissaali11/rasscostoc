@@ -1,0 +1,12 @@
+Limit  (cost=26.39..26.64 rows=100 width=208) (actual time=0.021..0.021 rows=0.00 loops=1)
+  Output: id, table_name, record_id, field_name, old_value, new_value, action, changed_by, changed_at
+  ->  Sort  (cost=26.39..27.24 rows=340 width=208) (actual time=0.019..0.020 rows=0.00 loops=1)
+        Output: id, table_name, record_id, field_name, old_value, new_value, action, changed_by, changed_at
+        Sort Key: al.changed_at DESC
+        Sort Method: quicksort  Memory: 25kB
+        ->  Seq Scan on public.courier_audit_logs al  (cost=0.00..13.40 rows=340 width=208) (actual time=0.015..0.015 rows=0.00 loops=1)
+              Output: id, table_name, record_id, field_name, old_value, new_value, action, changed_by, changed_at
+Planning:
+  Buffers: shared hit=7 read=4
+Planning Time: 1.688 ms
+Execution Time: 0.043 ms

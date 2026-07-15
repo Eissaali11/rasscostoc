@@ -1,0 +1,27 @@
+Limit  (cost=1382.21..1382.27 rows=25 width=649) (actual time=32.027..32.031 rows=25.00 loops=1)
+  Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+  Buffers: shared hit=966
+  ->  Sort  (cost=1382.21..1401.38 rows=7668 width=649) (actual time=32.025..32.028 rows=25.00 loops=1)
+        Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+        Sort Key: cr.created_at DESC
+        Sort Method: top-N heapsort  Memory: 34kB
+        Buffers: shared hit=966
+        ->  Hash Left Join  (cost=430.00..1165.82 rows=7668 width=649) (actual time=4.666..21.817 rows=30000.00 loops=1)
+              Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version, ce.installation_status
+              Inner Unique: true
+              Hash Cond: (cr.id = ce.request_id)
+              Buffers: shared hit=966
+              ->  Seq Scan on public.courier_requests cr  (cost=0.00..715.68 rows=7668 width=640) (actual time=0.012..8.610 rows=30000.00 loops=1)
+                    Output: cr.id, cr.date, cr.installation_type, cr.sim, cr.tid, cr.otp, cr.ticketing_holouly, cr.incident_number, cr.pin_code, cr.trsm, cr.terminal_id, cr.sim_sn, cr.id_data, cr.vendor_type, cr.city, cr.city_tec, cr.customer_name, cr.retailer_name, cr.address_ar, cr.address_en, cr.mobile, cr.mobile2, cr.tec_name, cr.created_by, cr.created_at, cr.updated_at, cr.version
+                    Buffers: shared hit=639
+              ->  Hash  (cost=372.78..372.78 rows=4578 width=13) (actual time=4.620..4.621 rows=15000.00 loops=1)
+                    Output: ce.installation_status, ce.request_id
+                    Buckets: 16384 (originally 8192)  Batches: 1 (originally 1)  Memory Usage: 812kB
+                    Buffers: shared hit=327
+                    ->  Seq Scan on public.courier_executions ce  (cost=0.00..372.78 rows=4578 width=13) (actual time=0.008..2.224 rows=15000.00 loops=1)
+                          Output: ce.installation_status, ce.request_id
+                          Buffers: shared hit=327
+Planning:
+  Buffers: shared hit=118 read=5 written=5
+Planning Time: 1.979 ms
+Execution Time: 32.312 ms

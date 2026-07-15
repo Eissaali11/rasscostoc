@@ -22,6 +22,8 @@ import { DrizzleInventoryUnitOfWork } from "@modules/inventory/infrastructure/da
 import { DrizzleWarehouseTransferOperationsRepository } from "@modules/inventory/infrastructure/database/DrizzleWarehouseTransferOperationsRepository";
 import { InventoryService } from "@modules/inventory/infrastructure/services/inventory.service";
 import { InventoryController } from "@modules/inventory/presentation/controllers/inventory.controller";
+import { WarehouseTransferService } from "@modules/inventory/infrastructure/services/warehouse-transfer.service";
+import { WarehouseTransferController } from "@modules/inventory/presentation/controllers/warehouse-transfer.controller";
 
 class InventoryContainer {
   private readonly unitOfWork = new DrizzleInventoryUnitOfWork();
@@ -56,6 +58,9 @@ class InventoryContainer {
     this.addInventoryStockUseCase,
     this.withdrawInventoryStockUseCase
   );
+
+  readonly warehouseTransferService = new WarehouseTransferService();
+  readonly warehouseTransferController = new WarehouseTransferController(this.warehouseTransferService);
 }
 
 export const inventoryContainer = new InventoryContainer();

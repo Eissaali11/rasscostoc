@@ -2,7 +2,7 @@ import type { Express } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { CourierController } from "../controllers/courier.controller";
+import { bootstrapCourierModule } from "../../composition/courier.container";
 import { requireAuth } from "@core/middlewares/auth.middleware";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads", "pdf");
@@ -118,7 +118,7 @@ function validateExcelMagicBytes(req: any, res: any, next: any) {
 }
 
 export function registerCourierRoutes(app: Express): void {
-  const controller = new CourierController();
+  const controller = bootstrapCourierModule();
 
   // Requests CRUD
   app.get("/api/courier/requests", requireAuth, controller.getRequests);
@@ -181,4 +181,6 @@ export function registerCourierRoutes(app: Express): void {
   );
 
   app.post("/api/courier/pdf/:id/apply", requireAuth, controller.applyPdf);
+  app.post("/api/courier/pdf/:id/complete", requireAuth, controller.completePdf);
+  app.post("/api/courier/pdf/:id/reextract", requireAuth, controller.reextractPdf);
 }

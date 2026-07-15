@@ -128,4 +128,22 @@ export class SerializedItemsController {
       data: item,
     });
   });
+
+  /**
+   * GET /api/technicians/:technicianId/serialized-custody
+   */
+  getTechnicianCustody = asyncHandler(async (req: Request, res: Response) => {
+    const { technicianId } = req.params;
+    const custodyItems = await this.serializedItemsService.getTechnicianCustody(technicianId);
+    res.status(200).json(custodyItems);
+  });
+
+  /**
+   * GET /api/my-serialized-custody
+   */
+  getMySerializedCustody = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const custodyItems = await this.serializedItemsService.getTechnicianCustody(userId);
+    res.status(200).json(custodyItems);
+  });
 }

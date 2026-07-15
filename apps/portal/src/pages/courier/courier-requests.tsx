@@ -19,8 +19,18 @@ import {
   Download,
   AlertCircle,
   X,
-  Phone
+  Phone,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  FileInput,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useCourierRenderPerf } from "@/hooks/use-courier-render-perf";
 
@@ -135,6 +145,23 @@ export default function CourierRequestsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleDeleteRequest = async (id: number) => {
+    if (!confirm(t("courier.delete_request"))) return;
+    try {
+      await apiRequest("DELETE", `/api/courier/requests/${id}`);
+      toast({
+        title: t("courier.completed_delete_successfully"),
+        description: t("courier.completed_scan_request_system"),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
+    } catch {
+      toast({
+        title: t("courier.fail_delete"),
+        variant: "destructive",
+      });
+    }
+  };
 
   const params = new URLSearchParams();
   if (q) params.set("q", q);
@@ -465,17 +492,45 @@ export default function CourierRequestsPage() {
                       <StatusBadge status={r.execution?.installationStatus} />
                     </td>
                     <td>
-                      <button
-                        onClick={() => {
-                          setSelectedRequestId(r.id);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="courier-action-chip"
-                      >
-                        {!r.execution || !r.execution.installationStatus
-                          ? t("courier.submit_data")
-                          : t("courier.edit_data_verification")}
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="courier-actions-trigger"
+                            aria-label={t("courier.item_7882")}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="courier-actions-menu"
+                        >
+                          <DropdownMenuItem
+                            className="courier-actions-item"
+                            onClick={() => {
+                              setSelectedRequestId(r.id);
+                              setIsEditModalOpen(true);
+                            }}
+                          >
+                            {!r.execution || !r.execution.installationStatus ? (
+                              <FileInput className="w-4 h-4" />
+                            ) : (
+                              <Edit2 className="w-4 h-4" />
+                            )}
+                            {!r.execution || !r.execution.installationStatus
+                              ? t("courier.submit_data")
+                              : t("courier.edit_data_verification")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="courier-actions-item courier-actions-item-danger"
+                            onClick={() => handleDeleteRequest(r.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {t("courier.delete_3")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))

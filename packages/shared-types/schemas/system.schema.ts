@@ -37,8 +37,35 @@ export const insertSystemLogSchema = createInsertSchema(systemLogs).omit({
 
 export const insertIdempotencyKeySchema = createInsertSchema(idempotencyKeys);
 
+export const coreJobs = pgTable("core_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 50 }).notNull(), // 'EXPORT_EXCEL', 'BULK_IMPORT', 'AI_PROCESS'
+  status: varchar("status", { length: 20 }).notNull().default("PENDING"), // 'PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'EXPIRED'
+  ownerId: varchar("owner_id").references(() => users.id).notNull(),
+  progress: integer("progress").notNull().default(0),
+  progressDetails: text("progress_details"), // JSON: { processedRows, totalRows, etaSeconds, currentStep }
+  payload: text("payload"), // JSON payload as text
+  resultUrl: varchar("result_url", { length: 512 }),
+  resultMetadata: text("result_metadata"), // JSON: { url, size, mime, checksum, expires }
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+  maxRetries: integer("max_retries").notNull().default(3),
+  nextRetryAt: timestamp("next_retry_at"),
+  lastErrorAt: timestamp("last_error_at"),
+  lastHeartbeatAt: timestamp("last_heartbeat_at"),
+  startedAt: timestamp("started_at"),
+  finishedAt: timestamp("finished_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertCoreJobSchema = createInsertSchema(coreJobs);
+
 export type InsertSystemLog = z.infer<typeof insertSystemLogSchema>;
 export type SystemLog = typeof systemLogs.$inferSelect;
 export type IdempotencyKey = typeof idempotencyKeys.$inferSelect;
 export type InsertIdempotencyKey = z.infer<typeof insertIdempotencyKeySchema>;
+export type CoreJob = typeof coreJobs.$inferSelect;
+export type InsertCoreJob = z.infer<typeof insertCoreJobSchema>;
+
 

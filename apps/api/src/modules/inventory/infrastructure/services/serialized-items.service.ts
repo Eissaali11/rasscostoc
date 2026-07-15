@@ -367,13 +367,35 @@ export class SerializedItemsService {
       })
       .from(itemHistoryLogs)
       .leftJoin(users, eq(itemHistoryLogs.changedById, users.id))
-      .where(eq(itemHistoryLogs.itemId, item.id))
-      .orderBy(itemHistoryLogs.changedAt);
+        .where(eq(itemHistoryLogs.itemId, item.id))
+        .orderBy(itemHistoryLogs.changedAt);
 
     return {
       ...item,
       history,
     };
+  }
+
+  async getTechnicianCustody(technicianId: string) {
+    return await db
+      .select({
+        id: items.id,
+        serialNumber: items.serialNumber,
+        status: items.status,
+        carrierName: items.carrierName,
+        createdAt: items.createdAt,
+        itemTypeNameAr: itemTypes.nameAr,
+        itemTypeNameEn: itemTypes.nameEn,
+        itemTypeId: items.itemTypeId,
+      })
+      .from(items)
+      .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
+      .where(
+        and(
+          eq(items.currentOwnerId, technicianId),
+          inArray(items.status, ["IN_TRANSIT_CUSTODY", "RECEIVED_BY_TECHNICIAN"])
+        )
+      );
   }
 }
 

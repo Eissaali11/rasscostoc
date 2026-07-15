@@ -1,0 +1,29 @@
+# Installation Report — Document Profile (draft)
+
+```yaml
+document_type: installation_report
+display_name: Installation Report
+multi_device: true
+technician_matching: required
+prompt_ref: ../prompt-profiles/installation.prompt_v1.md
+schema_ref: ../schemas/installation.schema.json
+business_rule_ids:
+  - BR-SN-01
+  - BR-SIM-01
+  - BR-TID-01
+  - BR-TECH-01
+  - BR-BRANCH-01
+confidence:
+  auto_accept_min: 97
+  review_recommended_min: 92
+  manual_review_min: 80
+field_priority:
+  - serial_number
+  - sim_serial
+  - tid
+  - merchant
+  - branch
+status: draft
+```
+
+Fill sibling profile files for Maintenance, Replacement, Withdrawal, Return, Inspection, Delivery, Inventory Count, Warehouse Transfer, and `unknown-generic`.

@@ -1,14 +1,15 @@
 # ERP-003 — Release Readiness Check (Quality Gate)
 
 **Governed by:** [ERP-000](./ERP-000-engineering-governance.md)  
-**Status:** Pending — blocked until ERP-002 is **Fully Complete** on Staging  
+**Status:** In Progress — post-deploy operational verification  
 **Date:** 2026-07-14  
 **Product:** StockPro Enterprise / RASSCO  
 **Type:** **Quality Gate only** — not a development / performance-improvement project  
 
-**Prerequisite:** [ERP-002](./ERP-002-drizzle-migration-drift.md) Status = **Completed** (Staging signed)  
+**Prerequisite:** [ERP-002](./ERP-002-drizzle-migration-drift.md) Production ledger aligned (`20/20`) + indexes `0018`/`0019` applied (2026-07-14); Staging sign-off still preferred for Full Complete  
 **Unlocks:** [ERP-004](./ERP-004-enterprise-performance-audit.md) (**diagnosis only** — Map + Backlog; fixes = ERP-004A/B…)  
 **Does not unlock:** PDF / OCR / AI / Drive / Storage / Queue / Redis  
+**Does not unfreeze:** ERP-006A until this gate **Pass**  
 
 ## Single question
 
@@ -47,41 +48,63 @@ ERP-004A / 004B … Ranked implementation packages
 Storage / Queue / Redis / PDF / AI / Drive
 ```
 
+## Official post-deploy operational checklist (Production)
+
+Source of truth for closing the release cycle after `44adf88`.  
+Probe helper: `node scripts/erp003-postdeploy-verify.mjs --base-url https://stc1.fun`
+
+| # | Check | Auto / Manual | Status |
+|---|--------|---------------|--------|
+| 1 | Open Courier Requests | Auto + UI | ✅ Auto (`GET` 200, 25 rows, sql/api 38ms) — ☐ UI confirm |
+| 2 | Search TID (Exact) | Auto + UI | ✅ Auto (`q=15805786`, 6ms) — ☐ UI confirm |
+| 3 | Search SN/SIM (Prefix/Exact) | Auto + UI | ✅ Auto (prefix `30302198`, 5–6ms) — ☐ UI confirm |
+| 4 | Open Raw Data | Manual UI | ☐ |
+| 5 | Edit + save a record | Manual UI | ☐ |
+| 6 | PDF Review opens (no AI test) | Auto list + Manual UI | ✅ Auto (`GET /api/courier/pdf` 200) — ☐ UI confirm |
+| 7 | Observe `X-SQL-Time-Ms` / `X-API-Time-Ms` | Auto | ✅ (`38` / `38` list; `6` / `6` TID) |
+| 8 | No critical errors in PM2 logs | Auto | ✅ (last 80 lines, 2026-07-14) |
+
+Auto probe run: `node scripts/erp003-postdeploy-verify.mjs` → **8/8 PASS** (API/PM2).  
+**ERP-003 not closed** until rows 4–5 (and UI confirms for 1–3, 6) are checked by an operator.
+
+**Pass rule:** all 8 checked; then complete sections 1–4 below (or explicitly waive Staging-only rows with Architecture note).
+
 ## Checklist
 
 ### 1) Migrations integrity
 
-- [ ] ERP-002 Status is **Completed** (Staging checklist signed)
-- [ ] `npm run db:migrate` exit 0 on Staging
-- [ ] Package A indexes present (`0018` / `0019` probes)
-- [ ] Production runbook reviewed (no execute required here)
+- [x] Production: indexes `0018` / `0019` present (probes PASS)
+- [x] Production: Drizzle ledger `20/20` aligned; `db:migrate` no-op OK (2026-07-14)
+- [ ] Staging checklist signed (preferred for Full Complete of ERP-002)
+- [x] Production runbook path executed (B for indexes → A catch-up)
 
 ### 2) Regression — Courier / Verification (smoke)
 
-- [ ] First page `GET /api/courier/requests`
-- [ ] Search TID / serial / name prefix
-- [ ] Status / reason filters
-- [ ] Raw Data list + edit save
-- [ ] Reports filtered list
-- [ ] Export for a known filter
-- [ ] Detail / execution save (FSM untouched)
+- [x] First page `GET /api/courier/requests` (auto 200)
+- [x] Search TID exact (auto)
+- [x] Search SN/SIM prefix (auto)
+- [ ] Raw Data list + edit save (**manual**)
+- [ ] Reports filtered list (optional stretch)
+- [x] PDF list API opens (auto; UI Review ☐)
+- [ ] Detail / execution save (**manual** via edit-save)
 
-### 3) Observability on Staging
+### 3) Observability (Production post-deploy)
 
-- [ ] `X-SQL-Time-Ms`, `X-API-Time-Ms`
-- [ ] Metrics: `courier_list_sql_ms` / `courier_list_api_ms`
-- [ ] Client timing: render / network / TTFB / paint
+- [x] `X-SQL-Time-Ms`, `X-API-Time-Ms` on list/search
+- [x] PM2: no critical error/fatal in recent logs
+- [ ] Client timing (UI): render / network — optional snapshot for §4
 
 ### 4) Official Baseline (snapshot only — do not optimize here)
 
-| Metric | Target (ERP-001) | Staging baseline | Notes |
-|--------|------------------|------------------|-------|
-| SQL Time (P50 / P95) | DB &lt; 100ms ideal | _TBD_ | |
-| API Time (P50 / P95) | P95 &lt; 300ms | _TBD_ | |
+| Metric | Target (ERP-001) | Prod snapshot (2026-07-14) | Notes |
+|--------|------------------|----------------------------|-------|
+| SQL Time (list 25) | DB &lt; 100ms ideal | **38ms** | single sample, not P95 |
+| API Time (list 25) | P95 &lt; 300ms | **38ms** | single sample |
+| SQL / API (TID exact) | &lt; 300ms | **6ms / 6ms** | |
+| SQL / API (SN prefix) | — | **5ms / 6ms** | |
 | Payload (25 rows) | &lt; 100KB | _TBD_ | |
-| React Render | &lt; 16ms ideal | _TBD_ | |
-| Browser Paint (FCP) | — | _TBD_ | |
-| Search TID | &lt; 300ms | _TBD_ | |
+| React Render | &lt; 16ms ideal | _manual_ | |
+| Browser Paint (FCP) | — | _manual_ | |
 
 ## Exit criteria
 

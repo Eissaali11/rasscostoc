@@ -203,3 +203,66 @@ export async function buildExportWorkbook(rows: any[]): Promise<Buffer> {
   const arrayBuffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);
 }
+
+export async function streamExportWorkbook(
+  filePath: string,
+  fetchBatch: (offset: number, limit: number) => Promise<any[]>
+): Promise<void> {
+  const workbookWriter = new ExcelJS.stream.xlsx.WorkbookWriter({
+    filename: filePath,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+
+  const sheet = workbookWriter.addWorksheet("Operations Report", {
+    views: [{ state: "frozen", ySplit: 1 }]
+  });
+
+  sheet.columns = EXPORT_COLUMNS.map((col) => ({
+    header: col.header,
+    key: col.header,
+    width: Math.max(col.header.length + 4, 14)
+  }));
+
+  // Style header row
+  const headerRow = sheet.getRow(1);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF284B63" } };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  });
+  headerRow.commit();
+
+  let offset = 0;
+  const limit = 5000;
+  let rowNumber = 2;
+
+  while (true) {
+    const rows = await fetchBatch(offset, limit);
+    if (!rows || rows.length === 0) {
+      break;
+    }
+
+    for (const rowData of rows) {
+      const record: Record<string, string | number | null> = {};
+      for (const col of EXPORT_COLUMNS) {
+        record[col.header] = col.get(rowData);
+      }
+
+      const excelRow = sheet.addRow(record);
+      if (rowNumber % 2 === 0) {
+        excelRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+        });
+      }
+      excelRow.commit();
+      rowNumber++;
+    }
+
+    offset += limit;
+  }
+
+  await sheet.commit();
+  await workbookWriter.commit();
+}
+

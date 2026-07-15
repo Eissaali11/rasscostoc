@@ -57,6 +57,13 @@ module.exports = {
           '^apps/api/src/modules/[^/]+/contracts/'
         ]
       }
+    },
+    {
+      name: 'core-should-not-depend-on-business-modules',
+      comment: 'Core layer must remain independent of specific business modules.',
+      severity: 'error',
+      from: { path: '^apps/api/src/core/' },
+      to: { path: '^apps/api/src/modules/' }
     }
   ],
   options: {

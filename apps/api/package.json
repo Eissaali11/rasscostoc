@@ -22,7 +22,8 @@
     "passport-local": "^1.0.0",
     "@stockpro/config": "*",
     "@stockpro/auth-sdk": "*",
-    "@stockpro/shared-types": "*"
+    "@stockpro/shared-types": "*",
+    "@stockpro/ai-extraction": "*"
   },
   "devDependencies": {
     "@types/express": "4.17.21",

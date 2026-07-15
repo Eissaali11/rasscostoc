@@ -1,0 +1,135 @@
+{
+  "remainingFiles": 33,
+  "remainingLines": 57,
+  "tCalls": 4683,
+  "dirRtlHardcoded": 0,
+  "topFiles": [
+    {
+      "count": 5,
+      "file": "apps/portal/src/pages/withdrawn-devices.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/pages/courier/courier-request-detail.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/pages/courier/courier-requests.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/pages/notifications.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/pages/operations-search.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/pages/ReceivedDeviceDetails.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/pages/WithdrawnDeviceDetails.tsx"
+    },
+    {
+      "count": 3,
+      "file": "apps/portal/src/components/transfer-from-warehouse-modal.tsx"
+    },
+    {
+      "count": 2,
+      "file": "apps/portal/src/pages/dashboard.tsx"
+    },
+    {
+      "count": 2,
+      "file": "apps/portal/src/pages/ReceivedDevicesReview.tsx"
+    },
+    {
+      "count": 2,
+      "file": "apps/portal/src/pages/technician-details.tsx"
+    },
+    {
+      "count": 2,
+      "file": "apps/portal/src/pages/transfer-details.tsx"
+    },
+    {
+      "count": 2,
+      "file": "apps/portal/src/pages/withdrawn-devices-all.tsx"
+    },
+    {
+      "count": 2,
+      "file": "apps/portal/src/pages/withdrawn-devices-management.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/courier/courier-audit-log.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/courier/courier-pdf-review.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/courier/courier-raw-data.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/fixed-inventory-dashboard.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/operation-details.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/operations.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/product-smart-add.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/pages/transaction-history.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/components/add-stock-modal.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/components/dashboard/GlobalInventoryChart.tsx"
+    },
+    {
+      "count": 1,
+      "file": "apps/portal/src/components/dashboard/stats-kpi-card.tsx"
+    }
+  ],
+  "samples": [
+    "apps/portal/src/pages/courier/courier-audit-log.tsx:75: {t('courier.completed_2')} <span className=\"font-semibold text-cyan-400\">{total}</span> حركة نظام وتعديل.",
+    "apps/portal/src/pages/courier/courier-pdf-review.tsx:301: مرتبط بـ TID: {linkedRequestTid || t('courier.loading')}",
+    "apps/portal/src/pages/courier/courier-raw-data.tsx:358: الصفحة {t('courier.item_4292', { count: page })}{totalPages} (إجمالي {t('courier.log_1', { count: total })})",
+    "apps/portal/src/pages/courier/courier-request-detail.tsx:559: الجهاز ({deviceLookup?.technician?.fullName}) والشريحة ({simLookup?.technician?.fullName}) ينتميان لفنيين مختلفين.",
+    "apps/portal/src/pages/courier/courier-request-detail.tsx:754: ⚠ الخصم من عهدة: {deviceLookup.technician.fullName} — وليس من اسم التعيين.",
+    "apps/portal/src/pages/courier/courier-request-detail.tsx:876: عند الحفظ بحالة t('courier.completed_5')، سيتم خصم كل الأجهزة والشرائح المُدخلة تلقائياً من عهدة الفني (Scan-Out).",
+    "apps/portal/src/pages/courier/courier-requests.tsx:224: {t('courier.total_review')} <span className=\"text-slate-200 font-medium\">{total}</span> طلب",
+    "apps/portal/src/pages/courier/courier-requests.tsx:345: الحالة: {status === \"pending\" ? t('courier.verification_3') : status}",
+    "apps/portal/src/pages/courier/courier-requests.tsx:438: صفحة {t('courier.item_4292', { count: page })}{totalPages}",
+    "apps/portal/src/pages/dashboard.tsx:486: مرحباً بك مجدداً، {user?.fullName || t('dashboard.supervisor')}. إليك نظرة شاملة على عمليات المخزون ومؤشرات الأداء.",
+    "apps/portal/src/pages/dashboard.tsx:1296: أهلاً بك، {user?.fullName || t('dashboard.technician')}. تابع عهدتك الثابتة والمتحركة وقدم طلبات المخزون الجديدة.",
+    "apps/portal/src/pages/fixed-inventory-dashboard.tsx:213: ⚠️ تنبيه: {t('inventory.item_33113', { count: summary.techniciansWithCriticalStock })}!",
+    "apps/portal/src/pages/notifications.tsx:965: المندوب: {technicianNameById.get(device.technicianId) || t('notifications.item_9013', { var_0: device.technicianId.slice(0, 8) })}",
+    "apps/portal/src/pages/notifications.tsx:1534: هل تريد قبول {t('notifications.item_7419', { count: selectedBatchIds.length })}",
+    "apps/portal/src/pages/notifications.tsx:1563: يرجى إدخال سبب رفض {t('notifications.request_4', { count: selectedBatchIds.length })}",
+    "apps/portal/src/pages/operation-details.tsx:684: نقل مخزون داخلي - {operationGroup.warehouseName || t('common.warehouse_1')} إلى {operationGroup.technicianName || t('common.techni",
+    "apps/portal/src/pages/operations-search.tsx:124: if (/(صيانة|maintenance|تحويل\\s*للصيانة)/i.test(combined)) return \"maintenance\";",
+    "apps/portal/src/pages/operations-search.tsx:125: if (/(مرفوض|رفض|rejected|reject)/i.test(combined)) return \"rejected\";",
+    "apps/portal/src/pages/operations-search.tsx:126: if (/(موافق|تمت\\s*الموافقة|approved|accept|مقبول)/i.test(combined)) return \"approved\";",
+    "apps/portal/src/pages/operations.tsx:1359: المنفذ: {mainOperation.technicianName || t('common.item_11173')} • {mainOperation.systemMeta?.userRole || \"-\"}",
+    "apps/portal/src/pages/product-smart-add.tsx:276: description: t('inventory.done_save_var_0_failedcount', { var_0: t('common.item_10652', { count: successCount  })، وفشل ${failedCo",
+    "apps/portal/src/pages/ReceivedDeviceDetails.tsx:1019: تاريخ الرفع: {deliveryProof.createdAt ? `${formatDate(deliveryProof.createdAt.toISOString())} - ${formatTime(deliveryProof.created",
+    "apps/portal/src/pages/ReceivedDeviceDetails.tsx:1065: تاريخ الرفع: {receiptFormProof.createdAt ? `${formatDate(receiptFormProof.createdAt.toISOString())} - ${formatTime(receiptFormProo",
+    "apps/portal/src/pages/ReceivedDeviceDetails.tsx:1186: ملاحظات {actionType === \"reject\" ? t('verification.item_9642') : t('verification.item_12773')}",
+    "apps/portal/src/pages/ReceivedDevicesReview.tsx:627: <>مادة: {getItemName(selectedDevice.itemTypeId, selectedDevice.terminalId)} - {selectedDevice.serialNumber}</>"
+  ]
+}

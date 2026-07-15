@@ -36,7 +36,7 @@ export class SerializedItemsAdapter implements ISerializedInventoryRepository {
     if (!item) return false;
 
     const { serializedItemsService } = await import(
-      "../../../inventory/infrastructure/services/serialized-items.service"
+      "../../../inventory/contracts"
     );
 
     await serializedItemsService.scanOut(

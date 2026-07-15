@@ -9,6 +9,9 @@ dist/
 .env.local
 .env.production
 
+# AI Engine secrets (API keys encrypted at rest)
+data/ai-engine-settings.json
+
 # OS files
 .DS_Store
 Thumbs.db

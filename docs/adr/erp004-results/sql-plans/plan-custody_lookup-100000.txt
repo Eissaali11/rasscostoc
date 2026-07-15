@@ -1,0 +1,16 @@
+Index Scan using custody_movements_item_id_idx on public.custody_movements cm  (cost=0.46..8.48 rows=1 width=333) (actual time=0.432..0.434 rows=1.00 loops=1)
+  Output: cm.id, cm.item_id, cm.from_owner_id, cm.to_owner_id, cm.from_warehouse_id, cm.to_warehouse_id, cm.reason, cm.reference_type, cm.reference_id, cm.performed_by_id, cm.performed_at, cm.latitude, cm.longitude, cm.notes
+  Index Cond: ((cm.item_id)::text = ((InitPlan 1).col1)::text)
+  Index Searches: 1
+  Buffers: shared hit=2 read=4
+  InitPlan 1
+    ->  Limit  (cost=0.00..0.04 rows=1 width=37) (actual time=0.011..0.012 rows=1.00 loops=1)
+          Output: items.id
+          Buffers: shared hit=2
+          ->  Seq Scan on public.items  (cost=0.00..4226.00 rows=100000 width=37) (actual time=0.010..0.010 rows=1.00 loops=1)
+                Output: items.id
+                Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=30
+Planning Time: 0.325 ms
+Execution Time: 0.456 ms

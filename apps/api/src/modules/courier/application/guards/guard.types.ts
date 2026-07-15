@@ -15,6 +15,9 @@ export interface GuardContext {
   request: RequestRecord;
   /** The existing execution record if any (for update path) */
   existingExecution?: ExistingExecution | null;
+  requestsRepo: any;
+  dashboardRepo: any;
+  inventoryPort: any;
 }
 
 export interface ExecutionInput {

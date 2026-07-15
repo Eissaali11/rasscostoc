@@ -16,6 +16,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [videoLoaded, setVideoLoaded] = useState(false);
 
   const form = useForm<LoginRequest>({
     resolver: zodResolver(loginSchema),
@@ -351,23 +352,33 @@ export default function Login() {
       `}</style>
 
       <div className="login-root min-h-screen text-slate-100 relative overflow-hidden" dir={dir}>
-        {/* Background Video with 1.15x scale to crop Gemini watermark and overlay */}
+        {/* Ambient background with video */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="w-full h-full object-cover"
+            onLoadedData={() => setVideoLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${
+              videoLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"
+            }`}
             style={{ 
-              transform: "scale(1.05) translate(1%, 0.5%)", 
-              transformOrigin: "center",
-              filter: "brightness(0.95)"
+              filter: "brightness(0.55) contrast(1.1)", 
             }}
           >
-            <source src="/assets/log1.mp4" type="video/mp4" />
+            <source src="/assets/video-erasio.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-[#07111a]/78" style={{ backgroundColor: "rgba(7, 17, 26, 0.78)" }} />
+          {/* Subtle gradient overlay to enhance visual depth and contrast */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/75 to-slate-950/90" 
+            style={{ 
+              mixBlendMode: "multiply"
+            }} 
+          />
+          <div 
+            className="absolute inset-0 bg-[#020617]/40" 
+          />
         </div>
 
         <div className="flex min-h-screen relative z-10">

@@ -1,0 +1,212 @@
+{
+  "list_requests": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 2324,
+      "p50": 2299,
+      "p95": 2321,
+      "p99": 2321,
+      "max": 2321,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 375,
+      "p50": 283,
+      "p95": 361,
+      "p99": 366,
+      "max": 366,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 685,
+      "p50": 504,
+      "p95": 654,
+      "p99": 667,
+      "max": 667,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 967,
+      "p50": 599,
+      "p95": 910,
+      "p99": 938,
+      "max": 938,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "search_tid": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 1060,
+      "p50": 838,
+      "p95": 1058,
+      "p99": 1058,
+      "max": 1058,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 2577,
+      "p50": 1616,
+      "p95": 2494,
+      "p99": 2575,
+      "max": 2575,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 4592,
+      "p50": 2649,
+      "p95": 4471,
+      "p99": 4578,
+      "max": 4578,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 9502,
+      "p50": 5026,
+      "p95": 9212,
+      "p99": 9481,
+      "max": 9481,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "search_sn": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 1161,
+      "p50": 845,
+      "p95": 1159,
+      "p99": 1159,
+      "max": 1159,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 2514,
+      "p50": 1492,
+      "p95": 2494,
+      "p99": 2509,
+      "max": 2509,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 5650,
+      "p50": 3531,
+      "p95": 5588,
+      "p99": 5639,
+      "max": 5639,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 10038,
+      "p50": 6011,
+      "p95": 10012,
+      "p99": 10013,
+      "max": 10013,
+      "errorRate": 0.12,
+      "errorCount": 12
+    }
+  },
+  "lookups": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 959,
+      "p50": 899,
+      "p95": 957,
+      "p99": 957,
+      "max": 957,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 333,
+      "p50": 192,
+      "p95": 318,
+      "p99": 327,
+      "max": 327,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 555,
+      "p50": 379,
+      "p95": 522,
+      "p99": 545,
+      "max": 545,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 1068,
+      "p50": 674,
+      "p95": 1036,
+      "p99": 1055,
+      "max": 1055,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  },
+  "dashboard_stats": {
+    "10": {
+      "concurrency": 10,
+      "totalTime": 172,
+      "p50": 146,
+      "p95": 168,
+      "p99": 168,
+      "max": 168,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "25": {
+      "concurrency": 25,
+      "totalTime": 407,
+      "p50": 360,
+      "p95": 386,
+      "p99": 405,
+      "max": 405,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "50": {
+      "concurrency": 50,
+      "totalTime": 869,
+      "p50": 757,
+      "p95": 819,
+      "p99": 861,
+      "max": 861,
+      "errorRate": 0,
+      "errorCount": 0
+    },
+    "100": {
+      "concurrency": 100,
+      "totalTime": 1775,
+      "p50": 1648,
+      "p95": 1752,
+      "p99": 1760,
+      "max": 1760,
+      "errorRate": 0,
+      "errorCount": 0
+    }
+  }
+}

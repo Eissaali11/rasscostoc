@@ -5,7 +5,7 @@
 
 import { and, eq, or, sql, type SQL } from "drizzle-orm";
 import { courierExecutions, courierRequests } from "@shared/schema";
-import type { ListFilters } from "../application/courier.service";
+import type { ListFilters } from "../domain/courier.types";
 
 /** Normalize user input: trim, collapse whitespace. */
 export function normalizeSearchQuery(raw: string): string {

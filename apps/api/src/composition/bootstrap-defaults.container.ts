@@ -1,5 +1,5 @@
 import { BootstrapDefaultsUseCase } from '@core/bootstrap/use-cases/BootstrapDefaults.use-case';
-import { DrizzleBootstrapDefaultsRepository } from '@core/bootstrap/infrastructure/database/DrizzleBootstrapDefaultsRepository';
+import { DrizzleBootstrapDefaultsRepository } from './DrizzleBootstrapDefaultsRepository';
 
 class BootstrapDefaultsContainer {
   private readonly repository = new DrizzleBootstrapDefaultsRepository();

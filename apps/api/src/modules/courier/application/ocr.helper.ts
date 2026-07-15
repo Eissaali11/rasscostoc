@@ -53,11 +53,29 @@ function mergeFields(
 }
 
 async function extractTextLayer(buffer: Buffer): Promise<string> {
-  const pdfParseModule = await import("pdf-parse");
-  const PDFParse = ((pdfParseModule as any).default || pdfParseModule) as any;
   try {
-    const result = await PDFParse(buffer);
-    return result.text || "";
+    const pdfParseModule = await import("pdf-parse");
+    const PDFParseCtor =
+      (pdfParseModule as any).PDFParse ||
+      (pdfParseModule as any).default?.PDFParse ||
+      (pdfParseModule as any).default;
+    if (typeof PDFParseCtor === "function" && PDFParseCtor !== pdfParseModule) {
+      // pdf-parse v2+: class PDFParse
+      const parser = new PDFParseCtor({ data: buffer });
+      try {
+        const result = await parser.getText();
+        return result?.text || "";
+      } finally {
+        await parser.destroy?.();
+      }
+    }
+    if (typeof PDFParseCtor === "function") {
+      // Legacy callable export
+      const result = await PDFParseCtor(buffer);
+      return result?.text || "";
+    }
+    console.error("[ocr] PDFParse export not found on pdf-parse module");
+    return "";
   } catch (err) {
     console.error("[ocr] PDF text layer extraction failed:", err);
     return "";
@@ -69,10 +87,13 @@ async function extractTextLayer(buffer: Buffer): Promise<string> {
 // If pdf-parse text layer extraction works, we use it directly.
 // If not, we log a warning or return empty images list.
 async function renderPagesToImages(buffer: Buffer): Promise<Buffer[]> {
-  // Since we are running in an Express server and pdf-parse doesn't natively screenshot,
-  // we default to no screenshots unless external native libraries are configured,
-  // to avoid complex system dependencies.
-  return [];
+  try {
+    const { renderPdfPagesToPng } = await import("./ai-engine/pdf-page-renderer");
+    return await renderPdfPagesToPng(buffer, { maxPages: 5, scale: 1.5 });
+  } catch (err) {
+    console.error("[ocr] PDF page render failed:", err);
+    return [];
+  }
 }
 
 const FIELD_KEYS = ["tid", "sn", "sim_serial", "date", "time", "retailer_name"] as const;

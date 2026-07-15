@@ -1,0 +1,20 @@
+Bitmap Heap Scan on public.items i  (cost=2152.97..37418.96 rows=20047 width=248) (actual time=25.563..369.500 rows=100000.00 loops=1)
+  Output: i.id, i.item_type_id, i.serial_number, i.barcode, i.status, i.current_owner_id, i.warehouse_id, i.carrier_name, i.sim_package_type, i.created_at, i.updated_at
+  Recheck Cond: (i.status = 'WAREHOUSE'::text)
+  Filter: ((i.warehouse_id)::text = ((InitPlan 1).col1)::text)
+  Rows Removed by Filter: 100000
+  Heap Blocks: exact=32259
+  Buffers: shared hit=286 read=32134 written=12873
+  InitPlan 1
+    ->  Limit  (cost=0.00..0.03 rows=1 width=37) (actual time=0.722..0.723 rows=1.00 loops=1)
+          Output: warehouses.id
+          Buffers: shared read=1 written=1
+          ->  Seq Scan on public.warehouses  (cost=0.00..14.30 rows=430 width=37) (actual time=0.720..0.720 rows=1.00 loops=1)
+                Output: warehouses.id
+                Buffers: shared read=1 written=1
+  ->  Bitmap Index Scan on items_status_idx  (cost=0.00..2147.92 rows=200466 width=0) (actual time=16.564..16.564 rows=200000.00 loops=1)
+        Index Cond: (i.status = 'WAREHOUSE'::text)
+        Index Searches: 1
+        Buffers: shared read=160 written=160
+Planning Time: 0.234 ms
+Execution Time: 375.092 ms

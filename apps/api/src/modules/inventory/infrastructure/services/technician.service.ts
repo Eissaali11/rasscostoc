@@ -20,7 +20,7 @@ import {
   type FixedInventorySummary,
   type StockMovementWithDetails
 } from "@shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
 /**
  * Technician Management Service
@@ -484,19 +484,39 @@ export class TechnicianService {
       .where(eq(users.role, 'technician'))
       .orderBy(users.fullName);
 
-    const result = [];
-    for (const tech of technicians) {
-      const fixedEntries = await this.getTechnicianFixedInventoryEntries(tech.technicianId);
-      const movingEntries = await this.getTechnicianMovingInventoryEntries(tech.technicianId);
-      
-      result.push({
-        ...tech,
-        fixedInventory: fixedEntries,
-        movingInventory: movingEntries
-      });
+    if (technicians.length === 0) return [];
+
+    const ids = technicians.map((tech) => tech.technicianId);
+    const [allFixed, allMoving] = await Promise.all([
+      db
+        .select()
+        .from(technicianFixedInventoryEntries)
+        .where(inArray(technicianFixedInventoryEntries.technicianId, ids)),
+      db
+        .select()
+        .from(technicianMovingInventoryEntries)
+        .where(inArray(technicianMovingInventoryEntries.technicianId, ids)),
+    ]);
+
+    const fixedByTech = new Map<string, typeof allFixed>();
+    for (const entry of allFixed) {
+      const list = fixedByTech.get(entry.technicianId) || [];
+      list.push(entry);
+      fixedByTech.set(entry.technicianId, list);
     }
 
-    return result;
+    const movingByTech = new Map<string, typeof allMoving>();
+    for (const entry of allMoving) {
+      const list = movingByTech.get(entry.technicianId) || [];
+      list.push(entry);
+      movingByTech.set(entry.technicianId, list);
+    }
+
+    return technicians.map((tech) => ({
+      ...tech,
+      fixedInventory: fixedByTech.get(tech.technicianId) || [],
+      movingInventory: movingByTech.get(tech.technicianId) || [],
+    }));
   }
 
   /**
@@ -517,18 +537,38 @@ export class TechnicianService {
       .where(and(eq(users.role, 'technician'), eq(users.regionId, regionId)))
       .orderBy(users.fullName);
 
-    const result = [];
-    for (const tech of technicians) {
-      const fixedEntries = await this.getTechnicianFixedInventoryEntries(tech.technicianId);
-      const movingEntries = await this.getTechnicianMovingInventoryEntries(tech.technicianId);
-      
-      result.push({
-        ...tech,
-        fixedInventory: fixedEntries,
-        movingInventory: movingEntries
-      });
+    if (technicians.length === 0) return [];
+
+    const ids = technicians.map((tech) => tech.technicianId);
+    const [allFixed, allMoving] = await Promise.all([
+      db
+        .select()
+        .from(technicianFixedInventoryEntries)
+        .where(inArray(technicianFixedInventoryEntries.technicianId, ids)),
+      db
+        .select()
+        .from(technicianMovingInventoryEntries)
+        .where(inArray(technicianMovingInventoryEntries.technicianId, ids)),
+    ]);
+
+    const fixedByTech = new Map<string, typeof allFixed>();
+    for (const entry of allFixed) {
+      const list = fixedByTech.get(entry.technicianId) || [];
+      list.push(entry);
+      fixedByTech.set(entry.technicianId, list);
     }
 
-    return result;
+    const movingByTech = new Map<string, typeof allMoving>();
+    for (const entry of allMoving) {
+      const list = movingByTech.get(entry.technicianId) || [];
+      list.push(entry);
+      movingByTech.set(entry.technicianId, list);
+    }
+
+    return technicians.map((tech) => ({
+      ...tech,
+      fixedInventory: fixedByTech.get(tech.technicianId) || [],
+      movingInventory: movingByTech.get(tech.technicianId) || [],
+    }));
   }
 }

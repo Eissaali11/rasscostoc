@@ -69,7 +69,7 @@ function getInventoryValue(inventory: any, entries: InventoryEntry[] | undefined
 }
 
 export default function AdminInventoryOverview() {
-  const { t } = useTranslation();
+  const { t, dir, formatNumber, formatDate } = useTranslation();
   const [, setLocation] = useLocation();
   const [searchName, setSearchName] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
@@ -503,22 +503,18 @@ export default function AdminInventoryOverview() {
     );
   }
 
-  const todayAr = new Date().toLocaleDateString("ar-SA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const todayLabel = formatDate(new Date());
 
   return (
-      <div className="space-y-6">
+      <div dir={dir} className="rassco-page space-y-6 p-1">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#2D3135]">{t('inventory.dashboard_couriers')}</h1>
-            <p className="text-sm text-[#6B7280]">{t('inventory.view')}</p>
+            <h1 className="text-xl md:text-2xl font-extrabold text-[#2D3135] tracking-tight">{t('inventory.dashboard_couriers')}</h1>
+            <p className="text-sm text-[#6B7280] mt-1">{t('inventory.view')}</p>
           </div>
           <div className="flex items-center gap-2 text-[#18B2B0] text-sm font-semibold">
             <CalendarDays className="h-4 w-4" />
-            <span>{todayAr}</span>
+            <span dir="ltr">{todayLabel}</span>
           </div>
         </div>
 
@@ -526,62 +522,74 @@ export default function AdminInventoryOverview() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rassco-glass p-5 relative overflow-hidden"
+            className="courier-stat-card"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-[#18B2B0]" />
-            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.total_couriers_1')}</p>
-            <p className="text-3xl font-bold text-[#2D3135]">{totalTechniciansInventory.toLocaleString("ar-SA")}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-[#6B7280] mb-2 font-semibold">{t('inventory.total_couriers_1')}</p>
+              <p className="text-3xl font-extrabold text-[#2D3135] tabular-nums" dir="ltr">
+                {formatNumber(totalTechniciansInventory)}
+              </p>
+            </div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="rassco-glass p-5 relative overflow-hidden"
+            className="courier-stat-card"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-[#18B2B0]" />
-            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.units_active')}</p>
-            <p className="text-3xl font-bold text-[#149D9B]">{totalFixedInventory.toLocaleString("ar-SA")}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-[#6B7280] mb-2 font-semibold">{t('inventory.units_active')}</p>
+              <p className="text-3xl font-extrabold text-[#149D9B] tabular-nums" dir="ltr">
+                {formatNumber(totalFixedInventory)}
+              </p>
+            </div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rassco-glass p-5 relative overflow-hidden"
+            className="courier-stat-card"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-[#F4B740]" />
-            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.units')}</p>
-            <p className="text-3xl font-bold text-[#8a6410]">{totalMovingInventory.toLocaleString("ar-SA")}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-[#6B7280] mb-2 font-semibold">{t('inventory.units')}</p>
+              <p className="text-3xl font-extrabold text-[#8a6410] tabular-nums" dir="ltr">
+                {formatNumber(totalMovingInventory)}
+              </p>
+            </div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rassco-glass p-5 relative overflow-hidden"
+            className="courier-stat-card"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-[#6B7280]" />
-            <p className="text-xs text-[#6B7280] mb-2">{t('inventory.pending')}</p>
-            <p className="text-3xl font-bold text-[#2D3135]">{technicians.length.toLocaleString("ar-SA")}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-[#6B7280] mb-2 font-semibold">{t('inventory.pending')}</p>
+              <p className="text-3xl font-extrabold text-[#2D3135] tabular-nums" dir="ltr">
+                {formatNumber(technicians.length)}
+              </p>
+            </div>
           </motion.div>
         </div>
 
-        <div className="rassco-glass rassco-glass-static p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
-          <div className="relative flex-1">
-            <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
+        <div className="courier-toolbar flex-col lg:flex-row lg:items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
             <input
               type="text"
               placeholder={t('inventory.search_name_technician_number')}
               value={searchName}
               onChange={(event) => setSearchName(event.target.value)}
               data-testid="input-search-name"
-              className="w-full bg-white border border-[#E6E8EC] rounded-xl pr-9 pl-3 py-2.5 text-sm text-[#2D3135] placeholder:text-[#9AA1AB] outline-none focus:ring-2 focus:ring-[#18B2B0]/30 focus:border-[#18B2B0]"
+              className="courier-input pe-9"
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <select
               value={selectedRegion}
               onChange={(event) => setSelectedRegion(event.target.value)}
-              className="bg-white border border-[#E6E8EC] rounded-xl px-3 py-2.5 text-sm text-[#2D3135] min-w-[150px] outline-none focus:ring-2 focus:ring-[#18B2B0]/30 focus:border-[#18B2B0]"
+              className="courier-input max-w-[180px]"
             >
               <option value="all">{t('inventory.item_14397')}</option>
               {regionOptions.map((regionName) => (
@@ -591,7 +599,7 @@ export default function AdminInventoryOverview() {
 
             <button
               type="button"
-              className="p-2.5 rounded-xl border border-[#18B2B0]/25 bg-[#18B2B0]/10 text-[#18B2B0]"
+              className="courier-btn-secondary !px-3"
               aria-label={t('inventory.filter')}
             >
               <Filter className="h-4 w-4" />
@@ -599,7 +607,7 @@ export default function AdminInventoryOverview() {
 
             <button
               onClick={exportToExcel}
-              className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#18B2B0] text-white border border-[#18B2B0] hover:bg-[#149D9B] transition-colors text-sm font-semibold"
+              className="courier-btn-primary"
               type="button"
               data-testid="button-export-all"
             >
@@ -609,19 +617,28 @@ export default function AdminInventoryOverview() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs">
-          <span className="px-3 py-1 rounded-full bg-[#E05252]/10 text-[#E05252] border border-[#E05252]/25 font-semibold" data-testid="text-critical-count">{t('inventory.item_4804')}{criticalTechs}</span>
-          <span className="px-3 py-1 rounded-full bg-[#F4B740]/15 text-[#8a6410] border border-[#F4B740]/35 font-semibold" data-testid="text-warning-count">{t('inventory.warning_1')}{warningTechs}</span>
-          <span className="px-3 py-1 rounded-full bg-[#18B2B0]/10 text-[#149D9B] border border-[#18B2B0]/25 font-semibold" data-testid="text-good-count">{t('inventory.active_1')}{goodTechs}</span>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span className="px-3 py-1.5 rounded-full bg-[#E05252]/10 text-[#E05252] border border-[#E05252]/25 font-semibold shadow-sm" data-testid="text-critical-count">
+            {t('inventory.item_4804')} {formatNumber(criticalTechs)}
+          </span>
+          <span className="px-3 py-1.5 rounded-full bg-[#F4B740]/15 text-[#8a6410] border border-[#F4B740]/35 font-semibold shadow-sm" data-testid="text-warning-count">
+            {t('inventory.warning_1')} {formatNumber(warningTechs)}
+          </span>
+          <span className="px-3 py-1.5 rounded-full bg-[#18B2B0]/10 text-[#149D9B] border border-[#18B2B0]/25 font-semibold shadow-sm" data-testid="text-good-count">
+            {t('inventory.active_1')} {formatNumber(goodTechs)}
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-5 pb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 pb-2">
           {technicians.map((technician, index) => {
             const fixedTotal = calculateFixedTotal(technician.fixedInventory);
             const movingTotal = calculateMovingTotal(technician.movingInventory);
             const fixedPercent = Math.min(100, Math.round((fixedTotal / maxFixedInventory) * 100));
             const movingPercent = Math.min(100, Math.round((movingTotal / maxMovingInventory) * 100));
             const badge = getAlertBadge(technician.alertLevel);
+            const cityLabel = technician.city?.trim()
+              ? technician.city
+              : t("inventory.city_unspecified");
 
             return (
               <motion.div
@@ -629,32 +646,49 @@ export default function AdminInventoryOverview() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index, 8) * 0.03 }}
-                className="rassco-glass p-5"
+                className="courier-panel p-5 flex flex-col"
               >
-                <div className="flex items-start justify-between mb-5">
-                  <span className={`px-3 py-1 rounded-full text-[11px] font-semibold ${badge.className}`}>{badge.label}</span>
-
-                  <div className="flex items-center gap-3">
-                    <div className="text-right min-w-0">
-                      <h3 className="text-lg font-bold text-[#2D3135] truncate">{technician.technicianName}</h3>
-                      <p className="text-xs text-[#18B2B0] truncate">{t('inventory.item_19161')}{technician.city}</p>
-                      <p className="text-[11px] text-[#9AA1AB]">ID: #{technician.technicianId.slice(0, 8).toUpperCase()}</p>
-                    </div>
-                    <div className="size-14 rounded-2xl bg-[#18B2B0]/10 border border-[#18B2B0]/25 flex items-center justify-center text-[#18B2B0] font-bold">
+                <div className="flex items-start justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-14 rounded-2xl bg-[#18B2B0]/10 border border-[#18B2B0]/25 flex items-center justify-center text-[#18B2B0] font-extrabold text-lg shrink-0 shadow-[0_8px_16px_rgba(24,178,176,0.12)]">
                       {(technician.technicianName || t('inventory.item_1601')).slice(0, 1)}
                     </div>
+                    <div className="text-start min-w-0">
+                      <h3 className="text-lg font-extrabold text-[#2D3135] truncate">{technician.technicianName}</h3>
+                      <p className="text-xs text-[#18B2B0] truncate font-semibold">
+                        {t('inventory.item_19161')}{cityLabel}
+                      </p>
+                      <p className="text-[11px] text-[#9AA1AB] font-mono" dir="ltr">
+                        ID: #{technician.technicianId.slice(0, 8).toUpperCase()}
+                      </p>
+                    </div>
                   </div>
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 ${badge.className}`}>
+                    {badge.label}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-5">
-                  <RingMetric label={t('inventory.item_14327')} percent={fixedPercent} value={fixedTotal} color="teal" />
-                  <RingMetric label={t('inventory.item_15971')} percent={movingPercent} value={movingTotal} color="warning" />
+                <div className="grid grid-cols-2 gap-3 mb-5 flex-1">
+                  <RingMetric
+                    label={t('inventory.item_14327')}
+                    percent={fixedPercent}
+                    value={fixedTotal}
+                    color="teal"
+                    formatNumber={formatNumber}
+                  />
+                  <RingMetric
+                    label={t('inventory.item_15971')}
+                    percent={movingPercent}
+                    value={movingTotal}
+                    color="warning"
+                    formatNumber={formatNumber}
+                  />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setLocation(`/technician-details/${technician.technicianId}`)}
-                  className="w-full py-2.5 rounded-xl border border-[#18B2B0]/25 bg-[#18B2B0]/10 text-[#18B2B0] hover:bg-[#18B2B0] hover:text-white font-semibold text-sm transition-colors"
+                  className="courier-btn-secondary w-full !border-[#18B2B0]/30 !text-[#18B2B0] hover:!bg-[#18B2B0] hover:!text-white"
                 >
                   {t('inventory.view_1')}
                 </button>
@@ -664,7 +698,7 @@ export default function AdminInventoryOverview() {
         </div>
 
         {technicians.length === 0 && (
-          <div className="rassco-glass rassco-glass-static p-8 text-center text-[#6B7280]">
+          <div className="courier-panel courier-panel-static p-8 text-center text-[#6B7280]">
             {t('inventory.no_results')}
           </div>
         )}
@@ -673,14 +707,26 @@ export default function AdminInventoryOverview() {
   );
 }
 
-function RingMetric({ label, percent, value, color }: { label: string; percent: number; value: number; color: "teal" | "warning" }) {
-  const { t } = useTranslation();
+function RingMetric({
+  label,
+  percent,
+  value,
+  color,
+  formatNumber,
+}: {
+  label: string;
+  percent: number;
+  value: number;
+  color: "teal" | "warning";
+  formatNumber: (n: number) => string;
+}) {
+  const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, Math.round(percent))) : 0;
   const strokeColor = color === "teal" ? "#18B2B0" : "#F4B740";
 
   return (
-    <div className="rounded-xl border border-[#18B2B0]/12 bg-white/60 p-4 flex flex-col items-center gap-2">
+    <div className="rounded-2xl border border-[rgba(24,178,176,0.14)] bg-gradient-to-b from-white to-[#F8FAFB] p-4 flex flex-col items-center gap-2 shadow-[0_8px_18px_rgba(15,23,42,0.04)]">
       <div className="relative w-16 h-16">
-        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36" aria-hidden>
           <path
             className="text-[#E6E8EC]"
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -692,18 +738,23 @@ function RingMetric({ label, percent, value, color }: { label: string; percent: 
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
             stroke={strokeColor}
-            strokeDasharray={`${percent}, 100`}
+            strokeDasharray={`${safePercent}, 100`}
             strokeLinecap="round"
             strokeWidth="3"
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-[#2D3135]">
-          {t('inventory.count_2', { count: percent.toLocaleString("ar-SA") })}
+        <div
+          className="absolute inset-0 flex items-center justify-center text-xs font-extrabold text-[#2D3135] tabular-nums"
+          dir="ltr"
+        >
+          {safePercent}%
         </div>
       </div>
 
-      <div className="text-[11px] text-[#6B7280]">{label}</div>
-      <div className="text-sm font-semibold text-[#2D3135]">{value.toLocaleString("ar-SA")}</div>
+      <div className="text-[11px] font-semibold text-[#6B7280] text-center">{label}</div>
+      <div className="text-sm font-extrabold text-[#2D3135] tabular-nums" dir="ltr">
+        {formatNumber(Number(value || 0))}
+      </div>
     </div>
   );
 }

@@ -15,8 +15,15 @@ import {
   Trash2,
   Upload,
   X,
-  Database
+  Database,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface RequestRow {
   id: number;
@@ -340,22 +347,36 @@ export default function CourierRawDataPage() {
                     <td className="font-mono text-xs text-[#6B7280]">{row.mobile || "—"}</td>
                     <td className="text-[#4B5563]">{row.tecName || "—"}</td>
                     <td>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(row)}
-                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#18B2B0] hover:bg-[#18B2B0]/10 transition-colors"
-                          title={t('courier.edit_2')}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="courier-actions-trigger"
+                            aria-label={t("courier.item_14214")}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="courier-actions-menu"
                         >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(row.id)}
-                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#E05252] hover:bg-[#E05252]/10 transition-colors"
-                          title={t('courier.delete_3')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                          <DropdownMenuItem
+                            className="courier-actions-item"
+                            onClick={() => handleOpenEdit(row)}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            {t("courier.edit_2")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="courier-actions-item courier-actions-item-danger"
+                            onClick={() => handleDelete(row.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {t("courier.delete_3")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))

@@ -1,0 +1,15 @@
+Bitmap Heap Scan on public.items i  (cost=16.83..3785.99 rows=442 width=248) (actual time=22.617..22.618 rows=0.00 loops=1)
+  Output: id, item_type_id, serial_number, barcode, status, current_owner_id, warehouse_id, carrier_name, sim_package_type, created_at, updated_at
+  Recheck Cond: ((i.current_owner_id)::text = '2685de8c-5d17-47d7-9c41-d23c30c10641'::text)
+  Filter: (i.status = 'RECEIVED_BY_TECHNICIAN'::text)
+  Rows Removed by Filter: 1112
+  Heap Blocks: exact=1112
+  Buffers: shared hit=4 read=1111 written=948
+  ->  Bitmap Index Scan on items_owner_idx  (cost=0.00..16.72 rows=1106 width=0) (actual time=0.929..0.929 rows=1112.00 loops=1)
+        Index Cond: ((i.current_owner_id)::text = '2685de8c-5d17-47d7-9c41-d23c30c10641'::text)
+        Index Searches: 1
+        Buffers: shared read=3
+Planning:
+  Buffers: shared hit=17 read=3 dirtied=2
+Planning Time: 0.329 ms
+Execution Time: 22.648 ms
