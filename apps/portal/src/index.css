@@ -150,7 +150,10 @@
   .rassco-input-glow[data-state="open"] {
     outline: none !important;
     border-color: #18B2B0 !important;
-    box-shadow: 0 0 0 4px rgba(24, 178, 176, 0.18), 0 4px 14px rgba(24, 178, 176, 0.15) !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-color: transparent !important;
+    box-shadow: 0 0 0 4px rgba(24, 178, 176, 0.22), 0 4px 18px rgba(24, 178, 176, 0.18) !important;
   }
 }
 
