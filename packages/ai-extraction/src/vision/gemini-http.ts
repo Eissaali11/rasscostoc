@@ -27,7 +27,7 @@ export interface GeminiHttpClient {
 
 /**
  * REST client for Gemini generateContent (Structured Output via responseMimeType).
- * Injectable for tests — no SDK dependency required in the monorepo root.
+ * PLATFORM-P0: API key is sent via `x-goog-api-key` header — never in the URL/query string.
  */
 export class FetchGeminiHttpClient implements GeminiHttpClient {
   constructor(
@@ -36,13 +36,20 @@ export class FetchGeminiHttpClient implements GeminiHttpClient {
   ) {}
 
   async generateContent(req: GeminiGenerateRequest): Promise<GeminiGenerateResponse> {
-    const url = `${this.baseUrl}/models/${encodeURIComponent(req.model)}:generateContent?key=${encodeURIComponent(req.apiKey)}`;
+    const url = `${this.baseUrl}/models/${encodeURIComponent(req.model)}:generateContent`;
+    if (url.includes("?") || url.toLowerCase().includes("key=")) {
+      throw new Error("Gemini client refused to send API key in URL");
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? 60_000);
     try {
       const res = await this.fetchImpl(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": req.apiKey,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           contents: req.contents,

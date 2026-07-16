@@ -5,10 +5,52 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "@core/errors/errorHandler";
 import { insertUserSchema, systemLogs } from "@shared/schema";
-import { NotFoundError } from "@core/errors/AppError";
+import { AuthorizationError, NotFoundError } from "@core/errors/AppError";
 import { hashPassword } from "@server/utils/password";
 import { usersContainer } from "@server/composition/users.container";
 import { getDatabase } from "@core/database/connection";
+import { ROLES, isAdmin, isSupervisor } from "@shared/roles";
+
+/** PLATFORM-P0 — minimum necessary public user fields */
+function toMinimalUserView(user: {
+  id: string;
+  username: string;
+  fullName: string;
+  role: string;
+  regionId: string | null;
+  employeeCode: string | null;
+  technicianCode: string | null;
+  isActive: boolean;
+}) {
+  return {
+    id: user.id,
+    username: user.username,
+    fullName: user.fullName,
+    role: user.role,
+    regionId: user.regionId ?? null,
+    employeeCode: user.employeeCode ?? null,
+    technicianCode: user.technicianCode ?? null,
+    isActive: user.isActive,
+  };
+}
+
+function canReadUser(
+  actor: Express.Request["user"],
+  target: { id: string; regionId: string | null },
+): boolean {
+  if (!actor) return false;
+  if (isAdmin(actor.role)) return true;
+  if (actor.id === target.id) return true;
+  if (
+    isSupervisor(actor.role) &&
+    actor.regionId &&
+    target.regionId &&
+    actor.regionId === target.regionId
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export class UsersController {
   private async logActivity(log: typeof systemLogs.$inferInsert) {
@@ -30,14 +72,47 @@ export class UsersController {
 
   /**
    * GET /api/users/:id
-   * Get single user
+   * PLATFORM-P0: authenticated + authorized; minimal fields; audit log
    */
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const user = await usersContainer.userManagementUseCase.findById(req.params.id);
-    if (!user) {
+    const actor = req.user!;
+    const target = await usersContainer.userManagementUseCase.findById(req.params.id);
+    if (!target) {
       throw new NotFoundError("User not found");
     }
-    res.json(user);
+
+    if (!canReadUser(actor, target)) {
+      await this.logActivity({
+        userId: actor.id,
+        userName: actor.username,
+        userRole: actor.role,
+        regionId: actor.regionId,
+        action: "read_denied",
+        entityType: "user",
+        entityId: req.params.id,
+        entityName: target.fullName,
+        description: `رفض قراءة مستخدم (cross-org/unauthorized): ${target.username}`,
+        severity: "warn",
+        success: false,
+      });
+      throw new AuthorizationError("ليس لديك صلاحية لعرض هذا المستخدم");
+    }
+
+    await this.logActivity({
+      userId: actor.id,
+      userName: actor.username,
+      userRole: actor.role,
+      regionId: actor.regionId,
+      action: "read",
+      entityType: "user",
+      entityId: target.id,
+      entityName: target.fullName,
+      description: `قراءة بيانات مستخدم: ${target.username}`,
+      severity: "info",
+      success: true,
+    });
+
+    res.json(toMinimalUserView(target));
   });
 
   /**

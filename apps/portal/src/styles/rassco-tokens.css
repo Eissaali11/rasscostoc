@@ -4,6 +4,80 @@
  * UI-only; do not import from business logic modules.
  */
 
+/* ── Montserrat — English / Latin typeface ─────────────────────── */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-ExtraLight.ttf") format("truetype");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-ExtraBold.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Noto Kufi Arabic — Arabic typeface ────────────────────────── */
 @font-face {
   font-family: "Noto Kufi Arabic";
   src: url("/fonts/NotoKufiArabic-Thin.ttf") format("truetype");
@@ -128,8 +202,8 @@
   --sidebar-ring: #18b2b0;
   --success: #18b2b0;
   --warning: #f4b740;
-  --font-sans: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Noto Kufi Arabic", Georgia, serif;
+  --font-sans: "Montserrat", "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Montserrat", "Noto Kufi Arabic", Georgia, serif;
   --font-mono: ui-monospace, Menlo, monospace;
   --radius: 12px;
   --radius-card: 16px;

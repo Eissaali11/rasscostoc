@@ -13,7 +13,7 @@
   }
 
   body {
-    font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Montserrat", "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--rassco-bg, #f8fafc);
@@ -21,11 +21,11 @@
   }
 
   html {
-    font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Montserrat", "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Montserrat", "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
     font-weight: 700;
   }
 

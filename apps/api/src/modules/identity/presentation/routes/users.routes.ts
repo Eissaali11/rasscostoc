@@ -12,8 +12,8 @@ export function registerUsersRoutes(app: Express): void {
   // Get all users
   app.get("/api/users", requireAuth, requireAdmin, usersController.getAll);
 
-  // Get single user
-  app.get("/api/users/:id", usersController.getById);
+  // Get single user — PLATFORM-P0: auth + authorization enforced in controller
+  app.get("/api/users/:id", requireAuth, usersController.getById);
 
   // Create new user
   app.post(

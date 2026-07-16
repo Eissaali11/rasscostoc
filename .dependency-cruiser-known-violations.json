@@ -268,5 +268,19 @@
       "severity": "error",
       "name": "no-cross-module-internal-imports"
     }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/api/src/modules/courier/application/ai-engine/courier-pdf-extraction.adapter.ts",
+    "to": "apps/api/src/modules/ai-engine-settings/vision-live-gate.ts",
+    "unresolvedTo": "../../../ai-engine-settings/vision-live-gate",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-internal-imports"
+    }
   }
 ]

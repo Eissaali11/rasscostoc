@@ -9,11 +9,13 @@ import { registerAiEngineSettingsRoutes } from "@modules/ai-engine-settings/ai-e
 import { readinessManager } from "@core/telemetry/readiness";
 import { metrics } from "@core/telemetry/metrics";
 import { getRecentSpans } from "@core/telemetry/tracer";
+import { requireAdminOrInternal, requireAuth } from "@core/middlewares/auth.middleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize default data on startup
   await initializeDefaults();
 
+  /** Safe public liveness — no environment / dependency details. */
   const healthHandler = (_req: Request, res: Response) => {
     res.json({
       status: "healthy",
@@ -29,22 +31,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "UP" });
   });
 
+  /** Public ready probe — status only (no internal details). */
   app.get("/health/ready", (_req, res) => {
     const ready = readinessManager.isReady();
-    const details = readinessManager.getDetails();
     if (ready) {
-      res.json({ status: "UP", details });
+      res.json({ status: "UP" });
     } else {
-      res.status(503).json({ status: "DOWN", details });
+      res.status(503).json({ status: "DOWN" });
     }
   });
 
-  app.get("/api/observability/metrics", (_req, res) => {
+  // PLATFORM-P0 — observability requires admin or internal service key
+  app.get("/api/observability/metrics", requireAdminOrInternal, (_req, res) => {
     res.json(metrics.getAllMetrics());
   });
 
-  /** ERP-001 / Sprint 1.5: client timings (Render / Network / TTFB / Paint). */
-  app.post("/api/observability/client-timing", (req, res) => {
+  /** ERP-001 / Sprint 1.5: client timings (authenticated users only). */
+  app.post("/api/observability/client-timing", requireAuth, (req, res) => {
     const body = req.body || {};
     const page = typeof body.page === "string" ? body.page : "";
 
@@ -65,8 +68,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
-  app.get("/api/observability/spans", (_req, res) => {
+  app.get("/api/observability/spans", requireAdminOrInternal, (_req, res) => {
     res.json(getRecentSpans());
+  });
+
+  app.get("/api/observability/ready", requireAdminOrInternal, (_req, res) => {
+    const ready = readinessManager.isReady();
+    const details = readinessManager.getDetails();
+    if (ready) {
+      res.json({ status: "UP", details });
+    } else {
+      res.status(503).json({ status: "DOWN", details });
+    }
   });
 
   // Config endpoint for Flutter app dynamic base URL
@@ -102,4 +115,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-
