@@ -597,7 +597,7 @@ export default function ItemTypesManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="بحث عن صنف، معرف، أو فئة..."
-              className="pr-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
+              className="pr-10 bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 placeholder:text-slate-400 focus-visible:border-[#18B2B0] focus-visible:ring-4 focus-visible:ring-[#18B2B0]/20 focus-visible:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300"
             />
           </div>
 
@@ -811,7 +811,7 @@ export default function ItemTypesManagement() {
                   value={formData.id}
                   onChange={(e) => setFormData({ ...formData, id: e.target.value })}
                   placeholder="اتركه فارغاً للإنشاء التلقائي"
-                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
+                  className="bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 focus-visible:border-[#18B2B0] focus-visible:ring-4 focus-visible:ring-[#18B2B0]/20 focus-visible:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300"
                   dir="ltr"
                 />
                 <p className="text-xs text-slate-500">اتركه فارغاً وسيتم إنشاء معرف تلقائي</p>
@@ -825,7 +825,7 @@ export default function ItemTypesManagement() {
                   value={formData.nameAr}
                   onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
                   placeholder="اسم الصنف بالعربي"
-                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
+                  className="bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 focus-visible:border-[#18B2B0] focus-visible:ring-4 focus-visible:ring-[#18B2B0]/20 focus-visible:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300"
                 />
               </div>
               <div className="space-y-2">
@@ -834,7 +834,7 @@ export default function ItemTypesManagement() {
                   value={formData.nameEn}
                   onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                   placeholder="Item Name"
-                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
+                  className="bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 focus-visible:border-[#18B2B0] focus-visible:ring-4 focus-visible:ring-[#18B2B0]/20 focus-visible:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300"
                   dir="ltr"
                 />
               </div>
@@ -846,7 +846,7 @@ export default function ItemTypesManagement() {
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
-                <SelectTrigger className="bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-[#18B2B0]/20 focus:border-[#18B2B0] focus:ring-offset-0 focus:outline-none transition-all duration-200">
+                <SelectTrigger className="bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 focus:border-[#18B2B0] focus:ring-4 focus:ring-[#18B2B0]/20 focus:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
@@ -866,7 +866,7 @@ export default function ItemTypesManagement() {
                   type="number"
                   value={formData.unitsPerBox}
                   onChange={(e) => setFormData({ ...formData, unitsPerBox: parseInt(e.target.value) || 0 })}
-                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
+                  className="bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 focus-visible:border-[#18B2B0] focus-visible:ring-4 focus-visible:ring-[#18B2B0]/20 focus-visible:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300"
                   min={1}
                 />
               </div>
@@ -876,7 +876,7 @@ export default function ItemTypesManagement() {
                   type="number"
                   value={formData.sortOrder}
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
+                  className="bg-white/90 border-slate-200/80 shadow-[0_2px_8px_rgba(24,178,176,0.06)] hover:border-[#18B2B0]/50 text-slate-800 focus-visible:border-[#18B2B0] focus-visible:ring-4 focus-visible:ring-[#18B2B0]/20 focus-visible:ring-offset-0 focus:outline-none focus:shadow-[0_0_15px_rgba(24,178,176,0.3)] transition-all duration-300"
                   min={0}
                 />
               </div>
