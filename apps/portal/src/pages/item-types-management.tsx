@@ -36,6 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
   Package,
@@ -55,7 +61,8 @@ import {
   AlertTriangle,
   Ban,
   ScrollText,
-  ArrowUpLeft
+  ArrowUpLeft,
+  MoreVertical
 } from "lucide-react";
 import type { ItemType as SchemaItemType } from "@shared/schema";
 
@@ -590,7 +597,7 @@ export default function ItemTypesManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="بحث عن صنف، معرف، أو فئة..."
-              className="pr-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
+              className="pr-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
             />
           </div>
 
@@ -747,22 +754,32 @@ export default function ItemTypesManagement() {
                           </TableCell>
 
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button asChild variant="ghost" size="sm" className="text-[#18B2B0] hover:text-[#149d9b] hover:bg-[#18B2B0]/10">
-                                <Link href={`/item-types/${item.id}/details`}>
-                                  <ArrowUpLeft className="h-4 w-4" />
-                                </Link>
-                              </Button>
-
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(item)}
-                                className="text-[#18B2B0] hover:text-[#149d9b] hover:bg-[#18B2B0]/10"
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-500 hover:text-[#18B2B0] hover:bg-[#18B2B0]/10 rounded-full"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white border-slate-200 text-slate-700 min-w-[130px] font-sans">
+                                <DropdownMenuItem asChild className="hover:bg-slate-50 cursor-pointer focus:bg-slate-50 focus:text-slate-900">
+                                  <Link href={`/item-types/${item.id}/details`} className="flex items-center gap-2 w-full text-right justify-start px-2 py-1.5">
+                                    <ArrowUpLeft className="h-4 w-4 text-[#18B2B0]" />
+                                    <span>عرض التفاصيل</span>
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleEdit(item)}
+                                  className="flex items-center gap-2 hover:bg-slate-50 cursor-pointer focus:bg-slate-50 focus:text-slate-900 justify-start px-2 py-1.5"
+                                >
+                                  <Edit2 className="h-4 w-4 text-[#18B2B0]" />
+                                  <span>تعديل</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -794,7 +811,7 @@ export default function ItemTypesManagement() {
                   value={formData.id}
                   onChange={(e) => setFormData({ ...formData, id: e.target.value })}
                   placeholder="اتركه فارغاً للإنشاء التلقائي"
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
+                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
                   dir="ltr"
                 />
                 <p className="text-xs text-slate-500">اتركه فارغاً وسيتم إنشاء معرف تلقائي</p>
@@ -808,7 +825,7 @@ export default function ItemTypesManagement() {
                   value={formData.nameAr}
                   onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
                   placeholder="اسم الصنف بالعربي"
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
+                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
@@ -817,7 +834,7 @@ export default function ItemTypesManagement() {
                   value={formData.nameEn}
                   onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                   placeholder="Item Name"
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
+                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
                   dir="ltr"
                 />
               </div>
@@ -829,7 +846,7 @@ export default function ItemTypesManagement() {
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
-                <SelectTrigger className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]">
+                <SelectTrigger className="bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-[#18B2B0]/20 focus:border-[#18B2B0] focus:ring-offset-0 focus:outline-none transition-all duration-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
@@ -849,7 +866,7 @@ export default function ItemTypesManagement() {
                   type="number"
                   value={formData.unitsPerBox}
                   onChange={(e) => setFormData({ ...formData, unitsPerBox: parseInt(e.target.value) || 0 })}
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
+                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
                   min={1}
                 />
               </div>
@@ -859,7 +876,7 @@ export default function ItemTypesManagement() {
                   type="number"
                   value={formData.sortOrder}
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#18B2B0] focus:ring-[#18B2B0]"
+                  className="bg-white border-slate-200 text-slate-800 focus-visible:ring-2 focus-visible:ring-[#18B2B0]/20 focus-visible:border-[#18B2B0] focus-visible:ring-offset-0 focus:outline-none transition-all duration-200"
                   min={0}
                 />
               </div>
