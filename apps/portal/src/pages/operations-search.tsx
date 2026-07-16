@@ -658,7 +658,7 @@ export default function OperationsSearchPage() {
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-xl font-black text-[#2D3135]">{t('common.results_search_1')}{submittedQuery}</h3>
+                <h3 className="text-xl font-bold text-[#2D3135]">{t('common.results_search_1')}{submittedQuery}</h3>
                 <p className="text-xs text-[#6B7280]">{t('common.results')}{results.length}</p>
               </div>
             </div>
@@ -731,7 +731,7 @@ export default function OperationsSearchPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="text-lg font-black text-[#2D3135] flex items-center gap-2">
+                    <h4 className="text-lg font-bold text-[#2D3135] flex items-center gap-2">
                       <History className="h-5 w-5 text-[#18B2B0]" />
                       {t('common.table_operation')}
                     </h4>
