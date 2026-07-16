@@ -282,6 +282,37 @@ export function requireAdmin(
 }
 
 /**
+ * PLATFORM-P0 — Admin session OR internal service key (X-Internal-Service-Key).
+ */
+export async function requireAdminOrInternal(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const expected = process.env.INTERNAL_SERVICE_KEY;
+    const provided = req.header("x-internal-service-key");
+    if (expected && provided && provided === expected) {
+      return next();
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      void requireAuth(req, res, (err?: unknown) => (err ? reject(err) : resolve()));
+    });
+
+    if (!req.user) {
+      throw new AuthenticationError("Authentication required");
+    }
+    if (req.user.role !== ROLES.ADMIN) {
+      throw new AuthorizationError("يجب أن تكون مدير نظام أو خدمة داخلية للوصول");
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Middleware to require supervisor role or above
  */
 export function requireSupervisor(

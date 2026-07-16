@@ -24,6 +24,12 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* Ensure Latin / English text uses Montserrat */
+.rassco-light-surface :is([dir="ltr"], [lang="en"], [lang^="en-"]),
+.enterprise-atmosphere :is([dir="ltr"], [lang="en"], [lang^="en-"]) {
+  font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+
 .rassco-light-surface h1,
 .enterprise-atmosphere h1 {
   color: var(--rassco-text) !important;

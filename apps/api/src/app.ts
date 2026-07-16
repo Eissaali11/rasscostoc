@@ -96,7 +96,22 @@ app.use((req, res, next) => {
       return obj.map(sanitizeResponse);
     }
     const sanitized = { ...obj };
-    const sensitiveKeys = ["token", "password", "refreshToken", "accessToken", "secret", "internalToken", "session", "cookie"];
+    const sensitiveKeys = [
+      "token",
+      "password",
+      "refreshToken",
+      "accessToken",
+      "secret",
+      "internalToken",
+      "session",
+      "cookie",
+      "apiKey",
+      "apikey",
+      "authorization",
+      "x-api-key",
+      "x-goog-api-key",
+      "x-internal-service-key",
+    ];
     for (const key of Object.keys(sanitized)) {
       if (sensitiveKeys.some(s => key.toLowerCase().includes(s.toLowerCase()))) {
         sanitized[key] = "[REDACTED]";
