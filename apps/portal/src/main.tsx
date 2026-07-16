@@ -2,27 +2,21 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((registration) => {
-        console.log('[PWA] Service Worker registered:', registration.scope);
-        
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[PWA] New content available, reload to update');
-              }
-            });
-          }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    if (registrations.length > 0) {
+      console.log('[PWA] Stale Service Workers found. Unregistering and clearing caches...');
+      Promise.all(registrations.map(r => r.unregister())).then(() => {
+        caches.keys().then((keys) => {
+          Promise.all(keys.map(k => caches.delete(k))).then(() => {
+            console.log('[PWA] Caches cleared. Reloading page...');
+            window.location.reload();
+          });
+        }).catch(() => {
+          window.location.reload();
         });
-      })
-      .catch((error) => {
-        console.error('[PWA] Service Worker registration failed:', error);
       });
+    }
   });
 }
 
