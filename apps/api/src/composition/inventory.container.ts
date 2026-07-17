@@ -60,7 +60,11 @@ class InventoryContainer {
   );
 
   readonly warehouseTransferService = new WarehouseTransferService();
-  readonly warehouseTransferController = new WarehouseTransferController(this.warehouseTransferService);
+  readonly warehouseTransferController = new WarehouseTransferController(
+    this.warehouseTransferService,
+    this.acceptWarehouseTransferUseCase,
+    this.rejectWarehouseTransferUseCase
+  );
 }
 
 export const inventoryContainer = new InventoryContainer();
