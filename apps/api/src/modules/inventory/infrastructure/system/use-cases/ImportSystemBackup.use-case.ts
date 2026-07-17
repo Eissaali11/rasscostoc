@@ -8,13 +8,13 @@ import {
   regions,
   supervisorWarehouses,
   transactions,
-  users,
   inventoryRequests,
   warehouseInventory,
   warehouseInventoryEntries,
   warehouseTransfers,
   warehouses,
 } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../../adapters/identity/identity-ports.registry";
 
 type BackupDataset = {
   users?: unknown[];
@@ -177,75 +177,25 @@ export class ImportSystemBackupUseCase {
         const username = this.asString(user.username);
         if (!username) continue;
 
-        const [existingById] = await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.id, id))
-          .limit(1);
-
-        const [existingByUsername] = await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
-
-        const targetUserId = existingById?.id ?? existingByUsername?.id ?? id;
-        let resolvedUsername = username;
-
-        const [usernameOwner] = await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.username, resolvedUsername))
-          .limit(1);
-
-        if (usernameOwner && usernameOwner.id !== targetUserId) {
-          resolvedUsername = `${username}_${targetUserId.slice(0, 8)}`;
-        }
-
-        let resolvedEmail = this.asString(user.email) ?? `${resolvedUsername}.${targetUserId.slice(0, 8)}@import.local`;
-
-        const [emailOwner] = await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.email, resolvedEmail))
-          .limit(1);
-
-        if (emailOwner && emailOwner.id !== targetUserId) {
-          resolvedEmail = `${resolvedUsername}.${targetUserId.slice(0, 8)}@import.local`;
-        }
-
         const password = await this.normalizeImportedPassword(user.password);
 
-        const userPayload = {
-          username: resolvedUsername,
-          email: resolvedEmail,
-          password,
-          fullName: this.asString(user.fullName) ?? resolvedUsername,
-          profileImage: this.asString(user.profileImage),
-          city: this.asString(user.city),
-          role: this.normalizeRole(user.role),
-          regionId: this.asString(user.regionId),
-          isActive: this.asBoolean(user.isActive, true),
-        };
-
-        if (existingById || existingByUsername) {
-          await tx
-            .update(users)
-            .set({
-              ...userPayload,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.id, targetUserId));
-        } else {
-          await tx
-            .insert(users)
-            .values({
-              id: targetUserId,
-              ...userPayload,
-              createdAt: this.asDate(user.createdAt),
-              updatedAt: this.asDate(user.updatedAt),
-            });
-        }
+        const { id: targetUserId } = await getInventoryIdentityPorts().restoreUser(
+          {
+            sourceId: id,
+            username,
+            email: this.asString(user.email),
+            password,
+            fullName: this.asString(user.fullName),
+            profileImage: this.asString(user.profileImage),
+            city: this.asString(user.city),
+            role: this.normalizeRole(user.role),
+            regionId: this.asString(user.regionId),
+            isActive: this.asBoolean(user.isActive, true),
+            createdAt: this.asDate(user.createdAt),
+            updatedAt: this.asDate(user.updatedAt),
+          },
+          tx
+        );
 
         importedUserIdMap.set(id, targetUserId);
 

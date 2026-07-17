@@ -3,12 +3,12 @@ import { getDatabase } from "@core/database/connection";
 import {
   transactions,
   inventoryItems,
-  users,
   type Transaction,
   type InsertTransaction,
   type TransactionWithDetails
 } from "@shared/schema";
 import type { ITransactionsRepository } from "@modules/inventory/application/transactions/contracts/ITransactionsRepository";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class DrizzleTransactionsRepository implements ITransactionsRepository {
   private get db() {
@@ -50,13 +50,9 @@ export class DrizzleTransactionsRepository implements ITransactionsRepository {
         createdAt: transactions.createdAt,
         itemName: inventoryItems.name,
         itemType: inventoryItems.type,
-        userName: users.fullName,
-        userRole: users.role,
-        userCity: users.city
       })
       .from(transactions)
       .leftJoin(inventoryItems, eq(transactions.itemId, inventoryItems.id))
-      .leftJoin(users, eq(transactions.userId, users.id))
       .$dynamic();
 
     const conditions = [];
@@ -88,10 +84,15 @@ export class DrizzleTransactionsRepository implements ITransactionsRepository {
     }
 
     const rows = await query;
+    const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds as string[]);
+
     return rows.map((row) => ({
       ...row,
       itemName: row.itemName || undefined,
-      userName: row.userName || undefined,
+      userName: (row.userId && usersById.get(row.userId)?.fullName) || undefined,
+      userRole: row.userId ? usersById.get(row.userId)?.role : undefined,
+      userCity: row.userId ? usersById.get(row.userId)?.city : undefined,
     }));
   }
 
@@ -154,16 +155,12 @@ export class DrizzleTransactionsRepository implements ITransactionsRepository {
     let query = this.db
       .select({
         userId: transactions.userId,
-        userName: users.fullName,
-        userRole: users.role,
-        userCity: users.city,
         transactionCount: count(transactions.id),
         totalQuantityHandled: sql<number>`SUM(${transactions.quantity})`,
         inboundTransactions: sql<number>`COUNT(CASE WHEN ${transactions.type} = 'inbound' THEN 1 END)`,
         outboundTransactions: sql<number>`COUNT(CASE WHEN ${transactions.type} = 'outbound' THEN 1 END)`
       })
       .from(transactions)
-      .leftJoin(users, eq(transactions.userId, users.id))
       .$dynamic();
 
     const conditions = [];
@@ -178,10 +175,20 @@ export class DrizzleTransactionsRepository implements ITransactionsRepository {
       query = query.where(and(...conditions));
     }
 
-    return query
-      .groupBy(transactions.userId, users.fullName, users.role, users.city)
+    const rows = await query
+      .groupBy(transactions.userId)
       .orderBy(desc(count(transactions.id)))
       .limit(limit);
+
+    const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds as string[]);
+
+    return rows.map((row) => ({
+      ...row,
+      userName: row.userId ? usersById.get(row.userId)?.fullName : undefined,
+      userRole: row.userId ? usersById.get(row.userId)?.role : undefined,
+      userCity: row.userId ? usersById.get(row.userId)?.city : undefined,
+    }));
   }
 
   async getMostTransactedItems(limit: number, startDate?: Date, endDate?: Date): Promise<any[]> {
@@ -295,13 +302,9 @@ export class DrizzleTransactionsRepository implements ITransactionsRepository {
         createdAt: transactions.createdAt,
         itemName: inventoryItems.name,
         itemType: inventoryItems.type,
-        userName: users.fullName,
-        userRole: users.role,
-        userCity: users.city
       })
       .from(transactions)
       .leftJoin(inventoryItems, eq(transactions.itemId, inventoryItems.id))
-      .leftJoin(users, eq(transactions.userId, users.id))
       .$dynamic();
 
     if (conditions.length > 0) {
@@ -311,10 +314,19 @@ export class DrizzleTransactionsRepository implements ITransactionsRepository {
     }
 
     const [totalCount] = await countQuery;
-    const transactionsData = await dataQuery
+    const rows = await dataQuery
       .orderBy(desc(transactions.createdAt))
       .limit(pageSize)
       .offset(offset);
+
+    const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds as string[]);
+    const transactionsData = rows.map((row) => ({
+      ...row,
+      userName: row.userId ? usersById.get(row.userId)?.fullName : undefined,
+      userRole: row.userId ? usersById.get(row.userId)?.role : undefined,
+      userCity: row.userId ? usersById.get(row.userId)?.city : undefined,
+    }));
 
     return {
       data: transactionsData,

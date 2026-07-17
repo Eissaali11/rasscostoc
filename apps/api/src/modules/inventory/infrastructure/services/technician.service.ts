@@ -1,11 +1,11 @@
 import { db } from "@core/config/db";
-import { 
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
+import {
   techniciansInventory,
   technicianFixedInventories,
   technicianFixedInventoryEntries,
   technicianMovingInventoryEntries,
   stockMovements,
-  users,
   regions,
   itemTypes,
   type TechnicianInventory,
@@ -27,6 +27,26 @@ import { eq, and, desc, sql, inArray } from "drizzle-orm";
  * Handles all technician-related operations including inventories and stock movements
  */
 export class TechnicianService {
+
+  private async listTechniciansWithRegionName(regionId?: string) {
+    const directory = await getInventoryIdentityPorts().listTechnicians(regionId ? { regionId } : undefined);
+    const sorted = [...directory].sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+    const distinctRegionIds = [...new Set(sorted.map((t) => t.regionId).filter(Boolean))] as string[];
+    const regionRows = distinctRegionIds.length > 0
+      ? await db.select({ id: regions.id, name: regions.name }).from(regions).where(inArray(regions.id, distinctRegionIds))
+      : [];
+    const regionNameById = new Map(regionRows.map((r) => [r.id, r.name]));
+
+    return sorted.map((t) => ({
+      technicianId: t.id,
+      fullName: t.fullName,
+      username: t.username,
+      city: t.city,
+      regionId: t.regionId,
+      regionName: t.regionId ? regionNameById.get(t.regionId) : undefined,
+    }));
+  }
 
   /**
    * Get all technicians inventory
@@ -168,15 +188,10 @@ export class TechnicianService {
    * Get all technicians with their fixed inventories
    */
   async getAllTechniciansWithFixedInventory(): Promise<TechnicianWithFixedInventory[]> {
-    const technicians = await db
-      .select({
-        technicianId: users.id,
-        technicianName: users.fullName,
-        city: users.city,
-      })
-      .from(users)
-      .where(eq(users.role, 'technician'))
-      .orderBy(users.fullName);
+    const directory = await getInventoryIdentityPorts().listTechnicians();
+    const technicians = [...directory]
+      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+      .map((t) => ({ technicianId: t.id, technicianName: t.fullName, city: t.city }));
 
     const result: TechnicianWithFixedInventory[] = [];
 
@@ -349,23 +364,24 @@ export class TechnicianService {
         performedBy: stockMovements.performedBy,
         notes: stockMovements.notes,
         createdAt: stockMovements.createdAt,
-        technicianName: users.fullName,
       })
       .from(stockMovements)
-      .leftJoin(users, eq(stockMovements.technicianId, users.id))
       .$dynamic();
 
     if (technicianId) {
       query = query.where(eq(stockMovements.technicianId, technicianId));
     }
 
-    const movements = await query
+    const rows = await query
       .orderBy(desc(stockMovements.createdAt))
       .limit(limit);
 
-    return movements.map((movement) => ({
+    const technicianIds = [...new Set(rows.map((r) => r.technicianId).filter(Boolean))];
+    const techsById = await getInventoryIdentityPorts().getUsersByIds(technicianIds as string[]);
+
+    return rows.map((movement) => ({
       ...movement,
-      technicianName: movement.technicianName || undefined,
+      technicianName: movement.technicianId ? techsById.get(movement.technicianId)?.fullName : undefined,
     }));
   }
 
@@ -392,6 +408,10 @@ export class TechnicianService {
    * Get stock movements by region
    */
   async getStockMovementsByRegion(regionId: string): Promise<StockMovementWithDetails[]> {
+    const ports = getInventoryIdentityPorts();
+    const technicianIdsInRegion = await ports.getUserIdsByRegion(regionId);
+    if (technicianIdsInRegion.length === 0) return [];
+
     const movements = await db
       .select({
         id: stockMovements.id,
@@ -405,16 +425,16 @@ export class TechnicianService {
         performedBy: stockMovements.performedBy,
         notes: stockMovements.notes,
         createdAt: stockMovements.createdAt,
-        technicianName: users.fullName,
       })
       .from(stockMovements)
-      .leftJoin(users, eq(stockMovements.technicianId, users.id))
-      .where(eq(users.regionId, regionId))
+      .where(inArray(stockMovements.technicianId, technicianIdsInRegion as string[]))
       .orderBy(desc(stockMovements.createdAt));
+
+    const techsById = await ports.getUsersByIds(technicianIdsInRegion);
 
     return movements.map((movement) => ({
       ...movement,
-      technicianName: movement.technicianName || undefined,
+      technicianName: movement.technicianId ? techsById.get(movement.technicianId)?.fullName : undefined,
     }));
   }
 
@@ -429,6 +449,15 @@ export class TechnicianService {
    * Calculate fixed inventory summary for a region
    */
   async getFixedInventorySummaryByRegion(regionId: string): Promise<FixedInventorySummary> {
+    const technicianIdsInRegion = await getInventoryIdentityPorts().getUserIdsByRegion(regionId);
+    if (technicianIdsInRegion.length === 0) {
+      return {
+        totalN950: 0, totalI9000s: 0, totalI9100: 0, totalRollPaper: 0, totalStickers: 0,
+        totalNewBatteries: 0, totalMobilySim: 0, totalStcSim: 0, totalZainSim: 0, totalLebaraSim: 0,
+        techniciansWithCriticalStock: 0, techniciansWithWarningStock: 0, techniciansWithGoodStock: 0,
+      };
+    }
+
     const [summary] = await db
       .select({
         totalN950: sql<number>`COALESCE(SUM(${technicianFixedInventories.n950Boxes} * 10 + ${technicianFixedInventories.n950Units}), 0)`,
@@ -444,8 +473,7 @@ export class TechnicianService {
         totalTechnicians: sql<number>`COUNT(DISTINCT ${technicianFixedInventories.technicianId})`
       })
       .from(technicianFixedInventories)
-      .leftJoin(users, eq(technicianFixedInventories.technicianId, users.id))
-      .where(eq(users.regionId, regionId));
+      .where(inArray(technicianFixedInventories.technicianId, technicianIdsInRegion as string[]));
 
     const techniciansCount = summary?.totalTechnicians || 0;
 
@@ -470,19 +498,7 @@ export class TechnicianService {
    * Get technicians with both fixed and moving inventories
    */
   async getAllTechniciansWithBothInventories() {
-    const technicians = await db
-      .select({
-        technicianId: users.id,
-        fullName: users.fullName,
-        username: users.username,
-        city: users.city,
-        regionName: regions.name,
-        regionId: users.regionId
-      })
-      .from(users)
-      .leftJoin(regions, eq(users.regionId, regions.id))
-      .where(eq(users.role, 'technician'))
-      .orderBy(users.fullName);
+    const technicians = await this.listTechniciansWithRegionName();
 
     if (technicians.length === 0) return [];
 
@@ -523,19 +539,7 @@ export class TechnicianService {
    * Get region technicians with inventories
    */
   async getRegionTechniciansWithInventories(regionId: string) {
-    const technicians = await db
-      .select({
-        technicianId: users.id,
-        fullName: users.fullName,
-        username: users.username,
-        city: users.city,
-        regionName: regions.name,
-        regionId: users.regionId
-      })
-      .from(users)
-      .leftJoin(regions, eq(users.regionId, regions.id))
-      .where(and(eq(users.role, 'technician'), eq(users.regionId, regionId)))
-      .orderBy(users.fullName);
+    const technicians = await this.listTechniciansWithRegionName(regionId);
 
     if (technicians.length === 0) return [];
 

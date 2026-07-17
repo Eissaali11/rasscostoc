@@ -3,9 +3,9 @@ import { getDatabase } from "@core/database/connection";
 import {
   warehouseTransfers,
   warehouses,
-  users,
   WarehouseTransferWithDetails
 } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export interface ITransferQueryRepository {
   getWarehouseTransfers(
@@ -63,13 +63,9 @@ export class TransferQueryRepository implements ITransferQueryRepository {
         respondedAt: warehouseTransfers.respondedAt,
         createdAt: warehouseTransfers.createdAt,
         warehouseName: warehouses.name,
-        technicianName: users.fullName,
-        performedByName: sql<string>`performer.full_name`,
       })
       .from(warehouseTransfers)
       .leftJoin(warehouses, eq(warehouseTransfers.warehouseId, warehouses.id))
-      .leftJoin(users, eq(warehouseTransfers.technicianId, users.id))
-      .leftJoin(sql`${users} as performer`, sql`${warehouseTransfers.performedBy} = performer.id`)
       .orderBy(desc(warehouseTransfers.createdAt));
 
     const conditions = [];
@@ -93,13 +89,20 @@ export class TransferQueryRepository implements ITransferQueryRepository {
 
     const transfers = await query;
 
+    const userIds = new Set<string>();
+    for (const t of transfers) {
+      if (t.technicianId) userIds.add(t.technicianId);
+      if (t.performedBy) userIds.add(t.performedBy);
+    }
+    const usersById = await getInventoryIdentityPorts().getUsersByIds([...userIds]);
+
     return transfers.map(transfer => ({
       ...transfer,
       status: transfer.status === 'approved' ? 'accepted' : transfer.status,
       itemNameAr: itemNameMap[transfer.itemType] || transfer.itemType,
       warehouseName: transfer.warehouseName || undefined,
-      technicianName: transfer.technicianName || undefined,
-      performedByName: transfer.performedByName || undefined,
+      technicianName: (transfer.technicianId && usersById.get(transfer.technicianId)?.fullName) || undefined,
+      performedByName: (transfer.performedBy && usersById.get(transfer.performedBy)?.fullName) || undefined,
     }));
   }
 }

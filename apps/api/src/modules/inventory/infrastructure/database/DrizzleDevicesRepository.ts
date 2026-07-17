@@ -4,7 +4,6 @@ import { getDatabase } from "@core/database/connection";
 import {
   withdrawnDevices,
   receivedDevices,
-  users,
   regions,
   technicianFixedInventoryEntries,
   technicianMovingInventoryEntries,
@@ -15,6 +14,7 @@ import {
   type InsertReceivedDevice
 } from "@shared/schema";
 import type { IDevicesRepository } from "@modules/inventory/application/devices/contracts/IDevicesRepository";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class DrizzleDevicesRepository implements IDevicesRepository {
   private get db() {
@@ -62,12 +62,23 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
       .leftJoin(regions, eq(withdrawnDevices.regionId, regions.id));
   }
 
+  private async withTechnicianInfo<T extends { technicianId?: string | null }>(
+    rows: T[]
+  ): Promise<(T & { city?: string | null; technicianName?: string })[]> {
+    const technicianIds = [...new Set(rows.map((r) => r.technicianId).filter(Boolean))] as string[];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(technicianIds);
+    return rows.map((row) => ({
+      ...row,
+      city: row.technicianId ? usersById.get(row.technicianId)?.city : undefined,
+      technicianName: row.technicianId ? usersById.get(row.technicianId)?.fullName : undefined,
+    }));
+  }
+
   async getReceivedDevicesForWithdrawnList(): Promise<any[]> {
-    return this.db
+    const rows = await this.db
       .select({
         id: receivedDevices.id,
-        city: users.city,
-        technicianName: users.fullName,
+        technicianId: receivedDevices.technicianId,
         terminalId: receivedDevices.terminalId,
         serialNumber: receivedDevices.serialNumber,
         battery: receivedDevices.battery,
@@ -86,9 +97,10 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
         isReceived: sql<boolean>`true`,
       })
       .from(receivedDevices)
-      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
       .leftJoin(regions, eq(receivedDevices.regionId, regions.id))
       .where(sql`${receivedDevices.status} IN ('pending', 'rejected')`);
+
+    return this.withTechnicianInfo(rows);
   }
 
   async getWithdrawnDevicesByRegion(regionId: string): Promise<any[]> {
@@ -120,11 +132,10 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
   }
 
   async getReceivedDevicesForWithdrawnListByRegion(regionId: string): Promise<any[]> {
-    return this.db
+    const rows = await this.db
       .select({
         id: receivedDevices.id,
-        city: users.city,
-        technicianName: users.fullName,
+        technicianId: receivedDevices.technicianId,
         terminalId: receivedDevices.terminalId,
         serialNumber: receivedDevices.serialNumber,
         battery: receivedDevices.battery,
@@ -143,12 +154,13 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
         isReceived: sql<boolean>`true`,
       })
       .from(receivedDevices)
-      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
       .leftJoin(regions, eq(receivedDevices.regionId, regions.id))
       .where(and(
         eq(receivedDevices.regionId, regionId),
         sql`${receivedDevices.status} IN ('pending', 'rejected')`
       ));
+
+    return this.withTechnicianInfo(rows);
   }
 
   async getWithdrawnDevice(id: string): Promise<any | undefined> {
@@ -183,11 +195,10 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
       return withdrawnDevice;
     }
 
-    const [receivedDevice] = await this.db
+    const [receivedDeviceRow] = await this.db
       .select({
         id: receivedDevices.id,
-        city: users.city,
-        technicianName: users.fullName,
+        technicianId: receivedDevices.technicianId,
         terminalId: receivedDevices.terminalId,
         serialNumber: receivedDevices.serialNumber,
         battery: receivedDevices.battery,
@@ -206,10 +217,11 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
         isReceived: sql<boolean>`true`,
       })
       .from(receivedDevices)
-      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
       .leftJoin(regions, eq(receivedDevices.regionId, regions.id))
       .where(eq(receivedDevices.id, id))
       .limit(1);
+
+    const [receivedDevice] = receivedDeviceRow ? await this.withTechnicianInfo([receivedDeviceRow]) : [];
 
     if (receivedDevice) {
       return {
@@ -630,11 +642,7 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
 
       // If status transitioned to approved, create a withdrawn device entry and increment inventory
       if (status === "approved" && existingDevice?.status !== "approved") {
-        const [technician] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.id, updatedDevice.technicianId))
-          .limit(1);
+        const technician = await getInventoryIdentityPorts().getUserById(updatedDevice.technicianId);
 
         if (technician) {
           await tx.insert(withdrawnDevices).values({
@@ -774,11 +782,7 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
   }
 
   async getDevicesByTechnician(technicianId: string): Promise<{ withdrawn: any[]; received: any[] }> {
-    const [technician] = await this.db
-      .select({ fullName: users.fullName })
-      .from(users)
-      .where(eq(users.id, technicianId))
-      .limit(1);
+    const technician = await getInventoryIdentityPorts().getUserById(technicianId);
 
     const withdrawn = await this.db
       .select()
@@ -835,12 +839,9 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
         serialNumber: receivedDevices.serialNumber,
         status: receivedDevices.status,
         createdAt: receivedDevices.createdAt,
-        technicianName: users.fullName,
-        technicianCity: users.city,
         type: sql<string>`'received'`
       })
       .from(receivedDevices)
-      .leftJoin(users, eq(receivedDevices.technicianId, users.id))
       .where(eq(receivedDevices.status, 'pending'))
       .$dynamic();
 
@@ -848,7 +849,14 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
       receivedQuery = receivedQuery.where(eq(receivedDevices.supervisorId, supervisorId));
     }
 
-    const received = await receivedQuery;
+    const receivedRows = await receivedQuery;
+    const technicianIds = [...new Set(receivedRows.map((r) => r.technicianId).filter(Boolean))];
+    const techsById = await getInventoryIdentityPorts().getUsersByIds(technicianIds as string[]);
+    const received = receivedRows.map((row) => ({
+      ...row,
+      technicianName: row.technicianId ? techsById.get(row.technicianId)?.fullName : undefined,
+      technicianCity: row.technicianId ? techsById.get(row.technicianId)?.city : undefined,
+    }));
 
     return [...received].sort((a, b) => {
       const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -1066,16 +1074,7 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
     };
 
     // Find the technician user in StockPro
-    const [tech] = await this.db
-      .select()
-      .from(users)
-      .where(
-        or(
-          sql`LOWER(${users.username}) = LOWER(${technicianCode.trim()})`,
-          sql`LOWER(${users.fullName}) = LOWER(${technicianCode.trim()})`
-        )
-      )
-      .limit(1);
+    const tech = await getInventoryIdentityPorts().findTechnicianByCodeOrName(technicianCode);
 
     if (!tech) {
       throw new Error(`لم يتم العثور على المندوب بالرمز أو الاسم: ${technicianCode}`);

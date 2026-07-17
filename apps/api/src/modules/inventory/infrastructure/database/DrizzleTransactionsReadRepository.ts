@@ -1,5 +1,5 @@
 import type { TransactionWithDetails } from '@shared/schema';
-import { and, desc, eq, gte, ilike, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import type {
   ITransactionsReadRepository,
   TransactionStatisticsFilters,
@@ -8,7 +8,8 @@ import type {
   TransactionsListResult,
 } from "@modules/inventory/application/transactions/contracts/ITransactionsReadRepository";
 import { getDatabase } from "@core/database/connection";
-import { inventoryItems, regions, transactions, users } from "@shared/schema";
+import { inventoryItems, regions, transactions } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class DrizzleTransactionsReadRepository implements ITransactionsReadRepository {
   private get db() {
@@ -26,18 +27,19 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
         userId: transactions.userId,
         createdAt: transactions.createdAt,
         itemName: inventoryItems.name,
-        userName: users.fullName,
       })
       .from(transactions)
       .leftJoin(inventoryItems, eq(transactions.itemId, inventoryItems.id))
-      .leftJoin(users, eq(transactions.userId, users.id))
       .orderBy(desc(transactions.createdAt))
       .limit(limit || 10);
+
+    const userIds = [...new Set(recentTransactions.map((t) => t.userId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds as string[]);
 
     return recentTransactions.map((transaction) => ({
       ...transaction,
       itemName: transaction.itemName || undefined,
-      userName: transaction.userName || undefined,
+      userName: (transaction.userId && usersById.get(transaction.userId)?.fullName) || undefined,
     }));
   }
 
@@ -56,12 +58,10 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
         reason: transactions.reason,
         createdAt: transactions.createdAt,
         itemName: inventoryItems.name,
-        userName: users.fullName,
         regionName: regions.name,
       })
       .from(transactions)
       .leftJoin(inventoryItems, eq(transactions.itemId, inventoryItems.id))
-      .leftJoin(users, eq(transactions.userId, users.id))
       .leftJoin(regions, eq(inventoryItems.regionId, regions.id))
       .$dynamic();
 
@@ -69,7 +69,6 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
       .select({ count: sql<number>`count(*)` })
       .from(transactions)
       .leftJoin(inventoryItems, eq(transactions.itemId, inventoryItems.id))
-      .leftJoin(users, eq(transactions.userId, users.id))
       .leftJoin(regions, eq(inventoryItems.regionId, regions.id))
       .$dynamic();
 
@@ -82,13 +81,15 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
     if (filters?.endDate) conditions.push(lte(transactions.createdAt, new Date(filters.endDate)));
     if (filters?.search) {
       const searchTerm = `%${filters.search}%`;
-      conditions.push(
-        or(
-          ilike(inventoryItems.name, searchTerm),
-          ilike(users.fullName, searchTerm),
-          ilike(transactions.reason, searchTerm),
-        ),
-      );
+      const matchingUserIds = await getInventoryIdentityPorts().searchUserIdsByName(filters.search);
+      const searchConditions = [
+        ilike(inventoryItems.name, searchTerm),
+        ilike(transactions.reason, searchTerm),
+      ];
+      if (matchingUserIds.length > 0) {
+        searchConditions.push(inArray(transactions.userId, matchingUserIds as string[]));
+      }
+      conditions.push(or(...searchConditions));
     }
 
     let finalQuery = query;
@@ -107,10 +108,13 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
       .limit(limit)
       .offset(offset);
 
+    const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds as string[]);
+
     const processedTransactions = rows.map((transaction) => ({
       ...transaction,
       itemName: transaction.itemName || 'صنف محذوف',
-      userName: transaction.userName || 'غير محدد',
+      userName: (transaction.userId && usersById.get(transaction.userId)?.fullName) || 'غير محدد',
       regionName: transaction.regionName || 'غير محدد',
     }));
 
@@ -126,7 +130,12 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
     const conditions: any[] = [];
 
     if (filters?.regionId) {
-      conditions.push(eq(users.regionId, filters.regionId));
+      const userIdsInRegion = await getInventoryIdentityPorts().getUserIdsByRegion(filters.regionId);
+      conditions.push(
+        userIdsInRegion.length > 0
+          ? inArray(transactions.userId, userIdsInRegion as string[])
+          : sql`false`
+      );
     }
 
     if (filters?.startDate) {
@@ -155,7 +164,6 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
         totalTransfer: sql<number>`COUNT(CASE WHEN ${transactions.type} = 'transfer' THEN 1 END)`,
       })
       .from(transactions)
-      .leftJoin(users, eq(transactions.userId, users.id))
       .$dynamic();
 
     if (conditions.length > 0) {
@@ -164,42 +172,51 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
 
     const [totals] = await totalsQuery;
 
-    let byRegionQuery = this.db
+    // Grouped by transactions.userId only — no join. Used to build both
+    // byUser (top 10 individual users) and byRegion (aggregated via each
+    // user's regionId, resolved through the identity port) below.
+    let byUserIdQuery = this.db
       .select({
-        regionName: sql<string>`COALESCE(${regions.name}, 'غير محدد')`,
+        userId: transactions.userId,
         count: sql<number>`COUNT(*)`,
       })
       .from(transactions)
-      .leftJoin(users, eq(transactions.userId, users.id))
-      .leftJoin(regions, eq(users.regionId, regions.id))
       .$dynamic();
 
     if (conditions.length > 0) {
-      byRegionQuery = byRegionQuery.where(and(...conditions));
+      byUserIdQuery = byUserIdQuery.where(and(...conditions));
     }
 
-    const byRegionRows = await byRegionQuery
-      .groupBy(regions.id, regions.name)
-      .orderBy(desc(sql`COUNT(*)`))
-      .limit(10);
+    const byUserIdRows = await byUserIdQuery.groupBy(transactions.userId);
 
-    let byUserQuery = this.db
-      .select({
-        userName: sql<string>`COALESCE(${users.fullName}, 'غير محدد')`,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(transactions)
-      .leftJoin(users, eq(transactions.userId, users.id))
-      .$dynamic();
+    const identityPorts = getInventoryIdentityPorts();
+    const allUserIds = byUserIdRows.map((r) => r.userId).filter(Boolean) as string[];
+    const usersById = await identityPorts.getUsersByIds(allUserIds);
 
-    if (conditions.length > 0) {
-      byUserQuery = byUserQuery.where(and(...conditions));
+    const byUserRows = [...byUserIdRows]
+      .sort((a, b) => Number(b.count) - Number(a.count))
+      .slice(0, 10);
+
+    const regionCounts = new Map<string, number>();
+    for (const row of byUserIdRows) {
+      const regionId = row.userId ? usersById.get(row.userId)?.regionId : null;
+      const key = regionId ?? '__none__';
+      regionCounts.set(key, (regionCounts.get(key) ?? 0) + Number(row.count));
     }
 
-    const byUserRows = await byUserQuery
-      .groupBy(users.id, users.fullName)
-      .orderBy(desc(sql`COUNT(*)`))
-      .limit(10);
+    const regionIds = [...regionCounts.keys()].filter((k) => k !== '__none__');
+    const regionRows = regionIds.length > 0
+      ? await this.db.select({ id: regions.id, name: regions.name }).from(regions).where(inArray(regions.id, regionIds))
+      : [];
+    const regionNameById = new Map(regionRows.map((r) => [r.id, r.name]));
+
+    const byRegionRows = [...regionCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([regionId, count]) => ({
+        regionName: (regionId !== '__none__' ? regionNameById.get(regionId) : undefined) || 'غير محدد',
+        count,
+      }));
 
     const totalAdditions = Number(totals?.totalAdditions || 0);
     const totalWithdrawals = Number(totals?.totalWithdrawals || 0);
@@ -210,12 +227,9 @@ export class DrizzleTransactionsReadRepository implements ITransactionsReadRepos
       totalWithdrawals,
       totalAddedQuantity: Number(totals?.totalAddedQuantity || 0),
       totalWithdrawnQuantity: Number(totals?.totalWithdrawnQuantity || 0),
-      byRegion: byRegionRows.map((row) => ({
-        regionName: row.regionName || 'غير محدد',
-        count: Number(row.count || 0),
-      })),
+      byRegion: byRegionRows,
       byUser: byUserRows.map((row) => ({
-        userName: row.userName || 'غير محدد',
+        userName: (row.userId && usersById.get(row.userId)?.fullName) || 'غير محدد',
         count: Number(row.count || 0),
       })),
       totalInbound: totalAdditions,

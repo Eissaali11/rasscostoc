@@ -2,12 +2,12 @@ import { eq } from 'drizzle-orm';
 import { getDatabase } from "@core/database/connection";
 import {
   inventoryRequests,
-  users,
   warehouseInventory,
   warehouseTransfers,
   type InventoryRequest,
   type WarehouseInventory,
 } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 import type {
   IInventoryRequestApprovalRepository,
   IInventoryRequestApprovalUnitOfWork,
@@ -78,16 +78,12 @@ class DrizzleUserRegionLookupRepository implements IUserRegionLookupRepository {
   constructor(private readonly executor: any) {}
 
   async getById(id: string): Promise<{ id: string; regionId: string | null } | undefined> {
-    const [user] = await this.executor
-      .select({
-        id: users.id,
-        regionId: users.regionId,
-      })
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
+    const ports = getInventoryIdentityPorts();
+    const eligibility = await ports.verifyTechnicianEligibility(id, ["admin", "supervisor", "technician"]);
+    if (!eligibility.eligible) return undefined;
 
-    return user || undefined;
+    const regionId = await ports.getUserRegionId(id);
+    return { id, regionId };
   }
 }
 

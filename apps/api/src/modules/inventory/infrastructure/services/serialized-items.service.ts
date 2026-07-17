@@ -1,8 +1,9 @@
 import { db } from "@core/config/db";
 import { AppError } from "@core/errors/AppError";
-import { items, inventoryTransactions, itemHistoryLogs, itemTypes, users, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
+import { items, inventoryTransactions, itemHistoryLogs, itemTypes, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
 import { eq, and, inArray, sql, or } from "drizzle-orm";
 import { SerialRecognitionService } from "./serial-recognition.service";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class SerializedItemsService {
   private async syncMovingInventory(tx: any, technicianId: string, itemTypeId: string, delta: number) {
@@ -325,7 +326,7 @@ export class SerializedItemsService {
   async lookup(serialNumber: string) {
     const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serialNumber);
 
-    const [item] = await db
+    const [itemRow] = await db
       .select({
         id: items.id,
         serialNumber: items.serialNumber,
@@ -333,16 +334,14 @@ export class SerializedItemsService {
         status: items.status,
         carrierName: items.carrierName,
         simPackageType: items.simPackageType,
+        currentOwnerId: items.currentOwnerId,
         createdAt: items.createdAt,
         updatedAt: items.updatedAt,
         itemTypeNameAr: itemTypes.nameAr,
         itemTypeNameEn: itemTypes.nameEn,
-        ownerName: users.fullName,
-        ownerUsername: users.username,
       })
       .from(items)
       .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
-      .leftJoin(users, eq(items.currentOwnerId, users.id))
       .where(
         or(
           inArray(items.serialNumber, candidates),
@@ -351,24 +350,39 @@ export class SerializedItemsService {
       )
       .limit(1);
 
-    if (!item) {
+    if (!itemRow) {
       return null;
     }
 
     // Get audit trail history
-    const history = await db
+    const historyRows = await db
       .select({
         id: itemHistoryLogs.id,
         fromStatus: itemHistoryLogs.fromStatus,
         toStatus: itemHistoryLogs.toStatus,
         changedAt: itemHistoryLogs.changedAt,
         notes: itemHistoryLogs.notes,
-        changedByName: users.fullName,
+        changedById: itemHistoryLogs.changedById,
       })
       .from(itemHistoryLogs)
-      .leftJoin(users, eq(itemHistoryLogs.changedById, users.id))
-        .where(eq(itemHistoryLogs.itemId, item.id))
-        .orderBy(itemHistoryLogs.changedAt);
+      .where(eq(itemHistoryLogs.itemId, itemRow.id))
+      .orderBy(itemHistoryLogs.changedAt);
+
+    const userIds = [
+      ...new Set([itemRow.currentOwnerId, ...historyRows.map((h) => h.changedById)].filter(Boolean)),
+    ] as string[];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds);
+
+    const item = {
+      ...itemRow,
+      ownerName: itemRow.currentOwnerId ? usersById.get(itemRow.currentOwnerId)?.fullName : undefined,
+      ownerUsername: itemRow.currentOwnerId ? usersById.get(itemRow.currentOwnerId)?.username : undefined,
+    };
+
+    const history = historyRows.map((h) => ({
+      ...h,
+      changedByName: h.changedById ? usersById.get(h.changedById)?.fullName : undefined,
+    }));
 
     return {
       ...item,

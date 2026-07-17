@@ -1,4 +1,4 @@
-import { and, or, eq, desc, sql } from 'drizzle-orm';
+import { and, or, eq, inArray, desc, sql } from 'drizzle-orm';
 import { getDatabase } from "@core/database/connection";
 import {
   warehouses,
@@ -6,7 +6,6 @@ import {
   warehouseTransfers,
   warehouseInventoryEntries,
   regions,
-  users,
   itemTypes,
   inventoryRequests,
   supervisorTechnicians,
@@ -23,6 +22,7 @@ import {
   type WarehouseTransferWithDetails
 } from "@shared/schema";
 import type { IWarehouseRepository } from "@modules/inventory/application/warehouse/contracts/IWarehouseRepository";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class DrizzleWarehouseRepository implements IWarehouseRepository {
   private get db() {
@@ -30,7 +30,7 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
   }
 
   async getWarehouses(): Promise<WarehouseWithStats[]> {
-    const warehouseList = await this.db
+    const warehouseRows = await this.db
       .select({
         id: warehouses.id,
         name: warehouses.name,
@@ -41,16 +41,21 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
         regionId: warehouses.regionId,
         createdAt: warehouses.createdAt,
         updatedAt: warehouses.updatedAt,
-        creatorName: users.fullName,
         regionName: regions.name,
       })
       .from(warehouses)
-      .leftJoin(users, eq(warehouses.createdBy, users.id))
       .leftJoin(regions, eq(warehouses.regionId, regions.id))
       .orderBy(desc(warehouses.createdAt));
 
+    const creatorIds = [...new Set(warehouseRows.map((w) => w.createdBy).filter(Boolean))];
+    const creatorsById = await getInventoryIdentityPorts().getUsersByIds(creatorIds as string[]);
+    const warehouseList = warehouseRows.map((w) => ({
+      ...w,
+      creatorName: (w.createdBy && creatorsById.get(w.createdBy)?.fullName) || undefined,
+    }));
+
     const result: WarehouseWithStats[] = [];
-    
+
     for (const warehouse of warehouseList) {
       const [inventory] = await this.db
         .select()
@@ -115,7 +120,7 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
   }
 
   async getWarehouse(id: string): Promise<WarehouseWithInventory | undefined> {
-    const [warehouse] = await this.db
+    const [warehouseRow] = await this.db
       .select({
         id: warehouses.id,
         name: warehouses.name,
@@ -126,71 +131,51 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
         regionId: warehouses.regionId,
         createdAt: warehouses.createdAt,
         updatedAt: warehouses.updatedAt,
-        creatorName: users.fullName,
         regionName: regions.name,
       })
       .from(warehouses)
-      .leftJoin(users, eq(warehouses.createdBy, users.id))
       .leftJoin(regions, eq(warehouses.regionId, regions.id))
       .where(eq(warehouses.id, id));
 
-    if (!warehouse) {
+    if (!warehouseRow) {
       return undefined;
     }
+
+    const ports = getInventoryIdentityPorts();
+    const creator = warehouseRow.createdBy ? await ports.getUserById(warehouseRow.createdBy) : null;
+    const warehouse = { ...warehouseRow, creatorName: creator?.fullName || undefined };
 
     const [inventory] = await this.db
       .select()
       .from(warehouseInventory)
       .where(eq(warehouseInventory.warehouseId, id));
 
-    const technicianScopeCondition = warehouse.regionId
-      ? or(
-          eq(users.regionId, warehouse.regionId),
-          eq(supervisorWarehouses.warehouseId, id)
-        )
-      : eq(supervisorWarehouses.warehouseId, id);
+    // Technician scope = technicians in the warehouse's region OR technicians
+    // supervised by a supervisor assigned to this warehouse (two-hop via
+    // supervisorTechnicians -> supervisorWarehouses, both inventory-permitted
+    // tables — only the `users` lookup itself goes through the identity port).
+    const supervisorRows = await this.db
+      .select({ supervisorId: supervisorWarehouses.supervisorId })
+      .from(supervisorWarehouses)
+      .where(eq(supervisorWarehouses.warehouseId, id));
+    const supervisorIds = supervisorRows.map((r) => r.supervisorId);
 
-    const techRows = await this.db
-      .select({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        fullName: users.fullName,
-        profileImage: users.profileImage,
-        city: users.city,
-        role: users.role,
-        regionId: users.regionId,
-        isActive: users.isActive,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
-      .from(users)
-      .leftJoin(supervisorTechnicians, eq(users.id, supervisorTechnicians.technicianId))
-      .leftJoin(supervisorWarehouses, eq(supervisorTechnicians.supervisorId, supervisorWarehouses.supervisorId))
-      .where(and(
-        eq(users.role, 'technician'),
-        technicianScopeCondition
-      ));
-
-    const techById: Record<string, any> = {};
-    for (const t of techRows) {
-      if (!t) continue;
-      techById[t.id] = {
-        id: t.id,
-        username: t.username,
-        email: t.email,
-        fullName: t.fullName,
-        profileImage: t.profileImage,
-        city: t.city,
-        role: t.role,
-        regionId: t.regionId,
-        isActive: t.isActive,
-        createdAt: t.createdAt,
-        updatedAt: t.updatedAt,
-      };
+    let supervisedTechnicianIds: string[] = [];
+    if (supervisorIds.length > 0) {
+      const rows = await this.db
+        .select({ technicianId: supervisorTechnicians.technicianId })
+        .from(supervisorTechnicians)
+        .where(inArray(supervisorTechnicians.supervisorId, supervisorIds));
+      supervisedTechnicianIds = rows.map((r) => r.technicianId);
     }
 
-    const technicians = Object.values(techById) as any[];
+    const regionTechnicianIds = warehouseRow.regionId
+      ? await ports.getUserIdsByRegion(warehouseRow.regionId)
+      : [];
+
+    const candidateIds = [...new Set([...supervisedTechnicianIds, ...regionTechnicianIds])];
+    const candidatesById = await ports.getUsersByIds(candidateIds);
+    const technicians = [...candidatesById.values()].filter((u) => u.role === 'technician');
 
     return {
       ...warehouse,
@@ -413,13 +398,10 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
         rejectionReason: warehouseTransfers.rejectionReason,
         createdAt: warehouseTransfers.createdAt,
         warehouseName: warehouses.name,
-        technicianName: users.fullName,
-        technicianCity: users.city,
         regionName: regions.name
       })
       .from(warehouseTransfers)
       .leftJoin(warehouses, eq(warehouseTransfers.warehouseId, warehouses.id))
-      .leftJoin(users, eq(warehouseTransfers.technicianId, users.id))
       .leftJoin(regions, eq(warehouses.regionId, regions.id))
       .$dynamic();
 
@@ -444,7 +426,15 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
       query = query.limit(limit);
     }
 
-    return query as any;
+    const rows = await query;
+    const technicianIds = [...new Set(rows.map((r: any) => r.technicianId).filter(Boolean))];
+    const techsById = await getInventoryIdentityPorts().getUsersByIds(technicianIds);
+
+    return rows.map((row: any) => ({
+      ...row,
+      technicianName: techsById.get(row.technicianId)?.fullName,
+      technicianCity: techsById.get(row.technicianId)?.city,
+    })) as any;
   }
 
   async createWarehouseTransfer(data: InsertWarehouseTransfer): Promise<WarehouseTransfer> {

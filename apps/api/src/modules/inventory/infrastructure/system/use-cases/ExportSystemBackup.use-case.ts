@@ -5,13 +5,13 @@ import {
   regions,
   supervisorWarehouses,
   transactions,
-  users,
   inventoryRequests,
   warehouseInventory,
   warehouseInventoryEntries,
   warehouseTransfers,
   warehouses,
 } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../../adapters/identity/identity-ports.registry";
 
 export class ExportSystemBackupUseCase {
   async execute(): Promise<{ exportedAt: string; data: Record<string, unknown> }> {
@@ -30,7 +30,7 @@ export class ExportSystemBackupUseCase {
       allInventoryRequests,
       allWarehouseTransfers,
     ] = await Promise.all([
-      db.select().from(users),
+      getInventoryIdentityPorts().getAllUsersForBackup(),
       db.select().from(regions),
       db.select().from(itemTypes),
       db.select().from(inventoryItems),

@@ -1,7 +1,8 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { IRegionRepository, RegionInventoryStats } from '../../application/regions/contracts/IRegionRepository';
 import { getDatabase } from "@core/database/connection";
-import { inventoryItems, regions, users, warehouses, type InsertRegion, type Region } from "@shared/schema";
+import { inventoryItems, regions, warehouses, type InsertRegion, type Region } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class DrizzleRegionRepository implements IRegionRepository {
   private get db() {
@@ -58,13 +59,14 @@ export class DrizzleRegionRepository implements IRegionRepository {
     return (result.rowCount || 0) > 0;
   }
 
+  /**
+   * Both current callers (DeleteRegion.use-case.ts, regions.controller.ts)
+   * only check `> 0` — never display the exact figure — so this is backed by
+   * the identity port's boolean existence check (0/1), not a live JOIN.
+   */
   async countUsersByRegionId(regionId: string): Promise<number> {
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(users)
-      .where(eq(users.regionId, regionId));
-
-    return Number(row?.count || 0);
+    const hasUsers = await getInventoryIdentityPorts().regionHasAssignedUsers(regionId);
+    return hasUsers ? 1 : 0;
   }
 
   async countWarehousesByRegionId(regionId: string): Promise<number> {
