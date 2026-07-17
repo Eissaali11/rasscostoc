@@ -25,6 +25,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { pool } from "@core/config/db";
 import { accountingService } from "./accounting.service";
+// ERP-005A-4 Phase 5: accountingService's cross-module reads now go through
+// AccountingIdentityLookupPort/AccountingCatalogLookupPort, populated by
+// this composition-root side-effect import — without it, the ports throw
+// "not registered yet".
+import "@server/composition/accounting-cross-module.adapter";
 
 describe("accounting.service — characterization (cross-module SQL baseline)", () => {
   let regionId: string;
@@ -202,5 +207,68 @@ describe("accounting.service — characterization (cross-module SQL baseline)", 
 
     const rowsForOtherRegion = await accountingService.getTopItems({ regionId: otherRegionId, limit: 10 });
     expect(rowsForOtherRegion.find((r: any) => r.itemTypeId === itemTypeId)).toBeUndefined();
+  });
+
+  // --- postSalesInvoice's users-join write path (lines ~682-737, split into
+  // computeTechnicianSalesLineData/upsertTechnicianSalesMetricsForInvoice in
+  // Phase 5) ---
+  //
+  // Two independent, pre-existing, out-of-scope defects block this path from
+  // being exercised end-to-end via postSalesInvoice():
+  //  1. number_sequences lacks a unique constraint on (scope, year), so
+  //     createPostedJournalForSalesInvoice()'s nextSequence() call fails
+  //     before this code is ever reached.
+  //  2. technician_sales_metrics_daily has NO unique constraint/index
+  //     matching (sales_date, technician_id, item_type_id, region_id)
+  //     anywhere in the migrations (confirmed by reading migrations/*.sql —
+  //     only plain single-column indexes exist), so
+  //     upsertTechnicianSalesMetricsForInvoice's `ON CONFLICT` INSERT fails
+  //     unconditionally, on every call, independent of defect #1 and
+  //     independent of this phase's change.
+  // Both are documented in docs/architecture/PHASE-5-ACCOUNTING-CROSS-MODULE-ACCESS.md
+  // and are NOT fixed here (schema changes, need separate approval).
+  //
+  // This test therefore exercises computeTechnicianSalesLineData() directly
+  // — the SELECT-only method containing the actual users.region_id join this
+  // phase changes — bypassing both defects entirely, since neither affects a
+  // plain SELECT.
+  it("computeTechnicianSalesLineData resolves the technician's region_id sourced from users", async () => {
+    const writeTestInvoice = await pool.query(
+      `INSERT INTO sales_invoices (invoice_no, status, subtotal, taxable_amount, vat_total, grand_total)
+       VALUES ($1, 'draft', 150, 150, 0, 150) RETURNING id`,
+      [`ERP005A4-SI-WRITE-${Date.now()}`]
+    );
+    const writeTestInvoiceId = writeTestInvoice.rows[0].id;
+    await pool.query(
+      `INSERT INTO sales_invoice_lines
+        (invoice_id, item_type_id, technician_id, qty, unit_price, line_total, qty_before_sale, qty_after_sale)
+       VALUES ($1, $2, $3, 2, 75, 150, 5, 3)`,
+      [writeTestInvoiceId, itemTypeId, technicianId]
+    );
+
+    try {
+      const client = await pool.connect();
+      let rows: any[];
+      try {
+        rows = await (accountingService as any).computeTechnicianSalesLineData(client, writeTestInvoiceId);
+      } finally {
+        client.release();
+      }
+
+      expect(rows.length).toBe(1);
+      const row = rows[0];
+      expect(row.technician_id).toBe(technicianId);
+      expect(row.item_type_id).toBe(itemTypeId);
+      expect(row.region_id).toBe(regionId);
+      expect(Number(row.sold_qty)).toBe(2);
+      expect(Number(row.sold_amount)).toBe(150);
+      expect(Number(row.avg_price)).toBe(75);
+    } finally {
+      // try/finally so a thrown assertion still cleans up this test's own
+      // fixture rows, rather than orphaning them for the next run (as
+      // happened once while developing this test).
+      await pool.query(`DELETE FROM sales_invoice_lines WHERE invoice_id = $1`, [writeTestInvoiceId]);
+      await pool.query(`DELETE FROM sales_invoices WHERE id = $1`, [writeTestInvoiceId]);
+    }
   });
 });

@@ -5,7 +5,7 @@ import {
   type ItemType,
   type InsertItemType
 } from "@shared/schema";
-import { eq, and, sql, count, desc } from "drizzle-orm";
+import { eq, and, sql, count, desc, inArray } from "drizzle-orm";
 import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 /**
@@ -243,6 +243,20 @@ export class ItemTypesService {
       .from(itemTypes)
       .where(and(eq(itemTypes.isActive, true), eq(itemTypes.isVisible, true)))
       .orderBy(itemTypes.sortOrder, itemTypes.nameAr);
+  }
+
+  /**
+   * ERP-005A-4 Phase 5 — batch lookup by ids, backing accounting's
+   * AccountingCatalogLookupPort (and IItemTypeCatalogRepository in
+   * @stockpro/contracts). A real WHERE id = ANY($1) query, not
+   * getItemTypes() + client-side filter.
+   */
+  async getItemTypesByIds(ids: readonly string[]): Promise<ItemType[]> {
+    if (ids.length === 0) return [];
+    return db
+      .select()
+      .from(itemTypes)
+      .where(inArray(itemTypes.id, [...ids]));
   }
 
   /**
