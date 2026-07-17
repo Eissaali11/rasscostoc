@@ -3,16 +3,15 @@ import { getDatabase } from "@core/database/connection";
 import {
   supervisorTechnicians,
   supervisorWarehouses,
-  UserSafe,
   SupervisorTechnician,
   InsertSupervisorTechnician,
   SupervisorWarehouse,
   InsertSupervisorWarehouse
 } from "@shared/schema";
-import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
+import type { SupervisorTechnicianReference } from "@stockpro/contracts";
 
 export interface ISupervisorRepository {
-  getSupervisorTechnicians(supervisorId: string): Promise<UserSafe[]>;
+  getSupervisorTechnicians(supervisorId: string): Promise<SupervisorTechnicianReference[]>;
   assignTechnicianToSupervisor(supervisorId: string, technicianId: string): Promise<SupervisorTechnician>;
   removeTechnicianFromSupervisor(supervisorId: string, technicianId: string): Promise<boolean>;
   getSupervisorWarehouses(supervisorId: string): Promise<SupervisorWarehouse[]>;
@@ -33,17 +32,21 @@ export class SupervisorAssignmentsRepository implements ISupervisorRepository {
     return getDatabase();
   }
 
-  async getSupervisorTechnicians(supervisorId: string): Promise<UserSafe[]> {
+  /**
+   * ERP-005A-4 Phase 5C — no longer calls the identity module at all.
+   * supervisor_technicians is inventory-owned, so the technician ids it
+   * assigns are already fully known here; the only thing any real consumer
+   * ever read from the old UserSafe[]-returning version was `.id`
+   * (see docs/architecture/PHASE-5C-REPORT-AR.md), so there was never a
+   * reason to fetch full identity rows for this method.
+   */
+  async getSupervisorTechnicians(supervisorId: string): Promise<SupervisorTechnicianReference[]> {
     const assignments = await this.db
       .select({ technicianId: supervisorTechnicians.technicianId })
       .from(supervisorTechnicians)
       .where(eq(supervisorTechnicians.supervisorId, supervisorId));
 
-    if (assignments.length === 0) return [];
-
-    return getInventoryIdentityPorts().getUserSafeRowsByIds(
-      assignments.map((assignment) => assignment.technicianId),
-    );
+    return assignments.map((assignment) => ({ id: assignment.technicianId }));
   }
 
   async assignTechnicianToSupervisor(supervisorId: string, technicianId: string): Promise<SupervisorTechnician> {

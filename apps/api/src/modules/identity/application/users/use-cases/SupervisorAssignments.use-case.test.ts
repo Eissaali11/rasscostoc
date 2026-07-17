@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { SupervisorTechnician, SupervisorWarehouse, UserSafe } from "@shared/schema";
-import type { ISupervisorAssignmentsRepository } from '@stockpro/contracts';
+import type { SupervisorTechnician, SupervisorWarehouse } from "@shared/schema";
+import type { ISupervisorAssignmentsRepository, SupervisorTechnicianReference } from '@stockpro/contracts';
 import { SupervisorAssignmentsUseCase } from './SupervisorAssignments.use-case';
 
 type MockRepo = {
@@ -18,19 +18,14 @@ function createMockRepo(): MockRepo {
   };
 }
 
-function technicianFixture(overrides: Partial<UserSafe> = {}): UserSafe {
+/**
+ * ERP-005A-4 Phase 5C — narrowed from a full UserSafe fixture to just {id},
+ * matching ISupervisorAssignmentsRepository.getSupervisorTechnicians'
+ * narrowed return type. This use case only ever reads `.id`.
+ */
+function technicianFixture(overrides: Partial<SupervisorTechnicianReference> = {}): SupervisorTechnicianReference {
   return {
     id: 'tech-1',
-    username: 'tech1',
-    email: 'tech1@example.com',
-    fullName: 'Tech One',
-    profileImage: null,
-    city: null,
-    role: 'technician',
-    regionId: 'region-1',
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     ...overrides,
   };
 }
