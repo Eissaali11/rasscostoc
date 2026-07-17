@@ -17,9 +17,15 @@ import type { IdentityUserReadPort } from "../../../application/ports/IdentityUs
 import type { TechnicianEligibilityPort } from "../../../application/ports/TechnicianEligibilityPort";
 import type { IdentityStatsPort } from "../../../application/ports/IdentityStatsPort";
 import type { IdentityUserRestorePort } from "../../../application/ports/IdentityUserRestorePort";
+import type { SupervisorTechnicianDisplayPort } from "../../../application/ports/SupervisorTechnicianDisplayPort";
 
 export interface InventoryIdentityPorts
-  extends IdentityUserReadPort, TechnicianEligibilityPort, IdentityStatsPort, IdentityUserRestorePort {}
+  extends
+    IdentityUserReadPort,
+    TechnicianEligibilityPort,
+    IdentityStatsPort,
+    IdentityUserRestorePort,
+    SupervisorTechnicianDisplayPort {}
 
 let ports: InventoryIdentityPorts | null = null;
 

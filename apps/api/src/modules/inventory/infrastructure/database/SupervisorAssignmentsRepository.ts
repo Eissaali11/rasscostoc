@@ -3,13 +3,13 @@ import { getDatabase } from "@core/database/connection";
 import {
   supervisorTechnicians,
   supervisorWarehouses,
-  users,
   UserSafe,
   SupervisorTechnician,
   InsertSupervisorTechnician,
   SupervisorWarehouse,
   InsertSupervisorWarehouse
 } from "@shared/schema";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export interface ISupervisorRepository {
   getSupervisorTechnicians(supervisorId: string): Promise<UserSafe[]>;
@@ -21,38 +21,29 @@ export interface ISupervisorRepository {
 }
 
 /**
- * Supervisor Repository Implementation
- * Handles supervisor-technician and supervisor-warehouse relationships
+ * ERP-005A-4 Phase 4B — relocated from identity (git rename) since this
+ * repository's entire logic and majority of its callers already belonged
+ * to inventory (supervisor_technicians/supervisor_warehouses are inventory
+ * concepts; its routes already live under inventory/presentation).
+ *
+ * Handles supervisor-technician and supervisor-warehouse relationships.
  */
-export class SupervisorRepository implements ISupervisorRepository {
+export class SupervisorAssignmentsRepository implements ISupervisorRepository {
   private get db() {
     return getDatabase();
   }
 
   async getSupervisorTechnicians(supervisorId: string): Promise<UserSafe[]> {
-    const technicians = await this.db
-      .select({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        fullName: users.fullName,
-        profileImage: users.profileImage,
-        city: users.city,
-        role: users.role,
-        regionId: users.regionId,
-        employeeCode: users.employeeCode,
-        technicianCode: users.technicianCode,
-        department: users.department,
-        permissions: users.permissions,
-        isActive: users.isActive,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
-      .from(users)
-      .innerJoin(supervisorTechnicians, eq(users.id, supervisorTechnicians.technicianId))
+    const assignments = await this.db
+      .select({ technicianId: supervisorTechnicians.technicianId })
+      .from(supervisorTechnicians)
       .where(eq(supervisorTechnicians.supervisorId, supervisorId));
-    
-    return technicians;
+
+    if (assignments.length === 0) return [];
+
+    return getInventoryIdentityPorts().getUserSafeRowsByIds(
+      assignments.map((assignment) => assignment.technicianId),
+    );
   }
 
   async assignTechnicianToSupervisor(supervisorId: string, technicianId: string): Promise<SupervisorTechnician> {

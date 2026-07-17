@@ -7,6 +7,8 @@ import type {
 } from "../../../application/ports/TechnicianEligibilityPort";
 import type { IdentityStatsPort } from "../../../application/ports/IdentityStatsPort";
 import type { IdentityUserRestorePort, RestoreUserPayload } from "../../../application/ports/IdentityUserRestorePort";
+import type { SupervisorTechnicianDisplayPort } from "../../../application/ports/SupervisorTechnicianDisplayPort";
+import type { UserSafe } from "@shared/schema";
 
 function toDisplayView(u: { id: string; fullName: string; username: string; city: string | null; profileImage: string | null; regionId: string | null; role: string | null }): UserDisplayView {
   return {
@@ -37,7 +39,12 @@ function toDirectoryView(u: { id: string; fullName: string; username: string; ci
  * internal identity import). Wired in the composition root only.
  */
 export class IdentityPortsAdapter
-  implements IdentityUserReadPort, TechnicianEligibilityPort, IdentityStatsPort, IdentityUserRestorePort
+  implements
+    IdentityUserReadPort,
+    TechnicianEligibilityPort,
+    IdentityStatsPort,
+    IdentityUserRestorePort,
+    SupervisorTechnicianDisplayPort
 {
   constructor(private readonly userRepository: IUserRepository) {}
 
@@ -125,5 +132,11 @@ export class IdentityPortsAdapter
 
   async getAllUsersForBackup() {
     return this.userRepository.getAllUsersForBackup();
+  }
+
+  // ── SupervisorTechnicianDisplayPort ─────────────────────────────────────
+  async getUserSafeRowsByIds(ids: readonly string[]): Promise<UserSafe[]> {
+    if (ids.length === 0) return [];
+    return this.userRepository.getUsersByIds([...new Set(ids)]);
   }
 }

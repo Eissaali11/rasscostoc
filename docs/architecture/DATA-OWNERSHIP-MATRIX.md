@@ -1,5 +1,24 @@
 # ERP-005A-4 Phase 0.5 — Full Data Ownership Matrix
 
+## Status update — post Phase 3 / 4 / 4B
+
+The scan and matrix below (dated 2026-07-17, the original Phase 0.5 baseline) are left unedited as the historical record of what was found before any fix landed. This section tracks what has actually been fixed since, so the "13 violations" figure below is not mistaken for the current state.
+
+| ID | Table(s) | Direction | Status | Fixed in |
+|---|---|---|---|---|
+| V1 | `items` | courier → inventory | **Fixed** — courier now reads via `ICourierInventoryPort` / `CourierInventoryPortAdapter`, no direct table import | Phase 3 |
+| V1b | `item_types`, `inventory_transactions`, `item_history_logs` | courier → inventory | **Fixed** — same port as V1 covers these | Phase 3 |
+| V2 | `users` | inventory → identity | **Fixed** — all 19 files (18 originally found + `ExportSystemBackup.use-case.ts` found during final verification) now read via `IdentityUserReadPort` / `TechnicianEligibilityPort` / `IdentityStatsPort` / `IdentityUserRestorePort`, backed by `IdentityPortsAdapter`, wired in `composition/inventory-identity.adapter.ts` | Phase 4 |
+| V2b | `technicians_inventory`, `technician_fixed_inventories`, `technician_fixed_inventory_entries`, `technician_moving_inventory_entries`, `inventory_requests` | identity → inventory | **Fixed** — `DrizzleAdminDashboardRepository.ts` and `DrizzleSupervisorUsersReadRepository.ts` now read via `InventoryTechnicianDataPort`, backed by `InventoryTechnicianDataService` (inventory-owned), wired in the same `composition/inventory-identity.adapter.ts` | Phase 4B |
+| V2c | `supervisor_technicians`, `supervisor_warehouses` | (was: identity file, inventory tables) | **Fixed by relocation** — `SupervisorRepository.ts` (identity) was git-renamed to `apps/api/src/modules/inventory/infrastructure/database/SupervisorAssignmentsRepository.ts`; these tables are now read in-module by their rightful owner. The one remaining cross-module edge (its `getSupervisorTechnicians` method needs identity's `users` row data for a legacy contract that still returns `UserSafe[]`) is now served by a new narrow `SupervisorTechnicianDisplayPort`, part of the same `IdentityPortsAdapter` used for V2 | Phase 4B |
+| V2c (`courier_request_items`) | `courier_request_items` | inventory → courier | Not yet fixed — out of Phase 4B's scope (identity/inventory boundary only) | Pending |
+| V3 | `users`, `item_types` (raw SQL) | accounting → identity/inventory | Not yet fixed — Phase 5 (accounting isolation), not started | Pending |
+| C1-C4 | (dependency cycles) | — | C1, C2, C4 fixed (Phase 1-3); C3 (`core/telemetry/tracer.ts` ↔ `metrics.ts`) is pre-existing and explicitly out of scope until Phase 6 | Phase 1-3 (partial) |
+
+As of Phase 4B: zero direct imports of inventory-owned tables remain anywhere under `apps/api/src/modules/identity/**`, and zero direct imports of `users`/`items`/`item_types`/`inventory_transactions`/`item_history_logs` remain under `apps/api/src/modules/{inventory,courier}/**` for the identity/courier↔inventory boundary specifically (verified via the same multi-line-aware whole-file-content scan used to build the original matrix). The accounting↔identity/inventory boundary (V3) is untouched and remains the next phase.
+
+---
+
 Date: 2026-07-17
 Method: every one of the 61 tables defined in `packages/shared-types/schemas/*.schema.ts` was checked against every `.ts` file (excluding tests) in `apps/api/src/modules/{accounting,ai-engine-settings,courier,identity,inventory}` for a real `import { ...tableVar... } from ".../schema"` statement — a full file-by-file scan, not a spot-check on a handful of pre-selected tables.
 

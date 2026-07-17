@@ -11,6 +11,7 @@ export * from './DrizzleRegionRepository';
 export * from './DrizzleDevicesRepository';
 export * from './DrizzleTransactionsRepository';
 export * from './DrizzleWarehouseRepository';
+export * from './SupervisorAssignmentsRepository';
 
 // Import all implementations
 import { WarehouseInventoryRepository } from './WarehouseInventoryRepository';
@@ -22,6 +23,7 @@ import { DrizzleRegionRepository } from './DrizzleRegionRepository';
 import { DrizzleDevicesRepository } from './DrizzleDevicesRepository';
 import { DrizzleTransactionsRepository } from './DrizzleTransactionsRepository';
 import { DrizzleWarehouseRepository } from './DrizzleWarehouseRepository';
+import { SupervisorAssignmentsRepository } from './SupervisorAssignmentsRepository';
 
 // Repository Instances (Singleton pattern)
 export const repositories = {
@@ -34,6 +36,7 @@ export const repositories = {
   region: new DrizzleRegionRepository(),
   devices: new DrizzleDevicesRepository(),
   transactions: new DrizzleTransactionsRepository(),
+  supervisorAssignments: new SupervisorAssignmentsRepository(),
 };
 
 // Type definitions for the repository container
