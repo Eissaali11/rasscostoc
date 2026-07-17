@@ -7,7 +7,6 @@
  */
 
 import { GuardValidationError, isCompletedStatus, type GuardContext, type TechUser } from "./guard.types";
-import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 const ACTIVE_CUSTODY_STATUSES = [
   "IN_TRANSIT_CUSTODY",
@@ -29,7 +28,7 @@ export class TechnicianGuard {
         ? executionData.deviceSerials.find((s) => String(s || "").trim())?.trim()
         : undefined);
     if (rawSn) {
-      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(rawSn);
+      const candidates = await ctx.inventoryPort.buildStoredSerialCandidates(rawSn);
       if (candidates.length > 0) {
         let item: any = null;
         for (const candidate of candidates) {

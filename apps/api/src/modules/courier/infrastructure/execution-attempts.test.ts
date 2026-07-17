@@ -23,6 +23,12 @@ const { mockRepoInstance } = vi.hoisted(() => {
       findUserByFuzzyName: vi.fn(),
       findLinkedRequestItemBySerial: vi.fn(),
       findItemTypeById: vi.fn(),
+      buildStoredSerialCandidates: vi.fn().mockResolvedValue([]),
+      recognizeSerial: vi.fn().mockResolvedValue(null),
+      resolveCarrierName: vi.fn().mockReturnValue(null),
+      transferCustodyToTechnician: vi.fn(),
+      mintAndAssignToTechnician: vi.fn(),
+      normalizeSerial: vi.fn(),
     }
   };
 });

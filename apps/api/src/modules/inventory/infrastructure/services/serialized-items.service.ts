@@ -397,6 +397,138 @@ export class SerializedItemsService {
         )
       );
   }
+
+  /** Optional external tx — joins courier Unit-of-Work when provided. */
+  private client(tx?: any) {
+    return tx || db;
+  }
+
+  /**
+   * Find serialized item by serial (prefixed or stored). Used by courier via composition adapter.
+   */
+  async findBySerial(serial: string, tx?: any): Promise<any | null> {
+    return SerialRecognitionService.findItemBySerial(serial, this.client(tx));
+  }
+
+  /**
+   * Transfer existing item into technician custody / in-transit (courier receiving & start-task).
+   * Must accept courier UoW `tx` to preserve atomicity with courier request writes.
+   */
+  async transferCustodyToTechnician(
+    params: {
+      itemId: string;
+      technicianId: string;
+      requestId: number;
+      oldStatus: string;
+      newStatus: "RECEIVED_BY_TECHNICIAN" | "IN_TRANSIT";
+    },
+    tx?: any
+  ): Promise<void> {
+    const client = this.client(tx);
+
+    await client
+      .update(items)
+      .set({
+        status: params.newStatus,
+        currentOwnerId: params.technicianId,
+        updatedAt: new Date(),
+      })
+      .where(eq(items.id, params.itemId));
+
+    await client.insert(inventoryTransactions).values({
+      itemId: params.itemId,
+      transactionType: "TRANSFER",
+      destinationOwnerId: params.technicianId,
+      orderNumber: params.requestId.toString(),
+      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
+        ? `استلام عهدة بالطلب رقم ${params.requestId}`
+        : `بدء مهمة التوصيل بالطلب رقم ${params.requestId}`,
+    });
+
+    await client.insert(itemHistoryLogs).values({
+      itemId: params.itemId,
+      fromStatus: params.oldStatus,
+      toStatus: params.newStatus,
+      changedById: params.technicianId,
+      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
+        ? `تحويل عهدة للفني بالمسح الضوئي - طلب رقم ${params.requestId}`
+        : `مغادرة المستودع والبدء بالتوصيل - طلب رقم ${params.requestId}`,
+    });
+  }
+
+  /**
+   * Mint a new serialized item and assign to technician custody (courier scan mint path).
+   * Same-db atomic with courier UoW when `tx` is supplied.
+   */
+  async mintAndAssignToTechnician(
+    params: {
+      serial: string;
+      itemTypeId: string;
+      carrierName: string | null;
+      technicianId: string;
+      requestId: number;
+    },
+    tx?: any
+  ): Promise<{ id: string; serialNumber: string }> {
+    const client = this.client(tx);
+
+    const [newItem] = await client
+      .insert(items)
+      .values({
+        itemTypeId: params.itemTypeId,
+        serialNumber: params.serial,
+        barcode: params.serial,
+        status: "RECEIVED_BY_TECHNICIAN",
+        currentOwnerId: params.technicianId,
+        warehouseId: null,
+        carrierName: params.carrierName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    if (newItem) {
+      await client.insert(inventoryTransactions).values({
+        itemId: newItem.id,
+        transactionType: "INTAKE",
+        destinationOwnerId: params.technicianId,
+        orderNumber: params.requestId.toString(),
+        notes: `تسجيل أصل جديد بالمسح الضوئي - طلب رقم ${params.requestId}`,
+      });
+
+      await client.insert(itemHistoryLogs).values({
+        itemId: newItem.id,
+        fromStatus: "NONE",
+        toStatus: "RECEIVED_BY_TECHNICIAN",
+        changedById: params.technicianId,
+        notes: `إنشاء أصل جديد عهدة للفني لأول مرة - طلب رقم ${params.requestId}`,
+      });
+    }
+
+    return {
+      id: newItem.id,
+      serialNumber: newItem.serialNumber,
+    };
+  }
+
+  /**
+   * Scan-out that returns false when serial is not in active custody (courier InventoryEngine contract).
+   */
+  async tryScanOut(
+    technicianId: string,
+    serialNumber: string,
+    receiverName: string,
+    orderNumber: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<boolean> {
+    try {
+      await this.scanOut(technicianId, serialNumber, receiverName, orderNumber, latitude, longitude);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const serializedItemsService = new SerializedItemsService();

@@ -18,7 +18,6 @@ import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
 import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
-import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
 import type { ICourierExecutionsRepository } from "../domain/repositories/ICourierExecutionsRepository";
 import type { ICourierPdfRepository } from "../domain/repositories/ICourierPdfRepository";
@@ -287,7 +286,7 @@ export class CourierService {
     serial: string,
     actorId: string
   ): Promise<{ success: boolean; message: string; item?: CourierRequestItem }> {
-    const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serial);
+    const candidates = await this.inventoryPort.buildStoredSerialCandidates(serial);
     if (candidates.length === 0) {
       return { success: false, message: "الرقم التسلسلي فارغ بعد التنظيف" };
     }
@@ -695,12 +694,7 @@ export class CourierService {
    * Returns item + custody owner technician for auto-fill (read-only in portal).
    */
   async serialLookup(rawSerial: string): Promise<any> {
-    let recognition: any = null;
-    try {
-      recognition = await SerialRecognitionService.recognize(rawSerial);
-    } catch {
-      // Still try DB lookup
-    }
+    const recognition = await this.inventoryPort.recognizeSerial(rawSerial);
 
     const item = await this.inventoryPort.findItemBySerial(rawSerial);
 
@@ -728,7 +722,7 @@ export class CourierService {
     const itemTypeRow = await this.inventoryPort.findItemTypeById(item.itemTypeId);
 
     const carrierName = itemTypeRow
-      ? SerialRecognitionService.resolveCarrierName(
+      ? this.inventoryPort.resolveCarrierName(
           itemTypeRow.id,
           itemTypeRow.nameEn,
           itemTypeRow.nameAr

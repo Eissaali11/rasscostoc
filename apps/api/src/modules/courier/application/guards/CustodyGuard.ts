@@ -19,7 +19,6 @@ import {
   type GuardContext,
   type TechUser,
 } from "./guard.types";
-import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 /** Active technician custody — keep in sync with inventory custody semantics (no FSM import). */
 const ACTIVE_CUSTODY_STATUSES = [
@@ -71,7 +70,7 @@ export class CustodyGuard {
     const resolved: ResolvedSerial[] = [];
 
     for (const entry of serialEntries) {
-      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(entry.raw);
+      const candidates = await ctx.inventoryPort.buildStoredSerialCandidates(entry.raw);
 
       let item: any = null;
       for (const candidate of candidates) {

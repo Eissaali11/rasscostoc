@@ -23,7 +23,8 @@ import { tracer } from "@core/telemetry/tracer";
 import { db } from "@core/config/db";
 import { courierRequestItems } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
+import { CourierInventoryPortAdapter } from "@server/composition/courier-inventory.adapter";
+import { DrizzleCourierRepository } from "../repositories/drizzle-courier.repository";
 
 export class InventorySubscriber {
   /**
@@ -41,13 +42,15 @@ export class InventorySubscriber {
           `[InventorySubscriber] Received ExecutionCompletedEvent for request ID: ${requestId}`
         );
 
+        const inventoryPort = new CourierInventoryPortAdapter(new DrizzleCourierRepository());
+
         // Build serial list first so deduction can resolve technician from custody owner
         const devices: { serialNumber: string; model?: string }[] = [];
         const serialsForCustody: string[] = [];
 
         const addSerial = async (sn?: string | null) => {
           if (!sn?.trim()) return;
-          const candidates = await SerialRecognitionService.buildStoredSerialCandidates(sn);
+          const candidates = await inventoryPort.buildStoredSerialCandidates(sn);
           const serial =
             [...candidates].sort((a, b) => a.length - b.length)[0] || sn.trim();
           if (!devices.some((d) => d.serialNumber === serial)) {

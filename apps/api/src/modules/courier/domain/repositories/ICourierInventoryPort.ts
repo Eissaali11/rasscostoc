@@ -33,6 +33,25 @@ export interface ICourierInventoryPort {
 
   findItemBySerial(serial: string, tx?: any): Promise<any | null>;
   findItemTypeById(itemTypeId: string, tx?: any): Promise<{ id: string; nameAr: string; nameEn: string; category: string } | null>;
+
+  /** Serial candidate expansion (reads inventory catalog via composition). */
+  buildStoredSerialCandidates(serial: string, hintItemTypeId?: string, tx?: any): Promise<string[]>;
+
+  /** Soft recognize — returns null when validation fails (no throw). */
+  recognizeSerial(
+    rawSerial: string,
+    hintItemTypeId?: string,
+    tx?: any
+  ): Promise<{
+    itemTypeId: string;
+    normalizedSerial: string;
+    nameAr: string;
+    category: string;
+    carrierName: string | null;
+  } | null>;
+
+  resolveCarrierName(itemTypeId: string, nameEn: string, nameAr: string): string | null;
+
   findUserById(userId: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null; role: string; regionId: number | null } | null>;
   findUserByCodeOrUsername(code: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null } | null>;
   findUserByFuzzyName(name: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null } | null>;

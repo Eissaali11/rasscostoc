@@ -62,8 +62,7 @@ export interface ICourierRepository {
   transaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
 
   // ── Serial Lookup ─────────────────────────────────────────────────────────
-  /** Resolve item type row and owner technician for a given inventory item id/type. */
-  findItemTypeById(itemTypeId: string, tx?: any): Promise<{ id: string; nameAr: string; nameEn: string; category: string } | null>;
+  /** Resolve owner technician for display (identity — Phase 4 will move to port). */
   findUserById(userId: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null } | null>;
   /** Find the linked courier request item for a given inventory item serial. */
   findLinkedRequestItemBySerial(serial: string, tx?: any): Promise<{ requestId: number; id: number; itemType: string; status: string } | null>;
