@@ -4,7 +4,7 @@
  * Implements lightweight in-memory metrics collection for system performance.
  */
 
-import type { Span } from "./tracer";
+import type { Span } from "./span.types";
 
 export interface MetricValue {
   value: number;
