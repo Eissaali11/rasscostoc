@@ -3,7 +3,7 @@ import { CourierWorkflow } from "../application/workflow/courier.workflow";
 import { WorkflowDecision } from "../application/workflow/workflow.types";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionCompletedEvent, InventoryDeductionFailedEvent } from "@core/events/events";
-import { InventorySubscriber } from "../../inventory/contracts";
+import { InventorySubscriber } from "./subscribers/inventory-deduction.subscriber";
 import { CourierAuditSubscriber } from "./subscribers/courier-audit.subscriber";
 import { CourierSagaSubscriber } from "./subscribers/courier-saga.subscriber";
 

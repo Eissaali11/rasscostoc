@@ -1,4 +1,4 @@
-import { InventorySubscriber } from "@modules/inventory/infrastructure/subscribers/inventory.subscriber";
+import { InventorySubscriber } from "@modules/courier/infrastructure/subscribers/inventory-deduction.subscriber";
 import { CourierAuditSubscriber } from "@modules/courier/infrastructure/subscribers/courier-audit.subscriber";
 import { CourierSagaSubscriber } from "@modules/courier/infrastructure/subscribers/courier-saga.subscriber";
 

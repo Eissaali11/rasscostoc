@@ -3,11 +3,21 @@
  *
  * Listens to ExecutionCompletedEvent to perform physical inventory deductions.
  * If the deduction fails, publishes an InventoryDeductionFailedEvent.
+ *
+ * Relocated from modules/inventory/infrastructure/subscribers/ (ERP-005A-4 Phase 2,
+ * cycle C1): despite its former location, this class subscribes to a courier event,
+ * reads courier's own courier_request_items table, and drives courier's own
+ * InventoryEngine (via createInventoryEngine) — it is a courier-side reaction
+ * handler, not an inventory-owned component. Its old location was the root cause
+ * of the inventory<->courier circular dependency: inventory/contracts re-exported
+ * it, which made inventory/contracts depend on courier/contracts (for
+ * createInventoryEngine), which depends on courier's composition root, which
+ * depends on SerializedItemsAdapter, which depends back on inventory/contracts.
  */
 
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionCompletedEvent, InventoryDeductionFailedEvent } from "@core/events/events";
-import { createInventoryEngine } from "../../../courier/contracts";
+import { createInventoryEngine } from "../../composition/courier.container";
 import { idempotencyService } from "@core/idempotency/idempotency.service";
 import { tracer } from "@core/telemetry/tracer";
 import { db } from "@core/config/db";
@@ -110,7 +120,7 @@ export class InventorySubscriber {
                   `[InventorySubscriber] Deduction completed with errors:`,
                   deductionResult.errors
                 );
-                
+
                 await eventBus.publish(
                   new InventoryDeductionFailedEvent({
                     requestId,
