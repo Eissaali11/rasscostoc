@@ -18,6 +18,7 @@ import { readinessManager } from "@core/telemetry/readiness";
 import { configService } from "@core/config/config.service";
 import { featureFlagService } from "@core/services/feature-flags.service";
 import { logger } from "@core/telemetry/logger";
+import { startSystemMetricsCollection } from "@core/telemetry/metrics";
 
 // Register global error and promise rejection handlers
 process.on("uncaughtException", (error) => {
@@ -108,6 +109,8 @@ async function startServer() {
 
     server.listen(port, () => {
       log(`Server is serving on port ${port}`);
+      // Start system metrics polling (CPU & Memory)
+      startSystemMetricsCollection();
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

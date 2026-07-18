@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { tracer, recentSpans, getRecentSpans } from "./tracer";
-import { metrics } from "./metrics";
+import { metrics, collectSystemMetrics, startSystemMetricsCollection, stopSystemMetricsCollection } from "./metrics";
 import { runWithContext } from "./telemetry";
 
 describe("telemetry — tracer/metrics integration (post Phase 6 cycle break)", () => {
@@ -64,5 +64,21 @@ describe("telemetry — tracer/metrics integration (post Phase 6 cycle break)", 
 
     metrics.setGauge("phase6_test_gauge", 42);
     expect(metrics.getGauge("phase6_test_gauge")).toBe(42);
+  });
+
+  it("collectSystemMetrics correctly populates memory and CPU gauges", () => {
+    collectSystemMetrics();
+    expect(metrics.getGauge("memory_heap_used_bytes")).toBeGreaterThan(0);
+    expect(metrics.getGauge("memory_heap_total_bytes")).toBeGreaterThan(0);
+    expect(metrics.getGauge("memory_rss_bytes")).toBeGreaterThan(0);
+    expect(metrics.getGauge("cpu_user_ms")).toBeGreaterThanOrEqual(0);
+    expect(metrics.getGauge("cpu_system_ms")).toBeGreaterThanOrEqual(0);
+  });
+
+  it("startSystemMetricsCollection and stopSystemMetricsCollection manage polling interval correctly", () => {
+    startSystemMetricsCollection(500);
+    // Gauge should have some value immediately
+    expect(metrics.getGauge("memory_heap_used_bytes")).toBeGreaterThan(0);
+    stopSystemMetricsCollection();
   });
 });

@@ -77,6 +77,44 @@ class MetricsRegistry {
 
 export const metrics = new MetricsRegistry();
 
+let metricsIntervalId: NodeJS.Timeout | null = null;
+
+/**
+ * Collects current process memory and CPU usage metrics.
+ */
+export function collectSystemMetrics(): void {
+  const mem = process.memoryUsage();
+  metrics.setGauge("memory_heap_used_bytes", mem.heapUsed);
+  metrics.setGauge("memory_heap_total_bytes", mem.heapTotal);
+  metrics.setGauge("memory_rss_bytes", mem.rss);
+  metrics.setGauge("memory_external_bytes", mem.external);
+
+  const cpu = process.cpuUsage();
+  metrics.setGauge("cpu_user_ms", Math.round(cpu.user / 1000));
+  metrics.setGauge("cpu_system_ms", Math.round(cpu.system / 1000));
+}
+
+/**
+ * Starts periodic system metrics collection.
+ */
+export function startSystemMetricsCollection(intervalMs = 10000): void {
+  if (metricsIntervalId) return;
+  collectSystemMetrics(); // Initial collect
+  metricsIntervalId = setInterval(() => {
+    collectSystemMetrics();
+  }, intervalMs);
+}
+
+/**
+ * Stops periodic system metrics collection.
+ */
+export function stopSystemMetricsCollection(): void {
+  if (metricsIntervalId) {
+    clearInterval(metricsIntervalId);
+    metricsIntervalId = null;
+  }
+}
+
 /**
  * Automap trace spans to specific performance metrics based on name.
  */
