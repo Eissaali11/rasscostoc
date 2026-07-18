@@ -1,4 +1,21 @@
+/**
+ * Canonical Structured Logger — ERP-008 Phase 8-A
+ *
+ * Every log entry emitted by this logger carries a fixed set of fields
+ * required for production observability:
+ *   timestamp · level · service · environment
+ *   traceId · correlationId · requestId · userId · username · spanId
+ *   module · action · duration · metadata · error
+ *
+ * NEVER log: passwords, tokens, cookies, API keys, connection strings,
+ * or any PII beyond userId/username that is already present in the request
+ * session.
+ */
+
 import { getContext } from "./telemetry";
+
+const SERVICE_NAME = "stockpro-api";
+const ENVIRONMENT = process.env.NODE_ENV ?? "development";
 
 type LogLevel = "INFO" | "WARN" | "ERROR" | "DEBUG";
 
@@ -7,8 +24,10 @@ export interface LogPayload {
   module?: string;
   action?: string;
   duration?: number;
-  metadata?: Record<string, any>;
-  error?: any;
+  statusCode?: number;
+  errorCode?: string;
+  metadata?: Record<string, unknown>;
+  error?: unknown;
 }
 
 class StructuredLogger {
@@ -16,9 +35,11 @@ class StructuredLogger {
     const context = getContext();
     const timestamp = new Date().toISOString();
 
-    let logObj: Record<string, any> = {
+    const logObj: Record<string, unknown> = {
       timestamp,
       level,
+      service: SERVICE_NAME,
+      environment: ENVIRONMENT,
       traceId: context?.traceId,
       correlationId: context?.correlationId,
       requestId: context?.requestId,
@@ -28,18 +49,20 @@ class StructuredLogger {
     };
 
     if (typeof payload === "string") {
-      logObj.message = payload;
+      logObj["message"] = payload;
     } else {
-      logObj.message = payload.message;
-      if (payload.module) logObj.module = payload.module;
-      if (payload.action) logObj.action = payload.action;
-      if (payload.duration !== undefined) logObj.duration = payload.duration;
-      if (payload.metadata) logObj.metadata = payload.metadata;
+      logObj["message"] = payload.message;
+      if (payload.module) logObj["module"] = payload.module;
+      if (payload.action) logObj["action"] = payload.action;
+      if (payload.duration !== undefined) logObj["duration"] = payload.duration;
+      if (payload.statusCode !== undefined) logObj["statusCode"] = payload.statusCode;
+      if (payload.errorCode) logObj["errorCode"] = payload.errorCode;
+      if (payload.metadata) logObj["metadata"] = payload.metadata;
       if (payload.error) {
-        logObj.error = payload.error instanceof Error ? {
-          message: payload.error.message,
-          stack: payload.error.stack,
-        } : payload.error;
+        logObj["error"] =
+          payload.error instanceof Error
+            ? { message: payload.error.message, stack: payload.error.stack }
+            : String(payload.error);
       }
     }
 
@@ -66,7 +89,7 @@ class StructuredLogger {
   }
 
   debug(payload: LogPayload | string): void {
-    if (process.env.NODE_ENV === "development") {
+    if (ENVIRONMENT === "development") {
       this.log("DEBUG", payload);
     }
   }

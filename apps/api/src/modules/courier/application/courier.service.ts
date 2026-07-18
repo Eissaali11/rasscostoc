@@ -14,6 +14,7 @@ import { parseRawDataWorkbook, buildExportWorkbook } from "./excel.helper";
 import { CompletionGuard, isCompletedStatus } from "./guards/CompletionGuard";
 import { normalizeSerialList } from "./guards/guard.types";
 import { metrics } from "@core/telemetry/metrics";
+import { logger } from "@core/telemetry/logger";
 import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
@@ -265,7 +266,7 @@ export class CourierService {
 
           if (itemsToCreate.length > 0) {
             await ctx.requestsRepository.insertRequestItems(itemsToCreate);
-            console.log(`[AcceptRequest] Auto-created ${itemsToCreate.length} request items for request ${requestId}`);
+            logger.info({ message: `Auto-created ${itemsToCreate.length} request items for request ${requestId}`, module: "CourierService", action: "acceptRequest", metadata: { requestId, count: itemsToCreate.length } });
           }
         }
       }
@@ -678,10 +679,12 @@ export class CourierService {
       });
 
       if (workflowResult.sideEffectErrors.length > 0) {
-        console.warn(
-          `[Workflow] Request ${requestId} completed with side-effect warnings:`,
-          workflowResult.sideEffectErrors
-        );
+        logger.warn({
+          message: `Request ${requestId} completed with side-effect warnings`,
+          module: "CourierService",
+          action: "saveExecution",
+          metadata: { requestId, sideEffectErrors: workflowResult.sideEffectErrors },
+        });
       }
     }
     // ─────────────────────────────────────────────────────────────────────────

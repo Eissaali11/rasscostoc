@@ -25,6 +25,9 @@ import { courierRequestItems } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { CourierInventoryPortAdapter } from "@server/composition/courier-inventory.adapter";
 import { DrizzleCourierRepository } from "../repositories/drizzle-courier.repository";
+import { logger } from "@core/telemetry/logger";
+
+const MODULE = "InventorySubscriber";
 
 export class InventorySubscriber {
   /**
@@ -38,9 +41,12 @@ export class InventorySubscriber {
       async (event: any) => {
         const { requestId, actorId, execution, request } = event.payload;
 
-        console.log(
-          `[InventorySubscriber] Received ExecutionCompletedEvent for request ID: ${requestId}`
-        );
+        logger.info({
+          message: `Received ExecutionCompletedEvent for request ID: ${requestId}`,
+          module: MODULE,
+          action: "receivedEvent",
+          metadata: { requestId, actorId },
+        });
 
         const inventoryPort = new CourierInventoryPortAdapter(new DrizzleCourierRepository());
 
@@ -119,10 +125,12 @@ export class InventorySubscriber {
 
               // If there were any errors, publish deduction failed event
               if (deductionResult.errors.length > 0) {
-                console.error(
-                  `[InventorySubscriber] Deduction completed with errors:`,
-                  deductionResult.errors
-                );
+                logger.error({
+                  message: "Deduction completed with errors",
+                  module: MODULE,
+                  action: "deduct",
+                  metadata: { requestId, errors: deductionResult.errors },
+                });
 
                 await eventBus.publish(
                   new InventoryDeductionFailedEvent({
@@ -134,16 +142,22 @@ export class InventorySubscriber {
                 );
                 return { success: false, errors: deductionResult.errors };
               } else {
-                console.log(
-                  `[InventorySubscriber] Inventory successfully deducted for request ${requestId}.`
-                );
+                logger.info({
+                  message: `Inventory successfully deducted for request ${requestId}`,
+                  module: MODULE,
+                  action: "deduct",
+                  metadata: { requestId },
+                });
                 return { success: true };
               }
             } catch (err: any) {
-              console.error(
-                `[InventorySubscriber] Critical error during inventory deduction:`,
-                err
-              );
+              logger.error({
+                message: "Critical error during inventory deduction",
+                module: MODULE,
+                action: "deduct",
+                metadata: { requestId, technicianCode },
+                error: err,
+              });
 
               await eventBus.publish(
                 new InventoryDeductionFailedEvent({
