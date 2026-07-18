@@ -9,8 +9,10 @@ class ReadinessManager {
     database: false,
     subscribers: false,
     outboxWorker: false,
+    jobsWorker: false,
     featureFlags: false,
   };
+  private shuttingDown = false;
 
   setDBConnected(val: boolean): void {
     this.status.database = val;
@@ -24,16 +26,32 @@ class ReadinessManager {
     this.status.outboxWorker = val;
   }
 
+  setJobsWorkerStarted(val: boolean): void {
+    this.status.jobsWorker = val;
+  }
+
   setFeatureFlagsLoaded(val: boolean): void {
     this.status.featureFlags = val;
   }
 
+  /** ERP-008 Phase 3: flips /health/ready to DOWN before the HTTP listener closes. */
+  setShuttingDown(val: boolean): void {
+    this.shuttingDown = val;
+  }
+
   isReady(): boolean {
-    return this.status.database && this.status.subscribers && this.status.outboxWorker && this.status.featureFlags;
+    return (
+      !this.shuttingDown &&
+      this.status.database &&
+      this.status.subscribers &&
+      this.status.outboxWorker &&
+      this.status.jobsWorker &&
+      this.status.featureFlags
+    );
   }
 
   getDetails() {
-    return { ...this.status };
+    return { ...this.status, shuttingDown: this.shuttingDown };
   }
 }
 

@@ -23,6 +23,15 @@ declare module "express-session" {
 // Initialize PostgreSQL session store
 const PgSession = connectPgSimple(session);
 
+let sessionStore: InstanceType<typeof PgSession> | null = null;
+
+/** ERP-008 Phase 3: lets the shutdown coordinator stop the store's internal prune timer. */
+export async function closeSessionStore(): Promise<void> {
+  if (sessionStore) {
+    await sessionStore.close();
+  }
+}
+
 export function setupSession(app: Express): void {
   const isProduction = process.env.NODE_ENV === "production";
   const isHttps = process.env.HTTPS === "true" || (isProduction && process.env.TRUST_PROXY === "true");
@@ -45,13 +54,14 @@ export function setupSession(app: Express): void {
   };
 
   // Use PostgreSQL store for persistent sessions
-  sessionConfig.store = new PgSession({
+  sessionStore = new PgSession({
     pool: pool, // Use existing database connection pool
     tableName: "session", // Table name for storing sessions
     createTableIfMissing: true, // Automatically create table if it doesn't exist
     pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 minutes
   });
-  
+  sessionConfig.store = sessionStore;
+
   logger.info("Using PostgreSQL session store with auto-table creation", { source: "session" });
 
   app.use(session(sessionConfig));
