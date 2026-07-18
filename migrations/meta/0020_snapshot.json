@@ -5752,6 +5752,12 @@
           "notNull": true,
           "default": 0
         },
+        "progress_details": {
+          "name": "progress_details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "payload": {
           "name": "payload",
           "type": "text",
@@ -5761,6 +5767,12 @@
         "result_url": {
           "name": "result_url",
           "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_metadata": {
+          "name": "result_metadata",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -5783,6 +5795,24 @@
           "primaryKey": false,
           "notNull": true,
           "default": 3
+        },
+        "next_retry_at": {
+          "name": "next_retry_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_at": {
+          "name": "last_error_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_heartbeat_at": {
+          "name": "last_heartbeat_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "started_at": {
           "name": "started_at",
