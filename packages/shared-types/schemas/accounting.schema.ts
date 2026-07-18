@@ -9,6 +9,7 @@ import {
   timestamp,
   varchar,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -279,7 +280,10 @@ export const numberSequences = pgTable("number_sequences", {
   nextNumber: integer("next_number").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // ERP-008-P2.1: match accounting.service nextSequence ON CONFLICT (scope, year)
+  scopeYearUnique: unique("number_sequences_scope_year_unique").on(table.scope, table.year),
+}));
 
 export const insertChartOfAccountSchema = createInsertSchema(chartOfAccounts).omit({
   id: true,

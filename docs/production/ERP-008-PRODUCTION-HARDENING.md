@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Phase 1 CLOSED; Phase 2 baseline **READY** — P2.1 may start (see PHASE-2-BASELINE) |
+| **Status** | Phase 1 CLOSED; Phase 2 baseline READY; **P2.1 CLOSED** — P2.2 next |
 | **Phase 2 worktree** | `d:/nulip-new.worktrees/erp-008-phase-2-financial-integrity` @ `erp-008/phase-2-financial-integrity` |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
@@ -23,7 +23,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 | Phase | Focus | Status |
 |---|---|---|
 | 1 | Security Blockers | **Complete (P1.1–P1.4)** |
-| 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **Baseline READY — P2.1 next** |
+| 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **P2.1 CLOSED — P2.2 next** |
 | 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | Pending |
 | 4 | Scalability (rate limit / in-memory / PM2) | Pending |
 | 5 | Database Reliability (drift / restore test) | Pending |
@@ -214,6 +214,7 @@ npx tsx scripts/bootstrap-first-admin.ts
 | 2026-07-18 | Migration integrity unblocker (0018/0020 + core_jobs) | `a3be98b` | **MIGRATION CHAIN VERIFIED** |
 | 2026-07-18 | Baseline fcmToken Case A align | `f1fd684` | CLOSED |
 | 2026-07-18 | Phase 2 baseline gate | see `ERP-008-PHASE-2-BASELINE.md` | **BASELINE READY** |
+| 2026-07-18 | ERP-008-P2.1 number_sequences uniqueness | *(this commit)* | **CLOSED** |
 
 ---
 
@@ -225,15 +226,107 @@ Clean worktree created; dirty `courier-custody-tech-fix` untouched.
 ### Baseline
 **BASELINE READY** — details in [`docs/production/ERP-008-PHASE-2-BASELINE.md`](ERP-008-PHASE-2-BASELINE.md), [`ERP-008-MIGRATION-UNBLOCKER.md`](ERP-008-MIGRATION-UNBLOCKER.md), [`ERP-008-BASELINE-BLOCKER.md`](ERP-008-BASELINE-BLOCKER.md).
 
-Closed pre-baseline blockers:
-
-1. Migration chain greenfield failure (`a3be98b`).
-2. Typecheck `fcmToken` Case A (`f1fd684`).
-3. Isolated test DB `stockpro_erp008_phase2_test` + husky/unit suite PASS.
-
-### Static evidence already recorded (P2.1 / P2.2 work)
-- `number_sequences`: `ON CONFLICT (scope, year)` without unique constraint in schema/migrations/snapshot.
+### Static evidence remaining (P2.2)
 - `technician_sales_metrics_daily`: `ON CONFLICT (sales_date, technician_id, item_type_id, region_id)` without unique constraint; nullable `region_id`/`item_type_id` → NULL semantics decision required before P2.2 migration.
 
-### P2.1 / P2.2
-**Not started** — baseline just cleared; start with P2.1 only.
+### P2.2
+**Not started** — wait for P2.1 commit + clean tree.
+
+---
+
+## P2.1 — number_sequences
+
+### 1. Problem
+`AccountingService.nextSequence` uses:
+
+```sql
+ON CONFLICT (scope, year) DO UPDATE SET next_number = number_sequences.next_number + 1 ...
+```
+
+but `number_sequences` had only `PRIMARY KEY (id)` — no unique/exclusion constraint on `(scope, year)`.
+
+### 2. Evidence before fix
+Command (test DB `stockpro_erp008_phase2_test`):
+
+```sql
+INSERT INTO number_sequences (scope, year, prefix, next_number)
+VALUES ('sales_invoices', 2026, 'SI-', 2)
+ON CONFLICT (scope, year)
+DO UPDATE SET next_number = number_sequences.next_number + 1
+RETURNING prefix, next_number - 1 AS current_number;
+```
+
+Error:
+
+```text
+ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification
+```
+
+Code site: `apps/api/src/modules/accounting/infrastructure/accounting.service.ts` → `nextSequence`.
+
+Affected document scopes: `journal_entries`, `sales_invoices`, `purchase_bills`, `payments` (prefixes JE-/SI-/SCN-/PB-/PDN-/RCPT-/PAY-).
+
+Financial impact: document numbering upsert fails; concurrent/safe annual counters cannot run.
+
+### 3. Approved business key
+**`(scope, year)`** — confirmed:
+
+| Question | Finding |
+|---|---|
+| Is `scope` document-type category? | Yes (`journal_entries`, `sales_invoices`, …) |
+| Separate by branch / warehouse / company? | **No** — not in table or `nextSequence` args |
+| Is year part of key? | Yes — `new Date().getFullYear()` |
+| Is prefix part of key? | **No** — prefix set on first insert only; SI/SCN share `sales_invoices` counter by design of existing code |
+
+No STOP for alternate key.
+
+### 4. Data state (pre-migration)
+Test DB empty for `number_sequences`: 0 duplicate `(scope, year)`, 0 NULL scope/year, 0 bad counters. No data-repair plan required.
+
+### 5. Migration
+`migrations/0021_erp008_number_sequences_scope_year_unique.sql`:
+
+```sql
+ALTER TABLE "number_sequences"
+  ADD CONSTRAINT "number_sequences_scope_year_unique" UNIQUE ("scope", "year");
+```
+
+Drizzle schema: `unique("number_sequences_scope_year_unique").on(scope, year)`.
+
+`accounting.service.ts` **unchanged** (conflict target already correct).
+
+### 6. Rollback
+```sql
+ALTER TABLE number_sequences
+DROP CONSTRAINT number_sequences_scope_year_unique;
+```
+
+Verified in tests: drop → ON CONFLICT fails again → re-add → numbering resumes without lost counter.
+
+### 7. Concurrency results
+| Scenario | Result |
+|---|---|
+| 40 concurrent first-insert same scope/year | 40 unique numbers; 1 row; `next_number = 41` |
+| 50 concurrent increments after seed | 50 unique; `next_number = 52` |
+| 3 scopes × 25 concurrent | isolated counters; no deadlocks |
+| Transaction rollback of first alloc | number reused after rollback |
+
+### 8. Test / gate results
+| Gate | Result |
+|---|---|
+| Existing DB migrate (+0021) | PASS (22 migrations) |
+| Fresh DB migrate | PASS (`stockpro_erp008_phase2_p21_fresh`) |
+| P2.1 integration suite | 8/8 PASS |
+| `npm run check` | PASS |
+| `npm run lint:architecture` | PASS |
+| `npm run test:unit` | **68 files / 291 tests PASS** |
+| Husky | PASS (this commit) |
+
+### 9. Commit SHA
+Recorded in changelog after commit.
+
+### 10. Decision
+
+```text
+CLOSED
+```
