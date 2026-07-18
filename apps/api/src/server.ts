@@ -2,7 +2,7 @@ import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { app } from "./app";
-import { initializeDatabase, getDatabase } from "@core/database/connection";
+import { initializeDatabase, getDatabase, closeDatabase } from "@core/database/connection";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "@core/utils/vite";
 import { errorHandler } from "@core/errors/errorHandler";
@@ -11,6 +11,8 @@ import { initializeEventSubscribers } from "./composition/events";
 import { readinessManager } from "@core/telemetry/readiness";
 import { configService } from "@core/config/config.service";
 import { featureFlagService } from "@core/services/feature-flags.service";
+import { closeSessionStore } from "@core/config/session";
+import { lifecycleCoordinator } from "@core/lifecycle/lifecycle.coordinator";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,10 +37,16 @@ async function startServer() {
     const { outboxWorker } = await import("@core/outbox/outbox.worker");
     outboxWorker.start();
     readinessManager.setOutboxWorkerStarted(true);
+    lifecycleCoordinator.register("outboxWorker", () => outboxWorker.stop());
 
     // Start Asynchronous Job Worker
     const { jobsWorker } = await import("@core/jobs/jobs.worker");
     jobsWorker.start();
+    readinessManager.setJobsWorkerStarted(true);
+    lifecycleCoordinator.register("jobsWorker", () => jobsWorker.stop());
+
+    lifecycleCoordinator.register("sessionStore", () => closeSessionStore());
+    lifecycleCoordinator.register("databasePool", () => closeDatabase());
 
     // 2. Programmatically apply Drizzle migrations on startup
     // migrations/ lives at monorepo root, two levels above apps/api/src
@@ -81,6 +89,14 @@ async function startServer() {
 
     server.listen(port, () => {
       log(`Server is serving on port ${port}`);
+
+      lifecycleCoordinator.registerHttpServer(server);
+      lifecycleCoordinator.setBeforeShutdown(() => readinessManager.setShuttingDown(true));
+
+      // All critical resources are up and the listener is accepting
+      // connections — only now is it safe to tell PM2 (wait_ready: true in
+      // ecosystem.config.cjs) that this instance is actually ready.
+      process.send?.("ready");
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -88,5 +104,12 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+process.on("SIGTERM", () => {
+  lifecycleCoordinator.shutdown("SIGTERM").then(() => process.exit(process.exitCode ?? 0));
+});
+process.on("SIGINT", () => {
+  lifecycleCoordinator.shutdown("SIGINT").then(() => process.exit(process.exitCode ?? 0));
+});
 
 startServer();
