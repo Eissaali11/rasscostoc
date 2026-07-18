@@ -155,6 +155,10 @@ export const technicianSalesMetricsDaily = pgTable("technician_sales_metrics_dai
   techSalesMetricsTechIdx: index("tech_sales_metrics_tech_idx").on(table.technicianId),
   techSalesMetricsRegionIdx: index("tech_sales_metrics_region_idx").on(table.regionId),
   techSalesMetricsItemIdx: index("tech_sales_metrics_item_idx").on(table.itemTypeId),
+  // ERP-008-P2.2: match postSalesInvoice ON CONFLICT grain; NULL item/region = same bucket
+  grainUnique: unique("technician_sales_metrics_daily_grain_unique")
+    .on(table.salesDate, table.technicianId, table.itemTypeId, table.regionId)
+    .nullsNotDistinct(),
 }));
 
 export const purchaseBills = pgTable("purchase_bills", {

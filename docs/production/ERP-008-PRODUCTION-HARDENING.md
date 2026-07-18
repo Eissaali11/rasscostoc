@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Phase 1 CLOSED; Phase 2 baseline READY; **P2.1 CLOSED** — P2.2 next |
+| **Status** | Phase 1 CLOSED; **Phase 2 Financial Integrity CLOSED** (P2.1 + P2.2) — Phase 3 next |
 | **Phase 2 worktree** | `d:/nulip-new.worktrees/erp-008-phase-2-financial-integrity` @ `erp-008/phase-2-financial-integrity` |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
@@ -23,7 +23,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 | Phase | Focus | Status |
 |---|---|---|
 | 1 | Security Blockers | **Complete (P1.1–P1.4)** |
-| 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **P2.1 CLOSED — P2.2 next** |
+| 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **CLOSED (P2.1 + P2.2)** |
 | 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | Pending |
 | 4 | Scalability (rate limit / in-memory / PM2) | Pending |
 | 5 | Database Reliability (drift / restore test) | Pending |
@@ -215,6 +215,7 @@ npx tsx scripts/bootstrap-first-admin.ts
 | 2026-07-18 | Baseline fcmToken Case A align | `f1fd684` | CLOSED |
 | 2026-07-18 | Phase 2 baseline gate | see `ERP-008-PHASE-2-BASELINE.md` | **BASELINE READY** |
 | 2026-07-18 | ERP-008-P2.1 number_sequences uniqueness | `1b794be` | **CLOSED** |
+| 2026-07-18 | ERP-008-P2.2 technician_sales_metrics_daily grain unique | *(this commit)* | **CLOSED** |
 
 ---
 
@@ -226,11 +227,11 @@ Clean worktree created; dirty `courier-custody-tech-fix` untouched.
 ### Baseline
 **BASELINE READY** — details in [`docs/production/ERP-008-PHASE-2-BASELINE.md`](ERP-008-PHASE-2-BASELINE.md), [`ERP-008-MIGRATION-UNBLOCKER.md`](ERP-008-MIGRATION-UNBLOCKER.md), [`ERP-008-BASELINE-BLOCKER.md`](ERP-008-BASELINE-BLOCKER.md).
 
-### Static evidence remaining (P2.2)
-- `technician_sales_metrics_daily`: `ON CONFLICT (sales_date, technician_id, item_type_id, region_id)` without unique constraint; nullable `region_id`/`item_type_id` → NULL semantics decision required before P2.2 migration.
+### P2.1 / P2.2
+**Both CLOSED** — critical financial ON CONFLICT blockers eliminated.
 
-### P2.2
-**Not started** — wait for P2.1 commit + clean tree.
+### Next
+Phase 3 — Runtime Safety (only after explicit go-ahead).
 
 ---
 
@@ -324,6 +325,97 @@ Verified in tests: drop → ON CONFLICT fails again → re-add → numbering res
 
 ### 9. Commit SHA
 `1b794be` — `fix(db): enforce number sequence uniqueness`
+
+### 10. Decision
+
+```text
+CLOSED
+```
+
+---
+
+## P2.2 — technician_sales_metrics_daily
+
+### 1. Problem
+`postSalesInvoice` upserts daily technician metrics with:
+
+```sql
+ON CONFLICT (sales_date, technician_id, item_type_id, region_id) DO UPDATE ...
+```
+
+but the table had only `PRIMARY KEY (id)` plus non-unique indexes on tech/region/item.  
+`item_type_id` and `region_id` are **nullable**.
+
+### 2. Evidence before fix
+```text
+ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification
+```
+
+Code: `accounting.service.ts` → `postSalesInvoice` metrics CTE (`LEFT JOIN users u` → `u.region_id`).
+
+### 3. Approved business key + NULL policy
+Grain = **daily metrics identity**:
+
+```text
+(sales_date, technician_id, item_type_id, region_id)
+```
+
+| Question | Finding |
+|---|---|
+| Multiple rows same tech same day? | **Yes** — different item and/or region grains |
+| Is `region_id` optional? | **Yes** — from `users.region_id` (nullable) |
+| NULL region/item = same record? | **Yes** — upsert must accumulate; proven that default `UNIQUE` allows 2 NULL rows and does **not** fire ON CONFLICT |
+| Warehouse / company missing? | **No** — not in GROUP BY of production SQL; warehouse stays on invoice lines only |
+
+**Decision:** `UNIQUE NULLS NOT DISTINCT (...)` (PostgreSQL 15+; verified on 18.1).  
+Plain `UNIQUE` would be a silent correctness bug for null grains — rejected.
+
+No STOP for alternate key expansion.
+
+### 4. Data state
+Test DB: 0 rows → 0 duplicates; no data-repair plan.
+
+### 5. Migration
+`migrations/0022_erp008_technician_sales_metrics_grain_unique.sql`:
+
+```sql
+ALTER TABLE "technician_sales_metrics_daily"
+  ADD CONSTRAINT "technician_sales_metrics_daily_grain_unique"
+  UNIQUE NULLS NOT DISTINCT ("sales_date", "technician_id", "item_type_id", "region_id");
+```
+
+Drizzle: `.nullsNotDistinct()` on the unique builder.  
+`accounting.service.ts` **unchanged**.
+
+### 6. Rollback
+```sql
+ALTER TABLE technician_sales_metrics_daily
+DROP CONSTRAINT technician_sales_metrics_daily_grain_unique;
+```
+
+Verified: drop → ON CONFLICT fails → re-add → aggregation resumes.
+
+### 7. Concurrency / correctness
+| Scenario | Result |
+|---|---|
+| First + repeated upsert (non-null grain) | qty/amount/invoice counts aggregate; 1 row |
+| NULL item + NULL region double upsert | single row; qty summed |
+| Grain isolation (item/region/tech/date) | 4 distinct rows |
+| 40 concurrent non-null upserts | sold_qty=40, amount=1000, invoices=40 |
+| 30 concurrent NULL-grain first inserts | 1 row; sold_qty=30 |
+| Transaction rollback | metrics row discarded |
+
+### 8. Gates
+| Gate | Result |
+|---|---|
+| Existing DB migrate (+0022) | PASS (23 migrations) |
+| Fresh DB migrate | PASS (`stockpro_erp008_phase2_p22_fresh`) |
+| P2.2 suite | 8/8 PASS |
+| `npm run check` / architecture / `test:unit` | PASS (**69 files / 299 tests**) |
+| Husky | PASS |
+
+### 9. Commit SHA
+Recorded in changelog after commit.
 
 ### 10. Decision
 
