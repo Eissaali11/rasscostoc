@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Phase 1 CLOSED; Phase 2 Financial Integrity CLOSED (P2.1 + P2.2); Phase 3 Runtime Safety CLOSED; **Phase 4 Scalability CLOSED** — Phase 5 next |
+| **Status** | Phases 1–4 CLOSED; **Phase 5 Database Reliability CLOSED** (dev-verifiable scope) — Phase 6 Observability next |
 | **Phase 2 worktree** | `d:/nulip-new.worktrees/erp-008-phase-2-financial-integrity` @ `erp-008/phase-2-financial-integrity` |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
@@ -26,7 +26,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 | 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **CLOSED (P2.1 + P2.2)** |
 | 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | **CLOSED** |
 | 4 | Scalability (rate limit / in-memory / PM2) | **CLOSED** |
-| 5 | Database Reliability (drift / restore test) | Pending |
+| 5 | Database Reliability (drift / restore test) | **CLOSED** (dev-verifiable scope; PITR/failover = documented production preconditions) |
 | 6 | Observability (structured logs / OTel / Prometheus / alerts) | Pending |
 | 7 | CI/CD Gates | Pending |
 | 8 | Production Validation (load / failure / security) | Pending |
@@ -675,4 +675,123 @@ ac67a8d — test(scale): derive multi-instance test ports from process PID
 
 ```text
 CLOSED
+```
+
+---
+
+## Phase 5 — Database Reliability
+
+### 1. Environment surveyed
+
+| Item | Finding |
+|---|---|
+| Server | PostgreSQL 18.1 (x86_64-windows) — dev sandbox; production may differ |
+| Client tools | Full 18.1 suite at `C:\Program Files\PostgreSQL\18\bin` (`pg_dump`, `pg_restore`, `psql`, `pg_amcheck`) |
+| `wal_level` | `replica` (sufficient for archiving/PITR/replication) |
+| `archive_mode` | **`off`** — no WAL archiving → **no PITR possible as configured** |
+| `data_checksums` | **`on`** — page-level corruption detection active at the storage layer |
+| Migrations | 25 on disk (0000–0024) = 25 in journal = 25 in `drizzle.__drizzle_migrations` ledger |
+| Backup tooling in repo before this phase | **None** (the app-level `ExportSystemBackup` use case is a JSON data export, not a database backup mechanism, and must not be treated as one) |
+
+### 2. Fresh install (migration replay)
+
+`npm run db:erp002:greenfield-proof` (pre-existing ERP-002 script): creates an empty DB, replays every migration, verifies ledger count against the journal, drops the DB.
+
+Result (re-run after this phase's 0024): **`Ledger rows: 25 / journal: 25 — GREENFIELD PROOF PASS`**. The chain is fully self-sufficient from zero.
+
+### 3. Schema drift — found, fixed, and now continuously checkable
+
+New permanent tool: `scripts/erp008-drift-check.mjs` (**`npm run db:drift-check`**) — replays every migration into a throwaway DB and diffs `pg_dump --schema-only` output against the live database (normalizing only pg_dump's random `\restrict` tokens). Any structural difference exits 1.
+
+First run found **exactly one** drift: the `session` table (+ `session_pkey`, `IDX_session_expire`) existed in every live DB but not in a fresh replay — it was created only at app startup by `connect-pg-simple`'s `createTableIfMissing` (runtime DDL outside the chain).
+
+Fix: migration `0024_erp008_session_table_in_chain.sql` codifies the table (definition matches `connect-pg-simple`'s `table.sql` exactly; `IF NOT EXISTS` on table and index, so it is a no-op on every existing DB, and the app's auto-creation remains as a harmless fallback).
+
+After 0024: **`DRIFT CHECK PASS — live schema is byte-identical to migration replay`**.
+
+### 4. Backup / restore drill
+
+New permanent tool: `scripts/erp008-backup-drill.mjs` (**`npm run db:backup-drill`**) — `pg_dump -Fc` the live DB → verify archive readability (`pg_restore --list`) → restore into a throwaway DB → compare per-table row counts and total constraint/index counts → drop. Any mismatch exits 1. Dump files land in `backups/` (gitignored).
+
+| Run | Result |
+|---|---|
+| As-is | 64 tables, 593 constraints, 189 indexes — all identical, **PASS** (463 TOC entries readable) |
+| After seeding 5,000 synthetic `system_logs` rows (then removed) | all identical, **PASS** — the comparison is exercised by real volume, not empty tables |
+
+### 5. Rollback validation
+
+| Migration | Proof |
+|---|---|
+| 0021 `number_sequences` unique | **Permanent regression test** (`number-sequences.p21.test.ts` — "supports constraint rollback then re-apply without data loss") runs in every suite |
+| 0022 metrics grain unique | **Permanent regression test** (`technician-sales-metrics.p22.test.ts` — "supports constraint rollback then re-apply") runs in every suite |
+| 0023 `rate_limit_counters` | Proven on a throwaway fresh-migrated DB: `DROP TABLE` → atomic-increment statement fails exactly as documented → re-apply migration file → increment works again |
+| 0024 `session` | Same throwaway DB: `DROP TABLE session` → gone → re-apply → table + index restored |
+
+### 6. Corruption detection
+
+| Check | Result |
+|---|---|
+| `pg_amcheck --install-missing --heapallindexed` (full DB) | 651 relations, 1,415 pages — **zero corruption findings**, exit 0 |
+| `data_checksums` | `on` (continuous page-level detection) |
+| `NOT VALID` constraints | 0 — every FK/CHECK is fully validated; orphaned references are impossible while constraints hold |
+| Disabled triggers | 0 |
+
+Ops note: `pg_amcheck` should be run periodically (or before major upgrades) in production; it is not wired into the app.
+
+### 7. Startup migration policy — Phase 3 residual risk resolved
+
+Old behavior: any migration failure at boot was swallowed ("continuing assuming schema already applied") — a broken schema could pass readiness and serve traffic. The tolerance existed for the multi-instance boot race (concurrent migrators, spurious loser errors).
+
+Fix (`f59632d`, decision delegated by the user "اختار الأنسب"): a session-level `pg_advisory_lock(823008)` serializes migration across instances — later instances find nothing to apply — so any remaining error is genuine and startup now **fails fast** (exit 1, visible to PM2 immediately).
+
+Proven both ways with real spawned servers:
+- Poisoned DB (full schema, drizzle ledger dropped → migrator re-runs 0000 → `relation "item_types" already exists`): **exit 1, "Startup failed"** — exactly the error class the old code swallowed silently.
+- Healthy DB: migrations complete, `/health/ready` → `{"status":"UP"}`.
+
+### 8. PITR — capability assessment (honest gap, not fabricated)
+
+Not possible on this sandbox as configured (`archive_mode=off` → no WAL archive to replay). `wal_level=replica` already satisfies the WAL prerequisite. **Production requirements to claim PITR** (must be verified on the production host, not here):
+
+1. `archive_mode = on` + a real `archive_command` (or a tool that manages both — pgBackRest / WAL-G recommended).
+2. Periodic `pg_basebackup` (physical base backups) — the logical `pg_dump` drill above is *not* a PITR base.
+3. A tested restore-to-timestamp drill on the production/staging host.
+
+### 9. Failover — capability assessment (honest gap)
+
+Single-node PostgreSQL, no standby configured → there is nothing to fail over to and no drill was faked. Production requirements: a streaming replica + documented promotion runbook (or managed-HA Postgres). Until then, RTO after node loss = restore-from-backup time (measured by the drill machinery above).
+
+### 10. Test / gate results
+
+| Gate | Result |
+|---|---|
+| Entry gate | clean tree @ `87c72d0`; typecheck PASS; architecture PASS; unit suite 76/77 first run with the known multi-instance flake, re-verified green in isolation |
+| Multi-instance flake root-caused | worker-ready timeout 15s → 60s (workers cold-compile the app through tsx while the full suite runs; 15s was routinely exceeded under load — it had blocked two commits in a row) |
+| Husky pre-commit (full lint + 77/317 suite) | PASS on all three Phase 5 commits |
+| Greenfield proof (post-0024) | PASS 25/25 |
+| Drift check (post-0024) | PASS (byte-identical) |
+| Backup drill | PASS ×2 |
+
+### 11. Commit SHAs
+
+```text
+8f9a4b8 — fix(db): eliminate session-table schema drift, add repeatable drift check
+b2bb124 — feat(db): add automated backup/restore drill
+f59632d — fix(db): serialize startup migrations, fail fast on genuine failure
+```
+
+### 12. Remaining risks (documented, not fixed)
+
+- **PITR and failover are documented requirements, not tested capabilities** (§8, §9) — both need the production/staging host. Certification below is scoped accordingly.
+- Backup **scheduling, retention, and offsite storage** are ops policy outside the codebase; the drill proves restorability of a taken backup, not that backups are being taken.
+- `pg_basebackup` (physical) backups not exercised — only logical `pg_dump`.
+- All server-side findings (`data_checksums=on`, `max_connections`, versions) are from the dev sandbox; production Postgres must be re-surveyed against §1's checklist.
+- Drizzle journal entries for hand-written migrations (0017–0019, 0021–0024) have no `meta/*_snapshot.json` files — consistent established pattern on this branch; `drizzle-kit generate` diffing is not used, so harmless today, but a future return to generated migrations would need a snapshot rebase.
+
+### 13. Decision
+
+```text
+Database Reliability Certified — dev-verifiable scope
+(fresh install, drift, backup/restore, rollback, corruption, startup policy: PROVEN
+ PITR + failover: documented production preconditions, NOT yet drilled)
+Phase 5 CLOSED
 ```
