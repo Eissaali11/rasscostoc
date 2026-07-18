@@ -214,7 +214,7 @@ npx tsx scripts/bootstrap-first-admin.ts
 | 2026-07-18 | Migration integrity unblocker (0018/0020 + core_jobs) | `a3be98b` | **MIGRATION CHAIN VERIFIED** |
 | 2026-07-18 | Baseline fcmToken Case A align | `f1fd684` | CLOSED |
 | 2026-07-18 | Phase 2 baseline gate | see `ERP-008-PHASE-2-BASELINE.md` | **BASELINE READY** |
-| 2026-07-18 | ERP-008-P2.1 number_sequences uniqueness | *(this commit)* | **CLOSED** |
+| 2026-07-18 | ERP-008-P2.1 number_sequences uniqueness | `1b794be` | **CLOSED** |
 
 ---
 
@@ -323,7 +323,7 @@ Verified in tests: drop → ON CONFLICT fails again → re-add → numbering res
 | Husky | PASS (this commit) |
 
 ### 9. Commit SHA
-Recorded in changelog after commit.
+`1b794be` — `fix(db): enforce number sequence uniqueness`
 
 ### 10. Decision
 
