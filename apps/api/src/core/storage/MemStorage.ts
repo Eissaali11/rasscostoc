@@ -38,25 +38,8 @@ export class MemStorage implements IStorage {
     };
     this.regions.set(defaultRegion.id, defaultRegion);
     
-    const adminUser: User = {
-      id: randomUUID(),
-      username: "admin",
-      email: "admin@company.com",
-      password: "admin123",
-      fullName: "مدير النظام",
-      profileImage: null,
-      city: null,
-      role: "admin",
-      regionId: defaultRegion.id,
-      isActive: true,
-      employeeCode: null,
-      technicianCode: null,
-      department: null,
-      permissions: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.users.set(adminUser.id, adminUser);
+    // ERP-008 P1.1: MemStorage must not seed admin/admin123 (or any default credentials).
+    // Tests and local in-memory mode create users explicitly when needed.
   }
 
   private getItemStatus(item: InventoryItem): 'available' | 'low' | 'out' {
@@ -386,6 +369,7 @@ export class MemStorage implements IStorage {
       department: insertUser.department ?? null,
       permissions: insertUser.permissions ?? null,
       isActive: insertUser.isActive ?? true,
+      fcmToken: (insertUser as any).fcmToken ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

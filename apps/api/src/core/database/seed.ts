@@ -1,9 +1,18 @@
 import { db } from "@core/config/db";
 import { regions, users, inventoryItems, itemTypes } from "@shared/schema";
 import type { InsertItemType } from "@shared/schema";
+import { assertSafeBootstrapPassword } from "@core/bootstrap/use-cases/BootstrapDefaults.use-case";
+import { hashPassword } from "@server/utils/password";
 
 async function seedDatabase() {
   try {
+    // ERP-008 P1.1: refuse hardcoded admin/admin123 / emp123
+    const bootstrapPassword = assertSafeBootstrapPassword(process.env.BOOTSTRAP_ADMIN_PASSWORD);
+    const bootstrapUsername = (process.env.BOOTSTRAP_ADMIN_USERNAME || "admin").trim() || "admin";
+    const bootstrapEmail =
+      (process.env.BOOTSTRAP_ADMIN_EMAIL || `${bootstrapUsername}@localhost.local`).trim();
+    const bootstrapFullName = (process.env.BOOTSTRAP_ADMIN_FULL_NAME || "مدير النظام").trim();
+
     // Create default region
     const [defaultRegion] = await db
       .insert(regions)
@@ -16,37 +25,20 @@ async function seedDatabase() {
 
     console.log("✅ Created default region:", defaultRegion.name);
 
-    // Create default admin user
     const [adminUser] = await db
       .insert(users)
       .values({
-        username: "admin",
-        email: "admin@company.com",
-        password: "admin123", // In production, this should be hashed
-        fullName: "مدير النظام",
+        username: bootstrapUsername,
+        email: bootstrapEmail,
+        password: await hashPassword(bootstrapPassword),
+        fullName: bootstrapFullName,
         role: "admin",
         regionId: defaultRegion.id,
         isActive: true,
       })
       .returning();
 
-    console.log("✅ Created admin user:", adminUser.fullName);
-
-    // Create sample employee
-    const [employeeUser] = await db
-      .insert(users)
-      .values({
-        username: "employee1",
-        email: "employee1@company.com",
-        password: "emp123", // In production, this should be hashed
-        fullName: "محمد أحمد",
-        role: "employee",
-        regionId: defaultRegion.id,
-        isActive: true,
-      })
-      .returning();
-
-    console.log("✅ Created employee user:", employeeUser.fullName);
+    console.log("✅ Created admin user via secure bootstrap:", adminUser.fullName);
 
     // Create sample inventory items
     const sampleItems = [
