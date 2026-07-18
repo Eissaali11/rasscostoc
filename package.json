@@ -29,7 +29,8 @@
     "db:item-types:constraints": "tsx scripts/apply-item-types-constraints.ts",
     "smoke:api": "node scripts/smoke-api.cjs",
     "smoke:erp003": "node scripts/erp003-postdeploy-verify.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ops": "node scripts/ops/run.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

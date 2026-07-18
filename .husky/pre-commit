@@ -1,1 +1,1 @@
-npm run lint:architecture && npm run test:unit
+node scripts/secret-scan.cjs && npm run lint:architecture && npm run test:unit
