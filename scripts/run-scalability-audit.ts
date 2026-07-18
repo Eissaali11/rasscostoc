@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const connectionString = 'postgresql://postgres:postgres@localhost:5432/nulip_performance';
+const connectionString = process.env.OPS_DB_URL_NULIP_PERFORMANCE;
 const port = 3001;
 
 // Kill any process on port 3001 or 5000 (Windows-compatible)
@@ -44,7 +44,7 @@ async function main() {
 
   // Create performance .env
   console.log('Writing performance .env file...');
-  const perfEnvContent = `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nulip_performance
+  const perfEnvContent = `DATABASE_URL=${process.env.OPS_DB_URL_NULIP_PERFORMANCE}
 PORT=3001
 NODE_ENV=development
 SESSION_SECRET=change-this-secret-key-in-production-12345

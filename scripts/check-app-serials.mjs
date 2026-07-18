@@ -35,5 +35,5 @@ conn.on("ready", () => {
     stream.stderr.on("data", (d) => { out += d.toString(); });
   });
 }).connect({
-  host: "72.62.149.127", port: 22, username: "root", password: "Eisa11223344@#", readyTimeout: 30000,
+  host: process.env.OPS_SSH_HOST, port: 22, username: process.env.OPS_SSH_USER, password: process.env.OPS_SSH_PASSWORD, readyTimeout: 30000,
 });

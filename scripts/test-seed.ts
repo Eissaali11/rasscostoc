@@ -1,7 +1,7 @@
 import pkg from 'pg';
 const { Client } = pkg;
 
-const connectionString = 'postgresql://postgres:postgres@localhost:5432/nulip_performance';
+const connectionString = process.env.OPS_DB_URL_NULIP_PERFORMANCE;
 
 async function main() {
   const client = new Client({ connectionString });

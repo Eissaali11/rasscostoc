@@ -12,5 +12,5 @@ conn.on('ready', () => {
     stream.stderr.on('data', (d) => process.stderr.write(d.toString()));
   });
 }).connect({
-  host: '72.62.149.127', port: 22, username: 'root', password: 'Eisa11223344@#',
+  host: process.env.OPS_SSH_HOST, port: 22, username: process.env.OPS_SSH_USER, password: process.env.OPS_SSH_PASSWORD,
 });

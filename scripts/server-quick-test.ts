@@ -17,8 +17,8 @@ conn.on('ready', () => {
 }).on('error', (err) => {
   console.error('SSH Error:', err);
 }).connect({
-  host: '72.62.149.127',
+  host: process.env.OPS_SSH_HOST,
   port: 22,
-  username: 'root',
-  password: 'Eisa11223344@#'
+  username: process.env.OPS_SSH_USER,
+  password: process.env.OPS_SSH_PASSWORD
 });

@@ -17,7 +17,7 @@
 ```
 Type: A
 Name: @ (أو stoc أو اتركه فارغاً)
-Value: 72.62.149.127
+Value: <SERVER_IP>
 TTL: 3600 (أو أقل)
 ```
 
@@ -25,7 +25,7 @@ TTL: 3600 (أو أقل)
 ```
 Type: A
 Name: www
-Value: 72.62.149.127
+Value: <SERVER_IP>
 TTL: 3600
 ```
 
@@ -41,7 +41,7 @@ nslookup stoc.fun
 
 # يجب أن يظهر:
 # Name: stoc.fun
-# Address: 72.62.149.127
+# Address: <SERVER_IP>
 ```
 
 ---
@@ -61,7 +61,7 @@ nslookup stoc.fun
   ```
   Type: A
   Name: stoc
-  Value: 72.62.149.127
+  Value: <SERVER_IP>
   ```
 - في Cloud Panel، غيّر Domain إلى `stoc.yourdomain.com`
 
@@ -86,7 +86,7 @@ nslookup stoc.fun
 ping stoc.fun
 ```
 
-إذا ظهر IP `72.62.149.127`، DNS يعمل!
+إذا ظهر IP `<SERVER_IP>`، DNS يعمل!
 
 ---
 

@@ -4,8 +4,8 @@ import { execSync } from 'child_process';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const baseConnectionString = 'postgresql://postgres:postgres@localhost:5432/postgres';
-const perfConnectionString = 'postgresql://postgres:postgres@localhost:5432/nulip_performance';
+const baseConnectionString = process.env.OPS_DB_URL_POSTGRES;
+const perfConnectionString = process.env.OPS_DB_URL_NULIP_PERFORMANCE;
 
 async function main() {
   console.log('Connecting to postgres database to check nulip_performance...');

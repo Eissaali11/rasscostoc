@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 (async () => {
-  const cs = 'postgresql://postgres:postgres@localhost:5432/nulip_inventory';
+  const cs = process.env.OPS_DB_URL_NULIP_INVENTORY;
   const client = new Client({ connectionString: cs });
   try {
     await client.connect();

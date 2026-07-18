@@ -2,7 +2,7 @@ import pkg from 'pg';
 const { Client } = pkg;
 
 (async () => {
-  const cs = 'postgresql://nulipuser:Simple123@localhost:5432/stokpro_db';
+  const cs = process.env.OPS_DB_URL_STOKPRO_DB_NULIPUSER;
   const client = new Client({ connectionString: cs });
   try {
     await client.connect();

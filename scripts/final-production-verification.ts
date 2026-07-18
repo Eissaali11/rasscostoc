@@ -3,7 +3,7 @@ const { Client } = pkg;
 import dotenv from 'dotenv';
 dotenv.config();
 
-const cs = 'postgresql://postgres:postgres@localhost:5432/nulip_inventory';
+const cs = process.env.OPS_DB_URL_NULIP_INVENTORY;
 const base = 'http://localhost:3001';
 
 async function run() {

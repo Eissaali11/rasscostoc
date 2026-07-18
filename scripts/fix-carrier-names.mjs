@@ -12,7 +12,7 @@ const PROJECT_PATH = '/home/stoc/htdocs/stoc.fun';
 // Write a Node.js script to the server, run it there
 const SERVER_SCRIPT = `
 const { Pool } = require('pg');
-const DB_URL = process.env.DATABASE_URL || 'postgresql://nulipuser:Simple123@localhost:5432/stokpro_db';
+const DB_URL = process.env.DATABASE_URL || process.env.OPS_DB_URL_STOKPRO_DB_NULIPUSER;
 const pool = new Pool({ connectionString: DB_URL });
 
 async function fix() {
@@ -77,6 +77,6 @@ conn.on('ready', () => {
     stream.stderr.on('data', (d) => process.stderr.write(d.toString()));
   });
 }).connect({
-  host: '72.62.149.127', port: 22, username: 'root', password: 'Eisa11223344@#', readyTimeout: 20000,
+  host: process.env.OPS_SSH_HOST, port: 22, username: process.env.OPS_SSH_USER, password: process.env.OPS_SSH_PASSWORD, readyTimeout: 20000,
 });
 conn.on('error', (e) => { console.error('Connection error:', e.message); process.exit(1); });

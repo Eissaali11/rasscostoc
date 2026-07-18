@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { Client } = require('pg');
 
 const journal = JSON.parse(fs.readFileSync('migrations/meta/_journal.json', 'utf8'));
-const dbUrl = 'postgresql://nulip_user:Nulip2026R8mQwX9@localhost:5432/nulip_inventory';
+const dbUrl = process.env.OPS_DB_URL_NULIP_INVENTORY_NULIP_USER;
 
 async function run() {
   const client = new Client({ connectionString: dbUrl });

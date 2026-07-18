@@ -2,7 +2,7 @@
  * Carrier name fix — uploaded directly to server
  */
 const { Pool } = require('pg');
-const DB_URL = process.env.DATABASE_URL || 'postgresql://nulipuser:Simple123@localhost:5432/stokpro_db';
+const DB_URL = process.env.DATABASE_URL || process.env.OPS_DB_URL_STOKPRO_DB_NULIPUSER;
 const pool = new Pool({ connectionString: DB_URL });
 
 async function fix() {

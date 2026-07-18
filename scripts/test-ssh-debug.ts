@@ -31,12 +31,12 @@ conn.on('close', () => {
   console.log('SSH Connection Closed');
 });
 
-console.log('Starting SSH connection to 72.62.149.127...');
+console.log('Starting SSH connection to [OPS_SSH_HOST]...');
 conn.connect({
-  host: '72.62.149.127',
+  host: process.env.OPS_SSH_HOST,
   port: 22,
-  username: 'root',
-  password: 'Eisa11223344@#',
+  username: process.env.OPS_SSH_USER,
+  password: process.env.OPS_SSH_PASSWORD,
   readyTimeout: 60000,
   debug: (msg) => console.log('DEBUG:', msg)
 });

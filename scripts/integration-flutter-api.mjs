@@ -174,7 +174,7 @@ async function findTechnician(token) {
 
 async function ensureIntegrationTechnician(adminToken) {
   const username = `int_tech_${Date.now().toString(36).slice(-6)}`;
-  const password = "IntTest#2026";
+  const password = process.env.OPS_APP_TEST_PASSWORD;
   const create = await req("/api/users", {
     method: "POST",
     token: adminToken,

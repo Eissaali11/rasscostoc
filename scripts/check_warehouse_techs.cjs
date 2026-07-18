@@ -1,6 +1,6 @@
 const { Client } = require('pg');
 (async ()=>{
-  const cs = 'postgresql://nulip_user:Nulip!2026$R8mQw@localhost:5432/nulip_inventory';
+  const cs = process.env.OPS_DB_URL_NULIP_INVENTORY_NULIP_USER;
   const client = new Client({ connectionString: cs });
   await client.connect();
   const warehouseId = '1b75e6c2-9f51-4151-a687-a4ea1dd22015';

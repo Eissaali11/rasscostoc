@@ -7,7 +7,7 @@ import { execSync } from 'child_process';
 
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nulip_inventory';
+const connectionString = process.env.DATABASE_URL || process.env.OPS_DB_URL_NULIP_INVENTORY;
 
 async function run() {
   console.log('====================================================================');

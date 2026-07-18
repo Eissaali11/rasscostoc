@@ -10,7 +10,7 @@ async function main() {
     fs.copyFileSync(envPath, envBackupPath);
   }
 
-  const perfEnvContent = `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nulip_performance
+  const perfEnvContent = `DATABASE_URL=${process.env.OPS_DB_URL_NULIP_PERFORMANCE}
 PORT=3001
 NODE_ENV=development
 SESSION_SECRET=change-this-secret-key-in-production-12345

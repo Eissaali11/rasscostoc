@@ -2,7 +2,7 @@
 
 ## 📋 معلومات السيرفر
 
-- **IP**: `72.62.149.127`
+- **IP**: `<SERVER_IP>`
 - **Domain**: `stoc.fun`
 - **User**: `stoc`
 - **Path**: `/home/stoc/htdocs/stoc.fun`
@@ -169,7 +169,7 @@ sudo tail -f /var/log/nginx/error.log
 
 ### 1. من المتصفح:
 
-افتح: `https://stoc.fun` أو `http://72.62.149.127`
+افتح: `https://stoc.fun` أو `http://<SERVER_IP>`
 
 ### 2. تسجيل الدخول:
 
@@ -256,7 +256,7 @@ kill -9 <PID>
 
 ## 📝 ملاحظات مهمة
 
-1. **DNS**: تأكد من أن `stoc.fun` يشير إلى `72.62.149.127`
+1. **DNS**: تأكد من أن `stoc.fun` يشير إلى `<SERVER_IP>`
 2. **SSL**: تأكد من وجود شهادة SSL صالحة في Cloud Panel
 3. **Firewall**: تأكد من فتح المنافذ 80 و 443
 4. **Backup**: قم بعمل نسخة احتياطية قبل التحديثات الكبيرة
