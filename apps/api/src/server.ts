@@ -17,6 +17,27 @@ import "./composition";
 import { readinessManager } from "@core/telemetry/readiness";
 import { configService } from "@core/config/config.service";
 import { featureFlagService } from "@core/services/feature-flags.service";
+import { logger } from "@core/telemetry/logger";
+
+// Register global error and promise rejection handlers
+process.on("uncaughtException", (error) => {
+  logger.error({
+    message: "CRITICAL: Uncaught Exception detected, shutting down server process...",
+    module: "Server",
+    action: "uncaughtException",
+    error,
+  });
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({
+    message: "CRITICAL: Unhandled Promise Rejection detected",
+    module: "Server",
+    action: "unhandledRejection",
+    error: reason instanceof Error ? reason : new Error(String(reason)),
+  });
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
