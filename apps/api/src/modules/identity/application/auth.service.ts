@@ -34,7 +34,7 @@ export class AuthService {
       throw new AuthenticationError("الحساب غير نشط");
     }
 
-    // Verify password (support both hashed and plain text for migration)
+    // ERP-008-P1.3: bcrypt-only — plaintext fallback removed
     const isPasswordValid = await this.verifyUserPassword(password, user.password);
     if (!isPasswordValid) {
       throw new AuthenticationError("اسم المستخدم أو كلمة المرور غير صحيحة");
@@ -182,22 +182,34 @@ export class AuthService {
     return user;
   }
 
+  /**
+   * Update FCM Token for user
+   */
+  async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
+    await this.userRepository.updateUser(userId, { fcmToken });
+  }
+
+  /**
+   * Clear FCM Token for user (logout / unregister device)
+   */
+  async clearFcmToken(userId: string): Promise<void> {
+    await this.userRepository.updateUser(userId, { fcmToken: null });
+  }
+
   private async verifyUserPassword(
     plainPassword: string,
     storedPassword: string
   ): Promise<boolean> {
-    // Check if password is hashed (bcrypt hashes start with $2a$, $2b$, or $2y$)
-    if (storedPassword.startsWith("$2")) {
-      return utilVerifyPassword(plainPassword, storedPassword);
-    }
-    // Safe constant-time comparison to prevent timing attacks
-    const plainBuffer = Buffer.from(plainPassword, "utf8");
-    const storedBuffer = Buffer.from(storedPassword, "utf8");
-    if (plainBuffer.length !== storedBuffer.length) {
-      crypto.timingSafeEqual(plainBuffer, plainBuffer);
+    // ERP-008-P1.3: refuse non-bcrypt stored credentials (no plaintext fallback).
+    // Legacy rows must be migrated via scripts/migrate-plaintext-passwords.ts
+    if (!storedPassword || !storedPassword.startsWith("$2")) {
+      logger.warn("Login blocked: stored password is not a bcrypt hash", {
+        source: "auth",
+        code: "PLAINTEXT_PASSWORD_REJECTED",
+      });
       return false;
     }
-    return crypto.timingSafeEqual(plainBuffer, storedBuffer);
+    return utilVerifyPassword(plainPassword, storedPassword);
   }
 
   /**

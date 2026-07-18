@@ -115,11 +115,47 @@ Broader endpoint surface still needs systematic review beyond `/api/users/:id` (
 
 ---
 
-## Open Phase 1 backlog
+### ERP-008-P1.3 — Plaintext password fallback removed
 
-### ERP-008-P1.3 — Plaintext password fallback
-- Evidence: `AuthService.verifyUserPassword` accepts non-`$2*` stored passwords via `timingSafeEqual`.
-- **Action:** reject plaintext; one-time migration/hash job for legacy rows; no permanent fallback.
+#### 1. Problem
+Login accepted plaintext stored passwords (`timingSafeEqual` fallback), enabling perpetual insecure credential storage.
+
+#### 2. Evidence
+`AuthService.verifyUserPassword` previously compared plaintext when hash did not start with `$2`.
+
+#### 3. Root cause
+Temporary migration convenience left as permanent auth path.
+
+#### 4. Files modified
+- `apps/api/src/utils/password.ts` (+ `isBcryptHash`, bcrypt-only `verifyPassword`)
+- `apps/api/src/utils/password.test.ts`
+- `apps/api/src/modules/identity/application/auth.service.ts`
+- `scripts/migrate-plaintext-passwords.ts` (one-time transitional job)
+- `docs/production/ERP-008-PRODUCTION-HARDENING.md`
+
+#### 5. Tests
+```bash
+npx vitest run apps/api/src/utils/password.test.ts
+```
+
+#### 6. Runtime verification
+- bcrypt hash → login works via `bcrypt.compare`
+- stored plaintext → login rejected + warn `PLAINTEXT_PASSWORD_REJECTED`
+- Operator: `npx tsx scripts/migrate-plaintext-passwords.ts` then `--apply`
+
+#### 7. Regression
+Password unit tests PASS.
+
+#### 8. Remaining risks
+- Existing DBs may still hold plaintext until migration is applied in each environment.
+- After hashing legacy plaintext, weak passwords remain weak until rotated (ops).
+
+#### 9. Decision
+**CLOSED** in code. Apply migration on each environment before declaring env clean.
+
+---
+
+## Open Phase 1 backlog
 
 ### ERP-008-P1.4 — CORS hardening
 - Evidence: `apps/api/src/app.ts` — development sets `Access-Control-Allow-Origin: origin || '*'`; production allows `stoc.fun` family and `origin.includes(host)` (loose).
@@ -146,4 +182,5 @@ npx tsx scripts/bootstrap-first-admin.ts
 | Date | Issue | Commit | Decision |
 |---|---|---|---|
 | 2026-07-18 | ERP-008-P1.1 Default admin eliminated | `aaf10c0` | CLOSED |
-| 2026-07-18 | ERP-008-P1.2 GET /api/users/:id authz re-verified | *(docs verification)* | CLOSED |
+| 2026-07-18 | ERP-008-P1.2 GET /api/users/:id authz re-verified | `e18a566` | CLOSED |
+| 2026-07-18 | ERP-008-P1.3 Plaintext password fallback removed | *(this commit)* | CLOSED |
