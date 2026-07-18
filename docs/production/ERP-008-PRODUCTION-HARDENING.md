@@ -215,7 +215,7 @@ npx tsx scripts/bootstrap-first-admin.ts
 | 2026-07-18 | Baseline fcmToken Case A align | `f1fd684` | CLOSED |
 | 2026-07-18 | Phase 2 baseline gate | see `ERP-008-PHASE-2-BASELINE.md` | **BASELINE READY** |
 | 2026-07-18 | ERP-008-P2.1 number_sequences uniqueness | `1b794be` | **CLOSED** |
-| 2026-07-18 | ERP-008-P2.2 technician_sales_metrics_daily grain unique | *(this commit)* | **CLOSED** |
+| 2026-07-18 | ERP-008-P2.2 technician_sales_metrics_daily grain unique | `6462e46` | **CLOSED** |
 
 ---
 
@@ -415,7 +415,7 @@ Verified: drop → ON CONFLICT fails → re-add → aggregation resumes.
 | Husky | PASS |
 
 ### 9. Commit SHA
-Recorded in changelog after commit.
+`6462e46` — `fix(db): enforce technician sales metrics daily grain uniqueness`
 
 ### 10. Decision
 
