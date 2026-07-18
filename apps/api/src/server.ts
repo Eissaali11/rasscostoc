@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { app } from "./app";
 import { initializeDatabase, getDatabase, closeDatabase } from "@core/database/connection";
+import { pool } from "@core/config/db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "@core/utils/vite";
 import { errorHandler } from "@core/errors/errorHandler";
@@ -48,17 +49,33 @@ async function startServer() {
     lifecycleCoordinator.register("sessionStore", () => closeSessionStore());
     lifecycleCoordinator.register("databasePool", () => closeDatabase());
 
-    // 2. Programmatically apply Drizzle migrations on startup
+    // 2. Programmatically apply Drizzle migrations on startup — one instance
+    // at a time, and fail startup on genuine failure.
+    // ERP-008 Phase 5: this block used to swallow any migration error and
+    // continue "assuming schema already applied", so a genuinely broken
+    // schema could pass readiness and serve traffic. The failure mode that
+    // tolerance existed for was the multi-instance boot race (two instances
+    // migrating concurrently); the session-level advisory lock below removes
+    // that race — instances serialize, later ones find nothing left to
+    // apply — so any error that still occurs is genuine and must halt
+    // startup (the outer catch exits 1, which PM2 surfaces immediately)
+    // rather than let this instance serve on an unknown schema.
     // migrations/ lives at monorepo root, two levels above apps/api/src
     const migrationsFolder = path.resolve(__dirname, "../../../migrations");
     log(`⏳ Running database migrations from: ${migrationsFolder}`);
     const db = getDatabase();
+    const MIGRATION_ADVISORY_LOCK_KEY = 823008; // shared constant, all instances
+    const migrationLockClient = await pool.connect();
     try {
+      await migrationLockClient.query("SELECT pg_advisory_lock($1)", [MIGRATION_ADVISORY_LOCK_KEY]);
       await migrate(db, { migrationsFolder });
       log("✅ Database migrations completed successfully!");
-    } catch (migError) {
-      log(`⚠️ Database migrations warning: ${migError instanceof Error ? migError.message : String(migError)}`);
-      log("Continuing server startup assuming database schema is already applied.");
+    } finally {
+      try {
+        await migrationLockClient.query("SELECT pg_advisory_unlock($1)", [MIGRATION_ADVISORY_LOCK_KEY]);
+      } finally {
+        migrationLockClient.release();
+      }
     }
 
 
