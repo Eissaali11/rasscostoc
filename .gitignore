@@ -34,6 +34,7 @@ vite.config.ts.*
 *.sql
 !migrations/**/*.sql
 *.backup
+backups/
 # Mobile apps (separate repos)
 mobile/
 technician-app/
