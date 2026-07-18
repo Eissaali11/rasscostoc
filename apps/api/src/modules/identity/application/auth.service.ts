@@ -183,17 +183,24 @@ export class AuthService {
   }
 
   /**
-   * Update FCM Token for user
+   * FCM push tokens are not part of the ERP-008 baseline schema (75ca707).
+   * Keep API surface callable for forward compatibility without writing unknown columns.
    */
-  async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
-    await this.userRepository.updateUser(userId, { fcmToken });
+  async updateFcmToken(_userId: string, _fcmToken: string): Promise<void> {
+    logger.warn("FCM token update ignored: users.fcm_token is not in baseline schema", {
+      source: "auth",
+      code: "FCM_TOKEN_UNSUPPORTED",
+    });
   }
 
   /**
    * Clear FCM Token for user (logout / unregister device)
    */
-  async clearFcmToken(userId: string): Promise<void> {
-    await this.userRepository.updateUser(userId, { fcmToken: null });
+  async clearFcmToken(_userId: string): Promise<void> {
+    logger.warn("FCM token clear ignored: users.fcm_token is not in baseline schema", {
+      source: "auth",
+      code: "FCM_TOKEN_UNSUPPORTED",
+    });
   }
 
   private async verifyUserPassword(
