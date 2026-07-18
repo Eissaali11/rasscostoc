@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Phase 1 CLOSED; **Phase 2 Financial Integrity CLOSED** (P2.1 + P2.2) — Phase 3 next |
+| **Status** | Phase 1 CLOSED; Phase 2 Financial Integrity CLOSED (P2.1 + P2.2); **Phase 3 Runtime Safety CLOSED** — Phase 4 next |
 | **Phase 2 worktree** | `d:/nulip-new.worktrees/erp-008-phase-2-financial-integrity` @ `erp-008/phase-2-financial-integrity` |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
@@ -24,7 +24,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 |---|---|---|
 | 1 | Security Blockers | **Complete (P1.1–P1.4)** |
 | 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **CLOSED (P2.1 + P2.2)** |
-| 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | Pending |
+| 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | **CLOSED** |
 | 4 | Scalability (rate limit / in-memory / PM2) | Pending |
 | 5 | Database Reliability (drift / restore test) | Pending |
 | 6 | Observability (structured logs / OTel / Prometheus / alerts) | Pending |
@@ -418,6 +418,110 @@ Verified: drop → ON CONFLICT fails → re-add → aggregation resumes.
 `6462e46` — `fix(db): enforce technician sales metrics daily grain uniqueness`
 
 ### 10. Decision
+
+```text
+CLOSED
+```
+
+---
+
+## Phase 3 — Runtime Safety & Graceful Lifecycle Remediation
+
+### 1. Long-lived resources (inventory)
+
+| Resource | Owner | Started by | Shutdown before this phase |
+|---|---|---|---|
+| HTTP server | `server.ts` (`http.createServer` in `routes.ts`) | `server.listen(port)` | Never closed |
+| PostgreSQL pool | `core/config/db.ts` (`pool`) | module load | `closeDatabase()` existed in `connection.ts` but was never called |
+| OutboxWorker | `core/outbox/outbox.worker.ts` | `outboxWorker.start()` (1 interval) | `stop()` cleared the timer but didn't await an in-flight `runOnce()` |
+| JobsWorker | `core/jobs/jobs.worker.ts` | `jobsWorker.start()` (3 intervals: poll/recovery/purge) | `stop()` cleared timers but didn't await an already-claimed job's `executeJob()` |
+| PgSession store (`connect-pg-simple`) | `core/config/session.ts` | `setupSession(app)` | Internal 15-min prune timer + a `close()` method existed, but the store instance was never exposed to call it |
+| ReadinessManager | `core/telemetry/readiness.ts` | — | No "shutting down" state; `/health/ready` could not be flipped to 503 ahead of the listener closing |
+| PM2 (`ecosystem.config.cjs`) | — | `wait_ready: true`, `kill_timeout: 5000` | `process.send?.("ready")` was never called anywhere in the code |
+
+Full-repo `setInterval` sweep confirmed no other timers/cron jobs/file watchers exist. No `SIGTERM`/`SIGINT` handler existed anywhere in the codebase.
+
+### 2. Behavior before the fix (reproduced, not assumed)
+
+- Full-repo grep for `SIGTERM|SIGINT|process.on|process.send`: zero matches outside this phase's own new code.
+- Controlled probe (`child_process.spawn` + a registered `process.on('SIGTERM'/'SIGINT')` handler in the child, signaled via `child.kill()` from the parent): the child was hard-terminated in both cases — **on this Windows dev sandbox, Node cannot deliver a catchable `SIGTERM` or `SIGINT` cross-process at all**; both map to an unconditional `TerminateProcess()`. This is documented Node/Windows behavior, confirmed empirically here rather than assumed.
+- Started the real dev server, sent `SIGTERM` via `process.kill(pid, 'SIGTERM')` from a separate Node process: the server died with **zero shutdown log output** — no cleanup code ran, because none existed. `pg_stat_activity` showed 0 orphaned connections afterward — Postgres itself reaped the dropped socket; this does not imply safety for an in-flight *transaction*, only that the DB is robust to an abrupt disconnect.
+- Since real signal delivery cannot be exercised in this sandbox, the shutdown logic itself is validated via direct function-level integration tests (real `http.Server`, real `JobsWorker`/`OutboxWorker` against the real test DB) rather than via OS signal delivery — see §9. The registered `process.on('SIGTERM'/'SIGINT')` handlers are correct for the actual Linux/PM2 production target (`ecosystem.config.cjs` + `kill_timeout` presume a POSIX host) even though they can't be exercised end-to-end here.
+
+### 3. Root cause
+
+No shutdown path was ever built. Every long-lived resource had start-only wiring; `closeDatabase()` and the session store's `close()` existed as dead code, never called from anywhere.
+
+### 4. Lifecycle design
+
+`apps/api/src/core/lifecycle/lifecycle.coordinator.ts` — `LifecycleCoordinator`:
+- `register(name, stop)` — resources register an async `stop()`.
+- `registerHttpServer(server)` — tracked separately, always closed first.
+- `shutdown(reason)` — idempotent (a second/third call returns the same in-flight promise); runs `setBeforeShutdown` synchronously, then closes the HTTP server (stop accepting new connections, drain in-flight ones via real `http.Server#close` semantics), then stops registered resources in the **reverse** of their registration order, the whole sequence bounded by one timeout (`GRACEFUL_SHUTDOWN_TIMEOUT_MS`, default 10s) that forces `process.exitCode = 1` instead of hanging.
+
+Not a God Object: it only orders start/stop: it does not know what a job, a pool, or a session is.
+
+### 5. Startup order (unchanged, now readiness-complete)
+
+```text
+Load feature flags → register event subscribers → connect database →
+start outbox worker → start jobs worker (now tracked by readiness) →
+run migrations → register routes → listen →
+register resources + signal handlers → readiness true → PM2 ready signal
+```
+Migration failure-handling (`catch` + "continuing assuming schema already applied") was **not** changed — that is an existing, deliberate production behavior decision, out of scope for a lifecycle-only phase; noted here as a residual risk (§11), not fixed.
+
+### 6. Shutdown order
+
+```text
+SIGTERM/SIGINT → readinessManager.setShuttingDown(true) [/health/ready → 503] →
+HTTP server close() [stop new traffic, drain in-flight requests] →
+outboxWorker.stop() [await in-flight runOnce()] →
+jobsWorker.stop() [await in-flight executeJob(), bounded 8s drain] →
+sessionStore.close() [stop 15-min prune timer] →
+database pool.end() →
+exit 0 (or exit 1 if the 10s overall timeout is exceeded)
+```
+
+### 7. Timeout policy
+
+`GRACEFUL_SHUTDOWN_TIMEOUT_MS` (coordinator, default 10000ms) bounds the whole sequence. `JobsWorker.stop(drainTimeoutMs = 8000)` bounds job-draining specifically so one stuck job can't consume the entire outer budget. Both are real, not cosmetic — proven by the `lifecycle.p3.test.ts` timeout test (a resource whose `stop()` never resolves still returns within the configured bound and sets a non-zero exit code) and the `jobs-drain.p3.test.ts` stuck-job test.
+
+### 8. PM2 behavior
+
+`ecosystem.config.cjs` already declared `wait_ready: true` / `kill_timeout: 5000`, but no code ever sent the ready signal — PM2 would wait out `listen_timeout` (10s) for a signal that never arrives. Since `kill_timeout` also implies a graceful-shutdown expectation, the correct fix was to implement `process.send?.("ready")` (called only after the HTTP listener is live and every readiness flag is true), not to strip the config.
+
+### 9. Runtime test results (real resources, not mocks-only)
+
+| Suite | What it proves | Result |
+|---|---|---|
+| `lifecycle.p3.test.ts` (5 tests) | reverse-order resource stop; idempotent duplicate shutdown; `setBeforeShutdown` ordering; **real** `http.Server` — new connections refused after shutdown begins, in-flight request still completes; stop()-never-resolves forces bounded non-zero exit | PASS |
+| `jobs-drain.p3.test.ts` (2 tests) | a job claimed by the real poll loop finishes before `stop()` returns; a stuck job respects the drain timeout instead of hanging forever | PASS |
+| `outbox-drain.p3.test.ts` (1 test) | `stop()` awaits the in-flight `runOnce()` batch (real outbox table + real subscriber) before returning | PASS |
+| `readiness.p3.test.ts` (2 tests) | `isReady()` now requires jobsWorker; `setShuttingDown(true)` forces `isReady()` false regardless of every other flag | PASS |
+| Manual dev-server run | `/health/ready` reaches `{"status":"UP"}` only once jobsWorker (previously untracked) is up too; startup log order unchanged | PASS |
+| Full regression | `npm run check` clean; `lint:architecture` 0 unknown violations (519 modules / 1671 deps, 1 pre-existing known violation unchanged); `test:unit` **73 files / 309 tests** (was 69/299 before this phase — 4 new files, 10 new tests, 0 regressions) | PASS |
+| Husky pre-commit | ran full lint+test gate on all 4 commits | PASS |
+
+**Scenario D (PM2 reload/ready under real PM2) was not run** — this sandbox has no PM2 process manager available; the ready-signal call and its ordering are covered by code review + the manual dev-server readiness-sequencing check instead. Documented as an honest gap, not fabricated as tested.
+
+### 10. Commit SHAs
+
+```text
+aa7e0cb — fix(runtime): add graceful shutdown coordination
+2de097c — fix(runtime): drain in-flight work on worker stop
+e7492f5 — fix(runtime): track shutdown state in readiness, expose session store close
+1537715 — fix(runtime): wire graceful shutdown and pm2 readiness into server bootstrap
+```
+
+### 11. Remaining risks (documented, not fixed — out of scope for this phase)
+
+- Migration failure during startup logs a warning and continues rather than failing fast; a genuinely broken schema could pass readiness. Pre-existing, deliberate-looking design (possibly for multi-instance deploys where only one instance migrates) — needs an explicit decision, not a silent change.
+- WebSocket connections: none found in this codebase (grep confirmed), so no drain concern today; revisit if one is ever added.
+- Real `SIGTERM`/PM2 reload behavior could not be exercised end-to-end in this Windows sandbox (§2, §9) — recommend a one-time smoke test on the actual Linux/PM2 production host (or a Linux CI runner) before relying on this in an incident.
+- This branch (`erp-008/phase-2-financial-integrity`) diverged from `erp-005a-4/data-ownership` before that branch's ERP-006A composition-wiring fix; cross-module port registration on this branch is unrelated to and unaffected by this phase, but is a separate, already-documented gap on the architecture track.
+
+### 12. Decision
 
 ```text
 CLOSED
