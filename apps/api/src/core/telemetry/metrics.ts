@@ -80,7 +80,7 @@ export const metrics = new MetricsRegistry();
 let metricsIntervalId: NodeJS.Timeout | null = null;
 
 /**
- * Collects current process memory and CPU usage metrics.
+ * Collects current process memory, CPU usage metrics, and database pool health.
  */
 export function collectSystemMetrics(): void {
   const mem = process.memoryUsage();
@@ -92,6 +92,20 @@ export function collectSystemMetrics(): void {
   const cpu = process.cpuUsage();
   metrics.setGauge("cpu_user_ms", Math.round(cpu.user / 1000));
   metrics.setGauge("cpu_system_ms", Math.round(cpu.system / 1000));
+
+  // Dynamically query database connection pool stats to prevent circular imports
+  import("../database/connection")
+    .then(({ getPool }) => {
+      const pool = getPool();
+      if (pool) {
+        metrics.setGauge("db_pool_total_connections", pool.totalCount || 0);
+        metrics.setGauge("db_pool_idle_connections", pool.idleCount || 0);
+        metrics.setGauge("db_pool_waiting_queries", pool.waitingCount || 0);
+      }
+    })
+    .catch(() => {
+      // Ignore if database/pool is not initialized yet (e.g. during test runs)
+    });
 }
 
 /**

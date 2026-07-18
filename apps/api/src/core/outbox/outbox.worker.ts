@@ -6,6 +6,7 @@ import { outboxRepository } from "./outbox.repository";
 import { EventBus } from "../events/event-bus";
 import { randomUUID } from "crypto";
 import { logger } from "@core/telemetry/logger";
+import { metrics } from "@core/telemetry/metrics";
 
 const MODULE = "OutboxWorker";
 
@@ -95,6 +96,7 @@ export class OutboxWorker {
 
         // Success - mark as PUBLISHED
         await outboxRepository.markAsPublished(record.id);
+        metrics.incrementCounter("outbox_events_published_total");
         logger.info({
           message: `Event published successfully`,
           module: MODULE,
@@ -113,9 +115,12 @@ export class OutboxWorker {
           error: err,
         });
 
+        metrics.incrementCounter("outbox_events_failed_total");
+
         if (nextRetryCount >= 3) {
           // Dead letter queue
           await outboxRepository.markAsDead(record.id, errorMsg);
+          metrics.incrementCounter("outbox_events_dead_total");
           logger.error({
             message: `Event marked as DEAD (exceeded max retries)`,
             module: MODULE,

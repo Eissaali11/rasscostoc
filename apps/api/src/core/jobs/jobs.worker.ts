@@ -6,6 +6,7 @@ import { jobsRepository } from "./jobs.repository";
 import { jobsRegistry } from "./jobs.registry";
 import { randomUUID } from "crypto";
 import { logger } from "@core/telemetry/logger";
+import { metrics } from "@core/telemetry/metrics";
 
 const MODULE = "JobsWorker";
 
@@ -92,6 +93,7 @@ export class JobsWorker {
     }
 
     this.activeJobsCount++;
+    metrics.setGauge("jobs_worker_active_count", this.activeJobsCount);
     logger.info({
       message: `Claimed job ${job.id} (Type: ${job.type}). Active: ${this.activeJobsCount}`,
       module: MODULE,
@@ -104,6 +106,7 @@ export class JobsWorker {
       logger.error({ message: `Critical error executing job ${job.id}`, module: MODULE, action: "executeJob", metadata: { jobId: job.id }, error: err });
     }).finally(() => {
       this.activeJobsCount--;
+      metrics.setGauge("jobs_worker_active_count", this.activeJobsCount);
     });
   }
 
@@ -117,6 +120,7 @@ export class JobsWorker {
         metadata: { jobId: job.id, jobType: job.type },
       });
       await jobsRepository.failJob(job.id, `No handler registered for job type: ${job.type}`, false);
+      metrics.incrementCounter("jobs_failed_total");
       return;
     }
 
@@ -142,6 +146,7 @@ export class JobsWorker {
       const result = await handler(job, updateProgress);
 
       await jobsRepository.completeJob(job.id, result || "");
+      metrics.incrementCounter("jobs_completed_total");
       logger.info({
         message: `Completed job ${job.id} successfully`,
         module: MODULE,
@@ -162,6 +167,7 @@ export class JobsWorker {
       const canRetry = nextRetryCount < job.maxRetries;
 
       await jobsRepository.failJob(job.id, errorMsg, canRetry, job.retryCount);
+      metrics.incrementCounter("jobs_failed_total");
     } finally {
       clearInterval(heartbeatInterval);
     }
