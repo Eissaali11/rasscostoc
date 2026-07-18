@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Phase 1 CLOSED; Phase 2 Financial Integrity CLOSED (P2.1 + P2.2); **Phase 3 Runtime Safety CLOSED** — Phase 4 next |
+| **Status** | Phase 1 CLOSED; Phase 2 Financial Integrity CLOSED (P2.1 + P2.2); Phase 3 Runtime Safety CLOSED; **Phase 4 Scalability CLOSED** — Phase 5 next |
 | **Phase 2 worktree** | `d:/nulip-new.worktrees/erp-008-phase-2-financial-integrity` @ `erp-008/phase-2-financial-integrity` |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
@@ -25,7 +25,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 | 1 | Security Blockers | **Complete (P1.1–P1.4)** |
 | 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **CLOSED (P2.1 + P2.2)** |
 | 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | **CLOSED** |
-| 4 | Scalability (rate limit / in-memory / PM2) | Pending |
+| 4 | Scalability (rate limit / in-memory / PM2) | **CLOSED** |
 | 5 | Database Reliability (drift / restore test) | Pending |
 | 6 | Observability (structured logs / OTel / Prometheus / alerts) | Pending |
 | 7 | CI/CD Gates | Pending |
@@ -522,6 +522,156 @@ e7492f5 — fix(runtime): track shutdown state in readiness, expose session stor
 - This branch (`erp-008/phase-2-financial-integrity`) diverged from `erp-005a-4/data-ownership` before that branch's ERP-006A composition-wiring fix; cross-module port registration on this branch is unrelated to and unaffected by this phase, but is a separate, already-documented gap on the architecture track.
 
 ### 12. Decision
+
+```text
+CLOSED
+```
+
+---
+
+## Phase 4 — Scalability & Distributed Runtime Readiness
+
+### 1. Runtime state inventory
+
+Full-repo sweep for `new Map()`, `new Set()`, module-level mutable state, singletons, and locks (`apps/api/src` only; test files excluded from the safety-relevant set).
+
+| Resource | File | Nature |
+|---|---|---|
+| `ipStore` (rate limit counter) | `core/middlewares/security.middleware.ts` | module-level `Map`, mutated per request |
+| `OutboxRepository.getPendingEvents()` claim | `core/outbox/outbox.repository.ts` | two unlocked DB statements (SELECT then UPDATE) — a *storage-level* race, not in-memory, but the identical duplicate-execution risk this phase is about |
+| `idempotencyKeys` lock-insert error handling | `core/middlewares/idempotency.middleware.ts` | DB-backed lock (already correct design) whose unique-violation race path was mishandled |
+| `JobsRepository.claimNextJob()` | `core/jobs/jobs.repository.ts` | `SELECT ... FOR UPDATE SKIP LOCKED` inside a transaction — already correct |
+| `PgSession` store | `core/config/session.ts` (`connect-pg-simple`) | DB-backed — already correct |
+| `FeatureFlagService.cache` | `core/services/feature-flags.service.ts` | per-process singleton, 60s TTL read-through cache over the `feature_flags` table |
+| `EventBus.getInstance()` subscribers | `core/events/event-bus.ts` | per-process singleton; subscribers are pure functions registered identically at boot in every process — not divergent state |
+| `outboxWorker` / `jobsWorker` `isRunning`/interval-id fields | `core/outbox/outbox.worker.ts`, `core/jobs/jobs.worker.ts` | per-process start/stop guards — only ever compared against this same process's own state |
+| `MemStorage` (in-memory `Map`s for every entity) | `core/storage/MemStorage.ts` | dead code — its only importer (`core/database/storage.ts`) is not reachable from any real bootstrap path (`server.ts`/`app.ts`/`routes.ts`); confirmed via import-graph grep |
+| Assorted immutable `Set`/`Map` (status enums, MIME allowlists, forbidden-password list, CORS origin allowlist, per-call local dedup sets) | `courier.workflow.ts`, `courier.service.ts`, `inventory.engine.ts`, `CustodyGuard.ts`, `upload-policy.ts`, `cors-policy.ts`, `accounting.routes.ts`, `BootstrapDefaults.use-case.ts` | either module-level immutable constants derived once from code/env (identical across processes) or function-scoped locals (never persist across requests) |
+
+No `node-cron` or equivalent scheduler dependency exists — `outboxWorker` and `jobsWorker` are the only two background loops in the codebase (confirmed via a full `setInterval` sweep, carried over from Phase 3's inventory).
+
+### 2. Classification
+
+| Item | Category | Reasoning |
+|---|---|---|
+| `ipStore` rate limiter | **C — blocker** | mutates per-request state that must be aggregate-correct across processes |
+| Outbox claim (SELECT+UPDATE) | **C — blocker** | duplicate-claim race proven via forced interleaving before the fix |
+| Idempotency lock-insert error handling | **C — blocker** | proven: sensitive operation executed twice for 2 concurrent same-key requests before the fix |
+| `JobsRepository.claimNextJob()` | A | already `FOR UPDATE SKIP LOCKED` in a transaction |
+| `PgSession` store | A | already Postgres-backed |
+| `FeatureFlagService` cache | B | best-effort, bounded 60s staleness; the two flags gated by it (`enable_rate_limiting`, `enable_strict_cors`) are defined but never actually read anywhere in the codebase today (dead flags, confirmed via grep) — no live behavior depends on cross-instance flag-flip timing right now |
+| `EventBus` subscribers | A | identical, deterministic registration in every process |
+| `outboxWorker`/`jobsWorker` start/stop guards | A | process-local by design, never compared cross-process |
+| `MemStorage` | A (dead code) | unreachable from any real bootstrap path; zero runtime effect regardless of process count |
+| Immutable Sets/Maps (enums, allowlists, per-call locals) | A | either identical-by-construction across processes or never outlive a single call |
+
+### 3. Session model
+
+`connect-pg-simple`-backed (`core/config/session.ts`), already Postgres, already correct. Verified with a genuine 2-real-OS-process test (`multi-instance.p4.test.ts`), not same-process concurrent calls: login via instance A, `whoami` via instance B recognizes it, logout via instance B, `whoami` via instance A correctly returns 401. **PASS, no fix needed.**
+
+### 4. Rate limiting model
+
+**Before:** `const ipStore = new Map<string, RateLimitInfo>()` at module scope in `security.middleware.ts` — the file's own comment already flagged this ("production systems would use Redis/MemoryCache"). Proven broken via a real 2-process test: 292–296 total successful requests across two instances against a supposed 150/min limit (expected ~150 if truly shared).
+
+**After:** new `rate_limit_counters` table (migration `0023_erp008_rate_limit_counters.sql`), one row per key, updated via a single atomic `INSERT ... ON CONFLICT (key) DO UPDATE` with a `CASE`-based window rollover — concurrent callers (same process or different processes) serialize on the row and never lose an increment. Fails open on a storage error (justified: every other component on this request path — sessions, idempotency — already hard-depends on the same database, so a DB outage already degrades the API elsewhere; refusing all traffic here would turn a storage hiccup into a full outage).
+
+Re-ran the identical 2-process test after the fix: **exactly 150 total** requests succeed across both instances (Instance A: 150/150, Instance B: 0/150 — already at the shared limit). Bypass closed. Unit tests (`rate-limiter-race.p4.test.ts`) additionally confirm 40 concurrent same-key requests never lose an increment, and exactly 150 of 160 concurrent requests succeed with the other 10 correctly rejected.
+
+Login has no separate/stricter throttle — it goes through this same general-purpose limiter (confirmed via grep: no dedicated login-throttling code exists in this codebase). Out of scope for this phase to add one (business/security-policy decision, not a state-sharing defect).
+
+### 5. Job ownership model
+
+`JobsRepository.claimNextJob()` already used `SELECT ... FOR UPDATE SKIP LOCKED` inside a transaction — correct on inspection, and now also verified with a genuine 2-real-process test (`multi-instance.p4.test.ts`): two separate OS processes concurrently claiming from a pool of 4 seeded jobs never claim the same job.
+
+`OutboxRepository.getPendingEvents()` did **not** have equivalent protection — SELECT and UPDATE were two separate, unlocked statements. Proven via a forced-interleaving repro (two claimants' SELECT phases both completing before either UPDATE) that both would see and process the same event. Fixed by wrapping the claim in one transaction with `SELECT ... FOR UPDATE SKIP LOCKED`, mirroring `claimNextJob()`'s already-correct pattern. Verified: zero duplicate claims across 20 repeated concurrent-claim rounds (`outbox-claim-race.p4.test.ts`).
+
+### 6. Idempotency model
+
+Design was already correct (DB-backed lock via `idempotencyKeys.key` as primary key), but the concurrency-race path was mishandled: a second concurrent request with the same key correctly fails its lock-INSERT with a Postgres `unique_violation` (23505), but that error fell through to a generic `catch` block which called `next()` unconditionally — letting the race through. Proven before the fix: 2 concurrent requests with the same key both executed the sensitive operation (`executionCounter.count` reached 2).
+
+Fixed by catching 23505 specifically at the lock-insert step and returning 409 (the same response already used for the "still pending" case). Verified (`idempotency-race.p4.test.ts`): the sensitive operation executes exactly once under both a 2-way and a 10-way concurrent burst with the same key; later arrivals correctly receive either a 409 (raced mid-flight) or the *cached* response of the single execution (arrived after it completed) — never a fresh, independently-executed 200.
+
+### 7. Shared lock model
+
+No hand-rolled in-memory mutex/lock flags guarding shared data were found (the two `isRunning` booleans in the workers are process-local start/stop guards, not locks over shared data). The three real concurrency-safety mechanisms in the codebase are all DB-level: `FOR UPDATE SKIP LOCKED` (jobs, now also outbox) and unique-constraint-as-lock (idempotency, now also rate limiting). No advisory locks or Redis needed — Postgres already sufficient for every case found.
+
+### 8. Cache model
+
+Only one cache exists: `FeatureFlagService`'s in-process 60s TTL read-through cache over the `feature_flags` table (source of truth = Postgres, staleness bound = 60s, invalidation = time-based only). Not a source of truth for anything; the two flags it exposes today (`enable_rate_limiting`, `enable_strict_cors`) are defined but never read anywhere in the codebase (dead flags). No cross-instance correctness risk identified — Category B, documented not fixed (no live behavior to fix).
+
+### 9. PM2 multi-instance behavior (real PM2, not just config review)
+
+`pm2` (v7.0.3) is available in this environment, so this was tested against a real PM2 daemon rather than reasoned about from config alone:
+
+| Test | Method | Result |
+|---|---|---|
+| Cluster mode starts 2 real instances | `pm2 start <worker>.js --name p4probe -i 2` | **PASS** — both online, `wait_ready`/`listen_timeout` honored (no restart loop) |
+| Shared port load balancing | `curl /ping` × N | both instances reachable on the same port (Node's cluster module) |
+| Zero-downtime reload | `pm2 reload p4probe` while streaming 40 requests | **PASS** — all 40 requests returned 200 throughout the reload |
+| One instance stops, other stays healthy | `pm2 stop 0` | **PASS** — instance 1 kept serving `/ping` after instance 0 stopped |
+
+**Anomaly found and documented (not chased further — orthogonal to this phase's scope):** starting via an ecosystem `.cjs` file (`pm2 start pm2-test-ecosystem.cjs`) did not apply the file's `instances`/`exec_mode`/`autorestart` settings in this environment — PM2 silently fell back to fork mode, 1 instance, filename-derived app name, and looped restarting (`autorestart: false` in the file was not honored either). The identical worker script launched via direct CLI flags (`-i 2 --wait-ready ... --no-autorestart`) worked correctly in every respect above. This is worth a real smoke test against the project's actual `ecosystem.config.cjs` (currently `instances: 1`, untested at `instances: 2`+) before ever relying on multi-instance PM2 in production — flagged as a residual risk (§14), not fixed here, since it needs a real build (`dist/server.js`) to test against the actual file rather than a probe script.
+
+### 10. Database connection pool budget
+
+`pool = new Pool({ connectionString })` had no `max` set, silently defaulting to `pg`'s built-in ceiling of 10. Local Postgres reports `max_connections = 100` (`SHOW max_connections`), with 9 already in use by other sessions at time of check.
+
+```text
+Total possible connections = pool max × process count × node count
+```
+
+Made configurable via `DB_POOL_MAX` (default unchanged at 10) so this can be tuned per-environment without a code change. With the current default of 10 and this project's single-node deployment target, a 2-instance PM2 cluster would use up to 20 connections — comfortably under the local instance's 100-connection ceiling, but this must be re-checked against the actual production Postgres's `max_connections` and any other consumers (migrations, ad-hoc admin connections, connection-pooler overhead) before enabling cluster mode there. Not independently re-verified against production infrastructure — flagged as an operational checklist item, not something this phase can close from a dev sandbox.
+
+### 11. Multi-process test results (real, not mocked)
+
+All of the following spawn genuinely separate OS processes — not concurrent calls within one process, which would share the exact module-level state these tests exist to catch:
+
+| Test | File | Result |
+|---|---|---|
+| Cross-instance session (login A → recognized on B → logout B → rejected on A) | `multi-instance.p4.test.ts` | PASS |
+| Concurrent job claim across 2 real processes, zero duplicates | `multi-instance.p4.test.ts` | PASS |
+| Rate limit bypass proof (pre-fix) and closure proof (post-fix) | ad hoc verification scripts (not committed — throwaway, matching this engagement's established practice for one-off proof scripts) | pre-fix: 292–296/300 succeeded; post-fix: 150/300 succeeded |
+| Real PM2 cluster: start, reload, partial stop | ad hoc `pm2` CLI session (not committed — PM2 process management isn't unit-testable the same way) | PASS on all 3 scenarios (§9) |
+| Outbox claim race (forced interleaving + 20-round repeat) | `outbox-claim-race.p4.test.ts` | PASS |
+| Idempotency race (2-way and 10-way concurrent bursts) | `idempotency-race.p4.test.ts` | PASS |
+| Rate limiter counter atomicity (40 concurrent increments, 160-request burst) | `rate-limiter-race.p4.test.ts` | PASS |
+
+Full regression after all Phase 4 changes: `npm run check` clean; `lint:architecture` 0 unknown violations (525 modules / 1703 deps, 1 pre-existing known violation unchanged); `test:unit` **77 files / 317 tests** (was 73/309 before this phase — 4 new files, 8 new tests, 0 regressions). Husky pre-commit ran the full gate on every commit.
+
+### 12. Failure scenarios
+
+| Scenario | Behavior / policy |
+|---|---|
+| Two processes claim a job at the same instant | One wins via `FOR UPDATE SKIP LOCKED`; the other sees an empty eligible set and moves on — no error, no duplicate |
+| Two processes claim an outbox event at the same instant | Same, now that it also uses `FOR UPDATE SKIP LOCKED` |
+| Two requests race the same idempotency key | First proceeds; second gets 409 if still mid-flight, or the first's cached response if it already completed — never a second independent execution |
+| Rate-limit storage (Postgres) unavailable | Fails open (logs the error, calls `next()`) — deliberate: every other component on the same request path already hard-depends on this DB, so failing closed here would just turn a storage hiccup into a harder outage without protecting anything the DB outage doesn't already threaten |
+| One PM2 instance stopped/crashed | Other instance(s) keep serving — verified with real PM2 (§9) |
+| PM2 reload (rolling restart) | Zero dropped requests — verified with real PM2 under a live 40-request stream (§9) |
+
+Not exercised in this phase (would need a real production-like multi-node setup, not a single dev sandbox): a shared-store (Postgres) outage mid-burst under real multi-node load, and duplicate-callback delivery from an external system arriving at two different nodes simultaneously — both reduce to "does the shared DB-level lock/unique-constraint hold," which is exactly what §5/§6 already prove at the mechanism level; a full node-level chaos exercise is Phase 8's concern (Production Validation), not this phase's.
+
+### 13. Commit SHAs
+
+```text
+ea85447 — fix(scale): prevent duplicate background job execution in outbox claim
+49eef13 — fix(scale): make idempotency middleware concurrency-safe
+3341e55 — fix(scale): configure database pool for multi-process runtime
+e6a6125 — test(scale): add multi-instance integration coverage
+4cc3567 — fix(scale): move rate limiting to shared store
+ac67a8d — test(scale): derive multi-instance test ports from process PID
+```
+
+### 14. Remaining risks (documented, not fixed — out of scope for this phase)
+
+- The project's actual `ecosystem.config.cjs` (`instances: 1` today) has never been tested at `instances: 2`+ against the real built app — only a minimal probe script was tested under real PM2 (§9). The probe proved Node/PM2 cluster mechanics work correctly in this environment; it did not prove the *real* app boots correctly under them (migrations-on-every-instance-start behavior, static-file serving, Vite dev-server setup — none of which the probe exercises). Needs a real `npm run build` + `pm2 start ecosystem.config.cjs -i 2` smoke test before production cluster mode is enabled.
+- The ecosystem-`.cjs`-file-vs-CLI-flags PM2 parsing anomaly (§9) is unexplained — could be a Windows-specific PM2 v7 quirk, unrelated to the real Linux production host, or could recur there too. Not chased further; flagged for a real-environment check.
+- DB connection budget (§10) is computed from this dev sandbox's Postgres (`max_connections=100`); not re-verified against actual production Postgres configuration or other concurrent consumers.
+- No dedicated login-throttling exists beyond the general 150/min limiter (§4) — a business/security-policy question, not a state-sharing defect, out of scope here.
+- `FeatureFlagService`'s two flags are defined but dead (never read anywhere) — noted, not removed (would be a business-logic-adjacent cleanup, not a scalability fix).
+- `MemStorage`/`core/database/storage.ts` remain as confirmed-dead code (§1) — same category of pre-existing dead code already documented on the sibling architecture-audit branch; not deleted here (out of scope, no runtime effect regardless of process count).
+
+### 15. Decision
 
 ```text
 CLOSED
