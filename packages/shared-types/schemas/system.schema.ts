@@ -30,6 +30,12 @@ export const idempotencyKeys = pgTable("idempotency_keys", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
+export const rateLimitCounters = pgTable("rate_limit_counters", {
+  key: varchar("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at").notNull(),
+});
+
 export const insertSystemLogSchema = createInsertSchema(systemLogs).omit({
   id: true,
   createdAt: true,
@@ -65,6 +71,7 @@ export type InsertSystemLog = z.infer<typeof insertSystemLogSchema>;
 export type SystemLog = typeof systemLogs.$inferSelect;
 export type IdempotencyKey = typeof idempotencyKeys.$inferSelect;
 export type InsertIdempotencyKey = z.infer<typeof insertIdempotencyKeySchema>;
+export type RateLimitCounter = typeof rateLimitCounters.$inferSelect;
 export type CoreJob = typeof coreJobs.$inferSelect;
 export type InsertCoreJob = z.infer<typeof insertCoreJobSchema>;
 

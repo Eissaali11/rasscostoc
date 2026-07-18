@@ -1,21 +1,43 @@
 import type { Request, Response, NextFunction } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "../config/db";
 import { logger } from "../telemetry/logger";
-
-interface RateLimitInfo {
-  count: number;
-  resetTime: number;
-}
-
-// In-memory store for rate limiting (production systems would use Redis/MemoryCache)
-const ipStore = new Map<string, RateLimitInfo>();
 
 const LIMIT_WINDOW_MS = 60000; // 1 minute window
 const MAX_REQUESTS_PER_WINDOW = 150; // 150 requests per minute
 
 /**
+ * ERP-008 Phase 4: the counter used to live in a process-local `Map`, so
+ * under multi-process/PM2-cluster operation each process enforced its own
+ * independent limit -- a client could bypass the aggregate limit just by
+ * landing on a different process. This single statement is the only place
+ * the count changes: INSERT ... ON CONFLICT DO UPDATE is atomic in
+ * Postgres, so concurrent callers (same process or different processes)
+ * serialize on the row and never lose an increment. The CASE expressions
+ * roll the window over (reset to 1) when the previous reset_at has passed,
+ * matching the prior in-memory "expired record" behavior.
+ */
+async function incrementRateLimitCounter(
+  key: string,
+  windowMs: number
+): Promise<{ count: number; resetAt: number }> {
+  const newResetAt = new Date(Date.now() + windowMs);
+  const result = await db.execute(sql`
+    INSERT INTO rate_limit_counters (key, count, reset_at)
+    VALUES (${key}, 1, ${newResetAt})
+    ON CONFLICT (key) DO UPDATE SET
+      count = CASE WHEN rate_limit_counters.reset_at <= now() THEN 1 ELSE rate_limit_counters.count + 1 END,
+      reset_at = CASE WHEN rate_limit_counters.reset_at <= now() THEN ${newResetAt} ELSE rate_limit_counters.reset_at END
+    RETURNING count, reset_at
+  `);
+  const row = result.rows[0] as { count: number; reset_at: string };
+  return { count: Number(row.count), resetAt: new Date(row.reset_at).getTime() };
+}
+
+/**
  * Custom Rate Limiting middleware to prevent brute-force attacks and abuse.
  */
-export function rateLimiter(req: Request, res: Response, next: NextFunction): void {
+export async function rateLimiter(req: Request, res: Response, next: NextFunction): Promise<void> {
   // Bypass rate limiting in development mode
   if (process.env.NODE_ENV !== "production") {
     return next();
@@ -31,33 +53,40 @@ export function rateLimiter(req: Request, res: Response, next: NextFunction): vo
   }
 
   const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
-  const now = Date.now();
-  
-  let record = ipStore.get(ip);
 
-  if (!record || now > record.resetTime) {
-    record = {
-      count: 0,
-      resetTime: now + LIMIT_WINDOW_MS,
-    };
+  let count: number;
+  let resetAt: number;
+  try {
+    ({ count, resetAt } = await incrementRateLimitCounter(ip, LIMIT_WINDOW_MS));
+  } catch (err) {
+    // Fail-open: every other component on this request path (sessions,
+    // readiness) already hard-depends on the same database, so a DB outage
+    // already degrades the API elsewhere. Rate limiting is a defense against
+    // abuse under normal operation, not a resource the API must remain
+    // available without -- refusing all traffic here would turn a rate-limit
+    // storage hiccup into a full outage, which is a worse outcome.
+    logger.error({
+      message: "Rate limiter storage error - failing open",
+      module: "security",
+      action: "rateLimiterStorageError",
+      metadata: { ip, path, error: (err as Error).message },
+    });
+    return next();
   }
 
-  record.count += 1;
-  ipStore.set(ip, record);
-
-  const remaining = Math.max(0, MAX_REQUESTS_PER_WINDOW - record.count);
+  const remaining = Math.max(0, MAX_REQUESTS_PER_WINDOW - count);
   res.setHeader("X-RateLimit-Limit", MAX_REQUESTS_PER_WINDOW);
   res.setHeader("X-RateLimit-Remaining", remaining);
-  res.setHeader("X-RateLimit-Reset", Math.ceil(record.resetTime / 1000));
+  res.setHeader("X-RateLimit-Reset", Math.ceil(resetAt / 1000));
 
-  if (record.count > MAX_REQUESTS_PER_WINDOW) {
+  if (count > MAX_REQUESTS_PER_WINDOW) {
     logger.warn({
       message: `Rate limit exceeded for IP: ${ip}`,
       module: "security",
       action: "rateLimitExceeded",
-      metadata: { ip, path, count: record.count }
+      metadata: { ip, path, count }
     });
-    
+
     res.status(429).json({
       error: "Too Many Requests",
       message: "لقد تجاوزت الحد المسموح به من الطلبات. يرجى المحاولة مرة أخرى لاحقاً.",
