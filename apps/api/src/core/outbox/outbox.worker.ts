@@ -8,6 +8,7 @@ export class OutboxWorker {
   private intervalId: NodeJS.Timeout | null = null;
   private readonly intervalMs: number;
   private readonly batchSize: number;
+  private inFlightRun: Promise<void> | null = null;
 
   constructor(options?: { intervalMs?: number; batchSize?: number }) {
     this.workerId = `worker-${randomUUID()}`;
@@ -24,26 +25,29 @@ export class OutboxWorker {
     console.info(`[OutboxWorker] Started Outbox Worker instance: ${this.workerId}`);
     
     // Run immediately on startup, then trigger interval
-    this.runOnce().catch(err => console.error("[OutboxWorker] Error during initial run:", err));
-    
-    this.intervalId = setInterval(async () => {
-      try {
-        await this.runOnce();
-      } catch (err) {
+    this.inFlightRun = this.runOnce().catch(err => console.error("[OutboxWorker] Error during initial run:", err));
+
+    this.intervalId = setInterval(() => {
+      this.inFlightRun = this.runOnce().catch(err => {
         console.error("[OutboxWorker] Error during loop run:", err);
-      }
+      });
     }, this.intervalMs);
   }
 
   /**
-   * Stops the polling loop.
+   * ERP-008 Phase 3: stops the polling loop immediately, then awaits
+   * whichever runOnce() batch is currently in flight so a shutdown never
+   * cuts off an event mid-publish.
    */
-  stop(): void {
+  async stop(): Promise<void> {
     if (!this.isRunning) return;
     this.isRunning = false;
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
+    }
+    if (this.inFlightRun) {
+      await this.inFlightRun;
     }
     console.info(`[OutboxWorker] Stopped Outbox Worker instance: ${this.workerId}`);
   }

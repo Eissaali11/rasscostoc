@@ -60,7 +60,13 @@ export class JobsWorker {
     }, 60 * 60 * 1000);
   }
 
-  stop(): void {
+  /**
+   * ERP-008 Phase 3: stops accepting new poll ticks immediately, then waits
+   * (bounded by drainTimeoutMs) for any job(s) already claimed via
+   * pollAndExecute() to finish via executeJob()'s own completeJob/failJob
+   * path, so a shutdown never abandons a job mid-execution.
+   */
+  async stop(drainTimeoutMs = 8000): Promise<void> {
     if (!this.isRunning) return;
     this.isRunning = false;
     if (this.intervalId) {
@@ -75,6 +81,17 @@ export class JobsWorker {
       clearInterval(this.purgeIntervalId);
       this.purgeIntervalId = null;
     }
+
+    const drainStart = Date.now();
+    while (this.activeJobsCount > 0 && Date.now() - drainStart < drainTimeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (this.activeJobsCount > 0) {
+      console.warn(
+        `[JobsWorker] Stop drain timeout: ${this.activeJobsCount} job(s) still active after ${drainTimeoutMs}ms.`
+      );
+    }
+
     console.info(`[JobsWorker] Stopped Asynchronous Job Worker: ${this.workerId}`);
   }
 
