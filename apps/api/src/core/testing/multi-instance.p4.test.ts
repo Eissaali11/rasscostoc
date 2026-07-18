@@ -14,8 +14,13 @@ import { jobsRepository } from "@core/jobs/jobs.repository";
  * proves cross-instance behavior over real HTTP.
  */
 
-const PORT_A = 4111;
-const PORT_B = 4112;
+// Derived from this vitest process's own PID rather than hardcoded, so two
+// rapid successive test runs (e.g. back-to-back Husky pre-commit runs) get
+// different ports instead of colliding on a port the previous run's child
+// process hasn't fully released yet (observed directly during development).
+const BASE_PORT = 20000 + (process.pid % 10000);
+const PORT_A = BASE_PORT;
+const PORT_B = BASE_PORT + 1;
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
 const WORKER_PATH = path.resolve(import.meta.dirname, "multi-instance-worker.ts");
 
