@@ -22,6 +22,15 @@ if (process.env.DATABASE_URL) {
   }
 }
 
+// ERP-008 Phase 4: max was previously unset, silently defaulting to pg's
+// built-in ceiling of 10 per process. Under multi-process/PM2-cluster
+// operation, total connections = this value × process count × node count,
+// which must stay under Postgres's own max_connections — see
+// docs/production/ERP-008-PRODUCTION-HARDENING.md Phase 4 §11 for the
+// budget worked out for this deployment. Configurable so ops can tune it
+// per-environment without a code change.
+const poolMax = process.env.DB_POOL_MAX ? Number(process.env.DB_POOL_MAX) : 10;
+
 // Use standard PostgreSQL driver (works with both local and cloud PostgreSQL)
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: poolMax });
 export const db = drizzle({ client: pool, schema });
