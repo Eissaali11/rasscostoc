@@ -56,59 +56,73 @@ export class OutboxRepository {
    * Retrieves pending or failed events that are eligible for processing,
    * and locks them for the current worker instance to prevent concurrent execution.
    */
+  /**
+   * ERP-008 Phase 4: SELECT + UPDATE used to be two separate statements
+   * with no row locking, so two OutboxWorker instances (e.g. under PM2
+   * cluster) could both see the same event as eligible before either had
+   * claimed it, and both would publish it — proven via a forced-interleaving
+   * repro. Now runs inside one transaction with SELECT ... FOR UPDATE SKIP
+   * LOCKED (same pattern JobsRepository.claimNextJob() already used
+   * correctly), so a second concurrent claimant skips rows already locked
+   * by the first instead of re-selecting them.
+   */
   async getPendingEvents(limit: number, lockedBy: string): Promise<any[]> {
     const now = new Date();
     const expiryThreshold = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes lock expiry
 
-    // Find all events that are:
-    // (status = PENDING OR (status = FAILED AND nextRetryAt <= now))
-    // AND
-    // (lockedBy IS NULL OR lockedAt <= expiryThreshold)
-    const eligibleEvents = await db
-      .select()
-      .from(outboxEvents)
-      .where(
-        and(
-          or(
-            eq(outboxEvents.status, "PENDING"),
-            and(
-              eq(outboxEvents.status, "FAILED"),
-              lte(outboxEvents.nextRetryAt, now)
+    const claimed = await db.transaction(async (tx) => {
+      // Find events that are:
+      // (status = PENDING OR (status = FAILED AND nextRetryAt <= now))
+      // AND
+      // (lockedBy IS NULL OR lockedAt <= expiryThreshold)
+      const eligibleEvents = await tx
+        .select()
+        .from(outboxEvents)
+        .where(
+          and(
+            or(
+              eq(outboxEvents.status, "PENDING"),
+              and(
+                eq(outboxEvents.status, "FAILED"),
+                lte(outboxEvents.nextRetryAt, now)
+              )
+            ),
+            or(
+              isNull(outboxEvents.lockedBy),
+              lte(outboxEvents.lockedAt, expiryThreshold)
             )
-          ),
-          or(
-            isNull(outboxEvents.lockedBy),
-            lte(outboxEvents.lockedAt, expiryThreshold)
           )
         )
-      )
-      .limit(limit);
+        .limit(limit)
+        .for("update", { skipLocked: true });
 
-    // Update stats gauges
-    await this.updateStatsGauges();
+      if (eligibleEvents.length === 0) {
+        return [];
+      }
 
-    if (eligibleEvents.length === 0) {
-      return [];
-    }
+      const eventIds = eligibleEvents.map((e) => e.id);
 
-    const eventIds = eligibleEvents.map(e => e.id);
+      await tx
+        .update(outboxEvents)
+        .set({
+          status: "PROCESSING",
+          lockedBy,
+          lockedAt: now,
+        })
+        .where(inArray(outboxEvents.id, eventIds));
 
-    // Lock the fetched events
-    await db
-      .update(outboxEvents)
-      .set({
+      return eligibleEvents.map((e) => ({
+        ...e,
         status: "PROCESSING",
         lockedBy,
         lockedAt: now,
-      })
-      .where(inArray(outboxEvents.id, eventIds));
+      }));
+    });
 
-    return eligibleEvents.map(e => ({
-      ...e,
-      status: "PROCESSING",
-      lockedBy,
-      lockedAt: now,
-    }));
+    // Update stats gauges (read-only, safe outside the claim transaction)
+    await this.updateStatsGauges();
+
+    return claimed;
   }
 
   async markAsPublished(id: string): Promise<void> {
