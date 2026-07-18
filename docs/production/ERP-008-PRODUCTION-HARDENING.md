@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | IN PROGRESS — Phase 1 (Security Blockers) |
+| **Status** | IN PROGRESS — Phase 1 complete; Phase 2 next |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
 | **Success metric** | Critical risks closed with runtime proof — not report count |
@@ -21,7 +21,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 
 | Phase | Focus | Status |
 |---|---|---|
-| 1 | Security Blockers | **In progress** |
+| 1 | Security Blockers | **Complete (P1.1–P1.4)** |
 | 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | Pending |
 | 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | Pending |
 | 4 | Scalability (rate limit / in-memory / PM2) | Pending |
@@ -155,11 +155,35 @@ Password unit tests PASS.
 
 ---
 
-## Open Phase 1 backlog
-
 ### ERP-008-P1.4 — CORS hardening
-- Evidence: `apps/api/src/app.ts` — development sets `Access-Control-Allow-Origin: origin || '*'`; production allows `stoc.fun` family and `origin.includes(host)` (loose).
-- **Action:** explicit whitelist (include `stc1.fun`), no wildcard with credentials.
+
+#### 1. Problem
+CORS used `*` in development and loose `origin.includes(host)` / hostname suffix checks in production.
+
+#### 2. Evidence
+`apps/api/src/app.ts` pre-change: `Access-Control-Allow-Origin: origin || '*'` (dev) and permissive production matching.
+
+#### 3. Root cause
+Convenience CORS without an explicit allow-list.
+
+#### 4. Files modified
+- `apps/api/src/core/middlewares/cors-policy.ts` (+ tests)
+- `apps/api/src/app.ts`
+- `docs/production/ERP-008-PRODUCTION-HARDENING.md`
+
+#### 5. Tests
+```bash
+npx vitest run apps/api/src/core/middlewares/cors-policy.test.ts
+```
+
+#### 6. Runtime verification
+- Allowed: `https://stc1.fun`, `https://www.stc1.fun`, `https://stoc.fun`, localhost (dev)
+- Override: `CORS_ALLOWED_ORIGINS=https://a.com,https://b.com`
+- Disallowed origin → no ACAO; OPTIONS → 403
+- Never emits `Access-Control-Allow-Origin: *`
+
+#### 7–9. Decision
+**CLOSED**. Phase 1 Security Blockers complete.
 
 ---
 
@@ -183,4 +207,5 @@ npx tsx scripts/bootstrap-first-admin.ts
 |---|---|---|---|
 | 2026-07-18 | ERP-008-P1.1 Default admin eliminated | `aaf10c0` | CLOSED |
 | 2026-07-18 | ERP-008-P1.2 GET /api/users/:id authz re-verified | `e18a566` | CLOSED |
-| 2026-07-18 | ERP-008-P1.3 Plaintext password fallback removed | *(this commit)* | CLOSED |
+| 2026-07-18 | ERP-008-P1.3 Plaintext password fallback removed | `6ab1859` | CLOSED |
+| 2026-07-18 | ERP-008-P1.4 CORS whitelist hardened | *(this commit)* | CLOSED |

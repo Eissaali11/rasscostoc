@@ -7,6 +7,10 @@ import { correlationMiddleware } from "@core/telemetry/telemetry";
 import { tracer } from "@core/telemetry/tracer";
 import { configService } from "@core/config/config.service";
 import { rateLimiter, securityHeaders, csrfProtection } from "@core/middlewares/security.middleware";
+import {
+  isCorsOriginAllowed,
+  resolveCorsAllowedOrigins,
+} from "@core/middlewares/cors-policy";
 
 const app = express();
 
@@ -22,38 +26,29 @@ app.use(correlationMiddleware);
 app.use(securityHeaders);
 app.use(rateLimiter);
 
-// CORS middleware
+// ERP-008-P1.4: explicit origin whitelist (no Access-Control-Allow-Origin: *)
+const corsAllowedOrigins = resolveCorsAllowedOrigins({
+  isDevelopment: configService.isDevelopment,
+  envOrigins: process.env.CORS_ALLOWED_ORIGINS,
+});
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const host = req.get('host') || '';
-  
-  // Safe origin validation: same-origin or *.stoc.fun
-  const isAllowedOrigin = (orig: string): boolean => {
-    try {
-      const parsedUrl = new URL(orig);
-      return parsedUrl.hostname === 'stoc.fun' || parsedUrl.hostname.endsWith('.stoc.fun');
-    } catch {
-      return false;
-    }
-  };
 
-  if (configService.isDevelopment) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-  } else if (origin) {
-    if (origin.includes(host) || isAllowedOrigin(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
+  if (isCorsOriginAllowed(origin, corsAllowedOrigins)) {
+    res.setHeader("Access-Control-Allow-Origin", origin as string);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Vary", "Origin");
   }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Idempotency-Key, X-Correlation-ID, X-Trace-ID');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, X-Idempotency-Key, X-Correlation-ID, X-Trace-ID",
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(isCorsOriginAllowed(origin, corsAllowedOrigins) ? 204 : 403);
   }
   next();
 });
