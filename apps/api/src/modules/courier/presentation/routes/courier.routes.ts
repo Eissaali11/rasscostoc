@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response, NextFunction } from "express";
 import path from "path";
 import fs from "fs";
 import { bootstrapCourierModule } from "../../composition/courier.container";
@@ -73,7 +73,7 @@ export function registerCourierRoutes(app: Express): void {
     upload.single("file"),
     validatePdfImageUploadMiddleware(),
     uploadErrorHandler,
-    async (req: any, res, next) => {
+    async (req: any, res: Response, next: NextFunction) => {
       if (req.file) {
         try {
           req.file.buffer = fs.readFileSync(req.file.path);

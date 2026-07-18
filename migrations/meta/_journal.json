@@ -148,6 +148,13 @@
       "when": 1784067464092,
       "tag": "0020_chubby_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784371757847,
+      "tag": "0021_erp_exec_002_financial_sequence_constraints",
+      "breakpoints": true
     }
   ]
 }
