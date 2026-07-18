@@ -45,3 +45,5 @@ technician-app/
 # Expo
 app.json
 eas.json
+coverage/
+.env.ops
