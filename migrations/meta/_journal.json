@@ -169,6 +169,13 @@
       "when": 1784500005000,
       "tag": "0023_erp008_rate_limit_counters",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784500006000,
+      "tag": "0024_erp008_session_table_in_chain",
+      "breakpoints": true
     }
   ]
 }

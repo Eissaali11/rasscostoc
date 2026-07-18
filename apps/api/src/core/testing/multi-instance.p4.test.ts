@@ -43,9 +43,14 @@ function startWorker(port: number, instanceId: string, extraArg?: string): Promi
     });
     let stderrOutput = "";
     child.stderr.on("data", (d) => { stderrOutput += d.toString(); });
+    // 60s, not 15s: each worker cold-compiles the app's whole import graph
+    // through tsx, and two of them start in parallel while the rest of the
+    // suite is still running — 15s was routinely exceeded under full-suite
+    // load (the recurring pre-commit flake), while being generous here costs
+    // nothing when the machine is idle.
     const timeout = setTimeout(
       () => reject(new Error(`worker ${instanceId} did not become ready in time. stderr: ${stderrOutput}`)),
-      15000
+      60000
     );
     child.stdout.on("data", (d) => {
       if (d.toString().includes("WORKER_READY")) {
@@ -88,7 +93,7 @@ describe("ERP-008 Phase 4 — multi-process integration", () => {
       startWorker(PORT_A, "A", "with-jobs-worker"),
       startWorker(PORT_B, "B", "with-jobs-worker"),
     ]);
-  }, 30000);
+  }, 90000);
 
   afterAll(async () => {
     await Promise.allSettled([
