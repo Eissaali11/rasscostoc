@@ -6,11 +6,13 @@ import {
   buildExtraColumnsWorkbook,
   buildMixedCaseHeaderWorkbook,
   buildHeaderOnlyWorkbook,
+} from "./__fixtures__/excel-fixtures";
+import {
   CORRUPT_RANDOM_BYTES,
   EMPTY_BUFFER,
   FAKE_ZIP_BYTES,
   legacyXlsBuffer,
-} from "./__fixtures__/excel-fixtures";
+} from "@core/testing/spreadsheet-fixtures";
 
 /**
  * ADR-002 — Characterization ("golden master") of the CURRENT xlsx-based

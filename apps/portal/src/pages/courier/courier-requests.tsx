@@ -264,7 +264,7 @@ export default function CourierRequestsPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx"
             className="hidden"
             onChange={handleImportExcel}
           />

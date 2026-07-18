@@ -105,14 +105,29 @@ Two independent issues converge on this path:
 
 If `.xls` **is** in active use → escalate to a separate decision (Option B vs a controlled deprecation window) before proceeding.
 
-## 9. Migration Plan (small, reviewable commits — NOT yet executed)
+## 9. Migration Plan (REVISED by executive review — contract before implementation)
 
-1. `test(courier): characterization tests for current import/export` — lock present behavior against real `.xlsx` fixtures **using the current xlsx code** (golden master). No behavior change.
-2. `feat(courier): read import workbook via exceljs` — swap internals of `parseRawDataWorkbook`; characterization tests must stay green.
-3. `fix(security): reject legacy .xls at upload policy` — policy + message + tests.
-4. `feat(courier): wrap raw import in a transaction with staging` — all-or-nothing import; idempotency guard.
-5. `chore(security): remove xlsx dependency` — drop from package.json/lockfile; `secret-scan` + `npm audit` re-run.
-6. `docs(security): mark ADR-002 accepted with evidence + SHAs`.
+The reader swap must not precede the format-contract change, or the UI would
+accept `.xls` while the new reader cannot parse it (error surfaces only after
+the upload gate). Revised, executed sequence:
+
+1. **DONE** `test(import): characterization fixtures + golden master` (`d90aea3`) — locks current behavior; gaps labelled as characterized-unsafe, not requirements to preserve.
+2. **THIS COMMIT** `fix(import): restrict spreadsheet uploads to xlsx` — the **format contract**: reject `.xls` at the upload boundary (bilingual message), remove `.xls`/unsupported `.csv` from the UI `accept`, boundary-rejection test with the real BIFF8 fixture. **Reader and `xlsx` dependency unchanged.**
+3. `refactor(import): replace xlsx reader with exceljs` — swap `parseRawDataWorkbook` internals only; keep signature; compatibility characterization stays green; typed internal errors (no raw exceljs messages to client). NOT YET AUTHORIZED.
+4. `fix(import): validation limits + integrity` — row/column ceilings, timeout, corrupt/encrypted rejection, unified API errors, structured logging, and the transaction-vs-staging decision (still `NOT VERIFIED`). NOT YET AUTHORIZED.
+5. `chore(deps): remove xlsx dependency` — drop from package.json/lockfile; re-run audit. NOT YET AUTHORIZED.
+6. `docs(adr): close ADR-002 with evidence + SHAs`. NOT YET AUTHORIZED.
+
+### Commit 2 — Format Contract (this commit)
+
+- `apps/api/src/core/uploads/upload-policy.ts`: `EXCEL_EXT` → `.xlsx` only; `fileFilter` rejects `.xls` with `LEGACY_XLS_MESSAGE` and any non-`.xlsx` with `XLSX_ONLY_MESSAGE`; `validateExcelUploadMiddleware` rejects `.xls` **by content** (`detectExcelMagic` still recognizes BIFF8) so a `.xls` renamed to `.xlsx` is caught at the boundary, never at the parser.
+- UI `accept` on both courier upload pages: `.xlsx,.xls,.csv` → `.xlsx`. Evidence for dropping `.csv`: no server-side or client-side CSV handling exists (`grep` → none); the attribute was misleading.
+- Tests (`excel-upload-policy.adr002.test.ts`): legacy `.xls` (renamed to `.xlsx`) rejected with the exact message and `next()` never called; genuine `.xlsx` passes; fixture integrity pinned (size 3584, magic `D0CF11E0`, SHA-256 `93b0dc99…d36596`).
+- `parseRawDataWorkbook` and the `xlsx` dependency are **unchanged** (verified: empty `git diff` on `excel.helper.ts`).
+
+Messages (bilingual):
+- Legacy: `صيغة XLS القديمة غير مدعومة. يرجى حفظ الملف بصيغة XLSX ثم إعادة رفعه. | Legacy XLS files are not supported. Please save the file as XLSX and upload it again.`
+- Non-xlsx: `يُقبل فقط ملف Excel بصيغة XLSX. | Only .xlsx spreadsheet files are accepted.`
 
 ## 10. Validation and Security Controls (to add/verify)
 

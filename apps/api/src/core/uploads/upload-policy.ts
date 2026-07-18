@@ -29,7 +29,19 @@ export const EXCEL_MIME = new Set([
   "application/octet-stream",
 ]);
 
-export const EXCEL_EXT = new Set([".xlsx", ".xls"]);
+// ADR-002: xlsx-only contract. Legacy .xls (BIFF) is intentionally NOT an
+// accepted upload extension; it is still *detected* by detectExcelMagic below
+// so a .xls (by extension or by content) can be rejected with a specific,
+// actionable message instead of a generic "invalid file".
+export const EXCEL_EXT = new Set([".xlsx"]);
+
+/** Bilingual rejection for legacy .xls uploads (ADR-002 §Format Contract). */
+export const LEGACY_XLS_MESSAGE =
+  "صيغة XLS القديمة غير مدعومة. يرجى حفظ الملف بصيغة XLSX ثم إعادة رفعه. | Legacy XLS files are not supported. Please save the file as XLSX and upload it again.";
+
+/** Bilingual rejection for any non-.xlsx spreadsheet upload. */
+export const XLSX_ONLY_MESSAGE =
+  "يُقبل فقط ملف Excel بصيغة XLSX. | Only .xlsx spreadsheet files are accepted.";
 
 export type MalwareScanResult = { clean: boolean; reason?: string };
 
@@ -175,13 +187,16 @@ export function createExcelUpload(destDir: string) {
     limits: { fileSize: UPLOAD_LIMITS.excelMaxBytes, files: 1 },
     fileFilter: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
-      if (!EXCEL_EXT.has(ext)) {
-        cb(new ValidationError("Only Excel files (.xlsx, .xls) are allowed") as any);
+      // Legacy .xls gets a specific message before the generic extension check.
+      if (ext === ".xls") {
+        cb(new ValidationError(LEGACY_XLS_MESSAGE) as any);
         return;
       }
-      if (!EXCEL_MIME.has(file.mimetype) && file.mimetype !== "") {
-        // Some browsers send empty/odd MIME; extension + magic bytes are authoritative.
+      if (!EXCEL_EXT.has(ext)) {
+        cb(new ValidationError(XLSX_ONLY_MESSAGE) as any);
+        return;
       }
+      // MIME is advisory only; extension + magic bytes (validate middleware) are authoritative.
       cb(null, true);
     },
   });
@@ -225,11 +240,18 @@ export function validateExcelUploadMiddleware() {
     try {
       assertNoPathTraversal(path.basename(file.filename || file.path));
       const kind = detectExcelMagic(file.path);
-      if (!kind) {
+      // ADR-002: catch a legacy .xls by CONTENT (e.g. renamed to .xlsx) and
+      // reject it at the boundary with the specific message — never let it
+      // reach the parser.
+      if (kind === "xls") {
+        unlinkQuiet(file.path);
+        return rejectUpload(res, LEGACY_XLS_MESSAGE);
+      }
+      if (kind !== "xlsx") {
         unlinkQuiet(file.path);
         return rejectUpload(
           res,
-          "الملف المرفوع غير صالح. يجب أن يكون ملف Excel حقيقي (.xlsx أو .xls).",
+          "الملف المرفوع غير صالح. يجب أن يكون ملف Excel حقيقي بصيغة XLSX. | Invalid file: a genuine .xlsx spreadsheet is required.",
         );
       }
 

@@ -1,17 +1,18 @@
 /**
- * ADR-002 — Deterministic spreadsheet fixtures for characterization tests.
+ * ADR-002 — Courier-domain spreadsheet fixtures for characterization tests.
  *
- * These builders generate workbook buffers at test time (no opaque binary
- * blobs in git) so the current xlsx reader's behavior can be locked as a
- * golden master before the exceljs migration, and re-verified identically
- * after it. The one exception is LEGACY_XLS_BASE64: a real legacy .xls
- * (BIFF8, magic D0CF11E0) captured here as base64 because exceljs cannot
- * WRITE .xls, and the future '.xls is rejected' test still needs a genuine
- * sample after xlsx is removed from the tree.
+ * These builders generate workbook buffers at test time using the courier
+ * import's known headers, so the current xlsx reader's behavior can be locked
+ * as a golden master before the exceljs migration and re-verified after it.
+ *
+ * Domain-neutral, format-level fixtures (legacy .xls sample, corrupt/empty
+ * buffers, a minimal valid xlsx) live in
+ * `@core/testing/spreadsheet-fixtures` so core-layer tests can use them
+ * without a core -> modules dependency.
  */
 import ExcelJS from "exceljs";
 
-/** The 22 headers the importer recognizes (subset used across fixtures). */
+/** The headers the courier importer recognizes (subset used across fixtures). */
 export const KNOWN_HEADERS = [
   "Date", "TID", "TERMINAL ID", "إسم العميل", "Mobile", "Installation type",
 ] as const;
@@ -73,21 +74,4 @@ export function buildLargeWorkbook(rowCount: number): Promise<Buffer> {
       ws.addRow(["01/02/2026", "T" + i, "TERM" + i]);
     }
   });
-}
-
-/** Non-spreadsheet random bytes (passes extension, fails as content). */
-export const CORRUPT_RANDOM_BYTES = Buffer.from("this is not a spreadsheet at all");
-
-/** Empty buffer. */
-export const EMPTY_BUFFER = Buffer.alloc(0);
-
-/** Bytes that look like a ZIP header but are truncated/invalid. */
-export const FAKE_ZIP_BYTES = Buffer.from("504b0304ffffff", "hex");
-
-/** A genuine legacy .xls (BIFF8) sample — see file header for why base64. */
-export const LEGACY_XLS_BASE64 =
-  "0M8R4KGxGuEAAAAAAAAAAAAAAAAAAAAAPgADAP7/CQAGAAAAAAAAAAAAAAABAAAAAgAAAAAAAAAAEAAAAQAAAAEAAAD+////AAAAAAAAAAD////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////9/////v////7///8EAAAABQAAAP7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7///8CAAAAAwAAAAQAAAAFAAAABgAAAAcAAAAIAAAACQAAAAoAAAALAAAADAAAAA0AAAAOAAAADwAAABAAAAARAAAAEgAAABMAAAAUAAAA/v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+/////v////7////+////UgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABQH//////////wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAAAQAUAAAAAAAABAFMAaAAzADMAdABKADUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEgACAf////8CAAAA/////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAFcAbwByAGsA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";
-
-export function legacyXlsBuffer(): Buffer {
-  return Buffer.from(LEGACY_XLS_BASE64, "base64");
 }
