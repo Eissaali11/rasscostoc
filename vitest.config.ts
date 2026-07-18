@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || "dummy-secret-for-tests-precommit";
+
 export default defineConfig({
   test: {
     environment: "node",
