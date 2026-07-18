@@ -2,7 +2,8 @@
 
 | Field | Value |
 |---|---|
-| **Status** | IN PROGRESS — Phase 1 complete; Phase 2 next |
+| **Status** | Phase 1 CLOSED; Phase 2 baseline **READY** — P2.1 may start (see PHASE-2-BASELINE) |
+| **Phase 2 worktree** | `d:/nulip-new.worktrees/erp-008-phase-2-financial-integrity` @ `erp-008/phase-2-financial-integrity` |
 | **Date opened** | 2026-07-18 |
 | **Parent programs** | ERP-005A (architecture), ERP-006 (audit) — **paused** for hardening |
 | **Success metric** | Critical risks closed with runtime proof — not report count |
@@ -22,7 +23,7 @@ Stop architecture redesign / audit expansion. Close production blockers **one is
 | Phase | Focus | Status |
 |---|---|---|
 | 1 | Security Blockers | **Complete (P1.1–P1.4)** |
-| 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | Pending |
+| 2 | Financial Integrity (`number_sequences`, sales metrics ON CONFLICT) | **Baseline READY — P2.1 next** |
 | 3 | Runtime Safety (startup/shutdown/SIGTERM/pool) | Pending |
 | 4 | Scalability (rate limit / in-memory / PM2) | Pending |
 | 5 | Database Reliability (drift / restore test) | Pending |
@@ -208,4 +209,31 @@ npx tsx scripts/bootstrap-first-admin.ts
 | 2026-07-18 | ERP-008-P1.1 Default admin eliminated | `aaf10c0` | CLOSED |
 | 2026-07-18 | ERP-008-P1.2 GET /api/users/:id authz re-verified | `e18a566` | CLOSED |
 | 2026-07-18 | ERP-008-P1.3 Plaintext password fallback removed | `6ab1859` | CLOSED |
-| 2026-07-18 | ERP-008-P1.4 CORS whitelist hardened | *(this commit)* | CLOSED |
+| 2026-07-18 | ERP-008-P1.4 CORS whitelist hardened | `75ca707` | CLOSED |
+| 2026-07-18 | Phase 2 clean worktree from `75ca707` | worktree init | PASS |
+| 2026-07-18 | Migration integrity unblocker (0018/0020 + core_jobs) | `a3be98b` | **MIGRATION CHAIN VERIFIED** |
+| 2026-07-18 | Baseline fcmToken Case A align | `f1fd684` | CLOSED |
+| 2026-07-18 | Phase 2 baseline gate | see `ERP-008-PHASE-2-BASELINE.md` | **BASELINE READY** |
+
+---
+
+## Phase 2 — Financial Integrity (status)
+
+### Isolation
+Clean worktree created; dirty `courier-custody-tech-fix` untouched.
+
+### Baseline
+**BASELINE READY** — details in [`docs/production/ERP-008-PHASE-2-BASELINE.md`](ERP-008-PHASE-2-BASELINE.md), [`ERP-008-MIGRATION-UNBLOCKER.md`](ERP-008-MIGRATION-UNBLOCKER.md), [`ERP-008-BASELINE-BLOCKER.md`](ERP-008-BASELINE-BLOCKER.md).
+
+Closed pre-baseline blockers:
+
+1. Migration chain greenfield failure (`a3be98b`).
+2. Typecheck `fcmToken` Case A (`f1fd684`).
+3. Isolated test DB `stockpro_erp008_phase2_test` + husky/unit suite PASS.
+
+### Static evidence already recorded (P2.1 / P2.2 work)
+- `number_sequences`: `ON CONFLICT (scope, year)` without unique constraint in schema/migrations/snapshot.
+- `technician_sales_metrics_daily`: `ON CONFLICT (sales_date, technician_id, item_type_id, region_id)` without unique constraint; nullable `region_id`/`item_type_id` → NULL semantics decision required before P2.2 migration.
+
+### P2.1 / P2.2
+**Not started** — baseline just cleared; start with P2.1 only.
