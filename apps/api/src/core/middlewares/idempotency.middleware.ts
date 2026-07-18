@@ -67,13 +67,30 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
     }
 
     // 2. إذا لم يكن المفتاح موجوداً، نضع قفل معالجة مؤقت (وضع حالة 102) وصلاحية قصيرة (5 دقائق)
+    // ERP-008 Phase 4: هذا الإدراج هو نقطة القفل الذرّية الوحيدة (المفتاح
+    // Primary Key). إذا وصل طلبان متزامنان بنفس المفتاح بعد أن اجتازا كلاهما
+    // فحص SELECT أعلاه (قبل أن يُدرج أي منهما القفل)، فسينجح إدراج أحدهما
+    // ويفشل الآخر بخطأ unique_violation (23505) — وهذا يعني أن طلبًا آخر
+    // فاز بالسباق فعليًا، لا خطأ عاماً؛ يجب معاملته كقفل قيد المعالجة (409)
+    // بدل تمريره إلى next() كما كان يحدث سابقًا (أثبتنا تنفيذ العملية
+    // الحساسة مرتين فعليًا قبل هذا الإصلاح).
     const lockExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 دقائق للقفل في حال تعطل السيرفر
-    await db.insert(idempotencyKeys).values({
-      key: idempotencyKey,
-      responseStatus: 102,
-      responseBody: "",
-      expiresAt: lockExpiry,
-    });
+    try {
+      await db.insert(idempotencyKeys).values({
+        key: idempotencyKey,
+        responseStatus: 102,
+        responseBody: "",
+        expiresAt: lockExpiry,
+      });
+    } catch (insertError: any) {
+      if (insertError?.code === "23505") {
+        return res.status(409).json({
+          message: "الطلب قيد المعالجة حالياً، يرجى المحاولة بعد قليل.",
+          code: "PENDING_TRANSACTION",
+        });
+      }
+      throw insertError;
+    }
 
     // 3. اعتراض وظائف إرسال الاستجابة (res.send / res.json) لتخزين النتيجة النهائية
     const originalSend = res.send;
