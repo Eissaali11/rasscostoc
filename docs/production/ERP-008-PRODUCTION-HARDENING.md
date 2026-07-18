@@ -84,11 +84,38 @@ Unit suite for bootstrap use-case: **PASS** (see commit CI / local vitest).
 
 ---
 
-## Open Phase 1 backlog (evidence snapshot)
+### ERP-008-P1.2 — Endpoint authorization (`GET /api/users/:id`) — VERIFIED CLOSED
 
-### ERP-008-P1.2 — Endpoint authorization (`GET /api/users/:id`)
-- Prior PLATFORM-P0 claims authz + minimal view + tests in `users.routes.security.test.ts`.
-- **Action:** re-verify runtime + expand if gaps; do not assume closed until re-proven under ERP-008.
+#### 1. Problem
+Historical audit: user detail endpoint could expose data without proper authz.
+
+#### 2. Evidence (re-verification 2026-07-18)
+`npx vitest run apps/api/src/modules/identity/presentation/http/users.routes.security.test.ts` → **6/6 PASS**
+- unauthenticated → 401
+- technician cross-user → 403
+- supervisor cross-region → 403
+- admin / same-region supervisor / self → allowed with **minimal fields only** (no password/email)
+
+#### 3. Root cause
+Previously missing `requireAuth` + ownership/RBAC (addressed under PLATFORM-P0; re-proven here).
+
+#### 4. Files (existing controls — no code change in this verification)
+- `apps/api/src/modules/identity/presentation/routes/users.routes.ts`
+- `apps/api/src/modules/identity/presentation/controllers/users.controller.ts` (`canReadUser`, `toMinimalUserView`)
+- `apps/api/src/modules/identity/presentation/http/users.routes.security.test.ts`
+
+#### 5–7. Tests / runtime / regression
+Security suite PASS as above.
+
+#### 8. Remaining risks
+Broader endpoint surface still needs systematic review beyond `/api/users/:id` (tracked as ongoing Phase 1 hygiene, not a reopen of P1.2).
+
+#### 9. Decision
+**CLOSED** (verified). Next: **ERP-008-P1.3**.
+
+---
+
+## Open Phase 1 backlog
 
 ### ERP-008-P1.3 — Plaintext password fallback
 - Evidence: `AuthService.verifyUserPassword` accepts non-`$2*` stored passwords via `timingSafeEqual`.
@@ -118,4 +145,5 @@ npx tsx scripts/bootstrap-first-admin.ts
 
 | Date | Issue | Commit | Decision |
 |---|---|---|---|
-| 2026-07-18 | ERP-008-P1.1 Default admin eliminated | *(this commit)* | CLOSED |
+| 2026-07-18 | ERP-008-P1.1 Default admin eliminated | `aaf10c0` | CLOSED |
+| 2026-07-18 | ERP-008-P1.2 GET /api/users/:id authz re-verified | *(docs verification)* | CLOSED |
