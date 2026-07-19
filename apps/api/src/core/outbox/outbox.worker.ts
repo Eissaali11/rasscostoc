@@ -16,6 +16,7 @@ export class OutboxWorker {
   private intervalId: NodeJS.Timeout | null = null;
   private readonly intervalMs: number;
   private readonly batchSize: number;
+  private currentRunPromise: Promise<void> | null = null;
 
   constructor(options?: { intervalMs?: number; batchSize?: number }) {
     this.workerId = `worker-${randomUUID()}`;
@@ -59,10 +60,59 @@ export class OutboxWorker {
   }
 
   /**
+   * Waits for the current batch execution to finish, up to the timeout.
+   */
+  async drain(timeoutMs: number): Promise<void> {
+    const startTime = Date.now();
+    const checkIntervalMs = 50;
+
+    return new Promise((resolve) => {
+      const check = () => {
+        if (!this.currentRunPromise) {
+          logger.info({
+            message: "OutboxWorker drained: active batch processing finished.",
+            module: MODULE,
+            action: "drain",
+            metadata: { durationMs: Date.now() - startTime },
+          });
+          resolve();
+          return;
+        }
+
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= timeoutMs) {
+          logger.warn({
+            message: "OutboxWorker drain timeout reached before batch finished.",
+            module: MODULE,
+            action: "drain",
+            metadata: { timeoutMs },
+          });
+          resolve();
+          return;
+        }
+
+        setTimeout(check, checkIntervalMs);
+      };
+
+      check();
+    });
+  }
+
+  /**
    * Queries pending events, processes them via the event bus,
    * and updates their status (PUBLISHED, FAILED, or DEAD).
    */
   async runOnce(): Promise<void> {
+    if (this.currentRunPromise) return this.currentRunPromise;
+    this.currentRunPromise = this._executeRunOnce();
+    try {
+      await this.currentRunPromise;
+    } finally {
+      this.currentRunPromise = null;
+    }
+  }
+
+  private async _executeRunOnce(): Promise<void> {
     const pendingEvents = await outboxRepository.getPendingEvents(this.batchSize, this.workerId);
     if (pendingEvents.length === 0) {
       return;
