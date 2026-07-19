@@ -62,7 +62,7 @@ async function startServer() {
 
     // 2. Programmatically apply Drizzle migrations on startup
     // migrations/ lives at monorepo root, two levels above apps/api/src
-    const migrationsFolder = path.resolve(__dirname, "../../../migrations");
+    const migrationsFolder = path.resolve(process.cwd(), "migrations");
     log(`⏳ Running database migrations from: ${migrationsFolder}`);
     const db = getDatabase();
     try {
