@@ -2,7 +2,7 @@ import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { app } from "./app";
-import { initializeDatabase, getDatabase } from "@core/database/connection";
+import { initializeDatabase, getDatabase, closeDatabase } from "@core/database/connection";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "@core/utils/vite";
 import { errorHandler } from "@core/errors/errorHandler";
@@ -19,6 +19,7 @@ import { configService } from "@core/config/config.service";
 import { featureFlagService } from "@core/services/feature-flags.service";
 import { logger } from "@core/telemetry/logger";
 import { startSystemMetricsCollection } from "@core/telemetry/metrics";
+import { shutdownCoordinator } from "@core/lifecycle/shutdown.coordinator";
 
 // Register global error and promise rejection handlers
 process.on("uncaughtException", (error) => {
@@ -59,15 +60,6 @@ async function startServer() {
     await initializeDatabase();
     readinessManager.setDBConnected(true);
 
-    // Start Outbox Worker
-    const { outboxWorker } = await import("@core/outbox/outbox.worker");
-    outboxWorker.start();
-    readinessManager.setOutboxWorkerStarted(true);
-
-    // Start Asynchronous Job Worker
-    const { jobsWorker } = await import("@core/jobs/jobs.worker");
-    jobsWorker.start();
-
     // 2. Programmatically apply Drizzle migrations on startup
     // migrations/ lives at monorepo root, two levels above apps/api/src
     const migrationsFolder = path.resolve(__dirname, "../../../migrations");
@@ -88,9 +80,26 @@ async function startServer() {
       throw migError;
     }
 
+    // Start Outbox Worker AFTER migrations run successfully
+    const { outboxWorker } = await import("@core/outbox/outbox.worker");
+    outboxWorker.start();
+    readinessManager.setOutboxWorkerStarted(true);
+
+    // Start Asynchronous Job Worker AFTER migrations run successfully
+    const { jobsWorker } = await import("@core/jobs/jobs.worker");
+    jobsWorker.start();
+    readinessManager.setJobsWorkerStarted(true);
 
     // 3. Register route modules
     const server = await registerRoutes(app);
+
+    // Wire shutdown coordinator immediately after HTTP server is created
+    shutdownCoordinator.register({
+      httpServer: server,
+      jobsWorker,
+      outboxWorker,
+      db: { closeDatabase },
+    });
 
     // 4. Global error handler middleware (must be registered after routes)
     app.use(errorHandler);
@@ -118,6 +127,7 @@ async function startServer() {
       log(`Server is serving on port ${port}`);
       // Start system metrics polling (CPU & Memory)
       startSystemMetricsCollection();
+      readinessManager.setListening(true);
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
