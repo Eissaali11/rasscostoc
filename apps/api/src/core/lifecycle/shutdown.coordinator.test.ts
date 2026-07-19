@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { shutdownCoordinator } from "./shutdown.coordinator";
+import { readinessManager } from "../telemetry/readiness";
+import * as metricsModule from "../telemetry/metrics";
 
 describe("ShutdownCoordinator Unit Tests", () => {
   let mockServer: any;
@@ -7,6 +9,7 @@ describe("ShutdownCoordinator Unit Tests", () => {
   let mockOutboxWorker: any;
   let mockDb: any;
   let exitMock: any;
+  let stopMetricsSpy: any;
 
   beforeEach(() => {
     mockServer = {
@@ -27,12 +30,22 @@ describe("ShutdownCoordinator Unit Tests", () => {
       closeDatabase: vi.fn(() => Promise.resolve()),
     };
     exitMock = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    stopMetricsSpy = vi.spyOn(metricsModule, "stopSystemMetricsCollection");
     // Reset private shutdown state of coordinator
     (shutdownCoordinator as any).isShuttingDown = false;
+
+    // Preset readiness flags to true so we can test that shutdown resets them
+    readinessManager.setDBConnected(true);
+    readinessManager.setSubscribersRegistered(true);
+    readinessManager.setOutboxWorkerStarted(true);
+    readinessManager.setJobsWorkerStarted(true);
+    readinessManager.setFeatureFlagsLoaded(true);
+    readinessManager.setListening(true);
   });
 
   afterEach(() => {
     exitMock.mockRestore();
+    stopMetricsSpy.mockRestore();
   });
 
   it("should shutdown components in correct sequence and call process.exit(0)", async () => {
@@ -80,6 +93,20 @@ describe("ShutdownCoordinator Unit Tests", () => {
       "db",
     ]);
     expect(exitMock).toHaveBeenCalledWith(0);
+
+    // Verify readiness flags were reset
+    expect(readinessManager.isReady()).toBe(false);
+    expect(readinessManager.getDetails()).toEqual({
+      database: false,
+      subscribers: false,
+      outboxWorker: false,
+      jobsWorker: false,
+      featureFlags: false,
+      listening: false,
+    });
+
+    // Verify system metrics collection was stopped
+    expect(stopMetricsSpy).toHaveBeenCalled();
   });
 
   it("should be idempotent (ignoring second shutdown request)", async () => {

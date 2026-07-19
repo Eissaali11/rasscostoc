@@ -91,6 +91,27 @@ class ShutdownCoordinator {
     }
     this.isShuttingDown = true;
 
+    // Immediately set all readiness flags to false to prevent the Load Balancer from routing new traffic.
+    try {
+      const { readinessManager } = await import("@core/telemetry/readiness");
+      readinessManager.setDBConnected(false);
+      readinessManager.setSubscribersRegistered(false);
+      readinessManager.setOutboxWorkerStarted(false);
+      readinessManager.setJobsWorkerStarted(false);
+      readinessManager.setFeatureFlagsLoaded(false);
+      readinessManager.setListening(false);
+    } catch (err) {
+      logger.error({ message: "Failed to reset readiness flags on shutdown", module: MODULE, error: err });
+    }
+
+    // Immediately stop system metrics collection to prevent pending intervals/timers.
+    try {
+      const { stopSystemMetricsCollection } = await import("@core/telemetry/metrics");
+      stopSystemMetricsCollection();
+    } catch (err) {
+      logger.error({ message: "Failed to stop metrics collection on shutdown", module: MODULE, error: err });
+    }
+
     const t = config.timeouts ?? {};
     const httpDrainMs   = t.httpDrainMs   ?? 30_000;
     const jobsDrainMs   = t.jobsDrainMs   ?? 60_000;

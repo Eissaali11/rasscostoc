@@ -132,6 +132,25 @@ async function startServer() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log(`Startup failed: ${message}`);
+
+    // Cleanup resources on startup failure
+    try {
+      const { outboxWorker } = await import("@core/outbox/outbox.worker");
+      if (outboxWorker) outboxWorker.stop();
+    } catch (_) {}
+
+    try {
+      const { jobsWorker } = await import("@core/jobs/jobs.worker");
+      if (jobsWorker) jobsWorker.stop();
+    } catch (_) {}
+
+    try {
+      await closeDatabase();
+      log("Database connection pool closed during startup failure cleanup.");
+    } catch (closeDbError) {
+      log(`Failed to close database pool during startup failure cleanup: ${closeDbError}`);
+    }
+
     process.exit(1);
   }
 }
