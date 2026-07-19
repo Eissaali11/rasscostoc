@@ -75,3 +75,22 @@ export function buildLargeWorkbook(rowCount: number): Promise<Buffer> {
     }
   });
 }
+
+/**
+ * Workbook whose row-3 cell in `header`'s column holds an arbitrary ExcelJS
+ * cell value (used to characterize formula-cell handling). Row 2 is a plain
+ * baseline row; the special cell is placed on row 3.
+ */
+export function buildWorkbookWithCell(
+  header: "Date" | "TID" | "TERMINAL ID" | "إسم العميل",
+  cellValue: unknown,
+): Promise<Buffer> {
+  const headers = ["Date", "TID", "TERMINAL ID", "إسم العميل"];
+  const colIndex = headers.indexOf(header) + 1;
+  return toBuffer((ws) => {
+    ws.addRow(headers);
+    ws.addRow(["01/02/2026", "T-PLAIN", "TERM1", "plain"]);
+    const r3 = ws.addRow(["02/02/2026", "T2", "TERM2", "c2"]);
+    r3.getCell(colIndex).value = cellValue as ExcelJS.CellValue;
+  });
+}

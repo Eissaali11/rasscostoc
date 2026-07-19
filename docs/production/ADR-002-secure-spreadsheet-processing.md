@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | PROPOSED — analysis complete, awaiting approval before any code change |
-| **Date** | 2026-07-18 |
+| **Status** | IN PROGRESS — Commit 1 (`d90aea3`) + Commit 2 (`2e794dd`) APPROVED; Pre-Commit-3 analysis complete; reader migration (Commit 3) NOT YET AUTHORIZED |
+| **Date** | 2026-07-18 (updated 2026-07-19) |
 | **Scope** | Server-side spreadsheet **import** path only |
 | **Decision owner** | Chief Software Architect |
 
@@ -209,3 +209,129 @@ Non-disruptive checks performed on the repository (2026-07-19):
 **Verdict: NO VERIFIED USAGE FOUND.** `.xls` is *offered* by the UI's `accept` attribute and accepted server-side, but there is no verified business evidence of actual `.xls` imports (no fixtures, no tests, production logs not observable). Per the governance rule *"Security remediation may proceed when legacy compatibility is not supported by verified business evidence,"* **Option A is authorized**: drop `.xls`, and update the UI `accept` attribute + user-facing docs as part of the rejection work (ADR-002 Commit 3).
 
 Side finding (out of scope, logged): the same `accept` attributes advertise `.csv`, but the server's `EXCEL_EXT` allowlist accepts only `.xlsx`/`.xls` — `.csv` uploads are already rejected server-side. UI/server mismatch, unrelated to this ADR.
+
+---
+
+## Pre-Commit-3 Analysis (authorized: analysis + tests + docs only; reader UNCHANGED)
+
+Required by the executive review gate before the reader migration is authorized.
+No production code changed in this phase; evidence added as characterization
+tests (`excel-formula.characterization.test.ts`) and this section.
+
+### A. rowNumber usage classification
+
+Traced every `rowNumber` from `parseRawDataWorkbook` outward:
+
+| Hop | Evidence |
+|---|---|
+| Produced | `excel.helper.ts:95` — `rowNumber = idx + 2` (post-empty-filter index, +1 header) |
+| Service | `courier.service.ts:1172` (rejected) and `:1208` (imported: `{rowNumber, id, tid}`) |
+| API response | returned via the import controller's `res.json(result)` |
+| **UI (user-visible)** | `courier-requests.tsx:331` and `:340` render `{rowNumber}: {error}` in the import-result list |
+| Persisted in DB | **NO** — `insertRequest({date, tid, ...})` does not store `rowNumber` |
+| Tests / integrations depending on it | **NONE** (outside the ADR-002 characterization test) |
+| `item-types-management.tsx` `rowNumber` | **separate, unrelated** client-side import (its own exceljs loop) — out of scope |
+
+**Classification: USER-VISIBLE** (shown in the import-result screen) and part of
+the import endpoint's response shape; **NOT PERSISTED**; external-consumer
+contract **NOT VERIFIED** (internal admin UI, no evidence of external
+consumers). 
+
+**Decision (per executive gate): PRESERVE existing rowNumber semantics exactly
+during the reader migration** — including the known quirk that it is the
+post-empty-filter index, not the true sheet row. Any correction is a separate,
+independently-tested change (proposed follow-up: *"Correct source spreadsheet
+row reporting"*), never bundled into the library swap.
+
+### B. Current formula-cell behavior (characterized, UNSAFE)
+
+Probed the current `xlsx` reader; locked as `excel-formula.characterization.test.ts`:
+
+| Formula cell | Current xlsx behavior | New policy (approved) |
+|---|---|---|
+| numeric cached result | **leaks** the cached value (`"3"`) as the imported value | REJECT — `SPREADSHEET_FORMULA_NOT_ALLOWED` |
+| string cached result | **leaks** the cached value (`"hi"`) | REJECT |
+| no cached result | silently → `null` (indistinguishable from empty) | REJECT |
+| error result (`#DIV/0!`) | silently → `null` | REJECT |
+
+The current reader silently trusts cached results and silently nulls the rest —
+exactly the "don't pass a formula through silently as text/0/null/untrusted
+cached result" case the policy forbids. The characterization expectations
+**invert** in the policy commit.
+
+### C. Cell-value adapter (design only — not implemented)
+
+To keep ExcelJS specifics out of business logic, the new reader introduces one
+boundary function in the import layer:
+
+```
+normalizeSpreadsheetCell(cell: ExcelJS.Cell): DomainCellValue
+```
+
+- `DomainCellValue = string | number | Date | null` (domain-neutral; the service
+  layer never sees an ExcelJS object).
+- All ExcelJS cell-type rules live in this one adapter; unit-tested in isolation.
+- Formula/error handling is enforced here (reject → typed error), so the row
+  mapper stays simple and the policy has a single choke point.
+
+### D. ExcelJS cell-type → domain mapping table
+
+| ExcelJS cell type | Imported value | Decision |
+|---|---|---|
+| `String` | trimmed string (current `normalizeCell`) | ACCEPT |
+| `Number` | number → string per current normalization | ACCEPT |
+| `Date` | ISO-normalized (current `toIsoDate`/`normalizeCell` handles `Date`) | ACCEPT |
+| `Boolean` | not used by any import field | REJECT as `UNSUPPORTED_CELL_TYPE` if in a mapped field; ignore in unmapped columns |
+| `Null` / empty | `null` | ACCEPT (per field rules) |
+| `RichText` | flattened plain text only | ACCEPT (flatten to `.text`) |
+| `Hyperlink` | displayed text only (`.text`), never the URL | ACCEPT (text only) |
+| `Formula` | — | **REJECT** → `SPREADSHEET_FORMULA_NOT_ALLOWED` |
+| `Error` | — | **REJECT** → `SPREADSHEET_FORMULA_NOT_ALLOWED` (error cells are formula-class) |
+
+`Boolean`, `RichText`, `Hyperlink` decisions are marked **DEFINE** and will get
+their own fixtures/tests in the migration commit; none are known to appear in
+current legitimate imports (NOT VERIFIED against production data).
+
+### E. Typed parser error contract (design only)
+
+| Code | When | Client message (safe, bilingual) |
+|---|---|---|
+| `INVALID_SPREADSHEET` | not a readable workbook (was: silent empty import) | "ملف غير صالح… / Invalid spreadsheet file." |
+| `EMPTY_WORKBOOK` | zero worksheets | "المصنّف فارغ… / The workbook is empty." |
+| `WORKSHEET_NOT_FOUND` | first sheet missing/unreadable | "لا توجد ورقة عمل… / No worksheet found." |
+| `SPREADSHEET_FORMULA_NOT_ALLOWED` | formula/error cell in a mapped field | "لا يُسمح باستخدام الصيغ في حقول الاستيراد… / Formulas are not allowed in import fields…" |
+| `UNSUPPORTED_CELL_TYPE` | unmappable cell type in a mapped field | "نوع خلية غير مدعوم… / Unsupported cell type…" |
+| `SPREADSHEET_LIMIT_EXCEEDED` | row/column ceiling exceeded (Commit 4) | "الملف يتجاوز الحد المسموح… / File exceeds allowed limits." |
+
+Requirements: stable `code`; safe user message; internal cause logged only;
+no stack trace, no raw exceljs text, no formula text to the client; carry
+`{ row, column }` when available.
+
+> Note: `INVALID_SPREADSHEET` / `EMPTY_WORKBOOK` change the current silent-empty
+> behavior (characterized as a gap in Commit 1). Per the executive gate, the
+> *typed-error return shape* lands in the reader commit; the enforced **limits**
+> (size/row/column/timeout, encrypted rejection) land in the following
+> validation commit — kept separate so a regression is attributable.
+
+### F. Estimated xlsx → exceljs result differences
+
+| Aspect | Risk | Mitigation |
+|---|---|---|
+| Empty-cell → `null` | exceljs iteration must map missing/empty cells to `null` to match `xlsx`'s `defval:null` | adapter + compatibility characterization tests |
+| Grid indexing | exceljs `eachRow` skips truly-empty rows differently; rowNumber quirk must be reproduced exactly | preserve current `idx+2` post-filter logic explicitly |
+| Dates | both yield JS `Date`; low risk | existing `normalizeCell` |
+| Formulas | **behavior intentionally changes** (leak/null → reject) | policy tests (inverted characterization) |
+| Number formatting | exceljs may surface numbers vs xlsx strings | normalize in adapter; assert via golden master |
+
+### G. Commit-3 authorization checklist (status)
+
+```
+[x] rowNumber usages classified (USER-VISIBLE, not persisted, no integrations)
+[x] current formula behavior documented by tests (4 characterization tests)
+[x] new formula policy represented (test plan + inverted-expectation note)
+[x] ExcelJS cell-type table complete (3 DEFINE items flagged)
+[x] adapter boundary designed (normalizeSpreadsheetCell)
+[x] typed error contract defined
+[x] no production code changed in analysis phase
+[x] git tree contains only tests + docs
+```
