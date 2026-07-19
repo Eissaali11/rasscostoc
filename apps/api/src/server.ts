@@ -77,8 +77,30 @@ async function startServer() {
       await migrate(db, { migrationsFolder });
       log("✅ Database migrations completed successfully!");
     } catch (migError) {
-      log(`⚠️ Database migrations warning: ${migError instanceof Error ? migError.message : String(migError)}`);
-      log("Continuing server startup assuming database schema is already applied.");
+      const strict = configService.get("DB_MIGRATE_STRICT", "false") === "true";
+      // Previously this was a silent console warning. Surface it through the
+      // structured logger at ERROR level so it reaches log aggregation and
+      // alerting instead of being lost in stdout.
+      logger.error({
+        message: "Database migration failed on startup",
+        module: "Server",
+        action: "migrate",
+        metadata: { strict, migrationsFolder },
+        error: migError,
+      });
+      if (strict) {
+        // Opt-in hard stop: refuse to serve against a potentially inconsistent
+        // schema. Off by default so a benign/idempotent migration hiccup does
+        // not turn into a boot outage on environments provisioned out-of-band.
+        logger.error({
+          message:
+            "DB_MIGRATE_STRICT is enabled — aborting startup to avoid running against an inconsistent schema.",
+          module: "Server",
+          action: "migrate",
+        });
+        process.exit(1);
+      }
+      log("Continuing server startup (set DB_MIGRATE_STRICT=true to fail fast instead).");
     }
 
 
