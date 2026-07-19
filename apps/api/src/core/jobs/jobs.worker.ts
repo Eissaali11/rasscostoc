@@ -86,6 +86,45 @@ export class JobsWorker {
     logger.info({ message: `Stopped Asynchronous Job Worker: ${this.workerId}`, module: MODULE, action: "stop" });
   }
 
+  /**
+   * Waits for currently running jobs to finish, up to the specified timeout.
+   */
+  async drain(timeoutMs: number): Promise<void> {
+    const startTime = Date.now();
+    const checkIntervalMs = 100;
+
+    return new Promise((resolve) => {
+      const check = () => {
+        if (this.activeJobsCount === 0) {
+          logger.info({
+            message: "JobsWorker drained: all active jobs finished.",
+            module: MODULE,
+            action: "drain",
+            metadata: { durationMs: Date.now() - startTime },
+          });
+          resolve();
+          return;
+        }
+
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= timeoutMs) {
+          logger.warn({
+            message: `JobsWorker drain timeout reached. ${this.activeJobsCount} job(s) still active.`,
+            module: MODULE,
+            action: "drain",
+            metadata: { activeJobsCount: this.activeJobsCount, timeoutMs },
+          });
+          resolve();
+          return;
+        }
+
+        setTimeout(check, checkIntervalMs);
+      };
+
+      check();
+    });
+  }
+
   private async pollAndExecute(): Promise<void> {
     const job = await jobsRepository.claimNextJob();
     if (!job) {
