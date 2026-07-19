@@ -11,6 +11,14 @@ vi.mock('@core/database/connection', () => {
   };
 });
 
+vi.mock('../../adapters/identity/identity-ports.registry', () => {
+  return {
+    getInventoryIdentityPorts: () => ({
+      getAllUsersForBackup: async () => [],
+    }),
+  };
+});
+
 describe('ExportSystemBackupUseCase', () => {
   it('exports backup data structure successfully', async () => {
     const useCase = new ExportSystemBackupUseCase();

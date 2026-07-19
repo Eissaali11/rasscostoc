@@ -98,10 +98,17 @@ export type StockMovementWithDetails = StockMovement & {
   itemNameAr?: string;
 };
 
+export type WarehouseTechnicianSummary = {
+  id: string;
+  fullName: string;
+  username: string;
+  city: string | null;
+};
+
 export type WarehouseWithInventory = Warehouse & {
   inventory: WarehouseInventory | null;
   creatorName?: string;
-  technicians?: UserSafe[];
+  technicians?: WarehouseTechnicianSummary[];
 };
 
 export type WarehouseWithStats = Warehouse & {

@@ -5,6 +5,7 @@ import {
   type AiConnectionTestSnapshot,
   type AiVisionProviderId,
 } from "./ai-engine-settings.store";
+import { FetchGeminiHttpClient } from "@stockpro/ai-extraction";
 
 export type ConnectionTestResult = AiConnectionTestSnapshot;
 
@@ -158,7 +159,6 @@ async function testGeminiConnection(args: {
   timeoutMs: number;
 }): Promise<Omit<ConnectionTestResult, "provider" | "model" | "testedAt">> {
   const started = Date.now();
-  const { FetchGeminiHttpClient } = await import("@stockpro/ai-extraction");
   const http = new FetchGeminiHttpClient();
 
   try {

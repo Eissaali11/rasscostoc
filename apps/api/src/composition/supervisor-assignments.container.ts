@@ -1,10 +1,8 @@
 import { SupervisorAssignmentsUseCase } from "@modules/identity/application/users/use-cases/SupervisorAssignments.use-case";
-import { SupervisorRepository } from "@modules/identity/infrastructure/database/SupervisorRepository";
+import { repositories } from "@modules/inventory/infrastructure/database";
 
 class SupervisorAssignmentsContainer {
-  private readonly repository = new SupervisorRepository();
-
-  readonly supervisorAssignmentsUseCase = new SupervisorAssignmentsUseCase(this.repository);
+  readonly supervisorAssignmentsUseCase = new SupervisorAssignmentsUseCase(repositories.supervisorAssignments);
 }
 
 export const supervisorAssignmentsContainer = new SupervisorAssignmentsContainer();

@@ -1,13 +1,13 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDatabase } from "@core/database/connection";
 import {
   inventoryRequests,
   InventoryRequest,
   InsertInventoryRequest,
-  users,
 } from "@shared/schema";
 
 import type { IInventoryRequestsRepository } from "../../application/inventory-requests/contracts/IInventoryRequestsRepository";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 /**
  * Inventory Requests Repository Implementation
@@ -20,12 +20,8 @@ export class InventoryRequestsRepository implements IInventoryRequestsRepository
 
   async getInventoryRequests(warehouseId?: string, technicianId?: string, status?: string) {
     let query = this.db
-      .select({
-        request: inventoryRequests,
-        technicianName: users.fullName,
-      })
+      .select({ request: inventoryRequests })
       .from(inventoryRequests)
-      .leftJoin(users, eq(inventoryRequests.technicianId, users.id))
       .orderBy(desc(inventoryRequests.createdAt));
 
     const conditions = [];
@@ -44,9 +40,12 @@ export class InventoryRequestsRepository implements IInventoryRequestsRepository
     }
 
     const rows = await query;
+    const technicianIds = [...new Set(rows.map((r: any) => r.request.technicianId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(technicianIds);
+
     return rows.map((row: any) => ({
       ...row.request,
-      technicianName: row.technicianName || 'غير معروف',
+      technicianName: usersById.get(row.request.technicianId)?.fullName || 'غير معروف',
     }));
   }
 
@@ -79,13 +78,13 @@ export class InventoryRequestsRepository implements IInventoryRequestsRepository
   }
 
   async getSupervisorRequestsByRegion(regionId: string, status?: string): Promise<any[]> {
+    const technicianIdsInRegion = await getInventoryIdentityPorts().getUserIdsByRegion(regionId);
+    if (technicianIdsInRegion.length === 0) return [];
+
     let query = this.db
       .select({
         id: inventoryRequests.id,
         technicianId: inventoryRequests.technicianId,
-        technicianName: users.fullName,
-        technicianUsername: users.username,
-        technicianCity: users.city,
         n950Boxes: inventoryRequests.n950Boxes,
         n950Units: inventoryRequests.n950Units,
         i9000sBoxes: inventoryRequests.i9000sBoxes,
@@ -112,16 +111,23 @@ export class InventoryRequestsRepository implements IInventoryRequestsRepository
         createdAt: inventoryRequests.createdAt,
       })
       .from(inventoryRequests)
-      .leftJoin(users, eq(inventoryRequests.technicianId, users.id))
       .orderBy(inventoryRequests.createdAt);
 
-    const conditions = [eq(users.regionId, regionId)];
+    const conditions = [inArray(inventoryRequests.technicianId, technicianIdsInRegion as string[])];
     if (status) {
       conditions.push(eq(inventoryRequests.status, status as any));
     }
 
     query = query.where(and(...conditions)) as any;
 
-    return query;
+    const rows = await query;
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(technicianIdsInRegion);
+
+    return rows.map((row: any) => ({
+      ...row,
+      technicianName: usersById.get(row.technicianId)?.fullName,
+      technicianUsername: usersById.get(row.technicianId)?.username,
+      technicianCity: usersById.get(row.technicianId)?.city,
+    }));
   }
 }

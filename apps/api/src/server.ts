@@ -8,9 +8,37 @@ import { setupVite, serveStatic, log } from "@core/utils/vite";
 import { errorHandler } from "@core/errors/errorHandler";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { initializeEventSubscribers } from "./composition/events";
+// ERP-006A: composition/index.ts registers the cross-module port adapters
+// (identity<->inventory, identity<->accounting, inventory<->accounting -
+// see composition/inventory-identity.adapter.ts / accounting-cross-module.adapter.ts).
+// This side-effect import is what actually runs those registrations at
+// startup; without it, nothing in the real app ever reached composition/index.ts.
+import "./composition";
 import { readinessManager } from "@core/telemetry/readiness";
 import { configService } from "@core/config/config.service";
 import { featureFlagService } from "@core/services/feature-flags.service";
+import { logger } from "@core/telemetry/logger";
+import { startSystemMetricsCollection } from "@core/telemetry/metrics";
+
+// Register global error and promise rejection handlers
+process.on("uncaughtException", (error) => {
+  logger.error({
+    message: "CRITICAL: Uncaught Exception detected, shutting down server process...",
+    module: "Server",
+    action: "uncaughtException",
+    error,
+  });
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({
+    message: "CRITICAL: Unhandled Promise Rejection detected",
+    module: "Server",
+    action: "unhandledRejection",
+    error: reason instanceof Error ? reason : new Error(String(reason)),
+  });
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +109,8 @@ async function startServer() {
 
     server.listen(port, () => {
       log(`Server is serving on port ${port}`);
+      // Start system metrics polling (CPU & Memory)
+      startSystemMetricsCollection();
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

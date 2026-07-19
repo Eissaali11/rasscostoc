@@ -2,6 +2,8 @@ import { randomUUID, createHash } from "crypto";
 import type { PoolClient, QueryResult } from "pg";
 import { pool } from "@core/config/db";
 import { ConflictError, NotFoundError, ValidationError } from "@core/errors/AppError";
+import { getAccountingIdentityLookupPort } from "./adapters/identity/identity-lookup.registry";
+import { getAccountingCatalogLookupPort } from "./adapters/inventory/catalog-lookup.registry";
 
 type CoaInput = {
   code: string;
@@ -433,18 +435,52 @@ export class AccountingService {
   async listSalesInvoices(): Promise<any[]> {
     const result = await pool.query(
       `SELECT si.*, c.name AS customer_name,
-              COALESCE(line_preview.items_summary, '-') AS items_summary
+              COALESCE(line_preview.lines_data, '[]'::json) AS lines_data
        FROM sales_invoices si
        LEFT JOIN customers c ON c.id = si.customer_id
        LEFT JOIN LATERAL (
-         SELECT string_agg(COALESCE(NULLIF(TRIM(sil.description), ''), it.name_ar, 'بند'), ' | ' ORDER BY sil.id) AS items_summary
+         SELECT json_agg(json_build_object('description', sil.description, 'item_type_id', sil.item_type_id) ORDER BY sil.id) AS lines_data
          FROM sales_invoice_lines sil
-         LEFT JOIN item_types it ON it.id = sil.item_type_id
          WHERE sil.invoice_id = si.id
        ) line_preview ON true
        ORDER BY si.issue_datetime DESC`
     );
-    return result.rows;
+    return this.attachItemsSummary(result.rows);
+  }
+
+  /**
+   * ERP-005A-4 Phase 5 — builds each invoice/bill's `items_summary` display
+   * string in JS from raw per-line {description, item_type_id} data,
+   * replacing a SQL-level `string_agg(... it.name_ar ...)` that required a
+   * live join against inventory's item type catalog. Preserves the exact original priority order
+   * (trimmed description, else item type name, else 'بند') and the exact
+   * ' | '-joined format, byte-for-byte, per line order already fixed by the
+   * SQL's `json_agg(... ORDER BY sil.id)`.
+   */
+  private async attachItemsSummary(rows: any[]): Promise<any[]> {
+    const allItemTypeIds = new Set<string>();
+    for (const row of rows) {
+      for (const line of (row.lines_data ?? []) as Array<{ item_type_id: string | null }>) {
+        if (line.item_type_id) allItemTypeIds.add(line.item_type_id);
+      }
+    }
+    const itemNamesById = await getAccountingCatalogLookupPort().getItemTypeNamesByIds([...allItemTypeIds]);
+
+    return rows.map((row) => {
+      const linesData = (row.lines_data ?? []) as Array<{ description: string | null; item_type_id: string | null }>;
+      const { lines_data, ...rest } = row;
+      const itemsSummary = linesData.length === 0
+        ? "-"
+        : linesData
+            .map((line) => {
+              const description = line.description && line.description.trim() !== "" ? line.description.trim() : null;
+              if (description) return description;
+              const itemName = line.item_type_id ? itemNamesById.get(line.item_type_id) : undefined;
+              return itemName ?? "بند";
+            })
+            .join(" | ");
+      return { ...rest, items_summary: itemsSummary };
+    });
   }
 
   async getSalesInvoice(id: string): Promise<any> {
@@ -463,20 +499,26 @@ export class AccountingService {
     }
 
     const linesResult = await pool.query(
-      `SELECT sil.*,
-              it.name_ar AS item_name_ar,
-              u.full_name AS technician_name
-       FROM sales_invoice_lines sil
-       LEFT JOIN item_types it ON it.id = sil.item_type_id
-       LEFT JOIN users u ON u.id = sil.technician_id
-       WHERE sil.invoice_id = $1
-       ORDER BY sil.id ASC`,
+      `SELECT sil.* FROM sales_invoice_lines sil WHERE sil.invoice_id = $1 ORDER BY sil.id ASC`,
       [id]
     );
 
+    const itemTypeIds = [...new Set(linesResult.rows.map((l: any) => l.item_type_id).filter(Boolean))] as string[];
+    const technicianIds = [...new Set(linesResult.rows.map((l: any) => l.technician_id).filter(Boolean))] as string[];
+    const [itemNamesById, techniciansById] = await Promise.all([
+      getAccountingCatalogLookupPort().getItemTypeNamesByIds(itemTypeIds),
+      getAccountingIdentityLookupPort().getTechniciansByIds(technicianIds),
+    ]);
+
+    const lines = linesResult.rows.map((line: any) => ({
+      ...line,
+      item_name_ar: line.item_type_id ? itemNamesById.get(line.item_type_id) ?? null : null,
+      technician_name: line.technician_id ? techniciansById.get(line.technician_id)?.fullName ?? null : null,
+    }));
+
     return {
       ...invoiceResult.rows[0],
-      lines: linesResult.rows,
+      lines,
     };
   }
 
@@ -679,64 +721,7 @@ export class AccountingService {
         [id, userId ?? null]
       );
 
-      await client.query(
-        `WITH line_data AS (
-            SELECT
-              DATE(si.issue_datetime) AS sales_date,
-              sil.technician_id,
-              sil.item_type_id,
-              u.region_id,
-              COALESCE(SUM(sil.qty), 0) AS sold_qty,
-              COALESCE(SUM(sil.line_total), 0) AS sold_amount,
-              COALESCE(MAX(sil.qty_after_sale), 0) AS remaining_qty_end_of_day,
-              COALESCE(COUNT(DISTINCT sil.invoice_id), 0) AS invoices_count,
-              COALESCE(CASE WHEN SUM(sil.qty) = 0 THEN 0 ELSE SUM(sil.line_total) / SUM(sil.qty) END, 0) AS avg_price
-            FROM sales_invoice_lines sil
-            INNER JOIN sales_invoices si ON si.id = sil.invoice_id
-            LEFT JOIN users u ON u.id = sil.technician_id
-            WHERE sil.invoice_id = $1 AND sil.technician_id IS NOT NULL
-            GROUP BY DATE(si.issue_datetime), sil.technician_id, sil.item_type_id, u.region_id
-          )
-          INSERT INTO technician_sales_metrics_daily (
-            sales_date,
-            technician_id,
-            item_type_id,
-            region_id,
-            sold_qty,
-            sold_amount,
-            remaining_qty_end_of_day,
-            invoices_count,
-            returns_qty,
-            avg_selling_price,
-            last_sale_at
-          )
-          SELECT
-            ld.sales_date,
-            ld.technician_id,
-            ld.item_type_id,
-            ld.region_id,
-            ld.sold_qty,
-            ld.sold_amount,
-            ld.remaining_qty_end_of_day,
-            ld.invoices_count,
-            0,
-            ld.avg_price,
-            NOW()
-          FROM line_data ld
-          ON CONFLICT (sales_date, technician_id, item_type_id, region_id)
-          DO UPDATE SET
-            sold_qty = technician_sales_metrics_daily.sold_qty + EXCLUDED.sold_qty,
-            sold_amount = technician_sales_metrics_daily.sold_amount + EXCLUDED.sold_amount,
-            remaining_qty_end_of_day = EXCLUDED.remaining_qty_end_of_day,
-            invoices_count = technician_sales_metrics_daily.invoices_count + EXCLUDED.invoices_count,
-            avg_selling_price = CASE
-              WHEN (technician_sales_metrics_daily.sold_qty + EXCLUDED.sold_qty) = 0 THEN 0
-              ELSE (technician_sales_metrics_daily.sold_amount + EXCLUDED.sold_amount)
-                   / (technician_sales_metrics_daily.sold_qty + EXCLUDED.sold_qty)
-            END,
-            last_sale_at = NOW()`,
-        [id]
-      );
+      await this.upsertTechnicianSalesMetricsForInvoice(client, id);
 
       await client.query("COMMIT");
       return this.getSalesInvoice(id);
@@ -746,6 +731,110 @@ export class AccountingService {
     } finally {
       client.release();
     }
+  }
+
+  /**
+   * ERP-005A-4 Phase 5 — extracted from postSalesInvoice's inline write
+   * (no behavior change) so the users-join computation and the INSERT can be
+   * characterization-tested/verified independently. See
+   * computeTechnicianSalesLineData()'s doc comment for why they're split.
+   */
+  private async upsertTechnicianSalesMetricsForInvoice(client: PoolClient, invoiceId: string): Promise<void> {
+    const lineData = await this.computeTechnicianSalesLineData(client, invoiceId);
+    if (lineData.length === 0) return;
+
+    for (const row of lineData) {
+      await client.query(
+        `INSERT INTO technician_sales_metrics_daily (
+           sales_date, technician_id, item_type_id, region_id,
+           sold_qty, sold_amount, remaining_qty_end_of_day, invoices_count,
+           returns_qty, avg_selling_price, last_sale_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, $9, NOW())
+         ON CONFLICT (sales_date, technician_id, item_type_id, region_id)
+         DO UPDATE SET
+           sold_qty = technician_sales_metrics_daily.sold_qty + EXCLUDED.sold_qty,
+           sold_amount = technician_sales_metrics_daily.sold_amount + EXCLUDED.sold_amount,
+           remaining_qty_end_of_day = EXCLUDED.remaining_qty_end_of_day,
+           invoices_count = technician_sales_metrics_daily.invoices_count + EXCLUDED.invoices_count,
+           avg_selling_price = CASE
+             WHEN (technician_sales_metrics_daily.sold_qty + EXCLUDED.sold_qty) = 0 THEN 0
+             ELSE (technician_sales_metrics_daily.sold_amount + EXCLUDED.sold_amount)
+                  / (technician_sales_metrics_daily.sold_qty + EXCLUDED.sold_qty)
+           END,
+           last_sale_at = NOW()`,
+        [
+          row.sales_date, row.technician_id, row.item_type_id, row.region_id,
+          row.sold_qty, row.sold_amount, row.remaining_qty_end_of_day, row.invoices_count,
+          row.avg_price,
+        ]
+      );
+    }
+  }
+
+  /**
+   * ERP-005A-4 Phase 5 — the only part of postSalesInvoice's write path that
+   * touches identity's `users` table (for region_id), split out as its own
+   * SELECT-only method so it's independently testable. `region_id` is
+   * resolved via AccountingIdentityLookupPort instead of a live `users`
+   * JOIN — safe to snapshot because region_id is functionally dependent on
+   * technician_id (one region per user), so grouping without it cannot
+   * change row cardinality; no lock was ever held on `users` (plain LEFT
+   * JOIN in a SELECT), so a separate port call preserves the same isolation
+   * guarantee the original query had.
+   *
+   * Note (pre-existing, out-of-scope defect, NOT introduced or fixed here):
+   * `technician_sales_metrics_daily` has no unique constraint/index matching
+   * (sales_date, technician_id, item_type_id, region_id) anywhere in the
+   * migrations (confirmed: only plain single-column indexes exist on
+   * technician_id/region_id/item_type_id). This means
+   * upsertTechnicianSalesMetricsForInvoice's `ON CONFLICT` INSERT fails
+   * unconditionally today, on every call, independent of this method's
+   * region_id source (JOIN or port) or of the number_sequences defect that
+   * already blocks postSalesInvoice() from being reached at all via
+   * createPostedJournalForSalesInvoice(). This is a second, real production
+   * defect discovered while building this phase's characterization test —
+   * out of scope for ERP-005A-4 (schema change, needs separate approval),
+   * documented in docs/architecture/PHASE-5-ACCOUNTING-CROSS-MODULE-ACCESS.md.
+   * Only this SELECT-only method (the part Phase 5 actually changes) is
+   * characterization-tested; the INSERT above cannot be exercised until that
+   * separate defect is fixed.
+   */
+  private async computeTechnicianSalesLineData(client: PoolClient, invoiceId: string): Promise<Array<{
+    sales_date: string;
+    technician_id: string;
+    item_type_id: string | null;
+    region_id: string | null;
+    sold_qty: number;
+    sold_amount: number;
+    remaining_qty_end_of_day: number;
+    invoices_count: number;
+    avg_price: number;
+  }>> {
+    const result = await client.query(
+      `SELECT
+         DATE(si.issue_datetime) AS sales_date,
+         sil.technician_id,
+         sil.item_type_id,
+         COALESCE(SUM(sil.qty), 0) AS sold_qty,
+         COALESCE(SUM(sil.line_total), 0) AS sold_amount,
+         COALESCE(MAX(sil.qty_after_sale), 0) AS remaining_qty_end_of_day,
+         COALESCE(COUNT(DISTINCT sil.invoice_id), 0) AS invoices_count,
+         COALESCE(CASE WHEN SUM(sil.qty) = 0 THEN 0 ELSE SUM(sil.line_total) / SUM(sil.qty) END, 0) AS avg_price
+       FROM sales_invoice_lines sil
+       INNER JOIN sales_invoices si ON si.id = sil.invoice_id
+       WHERE sil.invoice_id = $1 AND sil.technician_id IS NOT NULL
+       GROUP BY DATE(si.issue_datetime), sil.technician_id, sil.item_type_id`,
+      [invoiceId]
+    );
+
+    const technicianIds = [...new Set(result.rows.map((r: any) => r.technician_id))] as string[];
+    const techniciansById = await getAccountingIdentityLookupPort().getTechniciansByIds(technicianIds);
+
+    return result.rows.map((row: any) => ({
+      ...row,
+      region_id: techniciansById.get(row.technician_id)?.regionId ?? null,
+    }));
   }
 
   async createSalesCreditNote(invoiceId: string, userId?: string): Promise<any> {
@@ -879,18 +968,17 @@ export class AccountingService {
   async listPurchaseBills(): Promise<any[]> {
     const result = await pool.query(
       `SELECT pb.*, s.name AS supplier_name,
-              COALESCE(line_preview.items_summary, '-') AS items_summary
+              COALESCE(line_preview.lines_data, '[]'::json) AS lines_data
        FROM purchase_bills pb
        LEFT JOIN suppliers s ON s.id = pb.supplier_id
        LEFT JOIN LATERAL (
-         SELECT string_agg(COALESCE(NULLIF(TRIM(pbl.description), ''), it.name_ar, 'بند'), ' | ' ORDER BY pbl.id) AS items_summary
+         SELECT json_agg(json_build_object('description', pbl.description, 'item_type_id', pbl.item_type_id) ORDER BY pbl.id) AS lines_data
          FROM purchase_bill_lines pbl
-         LEFT JOIN item_types it ON it.id = pbl.item_type_id
          WHERE pbl.bill_id = pb.id
        ) line_preview ON true
        ORDER BY pb.issue_date DESC, pb.created_at DESC`
     );
-    return result.rows;
+    return this.attachItemsSummary(result.rows);
   }
 
   async getPurchaseBill(id: string): Promise<any> {
@@ -909,17 +997,21 @@ export class AccountingService {
     }
 
     const linesResult = await pool.query(
-      `SELECT pbl.*, it.name_ar AS item_name_ar
-       FROM purchase_bill_lines pbl
-       LEFT JOIN item_types it ON it.id = pbl.item_type_id
-       WHERE pbl.bill_id = $1
-       ORDER BY pbl.id ASC`,
+      `SELECT pbl.* FROM purchase_bill_lines pbl WHERE pbl.bill_id = $1 ORDER BY pbl.id ASC`,
       [id]
     );
 
+    const itemTypeIds = [...new Set(linesResult.rows.map((l: any) => l.item_type_id).filter(Boolean))] as string[];
+    const itemNamesById = await getAccountingCatalogLookupPort().getItemTypeNamesByIds(itemTypeIds);
+
+    const lines = linesResult.rows.map((line: any) => ({
+      ...line,
+      item_name_ar: line.item_type_id ? itemNamesById.get(line.item_type_id) ?? null : null,
+    }));
+
     return {
       ...billResult.rows[0],
-      lines: linesResult.rows,
+      lines,
     };
   }
 
@@ -1539,8 +1631,9 @@ export class AccountingService {
     }
 
     if (filters.regionId) {
-      values.push(filters.regionId);
-      whereParts.push(`u.region_id = $${values.length}`);
+      const technicianIdsInRegion = await getAccountingIdentityLookupPort().getTechnicianIdsInRegion(filters.regionId);
+      values.push([...technicianIdsInRegion]);
+      whereParts.push(`sil.technician_id = ANY($${values.length}::varchar[])`);
     }
 
     if (filters.itemTypeId) {
@@ -1551,10 +1644,7 @@ export class AccountingService {
     const sql = `
       SELECT
         sil.technician_id AS "technicianId",
-        u.full_name AS "technicianName",
         sil.item_type_id AS "itemTypeId",
-        it.name_ar AS "itemTypeName",
-        u.region_id AS "regionId",
         COALESCE(SUM(sil.qty), 0) AS "soldQty",
         COALESCE(SUM(sil.line_total), 0) AS "soldAmount",
         COALESCE(MAX(sil.qty_after_sale), 0) AS "remainingQty",
@@ -1562,15 +1652,28 @@ export class AccountingService {
         0::DOUBLE PRECISION AS "returnQty"
       FROM sales_invoice_lines sil
       INNER JOIN sales_invoices si ON si.id = sil.invoice_id
-      LEFT JOIN users u ON u.id = sil.technician_id
-      LEFT JOIN item_types it ON it.id = sil.item_type_id
       WHERE ${whereParts.join(" AND ")}
-      GROUP BY sil.technician_id, u.full_name, sil.item_type_id, it.name_ar, u.region_id
-      ORDER BY "soldAmount" DESC
+      GROUP BY sil.technician_id, sil.item_type_id
     `;
 
     const result = await pool.query(sql, values);
-    return result.rows;
+
+    const technicianIds = [...new Set(result.rows.map((r: any) => r.technicianId).filter(Boolean))] as string[];
+    const itemTypeIds = [...new Set(result.rows.map((r: any) => r.itemTypeId).filter(Boolean))] as string[];
+    const [techniciansById, itemNamesById] = await Promise.all([
+      getAccountingIdentityLookupPort().getTechniciansByIds(technicianIds),
+      getAccountingCatalogLookupPort().getItemTypeNamesByIds(itemTypeIds),
+    ]);
+
+    const rows = result.rows.map((row: any) => ({
+      ...row,
+      technicianName: row.technicianId ? techniciansById.get(row.technicianId)?.fullName ?? null : null,
+      regionId: row.technicianId ? techniciansById.get(row.technicianId)?.regionId ?? null : null,
+      itemTypeName: row.itemTypeId ? itemNamesById.get(row.itemTypeId) ?? null : null,
+    }));
+
+    rows.sort((a: any, b: any) => Number(b.soldAmount) - Number(a.soldAmount));
+    return rows;
   }
 
   async getTopTechnicians(filters: {
@@ -1637,8 +1740,9 @@ export class AccountingService {
     }
 
     if (filters.regionId) {
-      values.push(filters.regionId);
-      whereParts.push(`u.region_id = $${values.length}`);
+      const technicianIdsInRegion = await getAccountingIdentityLookupPort().getTechnicianIdsInRegion(filters.regionId);
+      values.push([...technicianIdsInRegion]);
+      whereParts.push(`sil.technician_id = ANY($${values.length}::varchar[])`);
     }
 
     if (filters.technicianId) {
@@ -1649,22 +1753,26 @@ export class AccountingService {
     const sql = `
       SELECT
         sil.item_type_id AS "itemTypeId",
-        it.name_ar AS "itemTypeName",
         COALESCE(SUM(sil.qty), 0) AS "soldQty",
         COALESCE(SUM(sil.line_total), 0) AS "soldAmount",
         COALESCE(MAX(sil.qty_after_sale), 0) AS "remainingQty"
       FROM sales_invoice_lines sil
       INNER JOIN sales_invoices si ON si.id = sil.invoice_id
-      LEFT JOIN users u ON u.id = sil.technician_id
-      LEFT JOIN item_types it ON it.id = sil.item_type_id
       WHERE ${whereParts.join(" AND ")}
-      GROUP BY sil.item_type_id, it.name_ar
+      GROUP BY sil.item_type_id
       ORDER BY "soldQty" DESC, "soldAmount" DESC
       LIMIT ${Math.max(1, Math.min(Number(filters.limit ?? 10), 100))}
     `;
 
     const result = await pool.query(sql, values);
-    return result.rows;
+
+    const itemTypeIds = [...new Set(result.rows.map((r: any) => r.itemTypeId).filter(Boolean))] as string[];
+    const itemNamesById = await getAccountingCatalogLookupPort().getItemTypeNamesByIds(itemTypeIds);
+
+    return result.rows.map((row: any) => ({
+      ...row,
+      itemTypeName: row.itemTypeId ? itemNamesById.get(row.itemTypeId) ?? null : null,
+    }));
   }
 }
 

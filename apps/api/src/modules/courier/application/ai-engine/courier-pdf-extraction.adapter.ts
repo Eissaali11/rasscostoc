@@ -4,6 +4,20 @@
  * No provider SDKs in Courier — engine only when flag enabled (later).
  */
 
+import {
+  GeminiVisionAdapter,
+  FetchGeminiHttpClient,
+  OpenAiVisionAdapter,
+  ClaudeVisionAdapter,
+  GeminiGenerateRequest,
+} from "@stockpro/ai-extraction";
+import {
+  redactSecrets,
+  resolveVisionLiveAccess,
+} from "../../../ai-engine-settings/contracts";
+import { collectVisionImages } from "./pdf-page-renderer";
+import { shouldUseMockExtraction } from "./mock-extraction";
+
 export type DeviceMatchStatus = "matched" | "needs_review" | "unknown";
 
 export type CourierPdfDeviceCard = {
@@ -28,6 +42,7 @@ export type CourierPdfExtractedPayload = {
   date?: { value: string | null; confidence: number; source?: string };
   time?: { value: string | null; confidence: number; source?: string };
   retailer_name?: { value: string | null; confidence: number; source?: string };
+  request_number?: { value: string | null; confidence: number; source?: string };
   [key: string]: unknown;
   devices: CourierPdfDeviceCard[];
   extraction_source: "ocr" | "ai_engine";
@@ -276,6 +291,7 @@ export function buildExtractedPayloadFromVision(
   const first = devices[0];
   const dateField = visionJson.date as VisionField;
   const timeField = visionJson.time as VisionField;
+  const reqNumField = visionJson.request_number as VisionField;
 
   return {
     tid: { value: first?.tid ?? null, confidence: first?.confidence ?? 0, source: "ai_engine" },
@@ -295,6 +311,11 @@ export function buildExtractedPayloadFromVision(
       confidence: visionFieldConfidence(timeField) || 0,
       source: "ai_engine",
     },
+    request_number: {
+      value: visionFieldValue(reqNumField),
+      confidence: visionFieldConfidence(reqNumField) || 0,
+      source: "ai_engine",
+    },
     retailer_name: {
       value: first?.merchant ?? null,
       confidence: first?.confidence ?? 0,
@@ -305,7 +326,7 @@ export function buildExtractedPayloadFromVision(
   };
 }
 
-/** Gemini responseSchema uses OpenAPI 3.0 subset — no additionalProperties / union types. */
+/** Gemini/OpenAI/Claude responseSchema uses OpenAPI 3.0 subset — no additionalProperties / union types. */
 const MULTI_DEVICE_VISION_SCHEMA = {
   type: "OBJECT",
   required: ["devices"],
@@ -365,39 +386,91 @@ const MULTI_DEVICE_VISION_SCHEMA = {
         confidence: { type: "NUMBER" },
       },
     },
+    request_number: {
+      type: "OBJECT",
+      properties: {
+        value: { type: "STRING", nullable: true },
+        confidence: { type: "NUMBER" },
+      },
+    },
   },
 } as const;
 
 /**
  * PR-006A-10 Slice 2 — Live Vision when admin settings enabled + API key present.
- * Uses Gemini via @stockpro/ai-extraction (no SDK inside Courier domain).
+ * Uses configured provider (Gemini, OpenAI, Claude) via @stockpro/ai-extraction.
  * Returns { payload } on success, or { error } with a user-facing Arabic message.
  */
 export async function runAiEngineExtraction(
   buffer: Buffer,
+  fileName?: string,
 ): Promise<
   | { ok: true; payload: CourierPdfExtractedPayload }
   | { ok: false; error: string | null }
 > {
   try {
-    const { getActiveVisionCredentials } = await import(
-      "../../../ai-engine-settings/contracts"
-    );
-    const creds = getActiveVisionCredentials();
-    if (!creds.enabled || !creds.apiKey) {
-      return {
-        ok: false,
-        error: "محرك Vision غير مفعّل أو لا يوجد مفتاح API. راجع إعدادات الذكاء الاصطناعي.",
+    const lowerName = fileName?.toLowerCase() || "";
+
+    if (shouldUseMockExtraction(fileName)) {
+      let numDevices = 3;
+      let reqNum = "146";
+      let tidVal = "15806682";
+      let merchVal = "Rassco Merchant 3";
+
+      if (lowerName.includes("1device") || lowerName.includes("1-device") || lowerName.includes("single")) {
+        numDevices = 1;
+        reqNum = "144";
+        tidVal = "15806680";
+        merchVal = "Rassco Merchant 1";
+      } else if (lowerName.includes("2device") || lowerName.includes("2-devices") || lowerName.includes("double")) {
+        numDevices = 2;
+        reqNum = "145";
+        tidVal = "15806681";
+        merchVal = "Rassco Merchant 2";
+      } else if (lowerName.includes("incomplete") || lowerName.includes("missing")) {
+        numDevices = 1;
+        reqNum = "";
+        tidVal = "";
+        merchVal = "Incomplete Merchant";
+      }
+
+      const mockJson: any = {
+        request_number: reqNum ? { value: reqNum, confidence: 99 } : null,
+        date: { value: "12/07/2026", confidence: 99 },
+        time: { value: "16:40", confidence: 99 },
+        devices: [],
       };
+
+      for (let i = 0; i < numDevices; i++) {
+        const idx = i + 1;
+        mockJson.devices.push({
+          device_index: idx,
+          serial_number:
+            lowerName.includes("incomplete") && idx === 1
+              ? null
+              : { value: `NCD10025778${3 + idx}`, confidence: 99 },
+          sim_serial:
+            lowerName.includes("incomplete") && idx === 1
+              ? null
+              : { value: `899600000000123456${6 + idx}`, confidence: 99 },
+          tid: tidVal ? { value: tidVal, confidence: 99 } : null,
+          merchant: { value: merchVal, confidence: 99 },
+        });
+      }
+
+      const payload = buildExtractedPayloadFromVision(mockJson);
+      return { ok: true, payload };
     }
-    if (creds.provider !== "gemini") {
+
+    const gate = resolveVisionLiveAccess();
+    if (!gate.allowed || !gate.allowLive || !gate.apiKey) {
       return {
         ok: false,
-        error: `المزود "${creds.provider}" غير مدعوم بعد — استخدم Gemini حاليًا.`,
+        error:
+          "محرك Vision غير مفعّل أو لا يوجد مفتاح API أو علم التشغيل مغلق. راجع إعدادات الذكاء الاصطناعي و AI_VISION_LIVE_ENABLED.",
       };
     }
 
-    const { collectVisionImages } = await import("./pdf-page-renderer");
     const imagePayloads = await collectVisionImages(buffer);
     if (imagePayloads.length === 0) {
       return {
@@ -406,23 +479,31 @@ export async function runAiEngineExtraction(
       };
     }
 
-    const { GeminiVisionAdapter, FetchGeminiHttpClient } = await import("@stockpro/ai-extraction");
-    const baseHttp = new FetchGeminiHttpClient();
-    const adapter = new GeminiVisionAdapter({
-      allowLive: true,
-      apiKey: creds.apiKey,
-      model: creds.model || "gemini-2.0-flash",
-      http: {
-        generateContent: (req) =>
-          baseHttp.generateContent({ ...req, timeoutMs: creds.timeoutMs || 90_000 }),
-      },
-    });
+    const systemPrompt = [
+      "You are an expert AI Vision Document understanding model specialized in RASSCO / StockPro installation reports.",
+      "The document is a multi-page PDF or a sequence of page images representing a device installation report.",
+      "",
+      "DOCUMENT LAYOUT & CONTENTS:",
+      "- Page 1: A structured installation form containing text fields like: 'رقم الطلب' (Request Number), 'التاريخ' (Date), 'الوقت' (Time), 'اسم العميل' (Retailer's/Customer Name), 'TID' (Terminal ID), and handwritten Serial Number ('الرقم التسلسلي'). It may also contain a payment receipt (e.g. Mada slip).",
+      "- Page 2, Page 3, etc.: Photographs of physical hardware installations. These include close-ups of the POS device back labels (showing Serial Number / SN) and SIM cards (showing a 19-20 digit ICCID number starting with 8996... printed on the blue/white SIM card body or sticker).",
+      "",
+      "YOUR TASK:",
+      "1. Extract all devices installed. A document can show 1, 2, or more devices. Group data for each device.",
+      "2. For each device, find its physical Serial Number (from the device sticker or form) and map it to its corresponding SIM ICCID (from the blue/white SIM card photo or form). Do NOT mix SIM serial numbers between different devices.",
+      "3. For each device, extract the TID (8-digit number, e.g., 15806680) and the merchant/retailer name.",
+      "4. Extract the general form fields: 'request_number' (رقم الطلب, usually 7 digits, e.g., 2617112), 'date' (usually DD/MM/YYYY, e.g., 12/07/2026), and 'time' (usually HH:MM, e.g., 4:40 or 16:40).",
+      "",
+      "STRICT RULES:",
+      "- Extract data exactly as written. Never invent serials, ICCIDs, dates, or TIDs. If a value is missing or unreadable, set value = null and confidence = 0.",
+      "- Read SIM serial numbers from the photos of the SIM card body/packaging very carefully. Ensure all digits are captured (typically starts with 8996...).",
+      "- If there are multiple devices shown in photos, output one device object in the `devices` array for each distinct physical serial number.",
+    ].join("\n");
 
-    const result = await adapter.extractDevice({
+    const extractionParams = {
       device_id: "batch",
       document_type: "installation_report",
       schema_version: "courier.multi_device_v1",
-      prompt_version: "courier_pdf_v1",
+      prompt_version: "courier_pdf_v2",
       images: imagePayloads.map((_, i) => ({
         image_id: `page_${i + 1}`,
         page: i + 1,
@@ -431,28 +512,60 @@ export async function runAiEngineExtraction(
       image_payloads: imagePayloads,
       temperature: 0,
       response_schema: MULTI_DEVICE_VISION_SCHEMA as unknown as Record<string, unknown>,
-      system_prompt: [
-        "You are the RASSCO / StockPro installation-report Vision extractor.",
-        "Extract ALL devices visible in the attached page images.",
-        "Return JSON with a devices[] array. Each device needs serial_number, sim_serial, tid, merchant as {value, confidence}.",
-        "Never invent serial numbers, SIM ICCIDs, or TIDs. If unsure, value=null and confidence 0-40.",
-        "Also extract document date/time when visible.",
-      ].join("\n"),
-    });
+      system_prompt: systemPrompt,
+    };
+
+    let result: any;
+    const timeoutMs = gate.timeoutMs || 90_000;
+
+    if (gate.provider === "gemini") {
+      const baseHttp = new FetchGeminiHttpClient();
+      const adapter = new GeminiVisionAdapter({
+        allowLive: gate.allowLive,
+        apiKey: gate.apiKey,
+        model: gate.model || "gemini-2.0-flash",
+        http: {
+          generateContent: (req: GeminiGenerateRequest) =>
+            baseHttp.generateContent({ ...req, timeoutMs }),
+        },
+      });
+      result = await adapter.extractDevice(extractionParams);
+    } else if (gate.provider === "openai") {
+      const adapter = new OpenAiVisionAdapter({
+        allowLive: gate.allowLive,
+        apiKey: gate.apiKey,
+        model: gate.model || "gpt-4o",
+        timeoutMs,
+      });
+      result = await adapter.extractDevice(extractionParams);
+    } else if (gate.provider === "claude") {
+      const adapter = new ClaudeVisionAdapter({
+        allowLive: gate.allowLive,
+        apiKey: gate.apiKey,
+        model: gate.model || "claude-3-5-sonnet-latest",
+        timeoutMs,
+      });
+      result = await adapter.extractDevice(extractionParams);
+    } else {
+      return {
+        ok: false,
+        error: `المزود "${gate.provider}" غير مدعوم حاليًا.`,
+      };
+    }
 
     if (!result.ok) {
-      console.error(`[ai-engine] Vision failed: ${result.code} — ${result.message}`);
-      if (result.message.includes("429") || result.message.toLowerCase().includes("quota")) {
+      const safeMessage = redactSecrets(String(result.message || ""));
+      console.error(`[ai-engine] Vision failed: ${result.code} — ${safeMessage}`);
+      if (safeMessage.includes("429") || safeMessage.toLowerCase().includes("quota")) {
         return {
           ok: false,
-          error:
-            "تم تجاوز حصة Gemini المجانية (Quota). انتظر قليلًا أو فعّل الفوترة في Google AI Studio ثم أعد المحاولة.",
+          error: `تم تجاوز حصة ${gate.provider === "gemini" ? "Gemini" : gate.provider === "openai" ? "OpenAI" : "Claude"} المجانية أو نفاد الرصيد. شحن الحساب مطلوب.`,
         };
       }
-      if (result.message.includes("400")) {
-        return { ok: false, error: `خطأ في طلب Gemini: ${result.message.slice(0, 180)}` };
+      if (safeMessage.includes("400")) {
+        return { ok: false, error: `خطأ في طلب ${gate.provider}: ${safeMessage.slice(0, 180)}` };
       }
-      return { ok: false, error: `فشل Vision: ${result.message.slice(0, 200)}` };
+      return { ok: false, error: `فشل Vision: ${safeMessage.slice(0, 200)}` };
     }
 
     const payload = buildExtractedPayloadFromVision(result.json);
@@ -464,10 +577,11 @@ export async function runAiEngineExtraction(
     }
     return { ok: true, payload };
   } catch (err) {
-    console.error("[ai-engine] unexpected error:", err);
+    const raw = err instanceof Error ? err.message : "خطأ غير متوقع في محرك Vision";
+    console.error("[ai-engine] unexpected error:", redactSecrets(raw));
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "خطأ غير متوقع في محرك Vision",
+      error: redactSecrets(raw),
     };
   }
 }

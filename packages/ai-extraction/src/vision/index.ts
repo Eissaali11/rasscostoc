@@ -5,5 +5,7 @@ export * from "./confidence.js";
 export * from "./prompts.js";
 export * from "./gemini-http.js";
 export * from "./gemini-adapter.js";
+export * from "./openai-adapter.js";
+export * from "./claude-adapter.js";
 export * from "./fixture-provider.js";
 export * from "./extract-devices.js";

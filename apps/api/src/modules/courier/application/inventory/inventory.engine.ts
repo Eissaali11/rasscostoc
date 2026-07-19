@@ -15,7 +15,6 @@
 import type { IGeneralInventoryRepository } from "./IGeneralInventoryRepository";
 import type { ISerializedInventoryRepository } from "./ISerializedInventoryRepository";
 import type { DeductionContext, DeductionResult } from "./inventory.engine.types";
-import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierInventoryPort } from "../../domain/repositories/ICourierInventoryPort";
 
 export class InventoryEngine {
@@ -73,7 +72,7 @@ export class InventoryEngine {
   ): Promise<{ id: string; username: string; fullName: string } | null> {
     for (const serial of ctx.serialsForCustody) {
       if (!serial?.trim()) continue;
-      const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serial);
+      const candidates = await this.inventoryPort.buildStoredSerialCandidates(serial);
       if (candidates.length === 0) continue;
 
       let item: any = null;

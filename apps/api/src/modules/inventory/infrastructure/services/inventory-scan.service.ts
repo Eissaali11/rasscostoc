@@ -6,12 +6,12 @@ import {
   systemLogs,
   technicianMovingInventoryEntries,
   techniciansInventory,
-  users,
   warehouseInventory,
   warehouseInventoryEntries,
   warehouses,
 } from "@shared/schema";
 import { db } from "@core/config/db";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export type ScanSource = "scanner" | "mobile";
 export type ScanPackagingType = "box" | "unit";
@@ -545,15 +545,7 @@ export class InventoryScanService {
       .limit(1);
 
     if (!legacyInventory) {
-      const [techUser] = await tx
-        .select({
-          fullName: users.fullName,
-          city: users.city,
-          regionId: users.regionId,
-        })
-        .from(users)
-        .where(eq(users.id, args.technicianId))
-        .limit(1);
+      const techUser = await getInventoryIdentityPorts().getUserById(args.technicianId);
 
       const [created] = await tx
         .insert(techniciansInventory)
@@ -638,18 +630,12 @@ export class InventoryScanService {
   }
 
   private async assertTechnicianExists(technicianId: string) {
-    const [technician] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(
-        and(
-          eq(users.id, technicianId),
-          or(eq(users.role, "technician"), eq(users.role, "employee")),
-        ),
-      )
-      .limit(1);
+    const eligibility = await getInventoryIdentityPorts().verifyTechnicianEligibility(technicianId, [
+      "technician",
+      "employee",
+    ]);
 
-    if (!technician) {
+    if (!eligibility.eligible) {
       throw new InventoryScanError(404, "المندوب غير موجود");
     }
   }

@@ -16,6 +16,9 @@ import { isCompletedStatus } from "../guards/CompletionGuard";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionCompletedEvent } from "@core/events/events";
 import { tracer } from "@core/telemetry/tracer";
+import { logger } from "@core/telemetry/logger";
+
+const MODULE = "CourierWorkflow";
 
 /** Statuses that close without inventory deduction */
 const CLOSE_WITHOUT_DEDUCTION_STATUSES = new Set([
@@ -60,16 +63,16 @@ export class CourierWorkflow {
 
         case WorkflowDecision.CLOSE_WITHOUT_DEDUCTION:
           // No inventory action — future: emit RequestClosedEvent
-          console.log(`[Workflow] Request ${requestId} closed without deduction. Status: ${status}`);
+          logger.info({ message: `Request ${requestId} closed without deduction`, module: MODULE, action: "decide", metadata: { requestId, status } });
           break;
 
         case WorkflowDecision.MARK_IN_PROGRESS:
           // No terminal action — future: schedule follow-up
-          console.log(`[Workflow] Request ${requestId} marked in-progress. Status: ${status}`);
+          logger.info({ message: `Request ${requestId} marked in-progress`, module: MODULE, action: "decide", metadata: { requestId, status } });
           break;
 
         case WorkflowDecision.UNKNOWN:
-          console.warn(`[Workflow] Unrecognized status "${status}" for request ${requestId}. No action taken.`);
+          logger.warn({ message: `Unrecognized status "${status}" for request ${requestId}. No action taken`, module: MODULE, action: "decide", metadata: { requestId, status } });
           break;
       }
 

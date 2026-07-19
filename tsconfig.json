@@ -7,13 +7,15 @@
     "packages/kernel/src/**/*",
     "packages/observability/src/**/*",
     "packages/contracts/src/**/*",
-    "packages/testing/src/**/*"
+    "packages/testing/src/**/*",
+    "packages/ai-extraction/src/**/*"
   ],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
+    "target": "ES2022",
     "module": "ESNext",
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
@@ -38,7 +40,9 @@
       "@stockpro/contracts": ["./packages/contracts/src/index.ts"],
       "@stockpro/contracts/*": ["./packages/contracts/src/*"],
       "@stockpro/testing": ["./packages/testing/src/index.ts"],
-      "@stockpro/testing/*": ["./packages/testing/src/*"]
+      "@stockpro/testing/*": ["./packages/testing/src/*"],
+      "@stockpro/ai-extraction": ["./packages/ai-extraction/src/index.ts"],
+      "@stockpro/ai-extraction/*": ["./packages/ai-extraction/src/*"]
     }
   }
 }

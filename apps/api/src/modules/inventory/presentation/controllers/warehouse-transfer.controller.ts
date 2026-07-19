@@ -1,11 +1,16 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "@core/errors/errorHandler";
 import type { WarehouseTransferService } from "../../infrastructure/services/warehouse-transfer.service";
-import { inventoryContainer } from "@server/composition/inventory.container";
+import type {
+  AcceptWarehouseTransferUseCase,
+  RejectWarehouseTransferUseCase,
+} from "../../application/inventory/use-cases/WarehouseTransferOperations.use-case";
 
 export class WarehouseTransferController {
   constructor(
-    private readonly warehouseTransferService: WarehouseTransferService
+    private readonly warehouseTransferService: WarehouseTransferService,
+    private readonly acceptWarehouseTransferUseCase: AcceptWarehouseTransferUseCase,
+    private readonly rejectWarehouseTransferUseCase: RejectWarehouseTransferUseCase
   ) {}
 
   updateStatus = asyncHandler(async (req: Request, res: Response) => {
@@ -23,14 +28,14 @@ export class WarehouseTransferController {
 
     const status = String(req.body?.status || "").toLowerCase();
     if (status === "approved" || status === "accepted") {
-      const result = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
+      const result = await this.acceptWarehouseTransferUseCase.execute({
         transferId: id,
       });
       return res.json(result);
     }
     if (status === "rejected") {
       const reason = typeof req.body?.reason === "string" ? req.body.reason : "Rejected via status endpoint";
-      const result = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
+      const result = await this.rejectWarehouseTransferUseCase.execute({
         transferId: id,
         reason,
       });
@@ -53,7 +58,7 @@ export class WarehouseTransferController {
       return res.status(403).json({ message: "غير مصرح لك بقبول هذا الطلب" });
     }
 
-    const result = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
+    const result = await this.acceptWarehouseTransferUseCase.execute({
       transferId: id,
     });
     res.json(result);
@@ -73,7 +78,7 @@ export class WarehouseTransferController {
     }
 
     const { reason } = req.body;
-    const result = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
+    const result = await this.rejectWarehouseTransferUseCase.execute({
       transferId: id,
       reason,
     });

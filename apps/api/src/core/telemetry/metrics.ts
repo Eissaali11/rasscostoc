@@ -4,7 +4,7 @@
  * Implements lightweight in-memory metrics collection for system performance.
  */
 
-import type { Span } from "./tracer";
+import type { Span } from "./span.types";
 
 export interface MetricValue {
   value: number;
@@ -76,6 +76,58 @@ class MetricsRegistry {
 }
 
 export const metrics = new MetricsRegistry();
+
+let metricsIntervalId: NodeJS.Timeout | null = null;
+
+/**
+ * Collects current process memory, CPU usage metrics, and database pool health.
+ */
+export function collectSystemMetrics(): void {
+  const mem = process.memoryUsage();
+  metrics.setGauge("memory_heap_used_bytes", mem.heapUsed);
+  metrics.setGauge("memory_heap_total_bytes", mem.heapTotal);
+  metrics.setGauge("memory_rss_bytes", mem.rss);
+  metrics.setGauge("memory_external_bytes", mem.external);
+
+  const cpu = process.cpuUsage();
+  metrics.setGauge("cpu_user_ms", Math.round(cpu.user / 1000));
+  metrics.setGauge("cpu_system_ms", Math.round(cpu.system / 1000));
+
+  // Dynamically query database connection pool stats to prevent circular imports
+  import("../database/connection")
+    .then(({ getPool }) => {
+      const pool = getPool();
+      if (pool) {
+        metrics.setGauge("db_pool_total_connections", pool.totalCount || 0);
+        metrics.setGauge("db_pool_idle_connections", pool.idleCount || 0);
+        metrics.setGauge("db_pool_waiting_queries", pool.waitingCount || 0);
+      }
+    })
+    .catch(() => {
+      // Ignore if database/pool is not initialized yet (e.g. during test runs)
+    });
+}
+
+/**
+ * Starts periodic system metrics collection.
+ */
+export function startSystemMetricsCollection(intervalMs = 10000): void {
+  if (metricsIntervalId) return;
+  collectSystemMetrics(); // Initial collect
+  metricsIntervalId = setInterval(() => {
+    collectSystemMetrics();
+  }, intervalMs);
+}
+
+/**
+ * Stops periodic system metrics collection.
+ */
+export function stopSystemMetricsCollection(): void {
+  if (metricsIntervalId) {
+    clearInterval(metricsIntervalId);
+    metricsIntervalId = null;
+  }
+}
 
 /**
  * Automap trace spans to specific performance metrics based on name.

@@ -1,9 +1,8 @@
 import { db } from "@core/config/db";
-import { 
+import {
   inventoryItems,
   transactions,
   regions,
-  users,
   systemLogs,
   inventoryRequests,
   warehouseTransfers,
@@ -17,8 +16,9 @@ import {
   type InsertSystemLog,
   type RegionWithStats
 } from "@shared/schema";
-import { eq, desc, and, or, sql, count, gte, lte } from "drizzle-orm";
+import { eq, desc, and, or, sql, count, gte, lte, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 /**
  * System Analytics Service
@@ -32,7 +32,7 @@ export class SystemAnalyticsService {
   async getDashboardStats(): Promise<DashboardStats> {
     // Get total counts
     const [itemsCount] = await db.select({ count: count() }).from(inventoryItems);
-    const [usersCount] = await db.select({ count: count() }).from(users);
+    const userStats = await getInventoryIdentityPorts().getActiveUserStats();
     const [regionsCount] = await db.select({ count: count() }).from(regions);
     const [todayTransactions] = await db
       .select({ count: count() })
@@ -52,7 +52,7 @@ export class SystemAnalyticsService {
 
     return {
       totalItems: itemsCount.count,
-      totalUsers: usersCount.count,
+      totalUsers: userStats.total,
       totalRegions: regionsCount.count,
       lowStockItems: lowStockItems[0].count,
       outOfStockItems: outOfStockItems[0].count,
@@ -64,15 +64,18 @@ export class SystemAnalyticsService {
    * Get admin statistics
    */
   async getAdminStats(): Promise<AdminStats> {
-    const [stats] = await db
-      .select({
-        totalUsers: count(users.id),
-        totalActiveUsers: sql<number>`COUNT(CASE WHEN ${users.isActive} = true THEN 1 END)`,
-        totalTechnicians: sql<number>`COUNT(CASE WHEN ${users.role} = 'technician' THEN 1 END)`,
-        totalSupervisors: sql<number>`COUNT(CASE WHEN ${users.role} = 'supervisor' THEN 1 END)`,
-        totalAdmins: sql<number>`COUNT(CASE WHEN ${users.role} = 'admin' THEN 1 END)`
-      })
-      .from(users);
+    const ports = getInventoryIdentityPorts();
+    const [userStats, countsByRole] = await Promise.all([
+      ports.getActiveUserStats(),
+      ports.getUserCountsByRole(),
+    ]);
+    const stats = {
+      totalUsers: userStats.total,
+      totalActiveUsers: userStats.active,
+      totalTechnicians: countsByRole["technician"] ?? 0,
+      totalSupervisors: countsByRole["supervisor"] ?? 0,
+      totalAdmins: countsByRole["admin"] ?? 0,
+    };
 
     const [regionsCount] = await db.select({ count: count() }).from(regions);
     const [transactionsCount] = await db.select({ count: count() }).from(transactions);
@@ -118,7 +121,7 @@ export class SystemAnalyticsService {
    * Get recent transactions with details
    */
   async getRecentTransactions(limit: number = 10): Promise<TransactionWithDetails[]> {
-    const transactionsWithDetails = await db
+    const rows = await db
       .select({
         id: transactions.id,
         type: transactions.type,
@@ -128,19 +131,20 @@ export class SystemAnalyticsService {
         userId: transactions.userId,
         createdAt: transactions.createdAt,
         itemName: inventoryItems.name,
-        userName: users.fullName,
-        userRole: users.role
       })
       .from(transactions)
       .leftJoin(inventoryItems, eq(transactions.itemId, inventoryItems.id))
-      .leftJoin(users, eq(transactions.userId, users.id))
       .orderBy(desc(transactions.createdAt))
       .limit(limit);
 
-    return transactionsWithDetails.map((row) => ({
+    const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds as string[]);
+
+    return rows.map((row) => ({
       ...row,
       itemName: row.itemName || undefined,
-      userName: row.userName || undefined,
+      userName: (row.userId && usersById.get(row.userId)?.fullName) || undefined,
+      userRole: row.userId ? usersById.get(row.userId)?.role : undefined,
     }));
   }
 
@@ -148,28 +152,47 @@ export class SystemAnalyticsService {
    * Get regions with statistics
    */
   async getRegions(): Promise<RegionWithStats[]> {
-    const regionsWithStats = await db
-      .select({
+    const [regionRows, warehouseCountRows, userCountsByRegionAndRole] = await Promise.all([
+      db.select({
         id: regions.id,
         name: regions.name,
         description: regions.description,
         isActive: regions.isActive,
         createdAt: regions.createdAt,
         updatedAt: regions.updatedAt,
-        totalUsers: sql<number>`COALESCE(COUNT(DISTINCT ${users.id}), 0)`,
-        totalWarehouses: sql<number>`COALESCE(COUNT(DISTINCT ${warehouses.id}), 0)`,
-        totalTechnicians: sql<number>`COALESCE(COUNT(CASE WHEN ${users.role} = 'technician' THEN 1 END), 0)`,
-        totalSupervisors: sql<number>`COALESCE(COUNT(CASE WHEN ${users.role} = 'supervisor' THEN 1 END), 0)`,
-        itemCount: sql<number>`0`,
-        totalQuantity: sql<number>`0`,
-        lowStockCount: sql<number>`0`,
-      })
-      .from(regions)
-      .leftJoin(users, eq(regions.id, users.regionId))
-      .leftJoin(warehouses, eq(regions.id, warehouses.regionId))
-      .groupBy(regions.id);
+      }).from(regions),
+      db.select({
+        regionId: warehouses.regionId,
+        totalWarehouses: sql<number>`COUNT(DISTINCT ${warehouses.id})`,
+      }).from(warehouses).groupBy(warehouses.regionId),
+      getInventoryIdentityPorts().getUserCountsByRegionAndRole(),
+    ]);
 
-    return regionsWithStats;
+    const warehouseCountByRegion = new Map(warehouseCountRows.map((r) => [r.regionId, Number(r.totalWarehouses)]));
+
+    const usersByRegion = new Map<string, { total: number; technicians: number; supervisors: number }>();
+    for (const row of userCountsByRegionAndRole) {
+      if (!row.regionId) continue;
+      const entry = usersByRegion.get(row.regionId) ?? { total: 0, technicians: 0, supervisors: 0 };
+      entry.total += row.count;
+      if (row.role === "technician") entry.technicians += row.count;
+      if (row.role === "supervisor") entry.supervisors += row.count;
+      usersByRegion.set(row.regionId, entry);
+    }
+
+    return regionRows.map((region) => {
+      const userStats = usersByRegion.get(region.id) ?? { total: 0, technicians: 0, supervisors: 0 };
+      return {
+        ...region,
+        totalUsers: userStats.total,
+        totalWarehouses: warehouseCountByRegion.get(region.id) ?? 0,
+        totalTechnicians: userStats.technicians,
+        totalSupervisors: userStats.supervisors,
+        itemCount: 0,
+        totalQuantity: 0,
+        lowStockCount: 0,
+      };
+    });
   }
 
   /**
@@ -287,9 +310,12 @@ export class SystemAnalyticsService {
       .$dynamic();
 
     if (regionId) {
-      query = query
-        .leftJoin(users, eq(inventoryRequests.technicianId, users.id))
-        .where(eq(users.regionId, regionId));
+      const technicianIdsInRegion = await getInventoryIdentityPorts().getUserIdsByRegion(regionId);
+      query = query.where(
+        technicianIdsInRegion.length > 0
+          ? inArray(inventoryRequests.technicianId, technicianIdsInRegion as string[])
+          : sql`false`
+      );
     }
 
     const [summary] = await query;
@@ -311,19 +337,38 @@ export class SystemAnalyticsService {
         sql`${inventoryRequests.createdAt} IS NOT NULL`
       ));
 
-    // Most active regions
-    const mostActiveRegions = await db
-      .select({
-        regionId: users.regionId,
-        regionName: regions.name,
-        activityCount: count(systemLogs.id)
-      })
+    // Most active regions — grouped by systemLogs.userId only (no join), then
+    // each user's regionId is resolved via the identity port and aggregated
+    // in application code, since users is not owned by inventory.
+    const activityByUserIdRows = await db
+      .select({ userId: systemLogs.userId, activityCount: count(systemLogs.id) })
       .from(systemLogs)
-      .leftJoin(users, eq(systemLogs.userId, users.id))
-      .leftJoin(regions, eq(users.regionId, regions.id))
-      .groupBy(users.regionId, regions.name)
-      .orderBy(desc(count(systemLogs.id)))
-      .limit(5);
+      .groupBy(systemLogs.userId);
+
+    const activityUserIds = activityByUserIdRows.map((r) => r.userId).filter(Boolean) as string[];
+    const usersForActivity = await getInventoryIdentityPorts().getUsersByIds(activityUserIds);
+
+    const activityByRegion = new Map<string, number>();
+    for (const row of activityByUserIdRows) {
+      const regionId = row.userId ? usersForActivity.get(row.userId)?.regionId : null;
+      if (!regionId) continue;
+      activityByRegion.set(regionId, (activityByRegion.get(regionId) ?? 0) + Number(row.activityCount));
+    }
+
+    const activeRegionIds = [...activityByRegion.keys()];
+    const regionNameRows = activeRegionIds.length > 0
+      ? await db.select({ id: regions.id, name: regions.name }).from(regions).where(inArray(regions.id, activeRegionIds))
+      : [];
+    const regionNameById = new Map(regionNameRows.map((r) => [r.id, r.name]));
+
+    const mostActiveRegions = [...activityByRegion.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([regionId, activityCount]) => ({
+        regionId,
+        regionName: regionNameById.get(regionId),
+        activityCount,
+      }));
 
     // Top users by activity
     const topUsersByActivity = await db
@@ -398,12 +443,12 @@ export class SystemAnalyticsService {
   async getPublicStock() {
     const [warehousesCount] = await db.select({ count: count() }).from(warehouses);
     const [itemTypesCount] = await db.select({ count: count() }).from(itemTypes).where(and(eq(itemTypes.isActive, true), eq(itemTypes.isVisible, true)));
-    const [techniciansCount] = await db.select({ count: count() }).from(users).where(eq(users.role, "technician"));
-    
-    const citiesResult = await db.select({
-      count: sql<number>`COUNT(DISTINCT ${users.city})`
-    }).from(users).where(sql`${users.city} IS NOT NULL AND ${users.city} != ''`);
-    const citiesCount = Number(citiesResult[0]?.count || 0);
+    const identityPorts = getInventoryIdentityPorts();
+    const [countsByRole, citiesCount] = await Promise.all([
+      identityPorts.getUserCountsByRole(),
+      identityPorts.getDistinctUserCityCount(),
+    ]);
+    const techniciansCount = { count: countsByRole["technician"] ?? 0 };
 
     const products = await db.select()
       .from(itemTypes)

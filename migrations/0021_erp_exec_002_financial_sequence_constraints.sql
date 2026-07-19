@@ -1,0 +1,2 @@
+ALTER TABLE "number_sequences" ADD CONSTRAINT "number_sequences_scope_year_unique" UNIQUE("scope","year");--> statement-breakpoint
+ALTER TABLE "technician_sales_metrics_daily" ADD CONSTRAINT "technician_sales_metrics_daily_date_tech_item_region_unique" UNIQUE("sales_date","technician_id","item_type_id","region_id");

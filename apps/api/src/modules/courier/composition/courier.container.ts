@@ -7,6 +7,10 @@ import { streamExportWorkbook } from "../application/excel.helper";
 import type { ResultMetadata } from "@core/jobs/jobs.types";
 import fs from "fs";
 import path from "path";
+import { InventoryEngine } from "../application/inventory/inventory.engine";
+import { DevicesServiceAdapter } from "../infrastructure/adapters/DevicesServiceAdapter";
+import { SerializedItemsAdapter } from "../infrastructure/adapters/SerializedItemsAdapter";
+import { CourierInventoryPortAdapter } from "@server/composition/courier-inventory.adapter";
 
 let isInitialized = false;
 let courierControllerInstance: CourierController | null = null;
@@ -95,6 +99,7 @@ export function bootstrapCourierModule(): CourierController {
   }
 
   const repository = new DrizzleCourierRepository();
+  const inventoryPort = new CourierInventoryPortAdapter(repository);
   const uow = new DrizzleCourierUnitOfWork();
   const service = new CourierService(
     uow,
@@ -102,7 +107,7 @@ export function bootstrapCourierModule(): CourierController {
     repository,
     repository,
     repository,
-    repository
+    inventoryPort
   );
 
   registerCourierJobHandlers(repository);
@@ -113,15 +118,11 @@ export function bootstrapCourierModule(): CourierController {
   return courierControllerInstance;
 }
 
-import { InventoryEngine } from "../application/inventory/inventory.engine";
-import { DevicesServiceAdapter } from "../infrastructure/adapters/DevicesServiceAdapter";
-import { SerializedItemsAdapter } from "../infrastructure/adapters/SerializedItemsAdapter";
-
 export function createInventoryEngine(): InventoryEngine {
   const repository = new DrizzleCourierRepository();
   return new InventoryEngine(
     new DevicesServiceAdapter(),
     new SerializedItemsAdapter(),
-    repository
+    new CourierInventoryPortAdapter(repository)
   );
 }

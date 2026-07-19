@@ -1,6 +1,14 @@
+/**
+ * Outbox Worker — ERP-008 Phase 8-A
+ * All log output now routes through the canonical structured logger.
+ */
 import { outboxRepository } from "./outbox.repository";
 import { EventBus } from "../events/event-bus";
 import { randomUUID } from "crypto";
+import { logger } from "@core/telemetry/logger";
+import { metrics } from "@core/telemetry/metrics";
+
+const MODULE = "OutboxWorker";
 
 export class OutboxWorker {
   private readonly workerId: string;
@@ -21,16 +29,18 @@ export class OutboxWorker {
   start(): void {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.info(`[OutboxWorker] Started Outbox Worker instance: ${this.workerId}`);
-    
+    logger.info({ message: `Started Outbox Worker instance: ${this.workerId}`, module: MODULE, action: "start" });
+
     // Run immediately on startup, then trigger interval
-    this.runOnce().catch(err => console.error("[OutboxWorker] Error during initial run:", err));
-    
+    this.runOnce().catch(err =>
+      logger.error({ message: "Error during initial run", module: MODULE, action: "start", error: err })
+    );
+
     this.intervalId = setInterval(async () => {
       try {
         await this.runOnce();
       } catch (err) {
-        console.error("[OutboxWorker] Error during loop run:", err);
+        logger.error({ message: "Error during loop run", module: MODULE, action: "pollLoop", error: err });
       }
     }, this.intervalMs);
   }
@@ -45,7 +55,7 @@ export class OutboxWorker {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    console.info(`[OutboxWorker] Stopped Outbox Worker instance: ${this.workerId}`);
+    logger.info({ message: `Stopped Outbox Worker instance: ${this.workerId}`, module: MODULE, action: "stop" });
   }
 
   /**
@@ -58,7 +68,12 @@ export class OutboxWorker {
       return;
     }
 
-    console.log(`[OutboxWorker] Instance ${this.workerId} processing ${pendingEvents.length} outbox event(s).`);
+    logger.info({
+      message: `Processing ${pendingEvents.length} outbox event(s)`,
+      module: MODULE,
+      action: "processEvents",
+      metadata: { workerId: this.workerId, count: pendingEvents.length },
+    });
 
     const eventBus = EventBus.getInstance();
 
@@ -81,18 +96,38 @@ export class OutboxWorker {
 
         // Success - mark as PUBLISHED
         await outboxRepository.markAsPublished(record.id);
-        console.log(`[OutboxWorker] Event ${record.id} (${record.eventName}) published successfully.`);
+        metrics.incrementCounter("outbox_events_published_total");
+        logger.info({
+          message: `Event published successfully`,
+          module: MODULE,
+          action: "publishEvent",
+          metadata: { eventId: record.id, eventName: record.eventName },
+        });
       } catch (err: any) {
         const errorMsg = err.message || String(err);
         const nextRetryCount = record.retryCount + 1;
-        
-        console.error(`[OutboxWorker] Event ${record.id} (${record.eventName}) failed (Attempt ${nextRetryCount}):`, errorMsg);
+
+        logger.warn({
+          message: `Event failed (Attempt ${nextRetryCount})`,
+          module: MODULE,
+          action: "eventFailed",
+          metadata: { eventId: record.id, eventName: record.eventName, attempt: nextRetryCount },
+          error: err,
+        });
+
+        metrics.incrementCounter("outbox_events_failed_total");
 
         if (nextRetryCount >= 3) {
           // Dead letter queue
           await outboxRepository.markAsDead(record.id, errorMsg);
-          console.error(`[OutboxWorker] Event ${record.id} marked as DEAD (exceeded max retries).`);
-          
+          metrics.incrementCounter("outbox_events_dead_total");
+          logger.error({
+            message: `Event marked as DEAD (exceeded max retries)`,
+            module: MODULE,
+            action: "deadLetter",
+            metadata: { eventId: record.id, eventName: record.eventName },
+          });
+
           // Publish dead letter notifications to EventBus if critical
           try {
             if (record.eventName === "ExecutionCompletedEvent") {
@@ -108,7 +143,13 @@ export class OutboxWorker {
               );
             }
           } catch (dlqErr) {
-            console.error("[OutboxWorker] Failed to publish dead-letter notification:", dlqErr);
+            logger.error({
+              message: "Failed to publish dead-letter notification",
+              module: MODULE,
+              action: "deadLetter",
+              metadata: { eventId: record.id },
+              error: dlqErr,
+            });
           }
         } else {
           // Calculate interval backoff:

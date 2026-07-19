@@ -10,6 +10,9 @@ import { db } from "@server/core/config/db";
 import { drizzleCourierRepository } from "../repositories/drizzle-courier.repository";
 import { idempotencyService } from "@core/idempotency/idempotency.service";
 import { metrics } from "@core/telemetry/metrics";
+import { logger } from "@core/telemetry/logger";
+
+const MODULE = "CourierSagaSubscriber";
 
 export class CourierSagaSubscriber {
   /**
@@ -29,9 +32,12 @@ export class CourierSagaSubscriber {
           event.id,
           "CourierSagaSubscriber",
           async () => {
-            console.warn(
-              `[CourierSagaSubscriber] Compensating transaction triggered for request ${requestId}. Reverting status to In Progress...`
-            );
+            logger.warn({
+              message: `Compensating transaction triggered for request ${requestId}. Reverting status to In Progress`,
+              module: MODULE,
+              action: "compensate",
+              metadata: { requestId, actorId, errors },
+            });
 
             try {
               await db.transaction(async (tx) => {
@@ -59,22 +65,31 @@ export class CourierSagaSubscriber {
                   }, tx);
 
                   metrics.incrementCounter("saga_compensations_total");
-                  console.log(
-                    `[CourierSagaSubscriber] Eventual consistency restored: Request ${requestId} reverted to In Progress.`
-                  );
+                  logger.info({
+                    message: `Eventual consistency restored: Request ${requestId} reverted to In Progress`,
+                    module: MODULE,
+                    action: "compensate",
+                    metadata: { requestId },
+                  });
                 } else {
-                  console.warn(
-                    `[CourierSagaSubscriber] No execution record found to revert for request ${requestId}.`
-                  );
+                  logger.warn({
+                    message: `No execution record found to revert for request ${requestId}`,
+                    module: MODULE,
+                    action: "compensate",
+                    metadata: { requestId },
+                  });
                 }
               });
 
               return { success: true };
             } catch (sagaErr) {
-              console.error(
-                `[CourierSagaSubscriber] Critical error while executing compensating transaction for request ${requestId}:`,
-                sagaErr
-              );
+              logger.error({
+                message: `Critical error while executing compensating transaction for request ${requestId}`,
+                module: MODULE,
+                action: "compensate",
+                metadata: { requestId },
+                error: sagaErr,
+              });
               throw sagaErr;
             }
           }

@@ -1,8 +1,9 @@
 import { db } from "@core/config/db";
 import { AppError } from "@core/errors/AppError";
-import { items, inventoryTransactions, itemHistoryLogs, itemTypes, users, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
+import { items, inventoryTransactions, itemHistoryLogs, itemTypes, custodyMovements, technicianMovingInventoryEntries } from "@shared/schema";
 import { eq, and, inArray, sql, or } from "drizzle-orm";
 import { SerialRecognitionService } from "./serial-recognition.service";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class SerializedItemsService {
   private async syncMovingInventory(tx: any, technicianId: string, itemTypeId: string, delta: number) {
@@ -325,7 +326,7 @@ export class SerializedItemsService {
   async lookup(serialNumber: string) {
     const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serialNumber);
 
-    const [item] = await db
+    const [itemRow] = await db
       .select({
         id: items.id,
         serialNumber: items.serialNumber,
@@ -333,16 +334,14 @@ export class SerializedItemsService {
         status: items.status,
         carrierName: items.carrierName,
         simPackageType: items.simPackageType,
+        currentOwnerId: items.currentOwnerId,
         createdAt: items.createdAt,
         updatedAt: items.updatedAt,
         itemTypeNameAr: itemTypes.nameAr,
         itemTypeNameEn: itemTypes.nameEn,
-        ownerName: users.fullName,
-        ownerUsername: users.username,
       })
       .from(items)
       .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
-      .leftJoin(users, eq(items.currentOwnerId, users.id))
       .where(
         or(
           inArray(items.serialNumber, candidates),
@@ -351,24 +350,39 @@ export class SerializedItemsService {
       )
       .limit(1);
 
-    if (!item) {
+    if (!itemRow) {
       return null;
     }
 
     // Get audit trail history
-    const history = await db
+    const historyRows = await db
       .select({
         id: itemHistoryLogs.id,
         fromStatus: itemHistoryLogs.fromStatus,
         toStatus: itemHistoryLogs.toStatus,
         changedAt: itemHistoryLogs.changedAt,
         notes: itemHistoryLogs.notes,
-        changedByName: users.fullName,
+        changedById: itemHistoryLogs.changedById,
       })
       .from(itemHistoryLogs)
-      .leftJoin(users, eq(itemHistoryLogs.changedById, users.id))
-        .where(eq(itemHistoryLogs.itemId, item.id))
-        .orderBy(itemHistoryLogs.changedAt);
+      .where(eq(itemHistoryLogs.itemId, itemRow.id))
+      .orderBy(itemHistoryLogs.changedAt);
+
+    const userIds = [
+      ...new Set([itemRow.currentOwnerId, ...historyRows.map((h) => h.changedById)].filter(Boolean)),
+    ] as string[];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(userIds);
+
+    const item = {
+      ...itemRow,
+      ownerName: itemRow.currentOwnerId ? usersById.get(itemRow.currentOwnerId)?.fullName : undefined,
+      ownerUsername: itemRow.currentOwnerId ? usersById.get(itemRow.currentOwnerId)?.username : undefined,
+    };
+
+    const history = historyRows.map((h) => ({
+      ...h,
+      changedByName: h.changedById ? usersById.get(h.changedById)?.fullName : undefined,
+    }));
 
     return {
       ...item,
@@ -396,6 +410,138 @@ export class SerializedItemsService {
           inArray(items.status, ["IN_TRANSIT_CUSTODY", "RECEIVED_BY_TECHNICIAN"])
         )
       );
+  }
+
+  /** Optional external tx — joins courier Unit-of-Work when provided. */
+  private client(tx?: any) {
+    return tx || db;
+  }
+
+  /**
+   * Find serialized item by serial (prefixed or stored). Used by courier via composition adapter.
+   */
+  async findBySerial(serial: string, tx?: any): Promise<any | null> {
+    return SerialRecognitionService.findItemBySerial(serial, this.client(tx));
+  }
+
+  /**
+   * Transfer existing item into technician custody / in-transit (courier receiving & start-task).
+   * Must accept courier UoW `tx` to preserve atomicity with courier request writes.
+   */
+  async transferCustodyToTechnician(
+    params: {
+      itemId: string;
+      technicianId: string;
+      requestId: number;
+      oldStatus: string;
+      newStatus: "RECEIVED_BY_TECHNICIAN" | "IN_TRANSIT";
+    },
+    tx?: any
+  ): Promise<void> {
+    const client = this.client(tx);
+
+    await client
+      .update(items)
+      .set({
+        status: params.newStatus,
+        currentOwnerId: params.technicianId,
+        updatedAt: new Date(),
+      })
+      .where(eq(items.id, params.itemId));
+
+    await client.insert(inventoryTransactions).values({
+      itemId: params.itemId,
+      transactionType: "TRANSFER",
+      destinationOwnerId: params.technicianId,
+      orderNumber: params.requestId.toString(),
+      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
+        ? `استلام عهدة بالطلب رقم ${params.requestId}`
+        : `بدء مهمة التوصيل بالطلب رقم ${params.requestId}`,
+    });
+
+    await client.insert(itemHistoryLogs).values({
+      itemId: params.itemId,
+      fromStatus: params.oldStatus,
+      toStatus: params.newStatus,
+      changedById: params.technicianId,
+      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
+        ? `تحويل عهدة للفني بالمسح الضوئي - طلب رقم ${params.requestId}`
+        : `مغادرة المستودع والبدء بالتوصيل - طلب رقم ${params.requestId}`,
+    });
+  }
+
+  /**
+   * Mint a new serialized item and assign to technician custody (courier scan mint path).
+   * Same-db atomic with courier UoW when `tx` is supplied.
+   */
+  async mintAndAssignToTechnician(
+    params: {
+      serial: string;
+      itemTypeId: string;
+      carrierName: string | null;
+      technicianId: string;
+      requestId: number;
+    },
+    tx?: any
+  ): Promise<{ id: string; serialNumber: string }> {
+    const client = this.client(tx);
+
+    const [newItem] = await client
+      .insert(items)
+      .values({
+        itemTypeId: params.itemTypeId,
+        serialNumber: params.serial,
+        barcode: params.serial,
+        status: "RECEIVED_BY_TECHNICIAN",
+        currentOwnerId: params.technicianId,
+        warehouseId: null,
+        carrierName: params.carrierName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    if (newItem) {
+      await client.insert(inventoryTransactions).values({
+        itemId: newItem.id,
+        transactionType: "INTAKE",
+        destinationOwnerId: params.technicianId,
+        orderNumber: params.requestId.toString(),
+        notes: `تسجيل أصل جديد بالمسح الضوئي - طلب رقم ${params.requestId}`,
+      });
+
+      await client.insert(itemHistoryLogs).values({
+        itemId: newItem.id,
+        fromStatus: "NONE",
+        toStatus: "RECEIVED_BY_TECHNICIAN",
+        changedById: params.technicianId,
+        notes: `إنشاء أصل جديد عهدة للفني لأول مرة - طلب رقم ${params.requestId}`,
+      });
+    }
+
+    return {
+      id: newItem.id,
+      serialNumber: newItem.serialNumber,
+    };
+  }
+
+  /**
+   * Scan-out that returns false when serial is not in active custody (courier InventoryEngine contract).
+   */
+  async tryScanOut(
+    technicianId: string,
+    serialNumber: string,
+    receiverName: string,
+    orderNumber: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<boolean> {
+    try {
+      await this.scanOut(technicianId, serialNumber, receiverName, orderNumber, latitude, longitude);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

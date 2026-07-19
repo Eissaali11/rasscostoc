@@ -1,3 +1,5 @@
+import './inventory-identity.adapter';
+import './accounting-cross-module.adapter';
 import { repositories } from '@modules/inventory/infrastructure/database';
 import { adminDashboardContainer } from './admin-dashboard.container';
 import { bootstrapDefaultsContainer } from './bootstrap-defaults.container';

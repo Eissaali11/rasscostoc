@@ -4,16 +4,11 @@ import type {
   TechnicianWithBothInventories,
   TechnicianWithFixedInventory,
 } from '@shared/schema';
-import { sql, eq, desc, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { IAdminDashboardRepository } from '@stockpro/contracts';
 import { getDatabase } from '@core/database/connection';
-import {
-  users,
-  technicianFixedInventories,
-  technicianFixedInventoryEntries,
-  technicianMovingInventoryEntries,
-  inventoryRequests,
-} from '@shared/schema';
+import { users } from '@shared/schema';
+import { getInventoryTechnicianDataPort } from '../adapters/inventory-ports.registry';
 
 export class DrizzleAdminDashboardRepository implements IAdminDashboardRepository {
   private get db() {
@@ -31,14 +26,11 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
       .where(eq(users.role, 'technician'))
       .orderBy(users.fullName);
 
+    const port = getInventoryTechnicianDataPort();
     const result: TechnicianWithFixedInventory[] = [];
 
     for (const technician of technicians) {
-      const [fixedInventory] = await this.db
-        .select()
-        .from(technicianFixedInventories)
-        .where(eq(technicianFixedInventories.technicianId, technician.technicianId))
-        .limit(1);
+      const fixedInventory = await port.getFixedInventoryByTechnicianId(technician.technicianId);
 
       result.push({
         technicianId: technician.technicianId,
@@ -53,38 +45,22 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
   }
 
   async getFixedInventorySummary(): Promise<FixedInventorySummary> {
-    const [summary] = await this.db
-      .select({
-        totalN950: sql<number>`COALESCE(SUM(${technicianFixedInventories.n950Boxes} + ${technicianFixedInventories.n950Units}), 0)`,
-        totalI9000s: sql<number>`COALESCE(SUM(${technicianFixedInventories.i9000sBoxes} + ${technicianFixedInventories.i9000sUnits}), 0)`,
-        totalI9100: sql<number>`COALESCE(SUM(${technicianFixedInventories.i9100Boxes} + ${technicianFixedInventories.i9100Units}), 0)`,
-        totalRollPaper: sql<number>`COALESCE(SUM(${technicianFixedInventories.rollPaperBoxes} + ${technicianFixedInventories.rollPaperUnits}), 0)`,
-        totalStickers: sql<number>`COALESCE(SUM(${technicianFixedInventories.stickersBoxes} + ${technicianFixedInventories.stickersUnits}), 0)`,
-        totalNewBatteries: sql<number>`COALESCE(SUM(${technicianFixedInventories.newBatteriesBoxes} + ${technicianFixedInventories.newBatteriesUnits}), 0)`,
-        totalMobilySim: sql<number>`COALESCE(SUM(${technicianFixedInventories.mobilySimBoxes} + ${technicianFixedInventories.mobilySimUnits}), 0)`,
-        totalStcSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.stcSimBoxes} + ${technicianFixedInventories.stcSimUnits}), 0)`,
-        totalZainSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.zainSimBoxes} + ${technicianFixedInventories.zainSimUnits}), 0)`,
-        totalLebaraSim: sql<number>`COALESCE(SUM(${technicianFixedInventories.lebaraBoxes} + ${technicianFixedInventories.lebaraUnits}), 0)`,
-        techniciansWithCriticalStock: sql<number>`0`,
-        techniciansWithWarningStock: sql<number>`0`,
-        techniciansWithGoodStock: sql<number>`COUNT(*)`,
-      })
-      .from(technicianFixedInventories);
+    const totals = await getInventoryTechnicianDataPort().getFixedInventorySummaryTotals();
 
     return {
-      totalN950: Number(summary?.totalN950 || 0),
-      totalI9000s: Number(summary?.totalI9000s || 0),
-      totalI9100: Number(summary?.totalI9100 || 0),
-      totalRollPaper: Number(summary?.totalRollPaper || 0),
-      totalStickers: Number(summary?.totalStickers || 0),
-      totalNewBatteries: Number(summary?.totalNewBatteries || 0),
-      totalMobilySim: Number(summary?.totalMobilySim || 0),
-      totalStcSim: Number(summary?.totalStcSim || 0),
-      totalZainSim: Number(summary?.totalZainSim || 0),
-      totalLebaraSim: Number(summary?.totalLebaraSim || 0),
-      techniciansWithCriticalStock: Number(summary?.techniciansWithCriticalStock || 0),
-      techniciansWithWarningStock: Number(summary?.techniciansWithWarningStock || 0),
-      techniciansWithGoodStock: Number(summary?.techniciansWithGoodStock || 0),
+      totalN950: totals.totalN950,
+      totalI9000s: totals.totalI9000s,
+      totalI9100: totals.totalI9100,
+      totalRollPaper: totals.totalRollPaper,
+      totalStickers: totals.totalStickers,
+      totalNewBatteries: totals.totalNewBatteries,
+      totalMobilySim: totals.totalMobilySim,
+      totalStcSim: totals.totalStcSim,
+      totalZainSim: totals.totalZainSim,
+      totalLebaraSim: totals.totalLebaraSim,
+      techniciansWithCriticalStock: 0,
+      techniciansWithWarningStock: 0,
+      techniciansWithGoodStock: totals.technicianCount,
     };
   }
 
@@ -104,34 +80,12 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
     if (technicians.length === 0) return [];
 
     const ids = technicians.map((tech) => tech.technicianId);
-    const [allFixed, allMoving] = await Promise.all([
-      this.db
-        .select()
-        .from(technicianFixedInventoryEntries)
-        .where(inArray(technicianFixedInventoryEntries.technicianId, ids)),
-      this.db
-        .select()
-        .from(technicianMovingInventoryEntries)
-        .where(inArray(technicianMovingInventoryEntries.technicianId, ids)),
-    ]);
-
-    const fixedByTech = new Map<string, typeof allFixed>();
-    for (const entry of allFixed) {
-      const list = fixedByTech.get(entry.technicianId) || [];
-      list.push(entry);
-      fixedByTech.set(entry.technicianId, list);
-    }
-
-    const movingByTech = new Map<string, typeof allMoving>();
-    for (const entry of allMoving) {
-      const list = movingByTech.get(entry.technicianId) || [];
-      list.push(entry);
-      movingByTech.set(entry.technicianId, list);
-    }
+    const { fixedByTechnicianId, movingByTechnicianId } =
+      await getInventoryTechnicianDataPort().getFixedAndMovingEntriesByTechnicianIds(ids);
 
     return technicians.map((tech) => {
-      const fixedEntries = fixedByTech.get(tech.technicianId) || [];
-      const movingEntries = movingByTech.get(tech.technicianId) || [];
+      const fixedEntries = fixedByTechnicianId.get(tech.technicianId) || [];
+      const movingEntries = movingByTechnicianId.get(tech.technicianId) || [];
       return {
         technicianId: tech.technicianId,
         technicianName: tech.fullName,
@@ -145,27 +99,21 @@ export class DrizzleAdminDashboardRepository implements IAdminDashboardRepositor
   }
 
   async getInventoryRequests(): Promise<InventoryRequest[]> {
-    const rows = await this.db
-      .select({
-        request: inventoryRequests,
-        technicianName: users.fullName,
-      })
-      .from(inventoryRequests)
-      .leftJoin(users, eq(inventoryRequests.technicianId, users.id))
-      .orderBy(desc(inventoryRequests.createdAt));
+    const requests = await getInventoryTechnicianDataPort().getAllInventoryRequests();
 
-    return rows.map((row: any) => ({
-      ...row.request,
-      technicianName: row.technicianName || 'غير معروف',
+    const technicianIds = [...new Set(requests.map((r) => r.technicianId).filter(Boolean))] as string[];
+    const techRows = technicianIds.length > 0
+      ? await this.db.select({ id: users.id, fullName: users.fullName }).from(users).where(inArray(users.id, technicianIds))
+      : [];
+    const nameById = new Map(techRows.map((u) => [u.id, u.fullName]));
+
+    return requests.map((request: any) => ({
+      ...request,
+      technicianName: (request.technicianId && nameById.get(request.technicianId)) || 'غير معروف',
     }));
   }
 
   async getPendingInventoryRequestsCount(): Promise<number> {
-    const rows = await this.db
-      .select()
-      .from(inventoryRequests)
-      .where(eq(inventoryRequests.status, 'pending'));
-
-    return rows.length;
+    return getInventoryTechnicianDataPort().getPendingInventoryRequestsCount();
   }
 }

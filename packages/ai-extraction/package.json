@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
   "description": "ERP-006A isolated AI Document Intelligence Core (PR-006A-2). No Gemini, no Courier coupling."
 }

@@ -1,10 +1,11 @@
 import { eq, inArray } from 'drizzle-orm';
-import { techniciansInventory, users, warehouseInventory, warehouseTransfers } from "@shared/schema";
+import { techniciansInventory, warehouseInventory, warehouseTransfers } from "@shared/schema";
 import type {
   IWarehouseTransferAdminRepository,
   LegacyStockSnapshot,
   WarehouseTransferAdminRecord,
 } from "@modules/inventory/application/inventory/contracts/IWarehouseTransferAdminRepository";
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
 
 export class DrizzleWarehouseTransferAdminRepository implements IWarehouseTransferAdminRepository {
   constructor(private readonly executor: any) {}
@@ -71,12 +72,8 @@ export class DrizzleWarehouseTransferAdminRepository implements IWarehouseTransf
   }
 
   async getTechnicianFullNameById(technicianId: string): Promise<string | undefined> {
-    const [row] = await this.executor
-      .select({ fullName: users.fullName })
-      .from(users)
-      .where(eq(users.id, technicianId));
-
-    return row?.fullName || undefined;
+    const user = await getInventoryIdentityPorts().getUserById(technicianId);
+    return user?.fullName || undefined;
   }
 
   async getTechnicianMovingInventoryByName(technicianName: string): Promise<LegacyStockSnapshot | undefined> {

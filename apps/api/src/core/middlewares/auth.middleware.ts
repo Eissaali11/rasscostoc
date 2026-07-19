@@ -1,7 +1,3 @@
-/**
- * Authentication and authorization middleware
- */
-
 import type { Request, Response, NextFunction } from "express";
 import { AuthenticationError, AuthorizationError } from "@core/errors/AppError";
 import { ROLES, hasRoleOrAbove } from "@shared/roles";
@@ -10,6 +6,7 @@ import { JWT_SECRET } from "@core/config/jwt.config";
 import { getDatabase } from "@core/database/connection";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { telemetryContextStore } from "@core/telemetry/telemetry";
 
 // Extend Express Request type to include full user context
 declare global {
@@ -142,8 +139,8 @@ class PostgresSessionStore implements SessionStore {
            username = EXCLUDED.username,
            region_id = EXCLUDED.region_id,
            expiry = EXCLUDED.expiry`,
-        [token, data.userId, data.role, data.username, data.regionId, expiry]
-      );
+         [token, data.userId, data.role, data.username, data.regionId, expiry]
+       );
     } catch (error) {
       console.error("Session set error:", error);
     } finally {
@@ -165,6 +162,14 @@ class PostgresSessionStore implements SessionStore {
 
 // Export PostgreSQL-backed session store instance
 export const sessionStore: SessionStore = new PostgresSessionStore();
+
+function updateTelemetryContext(user: AuthUser): void {
+  const store = telemetryContextStore.getStore();
+  if (store) {
+    store.userId = user.id;
+    store.username = user.username;
+  }
+}
 
 /**
  * Middleware to require authentication
@@ -199,6 +204,7 @@ export async function requireAuth(
 
         const freshUser = await getFreshAuthUser(decoded.userId);
         req.user = freshUser || fallbackUser;
+        updateTelemetryContext(req.user);
 
         return next();
       } catch (jwtError) {
@@ -217,6 +223,7 @@ export async function requireAuth(
 
           const freshUser = await getFreshAuthUser(session.userId);
           req.user = freshUser || fallbackUser;
+          updateTelemetryContext(req.user);
 
           if (
             freshUser &&
@@ -248,6 +255,7 @@ export async function requireAuth(
       const sessionUser = sessionObj.user as AuthUser;
       const freshUser = sessionUser?.id ? await getFreshAuthUser(sessionUser.id) : null;
       req.user = freshUser || sessionUser;
+      updateTelemetryContext(req.user);
 
       if (req.user) {
         sessionObj.user = req.user;
@@ -279,6 +287,37 @@ export function requireAdmin(
   }
 
   next();
+}
+
+/**
+ * PLATFORM-P0 — Admin session OR internal service key (X-Internal-Service-Key).
+ */
+export async function requireAdminOrInternal(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const expected = process.env.INTERNAL_SERVICE_KEY;
+    const provided = req.header("x-internal-service-key");
+    if (expected && provided && provided === expected) {
+      return next();
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      void requireAuth(req, res, (err?: unknown) => (err ? reject(err) : resolve()));
+    });
+
+    if (!req.user) {
+      throw new AuthenticationError("Authentication required");
+    }
+    if (req.user.role !== ROLES.ADMIN) {
+      throw new AuthorizationError("يجب أن تكون مدير نظام أو خدمة داخلية للوصول");
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 /**

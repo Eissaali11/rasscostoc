@@ -1,38 +1,45 @@
-import { desc, eq } from 'drizzle-orm';
-import { stockMovements, supervisorWarehouses, users, warehouseInventory } from "@shared/schema";
+import { desc, eq, inArray } from 'drizzle-orm';
+import { stockMovements, supervisorWarehouses, warehouseInventory } from "@shared/schema";
 import type { IWarehouseStockMovementsRepository } from "@modules/inventory/application/inventory/contracts/IWarehouseStockMovementsRepository";
 import type { StockMovementWithDetails, WarehouseInventory } from '@shared/schema';
+import { getInventoryIdentityPorts } from "../adapters/identity/identity-ports.registry";
+
+const stockMovementColumns = {
+  id: stockMovements.id,
+  technicianId: stockMovements.technicianId,
+  itemType: stockMovements.itemType,
+  packagingType: stockMovements.packagingType,
+  quantity: stockMovements.quantity,
+  fromInventory: stockMovements.fromInventory,
+  toInventory: stockMovements.toInventory,
+  reason: stockMovements.reason,
+  performedBy: stockMovements.performedBy,
+  notes: stockMovements.notes,
+  createdAt: stockMovements.createdAt,
+};
 
 export class DrizzleWarehouseStockMovementsRepository implements IWarehouseStockMovementsRepository {
   constructor(private readonly executor: any) {}
 
-  async getStockMovements(limit: number = 50): Promise<StockMovementWithDetails[]> {
-    const rows = await this.executor
-      .select({
-        id: stockMovements.id,
-        technicianId: stockMovements.technicianId,
-        itemType: stockMovements.itemType,
-        packagingType: stockMovements.packagingType,
-        quantity: stockMovements.quantity,
-        fromInventory: stockMovements.fromInventory,
-        toInventory: stockMovements.toInventory,
-        reason: stockMovements.reason,
-        performedBy: stockMovements.performedBy,
-        notes: stockMovements.notes,
-        createdAt: stockMovements.createdAt,
-        technicianName: users.fullName,
-      })
-      .from(stockMovements)
-      .leftJoin(users, eq(stockMovements.technicianId, users.id))
-      .orderBy(desc(stockMovements.createdAt))
-      .limit(limit);
-
-    return rows.map((row: any) => ({
+  private async withTechnicianNames(rows: any[]): Promise<StockMovementWithDetails[]> {
+    const technicianIds = [...new Set(rows.map((r) => r.technicianId).filter(Boolean))];
+    const usersById = await getInventoryIdentityPorts().getUsersByIds(technicianIds);
+    return rows.map((row) => ({
       ...row,
-      technicianName: row.technicianName || undefined,
+      technicianName: usersById.get(row.technicianId)?.fullName || undefined,
       performedByName: undefined,
       itemNameAr: row.itemType,
     }));
+  }
+
+  async getStockMovements(limit: number = 50): Promise<StockMovementWithDetails[]> {
+    const rows = await this.executor
+      .select(stockMovementColumns)
+      .from(stockMovements)
+      .orderBy(desc(stockMovements.createdAt))
+      .limit(limit);
+
+    return this.withTechnicianNames(rows);
   }
 
   async getStockMovementsByRegion(regionId: string | null): Promise<StockMovementWithDetails[]> {
@@ -40,62 +47,27 @@ export class DrizzleWarehouseStockMovementsRepository implements IWarehouseStock
       return [];
     }
 
+    const technicianIdsInRegion = await getInventoryIdentityPorts().getUserIdsByRegion(regionId);
+    if (technicianIdsInRegion.length === 0) return [];
+
     const rows = await this.executor
-      .select({
-        id: stockMovements.id,
-        technicianId: stockMovements.technicianId,
-        itemType: stockMovements.itemType,
-        packagingType: stockMovements.packagingType,
-        quantity: stockMovements.quantity,
-        fromInventory: stockMovements.fromInventory,
-        toInventory: stockMovements.toInventory,
-        reason: stockMovements.reason,
-        performedBy: stockMovements.performedBy,
-        notes: stockMovements.notes,
-        createdAt: stockMovements.createdAt,
-        technicianName: users.fullName,
-      })
+      .select(stockMovementColumns)
       .from(stockMovements)
-      .leftJoin(users, eq(stockMovements.technicianId, users.id))
-      .where(eq(users.regionId, regionId))
+      .where(inArray(stockMovements.technicianId, technicianIdsInRegion as string[]))
       .orderBy(desc(stockMovements.createdAt));
 
-    return rows.map((row: any) => ({
-      ...row,
-      technicianName: row.technicianName || undefined,
-      performedByName: undefined,
-      itemNameAr: row.itemType,
-    }));
+    return this.withTechnicianNames(rows);
   }
 
   async getStockMovementsByTechnician(technicianId: string, limit: number = 50): Promise<StockMovementWithDetails[]> {
     const rows = await this.executor
-      .select({
-        id: stockMovements.id,
-        technicianId: stockMovements.technicianId,
-        itemType: stockMovements.itemType,
-        packagingType: stockMovements.packagingType,
-        quantity: stockMovements.quantity,
-        fromInventory: stockMovements.fromInventory,
-        toInventory: stockMovements.toInventory,
-        reason: stockMovements.reason,
-        performedBy: stockMovements.performedBy,
-        notes: stockMovements.notes,
-        createdAt: stockMovements.createdAt,
-        technicianName: users.fullName,
-      })
+      .select(stockMovementColumns)
       .from(stockMovements)
-      .leftJoin(users, eq(stockMovements.technicianId, users.id))
       .where(eq(stockMovements.technicianId, technicianId))
       .orderBy(desc(stockMovements.createdAt))
       .limit(limit);
 
-    return rows.map((row: any) => ({
-      ...row,
-      technicianName: row.technicianName || undefined,
-      performedByName: undefined,
-      itemNameAr: row.itemType,
-    }));
+    return this.withTechnicianNames(rows);
   }
 
   async getSupervisorWarehouseIds(supervisorId: string): Promise<string[]> {

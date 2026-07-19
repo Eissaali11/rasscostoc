@@ -7,18 +7,12 @@
 import { randomUUID } from "node:crypto";
 import { getContext, telemetryContextStore, type TelemetryContext } from "./telemetry";
 import { recordSpanMetric } from "./metrics";
+import type { Span } from "./span.types";
 
-export interface Span {
-  name: string;
-  traceId: string;
-  spanId: string;
-  parentId?: string;
-  startTime: number;
-  endTime?: number;
-  duration?: number;
-  attributes: Record<string, any>;
-  end: () => void;
-}
+// Re-exported for backward compatibility with existing `import type { Span }
+// from "./tracer"` call sites — the canonical definition now lives in
+// span.types.ts (ERP-005A-4 Phase 6).
+export type { Span };
 
 // In-memory ring buffer of recent spans for dashboard observability
 const MAX_RECENT_SPANS = 500;

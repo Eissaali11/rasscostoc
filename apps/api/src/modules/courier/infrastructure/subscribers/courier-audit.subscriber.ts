@@ -9,6 +9,9 @@ import { ExecutionSavedEvent, InventoryDeductionFailedEvent } from "@core/events
 import { db } from "@server/core/config/db";
 import { courierAuditLogs } from "@shared/schema";
 import { idempotencyService } from "@core/idempotency/idempotency.service";
+import { logger } from "@core/telemetry/logger";
+
+const MODULE = "CourierAuditSubscriber";
 
 export class CourierAuditSubscriber {
   /**
@@ -29,9 +32,12 @@ export class CourierAuditSubscriber {
           event.id,
           "CourierAuditSubscriber",
           async () => {
-            console.log(
-              `[CourierAuditSubscriber] Audit: Execution saved for request ${requestId} by ${actorId}. Status: ${execution.installationStatus}`
-            );
+            logger.info({
+              message: "Audit: Execution saved",
+              module: MODULE,
+              action: "executionSaved",
+              metadata: { requestId, actorId, status: execution.installationStatus },
+            });
             return { success: true };
           }
         );
@@ -50,10 +56,12 @@ export class CourierAuditSubscriber {
           event.id,
           "CourierAuditSubscriber",
           async () => {
-            console.error(
-              `[CourierAuditSubscriber] Audit: Inventory deduction failed for request ${requestId}. Errors:`,
-              errors
-            );
+            logger.error({
+              message: "Audit: Inventory deduction failed",
+              module: MODULE,
+              action: "deductionFailed",
+              metadata: { requestId, actorId, technicianCode, errors },
+            });
 
             try {
               await db.insert(courierAuditLogs).values({
@@ -66,13 +74,10 @@ export class CourierAuditSubscriber {
                 changedBy: actorId,
                 changedAt: new Date(),
               });
-              console.log(`[CourierAuditSubscriber] Recorded deduction failure in audit logs.`);
+              logger.info({ message: "Recorded deduction failure in audit logs", module: MODULE, action: "auditWrite", metadata: { requestId } });
               return { success: true };
             } catch (dbErr) {
-              console.error(
-                `[CourierAuditSubscriber] Failed to record audit log for deduction failure:`,
-                dbErr
-              );
+              logger.error({ message: "Failed to record audit log for deduction failure", module: MODULE, action: "auditWrite", metadata: { requestId }, error: dbErr });
               throw dbErr;
             }
           }

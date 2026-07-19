@@ -7,6 +7,7 @@ import { correlationMiddleware } from "@core/telemetry/telemetry";
 import { tracer } from "@core/telemetry/tracer";
 import { configService } from "@core/config/config.service";
 import { rateLimiter, securityHeaders, csrfProtection } from "@core/middlewares/security.middleware";
+import { metrics } from "@core/telemetry/metrics";
 
 const app = express();
 
@@ -85,6 +86,9 @@ app.use(idempotency);
 app.use((req, res, next) => {
   const path = req.path;
   
+  // Increment global HTTP requests counter
+  metrics.incrementCounter("http_requests_total");
+
   const span = tracer.startSpan(`API:${req.method} ${path}`, {
     method: req.method,
     url: req.originalUrl,
@@ -96,7 +100,22 @@ app.use((req, res, next) => {
       return obj.map(sanitizeResponse);
     }
     const sanitized = { ...obj };
-    const sensitiveKeys = ["token", "password", "refreshToken", "accessToken", "secret", "internalToken", "session", "cookie"];
+    const sensitiveKeys = [
+      "token",
+      "password",
+      "refreshToken",
+      "accessToken",
+      "secret",
+      "internalToken",
+      "session",
+      "cookie",
+      "apiKey",
+      "apikey",
+      "authorization",
+      "x-api-key",
+      "x-goog-api-key",
+      "x-internal-service-key",
+    ];
     for (const key of Object.keys(sanitized)) {
       if (sensitiveKeys.some(s => key.toLowerCase().includes(s.toLowerCase()))) {
         sanitized[key] = "[REDACTED]";
@@ -119,6 +138,16 @@ app.use((req, res, next) => {
     span.end();
     const duration = span.duration || 0;
     
+    // Increment global HTTP error counter if >= 400 status
+    if (res.statusCode >= 400) {
+      metrics.incrementCounter("http_errors_total");
+    }
+
+    // Increment HTTP slow requests counter if execution took > 1000ms
+    if (duration > 1000) {
+      metrics.incrementCounter("http_requests_slow_total");
+    }
+
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {

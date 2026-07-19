@@ -9,6 +9,7 @@ import {
   timestamp,
   varchar,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -154,6 +155,9 @@ export const technicianSalesMetricsDaily = pgTable("technician_sales_metrics_dai
   techSalesMetricsTechIdx: index("tech_sales_metrics_tech_idx").on(table.technicianId),
   techSalesMetricsRegionIdx: index("tech_sales_metrics_region_idx").on(table.regionId),
   techSalesMetricsItemIdx: index("tech_sales_metrics_item_idx").on(table.itemTypeId),
+  techSalesMetricsDateTechItemRegionUnique: unique(
+    "technician_sales_metrics_daily_date_tech_item_region_unique"
+  ).on(table.salesDate, table.technicianId, table.itemTypeId, table.regionId),
 }));
 
 export const purchaseBills = pgTable("purchase_bills", {
@@ -279,7 +283,9 @@ export const numberSequences = pgTable("number_sequences", {
   nextNumber: integer("next_number").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  scopeYearUnique: unique("number_sequences_scope_year_unique").on(table.scope, table.year),
+}));
 
 export const insertChartOfAccountSchema = createInsertSchema(chartOfAccounts).omit({
   id: true,

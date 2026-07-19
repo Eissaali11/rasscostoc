@@ -95,7 +95,7 @@
   "date_3": "Date",
   "number_4": "Number",
   "item_23920": "Item_23920",
-  "item_20817": "Item_20817",
+  "item_20817": "Role",
   "number_5": "Number",
   "item_11158": "Item_11158",
   "image_view": "Image View",
@@ -231,8 +231,8 @@
   "other_1": "Other",
   "delete_3": "Delete",
   "all_count": "All ({{count}})",
-  "count": "المسؤولين ({{count}})",
-  "technician_count": "Technician ين ({{count}})",
+  "count": "Managers ({{count}})",
+  "technician_count": "Technicians ({{count}})",
   "phrase_02b1fb67": "Item_35190",
   "system_3": "System"
 }

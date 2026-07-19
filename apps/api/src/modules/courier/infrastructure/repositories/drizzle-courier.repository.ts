@@ -11,10 +11,6 @@ import {
   users,
   courierRequestItems,
   courierExecutionAttempts,
-  itemTypes,
-  items,
-  inventoryTransactions,
-  itemHistoryLogs,
 } from "@shared/schema";
 import { eq, and, or, sql, desc, count, inArray, ilike } from "drizzle-orm";
 import type { ICourierRepository } from "../../domain/repositories/courier.repository.interface";
@@ -22,7 +18,6 @@ import type { ICourierRequestsRepository } from "../../domain/repositories/ICour
 import type { ICourierExecutionsRepository } from "../../domain/repositories/ICourierExecutionsRepository";
 import type { ICourierPdfRepository } from "../../domain/repositories/ICourierPdfRepository";
 import type { ICourierDashboardReadRepository } from "../../domain/repositories/ICourierDashboardReadRepository";
-import type { ICourierInventoryPort } from "../../domain/repositories/ICourierInventoryPort";
 import type {
   CourierRequest,
   CourierExecution,
@@ -45,15 +40,13 @@ import {
   courierListRequestColumns,
 } from "../courier-list-query";
 import { metrics } from "@core/telemetry/metrics";
-import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 
 export class DrizzleCourierRepository implements
   ICourierRepository,
   ICourierRequestsRepository,
   ICourierExecutionsRepository,
   ICourierPdfRepository,
-  ICourierDashboardReadRepository,
-  ICourierInventoryPort
+  ICourierDashboardReadRepository
 {
   constructor(private readonly tx?: any) {}
 
@@ -669,15 +662,7 @@ export class DrizzleCourierRepository implements
   }
 
   // ── Serial Lookup Support ──────────────────────────────────────────────────
-  async findItemTypeById(itemTypeId: string, tx?: any): Promise<{ id: string; nameAr: string; nameEn: string; category: string } | null> {
-    const client = this.getClient(tx);
-    const [row] = await client
-      .select({ id: itemTypes.id, nameAr: itemTypes.nameAr, nameEn: itemTypes.nameEn, category: itemTypes.category })
-      .from(itemTypes)
-      .where(eq(itemTypes.id, itemTypeId))
-      .limit(1);
-    return row || null;
-  }
+  // Inventory catalog/item lookups moved to CourierInventoryPortAdapter (composition).
 
   async findUserById(userId: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null; role: string; regionId: number | null } | null> {
     const client = this.getClient(tx);
@@ -739,125 +724,6 @@ export class DrizzleCourierRepository implements
       )
       .limit(1);
     return row || null;
-  }
-
-  // ── ICourierInventoryPort ──────────────────────────────────────────────────
-  async findItemBySerial(serial: string, tx?: any): Promise<any | null> {
-    const client = tx || this.tx || db;
-    return SerialRecognitionService.findItemBySerial(serial, client);
-  }
-
-  async normalizeSerial(serial: string, hintItemTypeId: string, tx?: any): Promise<{
-    normalizedSerial: string;
-    itemTypeId: string;
-    carrierName: string | null;
-  }> {
-    const client = tx || this.tx || db;
-    const result = await SerialRecognitionService.normalizeForStorage(serial, hintItemTypeId, client);
-    return {
-      normalizedSerial: result.normalizedSerial,
-      itemTypeId: result.itemTypeId,
-      carrierName: result.carrierName
-    };
-  }
-
-  async transferCustodyToTechnician(
-    params: {
-      itemId: string;
-      technicianId: string;
-      requestId: number;
-      oldStatus: string;
-      newStatus: "RECEIVED_BY_TECHNICIAN" | "IN_TRANSIT";
-    },
-    tx?: any
-  ): Promise<void> {
-    const client = tx || this.tx || db;
-    
-    // Update item status & current owner
-    await client
-      .update(items)
-      .set({
-        status: params.newStatus,
-        currentOwnerId: params.technicianId,
-        updatedAt: new Date(),
-      })
-      .where(eq(items.id, params.itemId));
-
-    // Record inventory transaction
-    await client.insert(inventoryTransactions).values({
-      itemId: params.itemId,
-      transactionType: "TRANSFER",
-      destinationOwnerId: params.technicianId,
-      orderNumber: params.requestId.toString(),
-      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
-        ? `استلام عهدة بالطلب رقم ${params.requestId}`
-        : `بدء مهمة التوصيل بالطلب رقم ${params.requestId}`,
-    });
-
-    // Record item history log
-    await client.insert(itemHistoryLogs).values({
-      itemId: params.itemId,
-      fromStatus: params.oldStatus,
-      toStatus: params.newStatus,
-      changedById: params.technicianId,
-      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
-        ? `تحويل عهدة للفني بالمسح الضوئي - طلب رقم ${params.requestId}`
-        : `مغادرة المستودع والبدء بالتوصيل - طلب رقم ${params.requestId}`,
-    });
-  }
-
-  async mintAndAssignToTechnician(
-    params: {
-      serial: string;
-      itemTypeId: string;
-      carrierName: string | null;
-      technicianId: string;
-      requestId: number;
-    },
-    tx?: any
-  ): Promise<{ id: string; serialNumber: string }> {
-    const client = tx || this.tx || db;
-
-    // Normalizing/saving a new item in Inventory
-    const [newItem] = await client
-      .insert(items)
-      .values({
-        itemTypeId: params.itemTypeId,
-        serialNumber: params.serial,
-        barcode: params.serial,
-        status: "RECEIVED_BY_TECHNICIAN",
-        currentOwnerId: params.technicianId,
-        warehouseId: null,
-        carrierName: params.carrierName,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
-
-    if (newItem) {
-      // Record inventory transaction
-      await client.insert(inventoryTransactions).values({
-        itemId: newItem.id,
-        transactionType: "INTAKE",
-        destinationOwnerId: params.technicianId,
-        orderNumber: params.requestId.toString(),
-        notes: `تسجيل أصل جديد بالمسح الضوئي - طلب رقم ${params.requestId}`,
-      });
-
-      // Record item history log
-      await client.insert(itemHistoryLogs).values({
-        itemId: newItem.id,
-        fromStatus: "NONE",
-        toStatus: "RECEIVED_BY_TECHNICIAN",
-        changedById: params.technicianId,
-        notes: `إنشاء أصل جديد عهدة للفني لأول مرة - طلب رقم ${params.requestId}`,
-      });
-    }
-
-    return {
-      id: newItem.id,
-      serialNumber: newItem.serialNumber,
-    };
   }
 }
 

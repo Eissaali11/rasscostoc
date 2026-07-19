@@ -1,8 +1,9 @@
 /**
- * EventBus — EventEmitter-based Pub/Sub Implementation
+ * EventBus — EventEmitter-based Pub/Sub Implementation — ERP-008 Phase 8-A
  *
  * Implements a decoupled, asynchronous event bus.
  * Supports transactional outbox pattern to guarantee event delivery.
+ * All log output now routes through the canonical structured logger.
  */
 
 import { EventEmitter } from "events";
@@ -10,6 +11,9 @@ import type { IEvent, IEventBus, EventCallback } from "./event.types";
 import { runWithContextAsync, type TelemetryContext } from "../telemetry/telemetry";
 import { tracer } from "../telemetry/tracer";
 import { metrics } from "../telemetry/metrics";
+import { logger } from "../telemetry/logger";
+
+const MODULE = "EventBus";
 
 export class EventBus implements IEventBus {
   private static instance: EventBus;
@@ -41,9 +45,20 @@ export class EventBus implements IEventBus {
     try {
       const { outboxRepository } = await import("../outbox/outbox.repository");
       await outboxRepository.enqueue(event, tx);
-      console.log(`[EventBus] Enqueued event to Outbox table: ${event.name} (ID: ${event.id})`);
+      logger.info({
+        message: `Enqueued event to Outbox table`,
+        module: MODULE,
+        action: "enqueue",
+        metadata: { eventName: event.name, eventId: event.id },
+      });
     } catch (err) {
-      console.error(`[EventBus] Failed to enqueue event ${event.name} to Outbox:`, err);
+      logger.error({
+        message: `Failed to enqueue event to Outbox`,
+        module: MODULE,
+        action: "enqueue",
+        metadata: { eventName: event.name, eventId: event.id },
+        error: err,
+      });
       // Fallback to local dispatch in case database outbox save fails, to prevent blocking
       await this.publishLocal(event);
     }
@@ -53,14 +68,24 @@ export class EventBus implements IEventBus {
    * Directly invokes all local subscribers asynchronously.
    */
   async publishLocal<TPayload>(event: IEvent<TPayload>): Promise<void> {
-    console.log(`[EventBus] Publishing event locally: ${event.name} at ${event.timestamp.toISOString()}`);
-    
+    logger.info({
+      message: `Publishing event locally`,
+      module: MODULE,
+      action: "publishLocal",
+      metadata: { eventName: event.name, eventId: event.id, occurredAt: event.timestamp.toISOString() },
+    });
+
     return new Promise<void>((resolve, reject) => {
       setImmediate(async () => {
         const listeners = this.emitter.listeners(event.name) as EventCallback[];
-        
+
         if (listeners.length === 0) {
-          console.log(`[EventBus] No subscribers found for event: ${event.name}`);
+          logger.warn({
+            message: `No subscribers found for event`,
+            module: MODULE,
+            action: "publishLocal",
+            metadata: { eventName: event.name },
+          });
           resolve();
           return;
         }
@@ -80,10 +105,13 @@ export class EventBus implements IEventBus {
                 await listener(event);
               } catch (err: any) {
                 metrics.incrementCounter("subscriber_failures_total");
-                console.error(
-                  `[EventBus] Error in subscriber for event "${event.name}":`,
-                  err
-                );
+                logger.error({
+                  message: `Error in subscriber for event`,
+                  module: MODULE,
+                  action: "subscriber",
+                  metadata: { eventName: event.name },
+                  error: err,
+                });
                 throw err;
               } finally {
                 span.end();
@@ -94,13 +122,21 @@ export class EventBus implements IEventBus {
 
         const failures = results.filter((r) => r.status === "rejected");
         if (failures.length > 0) {
-          console.error(
-            `[EventBus] Event "${event.name}" finished with ${failures.length} subscriber failure(s).`
-          );
+          logger.error({
+            message: `Event finished with subscriber failure(s)`,
+            module: MODULE,
+            action: "publishLocal",
+            metadata: { eventName: event.name, failureCount: failures.length },
+          });
           const firstReason = (failures[0] as PromiseRejectedResult).reason;
           reject(firstReason);
         } else {
-          console.log(`[EventBus] Event "${event.name}" processed successfully by all subscribers.`);
+          logger.info({
+            message: `Event processed successfully by all subscribers`,
+            module: MODULE,
+            action: "publishLocal",
+            metadata: { eventName: event.name, subscriberCount: listeners.length },
+          });
           resolve();
         }
       });
@@ -113,7 +149,7 @@ export class EventBus implements IEventBus {
    */
   subscribe<TPayload>(eventName: string, callback: EventCallback<IEvent<TPayload>>): void {
     this.emitter.on(eventName, callback as any);
-    console.log(`[EventBus] Subscriber registered for event: ${eventName}`);
+    logger.info({ message: `Subscriber registered for event`, module: MODULE, action: "subscribe", metadata: { eventName } });
   }
 
   /**
@@ -121,6 +157,6 @@ export class EventBus implements IEventBus {
    */
   unsubscribe<TPayload>(eventName: string, callback: EventCallback<IEvent<TPayload>>): void {
     this.emitter.off(eventName, callback as any);
-    console.log(`[EventBus] Subscriber unregistered from event: ${eventName}`);
+    logger.info({ message: `Subscriber unregistered from event`, module: MODULE, action: "unsubscribe", metadata: { eventName } });
   }
 }

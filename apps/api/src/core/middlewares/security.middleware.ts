@@ -23,7 +23,10 @@ export function rateLimiter(req: Request, res: Response, next: NextFunction): vo
 
   // Bypass rate limiting for health check endpoints
   const path = req.path;
-  if (path === "/health" || path === "/health/live" || path === "/health/ready") {
+  if (
+    path === "/health" || path === "/health/live" || path === "/health/ready" ||
+    path === "/api/health" || path === "/api/health/live" || path === "/api/health/ready"
+  ) {
     return next();
   }
 
