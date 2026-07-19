@@ -160,26 +160,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }
 
       applyDocumentDirection(lang);
-
-      const token = localStorage.getItem('auth-token');
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const userId = payload.id;
-          if (userId) {
-            fetch(`/api/users/${userId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ preferredLanguage: lang })
-            }).catch(err => console.warn('Failed to save language to user DB profile:', err));
-          }
-        } catch {
-          // ignore
-        }
-      }
+      // Note: server-side persistence of the language preference previously
+      // decoded the JWT from localStorage to derive the user id. That path is
+      // removed with the httpOnly-cookie migration (it relied on a claim the
+      // token does not carry and never actually fired). Language is persisted
+      // locally; a cookie-authenticated endpoint can re-add DB persistence.
     }
   }, [applyDocumentDirection]);
 

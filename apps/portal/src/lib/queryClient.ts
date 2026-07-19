@@ -15,27 +15,25 @@ function getClientError(key: 'server_connection_failed' | 'html_instead_of_json'
   return messages[key][lang];
 }
 
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+// Rotate the session using the httpOnly refresh cookie. The server reads the
+// refresh token from the cookie and sets fresh cookies on the response, so no
+// token is read from or written to JavaScript-accessible storage. Returns
+// whether the session was successfully refreshed.
+async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) {
     return refreshPromise;
   }
 
   refreshPromise = (async () => {
     try {
-      const refreshToken = localStorage.getItem('refresh-token');
-      if (!refreshToken) {
-        throw new Error("No refresh token");
-      }
-
       const res = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -43,18 +41,14 @@ async function refreshAccessToken(): Promise<string | null> {
       }
 
       const data = await res.json();
-      if (data.success && data.token && data.refreshToken) {
-        localStorage.setItem('auth-token', data.token);
-        localStorage.setItem('refresh-token', data.refreshToken);
-        return data.token;
+      if (data.success) {
+        return true;
       }
       throw new Error("Invalid response schema");
     } catch (e) {
-      localStorage.removeItem('auth-token');
-      localStorage.removeItem('refresh-token');
-      // Dispatch event to inform AuthProvider to clear state
+      // Inform AuthProvider to clear cached identity.
       window.dispatchEvent(new CustomEvent('auth-session-expired'));
-      return null;
+      return false;
     } finally {
       refreshPromise = null;
     }
@@ -90,13 +84,13 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  let token = localStorage.getItem('auth-token');
+  // Auth travels in the httpOnly cookie (credentials: "include"); no Bearer
+  // header is set from JavaScript-accessible storage.
   const headers: Record<string, string> = {
     "X-Requested-With": "XMLHttpRequest",
     ...(data ? { "Content-Type": "application/json" } : {}),
-    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
   };
-  
+
   try {
     let res = await fetch(url, {
       method,
@@ -106,9 +100,8 @@ export async function apiRequest(
     });
 
     if (res.status === 401 && !url.includes('/api/auth/refresh') && !url.includes('/api/auth/login')) {
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        headers['Authorization'] = `Bearer ${newToken}`;
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
         res = await fetch(url, {
           method,
           headers,
@@ -135,12 +128,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    let token = localStorage.getItem('auth-token');
     const headers: Record<string, string> = {
       "X-Requested-With": "XMLHttpRequest",
-      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     };
-    
+
     try {
       const path = queryKey.join("/") as string;
       let res = await fetch(path, {
@@ -149,9 +140,8 @@ export const getQueryFn: <T>(options: {
       });
 
       if (res.status === 401 && !path.includes('/api/auth/refresh') && !path.includes('/api/auth/login')) {
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-          headers['Authorization'] = `Bearer ${newToken}`;
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
           res = await fetch(path, {
             headers,
             credentials: "include",

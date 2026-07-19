@@ -302,9 +302,7 @@ function renderFinanceTooltip(
 }
 
 async function fetchOptionalJson<T>(url: string, fallback: T): Promise<T> {
-  const token = localStorage.getItem("auth-token");
   const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: "include",
   });
 

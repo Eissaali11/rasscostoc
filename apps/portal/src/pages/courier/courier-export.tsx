@@ -51,8 +51,7 @@ const QUICK_EXPORTS = [
 export default function CourierExportPage() {
   const { t, dir } = useTranslation();
   const getExportUrl = (params: URLSearchParams) => {
-    const token = localStorage.getItem("auth-token") || "";
-    params.set("token", token);
+    // Download authenticates via the httpOnly cookie on the GET navigation.
     return `/api/courier/requests/export?${params.toString()}`;
   };
 

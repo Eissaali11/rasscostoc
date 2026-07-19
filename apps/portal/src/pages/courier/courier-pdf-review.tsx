@@ -243,9 +243,8 @@ export default function CourierPdfReviewPage() {
     (async () => {
       setPreviewError(null);
       try {
-        const token = localStorage.getItem("auth-token");
         const res = await fetch(`/api/courier/pdf/${report.id}?raw=1`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: "include",
         });
         if (!res.ok) throw new Error(`preview ${res.status}`);
         const blob = await res.blob();

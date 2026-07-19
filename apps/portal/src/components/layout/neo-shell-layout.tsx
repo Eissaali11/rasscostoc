@@ -129,38 +129,21 @@ export function NeoShellLayout({ titleKey, children }: NeoShellLayoutProps) {
     e.preventDefault();
     setIsSidebarOpen(false);
 
-    let token = localStorage.getItem("auth-token");
-    const refreshToken = localStorage.getItem("refresh-token");
-
-    let isExpired = true;
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const exp = payload.exp * 1000;
-        if (Date.now() < exp - 10000) isExpired = false;
-      } catch {
-        // ignore
+    // Mint a fresh short-lived token for the cross-app SSO handoff. Auth is via
+    // the httpOnly cookie (credentials: "include"); the token is used only to
+    // build the handoff URL and is never persisted in JavaScript storage.
+    let token: string | null = null;
+    try {
+      const res = await fetch("/api/auth/sso-token", {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        token = data?.token ?? null;
       }
-    }
-
-    if (isExpired && refreshToken) {
-      try {
-        const res = await fetch("/api/auth/refresh", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.token && data.refreshToken) {
-            localStorage.setItem("auth-token", data.token);
-            localStorage.setItem("refresh-token", data.refreshToken);
-            token = data.token;
-          }
-        }
-      } catch (err) {
-        console.error("Failed to refresh token for SSO navigation:", err);
-      }
+    } catch (err) {
+      console.error("Failed to obtain SSO token for navigation:", err);
     }
 
     const ssoUrl = token

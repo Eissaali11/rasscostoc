@@ -240,11 +240,10 @@ export default function BackupManagementPage() {
   const handleExportBackup = async () => {
     setIsExporting(true);
     try {
-      const token = localStorage.getItem('auth-token');
       const response = await fetch('/api/admin/backup', {
         credentials: 'include',
         headers: {
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          "X-Requested-With": "XMLHttpRequest",
         },
       });
 
