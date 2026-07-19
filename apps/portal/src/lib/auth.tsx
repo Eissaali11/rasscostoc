@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import type { AuthResponse, LoginRequest, UserSafe } from '@shared/schema';
 
 interface AuthContextType {
@@ -14,76 +14,49 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => 
-    localStorage.getItem('auth-token')
-  );
   const queryClient = useQueryClient();
 
-  // Get current user data
-  const { data: userResponse, isLoading, error } = useQuery({
+  // Identity is resolved from the httpOnly session cookie via /api/auth/me.
+  // No token is read from JavaScript-accessible storage. A 401 (not logged in)
+  // resolves to null rather than throwing.
+  const { data: userResponse, isLoading } = useQuery({
     queryKey: ['/api/auth/me'],
-    enabled: !!token,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const user = (userResponse as any)?.user || null;
 
-  // Login mutation
+  // Login mutation — the server sets the httpOnly cookies on the response.
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginRequest) => {
       const response = await apiRequest('POST', '/api/auth/login', credentials);
-      return await response.json() as AuthResponse;
+      return (await response.json()) as AuthResponse;
     },
-    onSuccess: (data) => {
-      if (data.success && data.token && data.refreshToken) {
-        setToken(data.token);
-        localStorage.setItem('auth-token', data.token);
-        localStorage.setItem('refresh-token', data.refreshToken);
+    onSuccess: async (data) => {
+      if (data.success) {
+        // Load the user the freshly-set cookie authenticates.
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       }
     },
   });
 
-  // Logout mutation
+  // Logout mutation — the server clears the cookies.
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const refreshToken = localStorage.getItem('refresh-token');
-      await apiRequest('POST', '/api/auth/logout', { refreshToken });
+      await apiRequest('POST', '/api/auth/logout');
     },
     onSuccess: () => {
-      setToken(null);
-      localStorage.removeItem('auth-token');
-      localStorage.removeItem('refresh-token');
       queryClient.clear();
     },
   });
 
-  // Invalidate queries when token changes
-  useEffect(() => {
-    if (token) {
-      // When token is set, refetch user data
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-    } else {
-      // When token is cleared, clear all cached data
-      queryClient.clear();
-    }
-  }, [token, queryClient]);
-
-  // Clear token if user fetch fails
-  useEffect(() => {
-    if (error && token) {
-      setToken(null);
-      localStorage.removeItem('auth-token');
-      localStorage.removeItem('refresh-token');
-    }
-  }, [error, token]);
-
-  // Listen for session expiry event from API client
+  // Clear cached identity when the API client signals the session has expired
+  // (e.g. refresh failed).
   useEffect(() => {
     const handleSessionExpired = () => {
-      setToken(null);
-      localStorage.removeItem('auth-token');
-      localStorage.removeItem('refresh-token');
+      queryClient.setQueryData(['/api/auth/me'], null);
       queryClient.clear();
     };
 
@@ -94,8 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const login = async (credentials: LoginRequest) => {
-    const result = await loginMutation.mutateAsync(credentials);
-    return result;
+    return loginMutation.mutateAsync(credentials);
   };
 
   const logout = async () => {
@@ -107,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     isLoading: isLoading || loginMutation.isPending,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user,
   };
 
   return (
@@ -123,10 +95,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
-
-// Helper to get auth headers for API requests
-export function getAuthHeaders() {
-  const token = localStorage.getItem('auth-token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
 }

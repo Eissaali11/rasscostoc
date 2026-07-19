@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
-import { securityHeaders } from "./security.middleware";
+import { securityHeaders, csrfProtection } from "./security.middleware";
 
 const ORIGINAL_ENV = process.env.NODE_ENV;
 
@@ -55,5 +55,66 @@ describe("securityHeaders CSP", () => {
   it("sets HSTS only in production", () => {
     expect(runSecurityHeaders("production")["Strict-Transport-Security"]).toBeDefined();
     expect(runSecurityHeaders("development")["Strict-Transport-Security"]).toBeUndefined();
+  });
+});
+
+function runCsrf(req: Partial<Request>): { nexted: boolean; status?: number } {
+  let status: number | undefined;
+  const res = {
+    status: (code: number) => {
+      status = code;
+      return { json: () => undefined };
+    },
+  } as unknown as Response;
+  const next = vi.fn() as unknown as NextFunction;
+  csrfProtection(
+    { method: "POST", headers: {}, query: {}, ...req } as Request,
+    res,
+    next
+  );
+  return { nexted: (next as any).mock.calls.length > 0, status };
+}
+
+describe("csrfProtection", () => {
+  it("no longer exempts ?token= query auth on mutating requests (#11)", () => {
+    // With only an access cookie and a query token but no CSRF header, the
+    // request must be rejected — the old ?token= bypass is removed.
+    const result = runCsrf({
+      method: "POST",
+      query: { token: "abc" },
+      headers: { cookie: "access_token=jwt" },
+    });
+    expect(result.nexted).toBe(false);
+    expect(result.status).toBe(403);
+  });
+
+  it("still exempts Bearer-authenticated mutating requests", () => {
+    const result = runCsrf({
+      method: "POST",
+      headers: { authorization: "Bearer jwt" },
+    });
+    expect(result.nexted).toBe(true);
+  });
+
+  it("allows a cookie-authenticated mutation that carries a CSRF header", () => {
+    const result = runCsrf({
+      method: "POST",
+      headers: { cookie: "access_token=jwt", "x-requested-with": "XMLHttpRequest" },
+    });
+    expect(result.nexted).toBe(true);
+  });
+
+  it("rejects a cookie-authenticated mutation with no CSRF header", () => {
+    const result = runCsrf({
+      method: "POST",
+      headers: { cookie: "access_token=jwt" },
+    });
+    expect(result.nexted).toBe(false);
+    expect(result.status).toBe(403);
+  });
+
+  it("does not gate non-mutating (GET) requests", () => {
+    const result = runCsrf({ method: "GET", headers: { cookie: "access_token=jwt" } });
+    expect(result.nexted).toBe(true);
   });
 });

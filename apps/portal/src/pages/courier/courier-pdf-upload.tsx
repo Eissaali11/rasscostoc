@@ -84,11 +84,11 @@ export default function CourierPdfUploadPage() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const token = localStorage.getItem("auth-token");
       const res = await fetch("/api/courier/pdf/upload", {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { "X-Requested-With": "XMLHttpRequest" },
         body: formData,
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok) {

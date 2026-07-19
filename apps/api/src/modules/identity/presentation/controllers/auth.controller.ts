@@ -68,6 +68,17 @@ export class AuthController {
   });
 
   /**
+   * GET /api/auth/sso-token
+   * Mints a fresh short-lived access token for the authenticated (cookie)
+   * user, so the browser can hand it off to a separate app via SSO without
+   * persisting a token in JavaScript-readable storage.
+   */
+  ssoToken = asyncHandler(async (req: Request, res: Response) => {
+    const token = await authService.issueAccessToken(req.user!.id);
+    res.json({ token });
+  });
+
+  /**
    * GET /api/auth/me
    */
   getMe = asyncHandler(async (req: Request, res: Response) => {

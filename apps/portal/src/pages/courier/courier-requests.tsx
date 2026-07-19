@@ -196,11 +196,11 @@ export default function CourierRequestsPage() {
     formData.append("file", file);
 
     try {
-      const token = localStorage.getItem("auth-token");
       const res = await fetch("/api/courier/requests/import", {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { "X-Requested-With": "XMLHttpRequest" },
         body: formData,
+        credentials: "include",
       });
 
       const result = await res.json();
@@ -235,10 +235,8 @@ export default function CourierRequestsPage() {
     if (q) exportParams.set("q", q);
     if (status) exportParams.set("status", status);
 
-    const token = localStorage.getItem("auth-token") || "";
-    // Trigger download by opening raw export link with auth token query if needed,
-    // or standard location redirection.
-    window.open(`/api/courier/requests/export?${exportParams.toString()}&token=${token}`);
+    // Download via a top-level GET navigation; the httpOnly cookie authenticates it.
+    window.open(`/api/courier/requests/export?${exportParams.toString()}`);
   };
 
   return (

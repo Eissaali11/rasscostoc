@@ -24,4 +24,7 @@ export function registerAuthRoutes(app: Express): void {
 
   // Get current user
   app.get("/api/auth/me", requireAuth, authController.getMe);
+
+  // Mint a short-lived token for cross-app SSO handoff (cookie-authenticated)
+  app.get("/api/auth/sso-token", requireAuth, authController.ssoToken);
 }

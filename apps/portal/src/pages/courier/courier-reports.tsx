@@ -120,8 +120,8 @@ export default function CourierReportsPage() {
     if (filters.simType) params.set("simType", filters.simType);
     if (filters.vendor) params.set("vendor", filters.vendor);
     
-    const token = localStorage.getItem("auth-token") || "";
-    return `/api/courier/requests/export?${params.toString()}&token=${encodeURIComponent(token)}`;
+    // Download authenticates via the httpOnly cookie on the GET navigation.
+    return `/api/courier/requests/export?${params.toString()}`;
   };
 
   const total = data?.total || 0;

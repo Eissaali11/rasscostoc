@@ -57,14 +57,14 @@ export function useCourierRenderPerf(page: CourierPerfPage) {
         transferSize,
       };
 
-      const token = localStorage.getItem("auth-token") || "";
       void fetch("/api/observability/client-timing", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "X-Requested-With": "XMLHttpRequest",
         },
         body: JSON.stringify(payload),
+        credentials: "include",
         keepalive: true,
       }).catch(() => {
         /* ignore */

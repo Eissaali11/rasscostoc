@@ -184,14 +184,13 @@ export async function requireAuth(
 ): Promise<void> {
   try {
     // 1. Check Bearer token FIRST (Frontend primary method), then the
-    //    httpOnly access cookie, then the legacy query param.
+    //    httpOnly access cookie. Token-in-URL (?token=) is no longer accepted:
+    //    it leaked into logs/history and is replaced by the cookie, which the
+    //    browser attaches automatically on top-level download/SSO navigations.
     const authHeader = req.headers.authorization;
     let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
     if (!token) {
       token = readCookie(req, ACCESS_COOKIE);
-    }
-    if (!token && req.query.token) {
-      token = String(req.query.token);
     }
 
     if (token) {

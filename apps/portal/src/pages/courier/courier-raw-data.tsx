@@ -205,10 +205,9 @@ export default function CourierRawDataPage() {
     try {
       const res = await fetch("/api/courier/requests/import", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("auth-token") || ""}`
-        },
-        body: formData
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: formData,
+        credentials: "include",
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || t('courier.fail_import'));

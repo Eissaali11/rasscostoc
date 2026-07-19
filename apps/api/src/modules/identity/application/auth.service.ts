@@ -19,6 +19,48 @@ export class AuthService {
   ) {}
 
   /**
+   * Sign a JWT access token with the canonical user claims.
+   * Single source of truth for the access-token payload used by login,
+   * refresh, and the SSO handoff.
+   */
+  private signAccessToken(user: {
+    id: string;
+    role: string;
+    username: string;
+    regionId?: string | null;
+    employeeCode?: string | null;
+    technicianCode?: string | null;
+    permissions?: string | null;
+  }): string {
+    return jwt.sign(
+      {
+        userId: user.id,
+        role: user.role,
+        username: user.username,
+        regionId: user.regionId || null,
+        employeeCode: user.employeeCode || null,
+        technicianCode: user.technicianCode || null,
+        permissions: user.permissions ? JSON.parse(user.permissions) : [],
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_ACCESS_EXPIRES_IN }
+    );
+  }
+
+  /**
+   * Mint a fresh access token for an already-authenticated user.
+   * Used by the SSO handoff endpoint so the browser can pass a token to a
+   * separate app without persisting one in JavaScript-readable storage.
+   */
+  async issueAccessToken(userId: string): Promise<string> {
+    const user = await this.userRepository.getUser(userId);
+    if (!user || !user.isActive) {
+      throw new AuthenticationError("المستخدم غير موجود أو غير نشط");
+    }
+    return this.signAccessToken(user);
+  }
+
+  /**
    * Authenticate user, create DB-backed refresh token and JWT access token
    */
   async login(credentials: LoginCredentials, session?: any): Promise<LoginResult> {
@@ -44,19 +86,7 @@ export class AuthService {
     const { password: _, ...userSafe } = user;
 
     // Generate JWT Access Token
-    const accessToken = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        username: user.username,
-        regionId: user.regionId || null,
-        employeeCode: user.employeeCode || null,
-        technicianCode: user.technicianCode || null,
-        permissions: user.permissions ? JSON.parse(user.permissions) : [],
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_ACCESS_EXPIRES_IN }
-    );
+    const accessToken = this.signAccessToken(user);
 
     // Generate Refresh Token (64-character random string)
     const refreshTokenString = crypto.randomBytes(32).toString("hex");
@@ -123,19 +153,7 @@ export class AuthService {
     }
 
     // Generate new Access Token
-    const newAccessToken = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        username: user.username,
-        regionId: user.regionId || null,
-        employeeCode: user.employeeCode || null,
-        technicianCode: user.technicianCode || null,
-        permissions: user.permissions ? JSON.parse(user.permissions) : [],
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_ACCESS_EXPIRES_IN }
-    );
+    const newAccessToken = this.signAccessToken(user);
 
     // Generate new Refresh Token (Rotation)
     const newRefreshTokenString = crypto.randomBytes(32).toString("hex");

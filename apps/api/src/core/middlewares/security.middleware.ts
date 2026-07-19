@@ -137,10 +137,9 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   if (mutatingMethods.includes(req.method)) {
     const authHeader = req.headers.authorization;
     const hasBearer = authHeader && authHeader.startsWith("Bearer ");
-    const hasTokenQuery = req.query.token;
 
-    // Token supplied via header or query cannot be forged cross-site → CSRF-immune.
-    if (hasBearer || hasTokenQuery) {
+    // A Bearer token cannot be forged cross-site → CSRF-immune.
+    if (hasBearer) {
       return next();
     }
 
