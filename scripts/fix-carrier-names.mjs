@@ -1,3 +1,4 @@
+import 'dotenv/config';
 /**
  * Production DB Direct Fix — Fix carrier names + verify
  * Uses pg client directly to avoid interactive terminal issues
@@ -77,6 +78,6 @@ conn.on('ready', () => {
     stream.stderr.on('data', (d) => process.stderr.write(d.toString()));
   });
 }).connect({
-  host: '72.62.149.127', port: 22, username: 'root', password: 'Eisa11223344@#', readyTimeout: 20000,
+  host: (process.env.SSH_HOST || ''), port: 22, username: process.env.SSH_USER || 'root', password: process.env.SSH_PASSWORD, readyTimeout: 20000,
 });
 conn.on('error', (e) => { console.error('Connection error:', e.message); process.exit(1); });

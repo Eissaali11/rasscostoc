@@ -45,9 +45,9 @@ c.on("ready", () => {
 });
 c.on("error", (e) => console.error(e.message));
 c.connect({
-  host: "72.62.149.127",
+  host: (process.env.SSH_HOST || ''),
   port: 22,
-  username: "root",
-  password: "Eisa11223344@#",
+  username: process.env.SSH_USER || 'root',
+  password: process.env.SSH_PASSWORD,
   readyTimeout: 60000,
 });

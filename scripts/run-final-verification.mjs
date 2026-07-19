@@ -1,3 +1,4 @@
+import 'dotenv/config';
 /**
  * Uploads and runs final-verification.cjs on production server
  */
@@ -36,7 +37,7 @@ conn.on('ready', () => {
     writeStream.end(scriptContent);
   });
 }).connect({
-  host: '72.62.149.127', port: 22, username: 'root', password: 'Eisa11223344@#',
+  host: (process.env.SSH_HOST || ''), port: 22, username: process.env.SSH_USER || 'root', password: process.env.SSH_PASSWORD,
   readyTimeout: 20000, keepaliveInterval: 15000, keepaliveCountMax: 20,
 });
 conn.on('error', (e) => { console.error('Connection error:', e.message); process.exit(1); });
