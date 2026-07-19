@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | IN PROGRESS — Commits 1 (`d90aea3`), 2 (`2e794dd`) APPROVED; Pre-Commit-3 analysis done; Commit 3 (reader → ExcelJS) IMPLEMENTED. Remaining: Commit 4 (validation/integrity), Commit 5 (remove xlsx dep), Commit 6 (close). |
+| **Status** | IN PROGRESS — Commits 1 (`d90aea3`), 2 (`2e794dd`), 3 (`7dcd117`, reader→ExcelJS) APPROVED; Commit 4 (remove xlsx dep) IMPLEMENTED. Remaining (executive renumbering): Commit 5 = import validation & resource controls; Commit 6 = atomicity/transaction/staging decision; Commit 7 = ADR closure. |
 | **Date** | 2026-07-18 (updated 2026-07-19) |
 | **Scope** | Server-side spreadsheet **import** path only |
 | **Decision owner** | Chief Software Architect |
@@ -98,7 +98,7 @@ Two independent issues converge on this path:
 
 **Option A**, conditional on Acceptance-criterion evidence that `.xls` is not in active use:
 
-1. Replace `parseRawDataWorkbook`'s internals with an `exceljs` reader (`workbook.xlsx.load(buffer)` → iterate first sheet → same `ImportSummary` output). **Public function signature unchanged** — callers and return shape identical.
+1. Replace `parseRawDataWorkbook`'s internals with an `exceljs` reader (`workbook.xlsx.load(buffer)` → iterate first sheet → same `ImportSummary` output). Function name and resolved result shape are preserved, but the invocation contract changed **sync → async** — see the "Invocation-contract note" under Commit 3 (this earlier "signature unchanged" wording is superseded there).
 2. Reject `.xls` at the **upload policy** layer (remove from `EXCEL_EXT` / `detectExcelMagic`), returning a clear message directing users to save as `.xlsx`.
 3. Remove `xlsx` from `package.json` and lockfile.
 4. Add the import-robustness controls in §10 (transaction/staging, formula-injection defense, limits) as part of the same change, since they share the blast radius.
@@ -351,11 +351,25 @@ limits, no rowNumber change, no row-acceptance-rule change.
 | `spreadsheet-errors.ts` (new) | `SpreadsheetError extends ValidationError` + codes; safe bilingual messages; `internalCause` kept server-side only. |
 | `courier.service.ts` | one line: `const summary = await parseRawDataWorkbook(buffer)` (unavoidable async consequence). |
 
-### Signature note
-`parseRawDataWorkbook` is now `async` (`Buffer -> Promise<ImportSummary>`).
-ExcelJS has no synchronous buffer reader; this is the minimal unavoidable
-change. The **return shape is unchanged**; the single production caller and the
-tests were updated with `await`, asserted values identical.
+### Invocation-contract note (executive correction — do NOT call this "signature preserved")
+
+`parseRawDataWorkbook` changed from **synchronous to asynchronous** invocation
+(`Buffer -> ImportSummary` became `Buffer -> Promise<ImportSummary>`). This is a
+contract change, not a fully-preserved signature. Precise classification:
+
+| Aspect | Status |
+|---|---|
+| Function name | **PRESERVED** |
+| Resolved result shape (`ImportSummary`) | **PRESERVED** |
+| Invocation contract (sync → async) | **CHANGED** |
+| Known repository callers | **UPDATED AND VERIFIED** (only `courier.service.ts`; searched repo-wide) |
+| External / undocumented consumers | **NOT VERIFIED** |
+
+Accepted because: all repository call sites were searched, all identified
+callers were updated, TypeScript validation passed, and the full regression
+suite passed. ExcelJS has no synchronous buffer reader, so the async change is
+unavoidable. Earlier phrasing "public signature unchanged" (§8) is superseded by
+this classification.
 
 ### rowNumber — preserved
 Verified identical: the rejected row of the valid fixture is physically sheet
@@ -399,3 +413,60 @@ row,column}]}`) — no stack, no raw ExcelJS text, no formula text, no path.
 ### Dependency
 `xlsx` **retained** in `package.json` (removal is Commit 5). Verified: **zero
 runtime `xlsx` imports remain in production code** (`grep` across `apps/`).
+
+---
+
+## Commit 4 — Remove xlsx dependency (IMPLEMENTED)
+
+Executive renumbering: Commit 4 = remove xlsx; Commit 5 = import validation &
+resource controls; Commit 6 = atomicity/transaction/staging decision; Commit 7 =
+ADR closure. Dependency removal comes first: isolated, low-risk, independently
+reviewable, directly tied to the active advisory, and already backed by zero
+runtime imports.
+
+Authorized scope only: remove the package + lockfile + prove absence. No parser
+behavior change, no adapter/policy/error change, no limits, no transaction, no
+schema/UI/upload-policy change.
+
+### Mandatory dependency search (all forms)
+
+| Pattern | Result |
+|---|---|
+| `from "xlsx"` / `require("xlsx")` / `import("xlsx")` / `from "xlsx/..."` | **zero** matches (repo-wide) |
+| quoted `'xlsx'` / `"xlsx"` | only `package.json` (the dep, removed) + `upload-policy.ts` return-value string `"xlsx"` (magic-byte discriminant — **FALSE POSITIVE**, not the package) |
+| executable scripts / test utils / fixture generators requiring xlsx | **none** |
+| other `\bxlsx\b` textual hits (45 files) | `.xlsx` extension, ExcelJS's `.xlsx` property, i18n strings, docs — none reference the package |
+
+Classification: PRODUCTION RUNTIME = 0; executable TEST/SCRIPT = 0; the rest are
+`.xlsx`-extension / ExcelJS-property / HISTORICAL DOCUMENTATION / FALSE POSITIVE.
+
+### Removal evidence
+- Command: `npm uninstall xlsx` (repo package manager: npm; updates package.json + package-lock.json).
+- `package.json`: xlsx **removed**.
+- Dependency tree: `npm ls xlsx` → **absent**.
+- Lockfile: `node_modules/xlsx` entries → **0**.
+
+### Audit delta (npm audit)
+| | total | critical | high | moderate | low | xlsx advisory |
+|---|---|---|---|---|---|---|
+| Before | 38 | 3 | 17 | 15 | 3 | present (HIGH: Prototype Pollution + ReDoS, no fix) |
+| After | 37 | 3 | 16 | 15 | 3 | **absent** |
+
+Delta: **−1 HIGH (the xlsx advisory), removed by deleting the package.** The
+remaining 37 findings are **other** dependencies (e.g. drizzle-orm, jspdf, vite,
+ws, vitest) — their runtime reachability is **NOT VERIFIED** and is separate,
+future per-advisory work. Per the executive gate, the success criterion for this
+commit is *the xlsx advisory removed + xlsx absent from the tree + no
+regression*, not zero advisories repo-wide.
+
+### Fixture safety
+The legacy `.xls` BIFF8 fixture is a **static base64 constant** in
+`core/testing/spreadsheet-fixtures.ts` — it does **not** import or require xlsx
+at test time and is not regenerated during tests. Integrity pinned and asserted
+(bytes 3584, magic `D0CF11E0`, SHA-256 `93b0dc99…d36596`). Independent of the
+removed package. ✅
+
+### richText note (from the Commit 3 executive review) — confirmed
+`normalizeSpreadsheetCell` on a 3-segment rich-text value returns
+`"AAABBBCCC"` — segment order preserved, no `[object Object]`. Already covered by
+the adapter unit test.
