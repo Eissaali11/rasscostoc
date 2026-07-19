@@ -155,6 +155,13 @@
       "when": 1784371757847,
       "tag": "0021_erp_exec_002_financial_sequence_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1784455881143,
+      "tag": "0022_quick_puck",
+      "breakpoints": true
     }
   ]
 }
