@@ -116,10 +116,10 @@ async function run() {
     const me = await request('/api/auth/me', { headers: authHeaders });
     expectStatus(me, 200, 'GET /api/auth/me', failures);
 
-    const inventory = await request('/api/inventory');
+    const inventory = await request('/api/inventory', { headers: authHeaders });
     expectStatus(inventory, 200, 'GET /api/inventory', failures);
 
-    const dashboard = await request('/api/dashboard');
+    const dashboard = await request('/api/dashboard', { headers: authHeaders });
     expectStatus(dashboard, 200, 'GET /api/dashboard', failures);
 
     const adminStats = await request('/api/admin/stats', { headers: authHeaders });
