@@ -94,3 +94,16 @@ export function buildWorkbookWithCell(
     r3.getCell(colIndex).value = cellValue as ExcelJS.CellValue;
   });
 }
+
+/**
+ * Row 3 has valid mapped values AND a formula in an UNMAPPED (unknown-header)
+ * column. The formula must be ignored (never read), so the row imports.
+ */
+export function buildWorkbookWithUnmappedFormula(): Promise<Buffer> {
+  return toBuffer((ws) => {
+    ws.addRow(["Date", "TID", "TERMINAL ID", "UNKNOWN_JUNK"]);
+    ws.addRow(["01/02/2026", "T-PLAIN", "TERM1", "x"]);
+    const r3 = ws.addRow(["02/02/2026", "T3", "TERM3", null]);
+    r3.getCell(4).value = { formula: "1+2", result: 3 } as ExcelJS.CellValue;
+  });
+}

@@ -1,46 +1,50 @@
 import { describe, expect, it } from "vitest";
 import { parseRawDataWorkbook } from "./excel.helper";
-import { buildWorkbookWithCell } from "./__fixtures__/excel-fixtures";
+import { buildWorkbookWithCell, buildWorkbookWithUnmappedFormula } from "./__fixtures__/excel-fixtures";
 
 /**
- * ADR-002 Pre-Commit-3 — characterizes the CURRENT (xlsx) reader's handling of
- * FORMULA cells. This documents UNSAFE current behavior on purpose: the reader
- * silently trusts a formula's cached result, and silently nulls a formula with
- * no cached result or an error result. The approved policy (executive decision)
- * is that formulas in imported fields are REJECTED
- * (SPREADSHEET_FORMULA_NOT_ALLOWED). These expectations therefore INVERT in the
- * later reader-migration/policy commit — they are labelled "characterizes
- * current unsafe behavior", not compatibility requirements to preserve.
+ * ADR-002 Commit 3 — formula SECURITY POLICY (inverted from the Commit 1
+ * characterization of unsafe behavior). Formulas and error cells in mapped
+ * import fields are now REJECTED at the file level with a typed error, instead
+ * of leaking a cached result or silently becoming null.
  */
-function valueOnRow3(summary: Awaited<ReturnType<typeof parseRawDataWorkbook>>, field: string) {
-  const row = [...summary.imported, ...summary.rejected].find((r) => r.rowNumber === 3);
-  return row?.data?.[field] ?? null;
-}
-
-describe("ADR-002 characterizes current UNSAFE formula behavior (to be inverted by the new policy)", () => {
-  it("formula with a numeric cached result: cached value LEAKS through as the imported value", async () => {
+describe("ADR-002 formula policy — formulas in mapped import fields are rejected", () => {
+  it("formula with a numeric cached result is rejected (SPREADSHEET_FORMULA_NOT_ALLOWED)", async () => {
     const buf = await buildWorkbookWithCell("TID", { formula: "1+2", result: 3 });
-    const summary = parseRawDataWorkbook(buf);
-    // UNSAFE: today the "3" cached result is trusted. New policy: reject.
-    expect(valueOnRow3(summary, "tid")).toBe("3");
+    await expect(parseRawDataWorkbook(buf)).rejects.toMatchObject({
+      code: "SPREADSHEET_FORMULA_NOT_ALLOWED",
+      row: 3,
+      column: "TID",
+    });
   });
 
-  it("formula with a string cached result: cached string LEAKS through", async () => {
+  it("formula with a string cached result is rejected", async () => {
     const buf = await buildWorkbookWithCell("إسم العميل", { formula: '"hi"', result: "hi" });
-    const summary = parseRawDataWorkbook(buf);
-    expect(valueOnRow3(summary, "customerName")).toBe("hi");
+    await expect(parseRawDataWorkbook(buf)).rejects.toMatchObject({
+      code: "SPREADSHEET_FORMULA_NOT_ALLOWED",
+      column: "إسم العميل",
+    });
   });
 
-  it("formula WITHOUT a cached result: silently becomes null (treated as empty)", async () => {
+  it("formula without a cached result is rejected (not silently treated as empty)", async () => {
     const buf = await buildWorkbookWithCell("TID", { formula: "1+2" });
-    const summary = parseRawDataWorkbook(buf);
-    // UNSAFE: an unresolved formula is indistinguishable from an empty cell today.
-    expect(valueOnRow3(summary, "tid")).toBeNull();
+    await expect(parseRawDataWorkbook(buf)).rejects.toMatchObject({
+      code: "SPREADSHEET_FORMULA_NOT_ALLOWED",
+    });
   });
 
-  it("formula error cell (#DIV/0!): silently becomes null", async () => {
+  it("a formula error cell is rejected (not silently treated as empty)", async () => {
     const buf = await buildWorkbookWithCell("TID", { formula: "1/0", result: { error: "#DIV/0!" } });
-    const summary = parseRawDataWorkbook(buf);
-    expect(valueOnRow3(summary, "tid")).toBeNull();
+    await expect(parseRawDataWorkbook(buf)).rejects.toMatchObject({
+      code: "SPREADSHEET_FORMULA_NOT_ALLOWED",
+    });
+  });
+
+  it("a formula in an UNMAPPED column does not affect the import (column is ignored)", async () => {
+    // The formula sits in a column with an unknown header, so it is never read;
+    // the row imports on its mapped values.
+    const summary = await parseRawDataWorkbook(await buildWorkbookWithUnmappedFormula());
+    expect(summary.imported.some((r) => r.rowNumber === 3 && r.data.tid === "T3")).toBe(true);
+    expect(summary.rejected).toHaveLength(0);
   });
 });

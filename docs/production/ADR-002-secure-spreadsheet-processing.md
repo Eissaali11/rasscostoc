@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | IN PROGRESS — Commit 1 (`d90aea3`) + Commit 2 (`2e794dd`) APPROVED; Pre-Commit-3 analysis complete; reader migration (Commit 3) NOT YET AUTHORIZED |
+| **Status** | IN PROGRESS — Commits 1 (`d90aea3`), 2 (`2e794dd`) APPROVED; Pre-Commit-3 analysis done; Commit 3 (reader → ExcelJS) IMPLEMENTED. Remaining: Commit 4 (validation/integrity), Commit 5 (remove xlsx dep), Commit 6 (close). |
 | **Date** | 2026-07-18 (updated 2026-07-19) |
 | **Scope** | Server-side spreadsheet **import** path only |
 | **Decision owner** | Chief Software Architect |
@@ -335,3 +335,67 @@ no stack trace, no raw exceljs text, no formula text to the client; carry
 [x] no production code changed in analysis phase
 [x] git tree contains only tests + docs
 ```
+
+---
+
+## Commit 3 — Reader migration to ExcelJS (IMPLEMENTED)
+
+Authorized scope only: internal reader swap. `xlsx` dependency retained
+(removal is Commit 5); no UI, no upload-policy, no transaction/staging, no
+limits, no rowNumber change, no row-acceptance-rule change.
+
+### Production files changed
+| File | Change |
+|---|---|
+| `excel.helper.ts` | `parseRawDataWorkbook` reads via ExcelJS (was xlsx); added `normalizeSpreadsheetCell` adapter + internal `structuralCellValue`; now async; throws typed errors. `import * as XLSX` removed. Export path (`buildExportWorkbook`/`streamExportWorkbook`) untouched (already ExcelJS). |
+| `spreadsheet-errors.ts` (new) | `SpreadsheetError extends ValidationError` + codes; safe bilingual messages; `internalCause` kept server-side only. |
+| `courier.service.ts` | one line: `const summary = await parseRawDataWorkbook(buffer)` (unavoidable async consequence). |
+
+### Signature note
+`parseRawDataWorkbook` is now `async` (`Buffer -> Promise<ImportSummary>`).
+ExcelJS has no synchronous buffer reader; this is the minimal unavoidable
+change. The **return shape is unchanged**; the single production caller and the
+tests were updated with `await`, asserted values identical.
+
+### rowNumber — preserved
+Verified identical: the rejected row of the valid fixture is physically sheet
+row 5 but still reported as `4` (post-empty-filter index), exactly as before.
+
+### Final cell-type decisions (implemented)
+| ExcelJS value | Result |
+|---|---|
+| string / number / Date / null | ACCEPT (then existing `normalizeCell`/`toIsoDate`) |
+| richText | plain text only (joined `.text`) |
+| hyperlink | display `.text` only (URL never surfaced) |
+| boolean | **REJECT** `UNSUPPORTED_CELL_TYPE` (no proven business use; no silent "true"/"false") |
+| formula / sharedFormula | **REJECT** `SPREADSHEET_FORMULA_NOT_ALLOWED` |
+| error cell | **REJECT** `UNSUPPORTED_CELL_TYPE` |
+| unknown object | **REJECT** `UNSUPPORTED_CELL_TYPE` (never `String(object)`) |
+
+Policy applies only to **mapped** fields; a formula in an unmapped column is
+never read (test-proven).
+
+### Errors implemented
+`INVALID_SPREADSHEET`, `EMPTY_WORKBOOK`, `WORKSHEET_NOT_FOUND`,
+`SPREADSHEET_FORMULA_NOT_ALLOWED`, `UNSUPPORTED_CELL_TYPE` (all thrown, file-
+level; formula/unsupported carry `{row, column}`). `SPREADSHEET_LIMIT_EXCEEDED`
+defined by the contract but **not enforced** here (Commit 4). Surfaced via the
+existing `errorHandler` as safe 400s (`{success:false, message, errors:[{code,
+row,column}]}`) — no stack, no raw ExcelJS text, no formula text, no path.
+
+### Deliberate behavior changes (from Commit 1 gaps, approved)
+- invalid / empty / non-spreadsheet content: was a **silent empty import** → now
+  a typed `INVALID_SPREADSHEET` rejection.
+- legacy `.xls`: xlsx read it; ExcelJS cannot → `INVALID_SPREADSHEET` (also
+  already blocked at the upload boundary in Commit 2).
+- formula/error in a mapped field: was leaked (cached result) or silently nulled
+  → now rejected.
+
+### Tests
+- `excel-import.characterization.test.ts`: 6 compatibility (identical values) + 4 policy.
+- `excel-formula.characterization.test.ts`: 5 policy (formula/error rejected; unmapped-column formula ignored).
+- `normalize-spreadsheet-cell.test.ts`: 12 adapter unit tests (all cell types).
+
+### Dependency
+`xlsx` **retained** in `package.json` (removal is Commit 5). Verified: **zero
+runtime `xlsx` imports remain in production code** (`grep` across `apps/`).

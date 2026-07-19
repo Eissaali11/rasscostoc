@@ -1158,7 +1158,11 @@ export class CourierService {
   }
 
   async importRawRequests(buffer: Buffer, createdBy: string): Promise<any> {
-    const summary = parseRawDataWorkbook(buffer);
+    // ADR-002 Commit 3: parseRawDataWorkbook is now async (ExcelJS has no
+    // synchronous buffer reader). It throws a typed SpreadsheetError for
+    // invalid/empty files and for formula/error/unsupported cells in mapped
+    // fields; those propagate to the errorHandler as safe 400 responses.
+    const summary = await parseRawDataWorkbook(buffer);
     const importedList = [];
     const skippedList = [];
 

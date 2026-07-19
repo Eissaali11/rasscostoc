@@ -1,5 +1,5 @@
-import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
+import { SpreadsheetError } from "./spreadsheet-errors";
 
 export interface ImportRowResult {
   rowNumber: number;
@@ -65,13 +65,113 @@ export const RAW_IMPORT_COLUMNS = [
   { header: "Tec Name", field: "tecName" }
 ];
 
-export function parseRawDataWorkbook(buffer: Buffer): ImportSummary {
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
+/**
+ * ADR-002 — central cell-value adapter (the ONLY place ExcelJS cell shapes are
+ * interpreted). Returns a domain-neutral value; no ExcelJS object ever reaches
+ * the service layer. Enforces the approved security policy: formulas and error
+ * cells are rejected, unknown objects are rejected (never String(object)).
+ */
+export function normalizeSpreadsheetCell(
+  value: ExcelJS.CellValue,
+): string | number | Date | null {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value;
 
-  const headerRow = grid[0] || [];
-  const normalizedHeaders = headerRow.map(normalizeHeader);
+  const t = typeof value;
+  if (t === "string" || t === "number") return value as string | number;
+  // Boolean: no proven business use in imports — reject rather than silently
+  // coerce to "true"/"false".
+  if (t === "boolean") throw new SpreadsheetError("UNSUPPORTED_CELL_TYPE");
+
+  if (t === "object") {
+    const o = value as Record<string, unknown>;
+    if ("formula" in o || "sharedFormula" in o) {
+      throw new SpreadsheetError("SPREADSHEET_FORMULA_NOT_ALLOWED");
+    }
+    if ("error" in o) {
+      // A literal error cell (not backed by a formula) is still not trustworthy.
+      throw new SpreadsheetError("UNSUPPORTED_CELL_TYPE");
+    }
+    if ("richText" in o && Array.isArray(o.richText)) {
+      // Plain text only; drop styling/metadata.
+      return (o.richText as Array<{ text?: string }>).map((r) => r.text ?? "").join("");
+    }
+    if ("hyperlink" in o) {
+      // Display text only; never surface the URL to business logic.
+      return typeof o.text === "string" ? o.text : null;
+    }
+    throw new SpreadsheetError("UNSUPPORTED_CELL_TYPE");
+  }
+
+  throw new SpreadsheetError("UNSUPPORTED_CELL_TYPE");
+}
+
+/**
+ * Lenient structural view of a raw cell, used ONLY for header detection and the
+ * empty-row filter (must not throw — a formula in an unmapped column must not
+ * abort the import). Mirrors the previous xlsx grid values closely enough for
+ * these structural decisions; imported field values always go through the
+ * strict normalizeSpreadsheetCell above.
+ */
+function structuralCellValue(value: ExcelJS.CellValue): unknown {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value;
+  const t = typeof value;
+  if (t === "string" || t === "number" || t === "boolean") return value;
+  if (t === "object") {
+    const o = value as Record<string, unknown>;
+    if ("result" in o) return o.result ?? null; // formula's cached result
+    if ("richText" in o && Array.isArray(o.richText)) {
+      return (o.richText as Array<{ text?: string }>).map((r) => r.text ?? "").join("");
+    }
+    if ("hyperlink" in o) return typeof o.text === "string" ? o.text : null;
+    return null; // error / unknown → treated as empty for structure only
+  }
+  return null;
+}
+
+/**
+ * ADR-002 Commit 3 — reads the import workbook via ExcelJS (was xlsx).
+ * Public shape unchanged (returns the same ImportSummary); rowNumber semantics
+ * preserved exactly (post-empty-filter index + header offset). The function is
+ * now async because ExcelJS has no synchronous buffer reader. Throws typed
+ * SpreadsheetError for structural problems (invalid/empty/no worksheet) and for
+ * policy violations (formula/error/unsupported cell in a mapped field).
+ */
+export async function parseRawDataWorkbook(buffer: Buffer): Promise<ImportSummary> {
+  const workbook = new ExcelJS.Workbook();
+  try {
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  } catch (err) {
+    throw new SpreadsheetError("INVALID_SPREADSHEET", {
+      internalCause: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  if (workbook.worksheets.length === 0) {
+    throw new SpreadsheetError("EMPTY_WORKBOOK");
+  }
+  const sheet = workbook.worksheets[0];
+  if (!sheet) {
+    throw new SpreadsheetError("WORKSHEET_NOT_FOUND");
+  }
+
+  // Build a dense grid of raw cell values (1-based cols → 0-based array).
+  const columnCount = sheet.columnCount;
+  const grid: ExcelJS.CellValue[][] = [];
+  sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    const arr: ExcelJS.CellValue[] = [];
+    for (let c = 1; c <= columnCount; c++) {
+      arr.push(row.getCell(c).value);
+    }
+    grid[rowNumber - 1] = arr;
+  });
+  for (let i = 0; i < grid.length; i++) {
+    if (!grid[i]) grid[i] = new Array(columnCount).fill(null);
+  }
+
+  const headerRow = grid[0] ?? [];
+  const normalizedHeaders = headerRow.map((cell) => normalizeHeader(structuralCellValue(cell)));
 
   const fieldToColumnIndex = new Map<string, number>();
   for (const col of RAW_IMPORT_COLUMNS) {
@@ -79,20 +179,36 @@ export function parseRawDataWorkbook(buffer: Buffer): ImportSummary {
     if (idx !== -1) fieldToColumnIndex.set(col.field, idx);
   }
 
-  const dataRows = grid.slice(1).filter((row) => row.some((cell) => cell !== null && cell !== ""));
+  const dataRows = grid.slice(1).filter((row) =>
+    row.some((cell) => {
+      const v = structuralCellValue(cell);
+      return v !== null && v !== "";
+    }),
+  );
 
   const imported: ImportRowResult[] = [];
   const rejected: ImportRowResult[] = [];
 
   dataRows.forEach((row, idx) => {
+    const rowNumber = idx + 2; // preserve existing semantics: post-filter index + header
     const data: Record<string, string | null> = {};
     for (const col of RAW_IMPORT_COLUMNS) {
       const colIndex = fieldToColumnIndex.get(col.field);
-      const raw = colIndex === undefined ? null : row[colIndex];
-      data[col.field] = col.field === "date" ? toIsoDate(normalizeCell(raw)) : normalizeCell(raw);
+      const rawCell = colIndex === undefined ? null : row[colIndex];
+      let domainValue: string | number | Date | null;
+      try {
+        domainValue = normalizeSpreadsheetCell(rawCell);
+      } catch (err) {
+        if (err instanceof SpreadsheetError) {
+          // Enrich with the offending location and re-throw (file-level reject).
+          throw new SpreadsheetError(err.code, { row: rowNumber, column: col.header });
+        }
+        throw err;
+      }
+      data[col.field] =
+        col.field === "date" ? toIsoDate(normalizeCell(domainValue)) : normalizeCell(domainValue);
     }
 
-    const rowNumber = idx + 2; // account for header row
     if (!data.tid && !data.terminalId) {
       rejected.push({ rowNumber, data, error: "Missing TID and Terminal ID" });
       return;
