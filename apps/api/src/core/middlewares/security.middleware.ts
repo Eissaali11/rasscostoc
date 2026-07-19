@@ -84,22 +84,44 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // Referrer Policy
   res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
 
+  const isProduction = process.env.NODE_ENV === "production";
+
   // HSTS (HTTP Strict Transport Security) - active in production
-  if (process.env.NODE_ENV === "production") {
+  if (isProduction) {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
   }
 
-  // Basic Content Security Policy (CSP)
+  // Content Security Policy.
+  //
+  // The production build emits NO inline scripts (single external module entry)
+  // and never reaches an eval/Function branch at runtime (the bundled
+  // `Function("return this")` global-polyfills are short-circuited in a
+  // browser), so production runs a strict `script-src 'self'` with no
+  // 'unsafe-inline' / 'unsafe-eval' — the primary XSS mitigation.
+  //
+  // In development the Vite dev server + HMR require inline scripts, eval, and
+  // a websocket connection, so the script/connect directives are relaxed there
+  // ONLY. `style-src 'unsafe-inline'` is retained in both modes because React,
+  // Radix, and Framer Motion set element style attributes at runtime.
+  const scriptSrc = isProduction
+    ? "script-src 'self'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+  const connectSrc = isProduction ? "connect-src 'self'" : "connect-src 'self' ws: wss:";
+
   res.setHeader(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       // OpenStreetMap / CartoCDN tiles for dashboard spread map
       "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.basemaps.cartocdn.com",
-      "connect-src 'self'",
+      connectSrc,
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
     ].join("; ")
   );
 
