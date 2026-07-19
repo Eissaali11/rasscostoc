@@ -117,14 +117,21 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     const hasBearer = authHeader && authHeader.startsWith("Bearer ");
     const hasTokenQuery = req.query.token;
 
-    // If request uses Bearer token, CSRF is not possible (immune)
+    // Token supplied via header or query cannot be forged cross-site → CSRF-immune.
     if (hasBearer || hasTokenQuery) {
       return next();
     }
 
-    // If session-cookie is present and active, enforce custom header presence
+    // Cookie-based auth is CSRF-susceptible: the browser attaches the cookie
+    // automatically on cross-site requests. This covers BOTH the httpOnly JWT
+    // access cookie and the express-session cookie. SameSite=Lax already blocks
+    // cross-site mutations in modern browsers; requiring a custom header (which
+    // cross-site form/simple requests cannot set) is defense-in-depth.
+    const hasAccessCookie = /(?:^|;\s*)access_token=/.test(req.headers.cookie || "");
     const sessionObj = (req as any).session;
-    if (sessionObj && sessionObj.user) {
+    const isCookieAuthenticated = hasAccessCookie || (sessionObj && sessionObj.user);
+
+    if (isCookieAuthenticated) {
       const csrfHeader = req.headers["x-requested-with"] || req.headers["x-csrf-token"];
       if (!csrfHeader) {
         res.status(403).json({
