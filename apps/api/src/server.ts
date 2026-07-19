@@ -77,8 +77,15 @@ async function startServer() {
       await migrate(db, { migrationsFolder });
       log("✅ Database migrations completed successfully!");
     } catch (migError) {
-      log(`⚠️ Database migrations warning: ${migError instanceof Error ? migError.message : String(migError)}`);
-      log("Continuing server startup assuming database schema is already applied.");
+      // Fail-fast: a schema mismatch is more dangerous than a restart.
+      // The outer catch will log the error and call process.exit(1).
+      logger.error({
+        message: "CRITICAL: Database migration failed — aborting startup to prevent schema mismatch.",
+        module: "Server",
+        action: "migrate",
+        error: migError,
+      });
+      throw migError;
     }
 
 
