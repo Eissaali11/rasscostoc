@@ -9,7 +9,9 @@ class ReadinessManager {
     database: false,
     subscribers: false,
     outboxWorker: false,
+    jobsWorker: false,
     featureFlags: false,
+    listening: false,
   };
 
   setDBConnected(val: boolean): void {
@@ -24,12 +26,27 @@ class ReadinessManager {
     this.status.outboxWorker = val;
   }
 
+  setJobsWorkerStarted(val: boolean): void {
+    this.status.jobsWorker = val;
+  }
+
   setFeatureFlagsLoaded(val: boolean): void {
     this.status.featureFlags = val;
   }
 
+  setListening(val: boolean): void {
+    this.status.listening = val;
+  }
+
   isReady(): boolean {
-    return this.status.database && this.status.subscribers && this.status.outboxWorker && this.status.featureFlags;
+    return (
+      this.status.database &&
+      this.status.subscribers &&
+      this.status.outboxWorker &&
+      this.status.jobsWorker &&
+      this.status.featureFlags &&
+      this.status.listening
+    );
   }
 
   getDetails() {
