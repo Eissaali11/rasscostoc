@@ -26,9 +26,12 @@ app.use(rateLimiter);
 // CORS middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const host = req.get('host') || '';
-  
-  // Safe origin validation: same-origin or *.stoc.fun
+
+  // Safe origin validation: stoc.fun or any *.stoc.fun subdomain. Matched by
+  // parsed hostname (exact or dot-suffix) — never a substring, and never
+  // derived from the request's own Host header, which is client-controllable
+  // and would let e.g. `https://evil.com/app.stoc.fun` be reflected back with
+  // Access-Control-Allow-Credentials.
   const isAllowedOrigin = (orig: string): boolean => {
     try {
       const parsedUrl = new URL(orig);
@@ -43,11 +46,9 @@ app.use((req, res, next) => {
     if (origin) {
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
-  } else if (origin) {
-    if (origin.includes(host) || isAllowedOrigin(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
+  } else if (origin && isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
