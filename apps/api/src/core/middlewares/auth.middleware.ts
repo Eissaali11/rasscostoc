@@ -56,9 +56,33 @@ type AuthUser = {
 };
 
 /**
- * Fetch fresh user data from DB via Drizzle Repository (no raw SQL)
+ * Short-TTL cache for authenticated user lookups.
+ *
+ * Every authenticated request resolves the current user from the DB. That is
+ * one round-trip per request. A brief cache removes it for repeat requests
+ * from the same user while keeping deactivation/role changes fast to
+ * propagate (bounded by AUTH_USER_CACHE_TTL_MS). Per-process by design — safe
+ * under PM2 cluster (each worker caches independently). Call
+ * invalidateAuthUser(userId) to drop an entry immediately on a role/status
+ * change.
+ */
+const AUTH_USER_CACHE_TTL_MS = 30_000;
+const authUserCache = new Map<string, { user: AuthUser; expiresAt: number }>();
+
+export function invalidateAuthUser(userId: string): void {
+  authUserCache.delete(userId);
+}
+
+/**
+ * Fetch user data for auth, backed by a short-TTL cache. Falls through to the
+ * DB (Drizzle, no raw SQL) on a miss or expiry.
  */
 async function getFreshAuthUser(userId: string): Promise<AuthUser | null> {
+  const cached = authUserCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.user;
+  }
+
   try {
     const db = getDatabase();
     const [row] = await db
@@ -75,9 +99,12 @@ async function getFreshAuthUser(userId: string): Promise<AuthUser | null> {
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!row) return null;
+    if (!row) {
+      authUserCache.delete(userId);
+      return null;
+    }
 
-    return {
+    const user: AuthUser = {
       id: row.id,
       role: row.role,
       username: row.username,
@@ -86,6 +113,8 @@ async function getFreshAuthUser(userId: string): Promise<AuthUser | null> {
       technicianCode: row.technicianCode ?? null,
       permissions: row.permissions ? JSON.parse(row.permissions) : [],
     };
+    authUserCache.set(userId, { user, expiresAt: Date.now() + AUTH_USER_CACHE_TTL_MS });
+    return user;
   } catch (error) {
     console.error("Auth user refresh error:", error);
     return null;
