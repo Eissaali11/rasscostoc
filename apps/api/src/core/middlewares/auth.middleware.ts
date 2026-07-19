@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AuthenticationError, AuthorizationError } from "@core/errors/AppError";
 import { ROLES, hasRoleOrAbove } from "@shared/roles";
@@ -376,8 +377,10 @@ export function requireRole(minRole: string) {
 }
 
 /**
- * Generate a session token
+ * Generate a cryptographically secure, unpredictable session token.
+ * Uses crypto.randomBytes (CSPRNG) — never Math.random, whose output is
+ * predictable and unsafe for anything security-sensitive.
  */
 export function generateSessionToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return randomBytes(32).toString("hex");
 }

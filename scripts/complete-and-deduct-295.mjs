@@ -1,3 +1,4 @@
+import 'dotenv/config';
 /**
  * One-shot: complete courier request #295 and deduct v3 custody (items + moving).
  * Mirrors SerializedItemsService.scanOut + marks execution Installation Completed.
@@ -163,9 +164,9 @@ conn.on("ready", () => {
     });
   });
 }).connect({
-  host: "72.62.149.127",
+  host: (process.env.SSH_HOST || ''),
   port: 22,
-  username: "root",
-  password: "Eisa11223344@#",
+  username: process.env.SSH_USER || 'root',
+  password: process.env.SSH_PASSWORD,
   readyTimeout: 30000,
 });

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createRequire } from 'module';
 import fs from 'fs';
 const require = createRequire(import.meta.url);
@@ -27,7 +28,7 @@ conn.on('ready', () => {
     w.end(scriptContent);
   });
 }).connect({
-  host: '72.62.149.127', port: 22, username: 'root', password: 'Eisa11223344@#',
+  host: (process.env.SSH_HOST || ''), port: 22, username: process.env.SSH_USER || 'root', password: process.env.SSH_PASSWORD,
   readyTimeout: 20000, keepaliveInterval: 15000,
 });
 conn.on('error', e => { console.error('SSH error:', e.message); process.exit(1); });
