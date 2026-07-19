@@ -1155,7 +1155,7 @@ export class CourierService {
   }
 
   async importRawRequests(buffer: Buffer, createdBy: string): Promise<any> {
-    const summary = parseRawDataWorkbook(buffer);
+    const summary = await parseRawDataWorkbook(buffer);
     const importedList = [];
     const skippedList = [];
 
