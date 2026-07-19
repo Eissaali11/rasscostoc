@@ -93,8 +93,11 @@ export class CourierService {
   }
 
   async createRequest(data: any, createdBy: string): Promise<any> {
+    // Strip server-controlled fields so a client can't set the primary key or
+    // spoof audit/ownership columns via mass assignment.
+    const { id: _id, createdBy: _cb, createdAt: _ca, updatedAt: _ua, version: _v, ...safeData } = data ?? {};
     const newReq = await this.requestsRepo.insertRequest({
-      ...data,
+      ...safeData,
       createdBy
     });
 
@@ -109,7 +112,10 @@ export class CourierService {
   }
 
   async updateRequest(id: number, data: any, updatedBy: string): Promise<any> {
-    const { version, ...updateFields } = data;
+    // Pull out the optimistic-lock version, and drop server-controlled fields
+    // so a client cannot rewrite the primary key (SET id = …) or spoof
+    // audit/ownership columns via the update payload.
+    const { version, id: _id, createdBy: _cb, createdAt: _ca, updatedAt: _ua, ...updateFields } = data ?? {};
 
     const updatedReq = await this.requestsRepo.updateRequest(id, updateFields, version);
 

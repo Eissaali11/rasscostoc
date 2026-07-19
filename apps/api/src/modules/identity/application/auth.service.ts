@@ -204,18 +204,18 @@ export class AuthService {
     plainPassword: string,
     storedPassword: string
   ): Promise<boolean> {
-    // Check if password is hashed (bcrypt hashes start with $2a$, $2b$, or $2y$)
-    if (storedPassword.startsWith("$2")) {
-      return utilVerifyPassword(plainPassword, storedPassword);
-    }
-    // Safe constant-time comparison to prevent timing attacks
-    const plainBuffer = Buffer.from(plainPassword, "utf8");
-    const storedBuffer = Buffer.from(storedPassword, "utf8");
-    if (plainBuffer.length !== storedBuffer.length) {
-      crypto.timingSafeEqual(plainBuffer, plainBuffer);
+    // Only bcrypt-hashed passwords are accepted. A stored value without the
+    // bcrypt prefix ($2a/$2b/$2y) is treated as invalid — never compared as
+    // plaintext — so a manual DB edit or import that skipped hashing can never
+    // authenticate. Such a row is a data-integrity anomaly worth surfacing.
+    if (!storedPassword.startsWith("$2")) {
+      logger.warn(
+        "Rejected login: stored password is not a bcrypt hash (possible unhashed/corrupt credential)",
+        { source: "auth" }
+      );
       return false;
     }
-    return crypto.timingSafeEqual(plainBuffer, storedBuffer);
+    return utilVerifyPassword(plainPassword, storedPassword);
   }
 
   /**
