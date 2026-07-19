@@ -12,6 +12,7 @@ import {
   readCookie,
   REFRESH_COOKIE,
 } from "@core/config/auth-cookies";
+import { recordLoginFailure, recordLoginSuccess } from "@core/middlewares/login-rate-limit";
 
 export class AuthController {
   /**
@@ -27,7 +28,16 @@ export class AuthController {
         });
       });
     }
-    const result = await authService.login(req.body, req.session);
+    let result;
+    try {
+      result = await authService.login(req.body, req.session);
+    } catch (err) {
+      // Count invalid-credential attempts toward the brute-force lockout.
+      recordLoginFailure(req);
+      throw err;
+    }
+    // Successful login clears this client's failure counter.
+    recordLoginSuccess(req);
     // Additive: also issue httpOnly cookies. The JSON body (token/refreshToken)
     // is still returned so the existing Bearer/localStorage flow keeps working.
     if (result.success && result.token && result.refreshToken) {

@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AuthenticationError, AuthorizationError } from "@core/errors/AppError";
 import { readCookie, ACCESS_COOKIE } from "@core/config/auth-cookies";
@@ -121,13 +121,22 @@ async function getFreshAuthUser(userId: string): Promise<AuthUser | null> {
   }
 }
 
+/**
+ * Bearer session tokens are stored and looked up as a SHA-256 hash, so a
+ * read/leak of the bearer_sessions table cannot yield a directly replayable
+ * token. The raw token stays only in the client's Authorization header.
+ */
+function hashBearerToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 class PostgresSessionStore implements SessionStore {
   async get(token: string): Promise<SessionData | null> {
     const client = await pool.connect();
     try {
       const result = await client.query(
         `SELECT user_id AS "userId", role, username, region_id AS "regionId", expiry FROM bearer_sessions WHERE token = $1`,
-        [token]
+        [hashBearerToken(token)]
       );
       
       if (result.rows && result.rows.length > 0) {
@@ -170,7 +179,7 @@ class PostgresSessionStore implements SessionStore {
            username = EXCLUDED.username,
            region_id = EXCLUDED.region_id,
            expiry = EXCLUDED.expiry`,
-         [token, data.userId, data.role, data.username, data.regionId, expiry]
+         [hashBearerToken(token), data.userId, data.role, data.username, data.regionId, expiry]
        );
     } catch (error) {
       console.error("Session set error:", error);
@@ -182,7 +191,7 @@ class PostgresSessionStore implements SessionStore {
   async delete(token: string): Promise<void> {
     const client = await pool.connect();
     try {
-      await client.query(`DELETE FROM bearer_sessions WHERE token = $1`, [token]);
+      await client.query(`DELETE FROM bearer_sessions WHERE token = $1`, [hashBearerToken(token)]);
     } catch (error) {
       console.error("Session delete error:", error);
     } finally {
