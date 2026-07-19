@@ -73,6 +73,38 @@ class MetricsRegistry {
       ),
     };
   }
+
+  /**
+   * Serialize all metrics into the Prometheus text exposition format so an
+   * external Prometheus/Grafana can scrape and persist the time series
+   * (the registry itself is in-memory and per-process). Histograms are
+   * exposed as summary-style `_count`/`_sum` plus `_min`/`_max` gauges.
+   */
+  toPrometheus(): string {
+    const lines: string[] = [];
+    const sanitize = (name: string) => name.replace(/[^a-zA-Z0-9_:]/g, "_");
+
+    for (const [name, value] of this.counters) {
+      const m = sanitize(name);
+      lines.push(`# TYPE ${m} counter`, `${m} ${value}`);
+    }
+    for (const [name, value] of this.gauges) {
+      const m = sanitize(name);
+      lines.push(`# TYPE ${m} gauge`, `${m} ${value}`);
+    }
+    for (const [name, v] of this.histograms) {
+      const m = sanitize(name);
+      const min = v.min === Infinity ? 0 : v.min;
+      const max = v.max === -Infinity ? 0 : v.max;
+      lines.push(
+        `# TYPE ${m}_count gauge`, `${m}_count ${v.count}`,
+        `# TYPE ${m}_sum gauge`, `${m}_sum ${v.sum}`,
+        `# TYPE ${m}_min gauge`, `${m}_min ${min}`,
+        `# TYPE ${m}_max gauge`, `${m}_max ${max}`,
+      );
+    }
+    return lines.join("\n") + "\n";
+  }
 }
 
 export const metrics = new MetricsRegistry();

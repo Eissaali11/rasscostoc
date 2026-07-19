@@ -46,6 +46,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(metrics.getAllMetrics());
   });
 
+  // Prometheus scrape endpoint (text exposition format). Protected by the
+  // internal-service key (x-internal-service-key) or admin auth — configure
+  // the scraper with INTERNAL_SERVICE_KEY.
+  app.get("/metrics", requireAdminOrInternal, (_req, res) => {
+    res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+    res.send(metrics.toPrometheus());
+  });
+
   /** ERP-001 / Sprint 1.5: client timings (authenticated users only). */
   app.post("/api/observability/client-timing", requireAuth, (req, res) => {
     const body = req.body || {};
