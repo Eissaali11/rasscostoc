@@ -17,6 +17,8 @@
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "db:push:test": "drizzle-kit push --force",
     "check": "tsc -p tsconfig.runtime-check.json",
     "check:full": "tsc -p tsconfig.json",
     "lint:architecture": "depcruise --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json apps/api/src",
