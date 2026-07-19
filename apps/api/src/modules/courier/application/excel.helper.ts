@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 
 export interface ImportRowResult {
@@ -65,10 +64,45 @@ export const RAW_IMPORT_COLUMNS = [
   { header: "Tec Name", field: "tecName" }
 ];
 
-export function parseRawDataWorkbook(buffer: Buffer): ImportSummary {
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
+/**
+ * Extract a plain scalar from an ExcelJS cell value, which may be a rich-text
+ * object, a hyperlink object, or a formula result rather than a primitive.
+ */
+function extractCellValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === "object") {
+    const cell = value as Record<string, unknown>;
+    if (typeof cell.text === "string") return cell.text; // hyperlink / simple rich text
+    if (Array.isArray(cell.richText)) {
+      return (cell.richText as Array<{ text?: string }>).map((r) => r.text ?? "").join("");
+    }
+    if (cell.result !== undefined) return cell.result; // formula result
+    return String(value);
+  }
+  return value;
+}
+
+export async function parseRawDataWorkbook(buffer: Buffer): Promise<ImportSummary> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const sheet = workbook.worksheets[0];
+
+  if (!sheet) {
+    return { totalRows: 0, imported: [], rejected: [] };
+  }
+
+  // Build a 0-based grid: grid[0] = header row, grid[1..] = data rows.
+  // ExcelJS row.values is 1-based (index 0 is unused), so shift down by one.
+  const grid: unknown[][] = [];
+  sheet.eachRow({ includeEmpty: false }, (row) => {
+    const values = Array.isArray(row.values) ? row.values : [];
+    const cells: unknown[] = [];
+    for (let c = 1; c < values.length; c++) {
+      cells[c - 1] = extractCellValue(values[c]);
+    }
+    grid.push(cells);
+  });
 
   const headerRow = grid[0] || [];
   const normalizedHeaders = headerRow.map(normalizeHeader);
