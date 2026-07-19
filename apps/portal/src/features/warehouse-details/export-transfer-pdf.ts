@@ -30,6 +30,18 @@ function pdfLocale(): string {
   return resolvePdfLang() === 'en' ? 'en-US' : 'ar-SA';
 }
 
+// Escape user-controlled values before interpolating into the innerHTML
+// template, preventing DOM-based XSS (matches the sibling PDF-export helpers).
+const escapeHtml = (value?: string | null): string => {
+  const text = value || "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const p0 = { ar: "إيصال نقل المستودع", en: "Warehouse transfer receipt" } as const;
 const p1 = { ar: "تفاصيل النقل", en: "Transfer details" } as const;
 const p2 = { ar: "التاريخ:", en: "Date:" } as const;
@@ -107,11 +119,11 @@ export async function exportWarehouseTransferToPDF({
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #666; width: 80px;">${pdfT(p6)}</td>
-                  <td style="padding: 8px 0; color: #333; font-weight: bold;">${warehouse?.name || pdfT(pNa)}</td>
+                  <td style="padding: 8px 0; color: #333; font-weight: bold;">${escapeHtml(warehouse?.name) || pdfT(pNa)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">${pdfT(p7)}</td>
-                  <td style="padding: 8px 0; color: #333;">${warehouse?.location || pdfT(pNa)}</td>
+                  <td style="padding: 8px 0; color: #333;">${escapeHtml(warehouse?.location) || pdfT(pNa)}</td>
                 </tr>
               </table>
             </div>
@@ -121,7 +133,7 @@ export async function exportWarehouseTransferToPDF({
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #666; width: 80px;">${pdfT(p6)}</td>
-                  <td style="padding: 8px 0; color: #333; font-weight: bold;">${transfer.technicianName || pdfT(pNa)}</td>
+                  <td style="padding: 8px 0; color: #333; font-weight: bold;">${escapeHtml(transfer.technicianName) || pdfT(pNa)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">${pdfT(p9)}</td>
@@ -146,7 +158,7 @@ export async function exportWarehouseTransferToPDF({
                   .map(
                     (item, index) => `
                   <tr style="background: ${index % 2 === 0 ? "white" : "#f0f0f0"};">
-                    <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.nameAr}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #eee;">${escapeHtml(item.nameAr)}</td>
                     <td style="padding: 12px; text-align: center; border-bottom: 1px solid #eee; font-weight: bold;">${item.quantity}</td>
                     <td style="padding: 12px; text-align: center; border-bottom: 1px solid #eee;">${item.type === "box" ? pdfT(pBox) : pdfT(pUnit)}</td>
                   </tr>
@@ -167,7 +179,7 @@ export async function exportWarehouseTransferToPDF({
               ? `
           <div style="background: #fff3cd; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-right: 4px solid #ffc107;">
             <h3 style="color: #856404; margin: 0 0 10px 0; font-size: 16px;">${pdfT(p15)}</h3>
-            <p style="margin: 0; color: #856404;">${transfer.notes}</p>
+            <p style="margin: 0; color: #856404;">${escapeHtml(transfer.notes)}</p>
           </div>
           `
               : ""
