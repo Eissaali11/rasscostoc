@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AuthenticationError, AuthorizationError } from "@core/errors/AppError";
+import { readCookie, ACCESS_COOKIE } from "@core/config/auth-cookies";
 import { ROLES, hasRoleOrAbove } from "@shared/roles";
 import * as jwt from "@server/utils/jwt";
 import { JWT_SECRET } from "@core/config/jwt.config";
@@ -182,9 +183,13 @@ export async function requireAuth(
   next: NextFunction
 ): Promise<void> {
   try {
-    // 1. Check Bearer token FIRST (Frontend sends this or query param)
+    // 1. Check Bearer token FIRST (Frontend primary method), then the
+    //    httpOnly access cookie, then the legacy query param.
     const authHeader = req.headers.authorization;
     let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    if (!token) {
+      token = readCookie(req, ACCESS_COOKIE);
+    }
     if (!token && req.query.token) {
       token = String(req.query.token);
     }
