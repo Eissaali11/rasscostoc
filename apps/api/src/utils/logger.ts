@@ -1,10 +1,13 @@
 /**
- * Logger utility for consistent structured logging across the application.
+ * String-style logging facade.
+ *
+ * Delegates to the canonical structured logger (core/telemetry/logger) so the
+ * application has a SINGLE structured-logging implementation. This adapter only
+ * exists to preserve the ergonomic `logger.info("msg", { source, metadata })`
+ * call style used across several modules; it no longer emits its own JSON.
  */
 
-import { getContext } from "../core/telemetry/telemetry";
-
-type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+import { logger as structuredLogger } from "../core/telemetry/logger";
 
 interface LogOptions {
   source?: string;
@@ -13,56 +16,20 @@ interface LogOptions {
 }
 
 class Logger {
-  private logStructured(level: LogLevel, message: string, options?: LogOptions, error?: Error | unknown): void {
-    const context = getContext();
-    const timestamp = new Date().toISOString();
-    const source = options?.source || "app";
-
-    const errMessage = error ? (error instanceof Error ? error.message : String(error)) : undefined;
-    const errStack = error instanceof Error ? error.stack : undefined;
-
-    const payload = {
-      timestamp,
-      level,
-      traceId: context.traceId,
-      correlationId: context.correlationId,
-      requestId: context.requestId,
-      userId: context.userId,
-      username: context.username,
-      source,
-      message,
-      metadata: options?.metadata || undefined,
-      ...(errMessage && { error: errMessage }),
-      ...(errStack && { stack: errStack }),
-    };
-
-    if (level === 'ERROR') {
-      console.error(JSON.stringify(payload));
-    } else if (level === 'WARN') {
-      console.warn(JSON.stringify(payload));
-    } else if (level === 'DEBUG') {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(JSON.stringify(payload));
-      }
-    } else {
-      console.log(JSON.stringify(payload));
-    }
-  }
-
   info(message: string, options?: LogOptions): void {
-    this.logStructured('INFO', message, options);
+    structuredLogger.info({ message, module: options?.source, metadata: options?.metadata });
   }
 
   warn(message: string, options?: LogOptions): void {
-    this.logStructured('WARN', message, options);
+    structuredLogger.warn({ message, module: options?.source, metadata: options?.metadata });
   }
 
   error(message: string, error?: Error | unknown, options?: LogOptions): void {
-    this.logStructured('ERROR', message, options, error);
+    structuredLogger.error({ message, module: options?.source, metadata: options?.metadata, error });
   }
 
   debug(message: string, options?: LogOptions): void {
-    this.logStructured('DEBUG', message, options);
+    structuredLogger.debug({ message, module: options?.source, metadata: options?.metadata });
   }
 }
 
