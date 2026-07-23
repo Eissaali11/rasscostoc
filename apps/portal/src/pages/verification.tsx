@@ -25,6 +25,7 @@ import {
   ArrowLeft 
 } from "lucide-react";
 import { Link } from "wouter";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type SerialLookupResult = {
   id: string;
@@ -38,6 +39,18 @@ type SerialLookupResult = {
   itemTypeCategory: string | null;
   ownerName: string | null;
   ownerId: string | null;
+  ownerCity?: string | null;
+  ownerRegionName?: string | null;
+  technicianId?: string | null;
+  technicianName?: string | null;
+  technicianCity?: string | null;
+  technicianRegionName?: string | null;
+  technicianProfileImage?: string | null;
+  deliveredAt?: string | null;
+  orderNumber?: string | null;
+  closedById?: string | null;
+  closedByName?: string | null;
+  closedByProfileImage?: string | null;
 };
 
 export default function VerificationPage() {
@@ -251,14 +264,31 @@ export default function VerificationPage() {
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <User className="w-5 h-5 text-cyan-400 shrink-0" />
-                    <div>
-                      <p className="text-xs text-slate-500">{t('verification.item_25468')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5">
-                        {itemData.ownerName ? (
-                          <Link href={`/technician-details/${itemData.ownerId}`} className="hover:underline text-cyan-300">
-                            {itemData.ownerName}
-                          </Link>
+                    <Avatar className="h-12 w-12 border border-cyan-500/30 shrink-0">
+                      <AvatarImage
+                        src={itemData.technicianProfileImage || undefined}
+                        alt={itemData.technicianName || itemData.ownerName || "technician"}
+                      />
+                      <AvatarFallback className="bg-slate-800 text-cyan-300">
+                        <User className="w-5 h-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-xs text-slate-500">{t('verification.linked_technician')}</p>
+                      <p className="text-sm font-bold text-slate-200 mt-0.5 truncate">
+                        {(itemData.technicianName || itemData.ownerName) ? (
+                          itemData.technicianId || itemData.ownerId ? (
+                            <Link
+                              href={`/technician-details/${itemData.technicianId || itemData.ownerId}`}
+                              className="hover:underline text-cyan-300"
+                            >
+                              {itemData.technicianName || itemData.ownerName}
+                            </Link>
+                          ) : (
+                            <span className="text-cyan-300">
+                              {itemData.technicianName || itemData.ownerName}
+                            </span>
+                          )
                         ) : t('verification.warehouse_primary_1')}
                       </p>
                     </div>
@@ -269,6 +299,26 @@ export default function VerificationPage() {
                     <div>
                       <p className="text-xs text-slate-500">{t('verification.category')}</p>
                       <p className="text-sm font-bold text-slate-200 mt-0.5">{cat.label}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
+                    <MapPin className="w-5 h-5 text-cyan-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-slate-500">{t('verification.technician_city')}</p>
+                      <p className="text-sm font-bold text-slate-200 mt-0.5">
+                        {itemData.technicianCity || itemData.ownerCity || t('verification.not_available')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
+                    <MapPin className="w-5 h-5 text-cyan-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-slate-500">{t('verification.technician_region')}</p>
+                      <p className="text-sm font-bold text-slate-200 mt-0.5">
+                        {itemData.technicianRegionName || itemData.ownerRegionName || t('verification.not_available')}
+                      </p>
                     </div>
                   </div>
 
@@ -302,6 +352,55 @@ export default function VerificationPage() {
                     </div>
                   </div>
                 </div>
+
+                {(itemData.status === "DELIVERED" || itemData.closedByName || itemData.deliveredAt) && (
+                  <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/15 space-y-3">
+                    <p className="text-sm font-bold text-cyan-300 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      {t('verification.closure_data')}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-slate-700 shrink-0">
+                          <AvatarImage
+                            src={itemData.closedByProfileImage || undefined}
+                            alt={itemData.closedByName || "closer"}
+                          />
+                          <AvatarFallback className="bg-slate-800 text-slate-300">
+                            <User className="w-4 h-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-500">{t('verification.closed_by')}</p>
+                          <p className="text-sm font-bold text-slate-200 mt-0.5 truncate">
+                            {itemData.closedByName || t('verification.not_available')}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">{t('verification.delivered_at')}</p>
+                        <p className="text-sm font-bold text-slate-200 mt-0.5">
+                          {itemData.deliveredAt
+                            ? new Date(itemData.deliveredAt).toLocaleString("ar-SA", {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : t('verification.not_available')}
+                        </p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <p className="text-xs text-slate-500">{t('verification.order_number')}</p>
+                        <p className="text-sm font-bold font-mono text-cyan-200 mt-0.5">
+                          {itemData.orderNumber || t('verification.not_available')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {itemData.itemTypeCategory === "sim" && itemData.carrierName && (
                   <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 flex items-center justify-between">

@@ -257,7 +257,7 @@ export default function CourierRawDataPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx"
+            accept=".xlsx,.xls,.csv"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])}
           />
