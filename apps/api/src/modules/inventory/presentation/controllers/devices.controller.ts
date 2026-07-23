@@ -441,10 +441,13 @@ export class DevicesController {
    */
   patchReceivedDevice = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { serialNumber, terminalId } = req.body;
+    const { serialNumber, terminalId, status, simCardType, adminNotes } = req.body;
     const updates: any = {};
     if (serialNumber !== undefined) updates.serialNumber = String(serialNumber).trim();
     if (terminalId !== undefined) updates.terminalId = String(terminalId).trim();
+    if (status !== undefined) updates.status = String(status).trim();
+    if (simCardType !== undefined) updates.simCardType = String(simCardType).trim();
+    if (adminNotes !== undefined) updates.adminNotes = String(adminNotes).trim();
 
     const updated = await this.devicesService.updateReceivedDevice(id, updates);
     res.json(updated);

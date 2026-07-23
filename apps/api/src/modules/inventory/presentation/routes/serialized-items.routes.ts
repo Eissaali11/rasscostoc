@@ -58,17 +58,14 @@ export function registerSerializedItemsRoutes(app: Express): void {
     async (req, res) => {
       try {
         const { id } = req.params;
-        const { serialNumber } = req.body;
-        if (!serialNumber || typeof serialNumber !== "string") {
-          return res.status(400).json({ message: "الرقم التسلسلي مطلوب" });
-        }
-        const updated = await serializedItemsService.updateSerial(id, serialNumber);
+        const payload = typeof req.body === "object" && req.body !== null ? req.body : { serialNumber: String(req.body) };
+        const updated = await serializedItemsService.updateSerial(id, payload);
         if (!updated) {
           return res.status(404).json({ message: "الجهاز غير موجود" });
         }
         res.json(updated);
       } catch (err: any) {
-        res.status(500).json({ message: err.message || "فشل تحديث السيريال" });
+        res.status(500).json({ message: err.message || "فشل تحديث البيانات" });
       }
     }
   );

@@ -1,5 +1,5 @@
 import { useTranslation, t } from "@/lib/language";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -39,28 +39,40 @@ import {
   Navigation,
   Handshake,
   Info,
-  Edit3,
   Trash2,
-  Eye,
+  Pencil,
+  Loader2,
 } from "lucide-react";
 import { useActiveItemTypes } from "@/hooks/use-item-types";
 import type { TechnicianFixedInventoryEntry, TechnicianMovingInventoryEntry } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type ProductTab = "available" | "delivered";
 
@@ -102,6 +114,8 @@ type ProductOperationRow = {
   datetime: string;
   raw?: any;
   type?: "device" | "transfer";
+  /** True when row comes from active `items` custody (hard-deletable). */
+  isActiveSerialized?: boolean;
 };
 
 function createMockOperations(productName: string): ProductOperationRow[] {
@@ -297,6 +311,8 @@ export default function TechnicianItemDetailsPage() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canHardDeleteSerialized = user?.role === "admin";
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<ProductTab>("available");
 
@@ -305,6 +321,18 @@ export default function TechnicianItemDetailsPage() {
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [adminNotesText, setAdminNotesText] = useState<string>("");
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [rowPendingDelete, setRowPendingDelete] = useState<ProductOperationRow | null>(null);
+
+  // Edit Device Modal States
+  const [editingRow, setEditingRow] = useState<ProductOperationRow | null>(null);
+  const [editSerialNumber, setEditSerialNumber] = useState("");
+  const [editTerminalId, setEditTerminalId] = useState("");
+  const [editSimCardType, setEditSimCardType] = useState("");
+  const [editAdminNotes, setEditAdminNotes] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+
+  const deleteLabelForCategory = (category?: string | null) =>
+    category === "sim" ? "الشريحة" : "الجهاز";
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -365,6 +393,18 @@ export default function TechnicianItemDetailsPage() {
     : Number(movingEntry?.boxes || 0) + Number(movingEntry?.units || 0);
   const totalStock = fixedTotal + movingTotal;
 
+  const formatSerialWithPrefix = (serialRaw?: string | null, type?: { serialPrefix?: string | null }) => {
+    if (!serialRaw || serialRaw === "-") return "-";
+    const s = String(serialRaw).trim();
+    if (!type?.serialPrefix) return s;
+    const prefixes = type.serialPrefix.split(",").map((p) => p.trim().toUpperCase());
+    const alphabeticPrefix = prefixes.find((p) => /^[A-Z]+$/.test(p));
+    if (alphabeticPrefix && !s.toUpperCase().startsWith(alphabeticPrefix)) {
+      return `${alphabeticPrefix}${s}`;
+    }
+    return s;
+  };
+
   const liveOperations = useMemo(() => {
     const productNameAr = itemType?.nameAr || t('common.item_6369');
     const productNameEn = itemType?.nameEn || "";
@@ -373,50 +413,57 @@ export default function TechnicianItemDetailsPage() {
 
     const activeSerializedRows: ProductOperationRow[] = (serializedItems || [])
       .filter((item) => item.itemTypeId === itemTypeId)
-      .map((item) => ({
-        id: `active-${item.id}`,
-        productName: item.itemTypeName || productNameAr,
-        serial: item.serialNumber || "-",
-        status: t('common.inventory_6'),
-        statusClass: inStockClass,
-        datetime: formatDateTime(item.createdAt),
-        raw: {
-          id: item.id,
-          serialNumber: item.serialNumber,
-          itemTypeId: item.itemTypeId,
-          status: item.status || "RECEIVED_BY_TECHNICIAN",
-          createdAt: item.createdAt,
-          technicianId,
-          inventoryType: "moving",
-          simCardType: item.carrierName,
-          hasSim: !!item.carrierName,
-        },
-        type: "device" as const,
-      }));
+      .map((item) => {
+        const serialFormatted = formatSerialWithPrefix(item.serialNumber, itemType);
+        return {
+          id: `active-${item.id}`,
+          productName: item.itemTypeName || productNameAr,
+          serial: serialFormatted,
+          status: t('common.inventory_6'),
+          statusClass: inStockClass,
+          datetime: formatDateTime(item.createdAt),
+          raw: {
+            id: item.id,
+            serialNumber: serialFormatted !== "-" ? serialFormatted : item.serialNumber,
+            itemTypeId: item.itemTypeId,
+            status: item.status || "RECEIVED_BY_TECHNICIAN",
+            createdAt: item.createdAt,
+            technicianId,
+            inventoryType: "moving",
+            simCardType: item.carrierName,
+            hasSim: !!item.carrierName,
+          },
+          type: "device" as const,
+          isActiveSerialized: true,
+        };
+      });
 
     const deliveredV3Rows: ProductOperationRow[] = (deliveredSerializedItems || [])
       .filter((item) => item.itemTypeId === itemTypeId)
-      .map((item) => ({
-        id: `delivered-${item.movementId || item.id}`,
-        productName: item.itemTypeName || productNameAr,
-        serial: item.serialNumber || "-",
-        status: t('common.completed_3'),
-        statusClass: deliveredClass,
-        datetime: formatDateTime(item.deliveredAt || item.createdAt),
-        raw: {
-          id: item.id,
-          serialNumber: item.serialNumber,
-          itemTypeId: item.itemTypeId,
-          status: "delivered",
-          createdAt: item.deliveredAt || item.createdAt,
-          technicianId,
-          inventoryType: "moving",
-          simCardType: item.carrierName,
-          hasSim: !!item.carrierName,
-          adminNotes: item.notes || (item.referenceId ? t('common.request_1', { var_0: item.referenceId }) : null),
-        },
-        type: "device" as const,
-      }));
+      .map((item) => {
+        const serialFormatted = formatSerialWithPrefix(item.serialNumber, itemType);
+        return {
+          id: `delivered-${item.movementId || item.id}`,
+          productName: item.itemTypeName || productNameAr,
+          serial: serialFormatted,
+          status: t('common.completed_3'),
+          statusClass: deliveredClass,
+          datetime: formatDateTime(item.deliveredAt || item.createdAt),
+          raw: {
+            id: item.id,
+            serialNumber: serialFormatted !== "-" ? serialFormatted : item.serialNumber,
+            itemTypeId: item.itemTypeId,
+            status: "delivered",
+            createdAt: item.deliveredAt || item.createdAt,
+            technicianId,
+            inventoryType: "moving",
+            simCardType: item.carrierName,
+            hasSim: !!item.carrierName,
+            adminNotes: item.notes || (item.referenceId ? t('common.request_1', { var_0: item.referenceId }) : null),
+          },
+          type: "device" as const,
+        };
+      });
 
     const receivedRows: ProductOperationRow[] = receivedDevices
       .filter((device) => device.technicianId === technicianId)
@@ -430,14 +477,18 @@ export default function TechnicianItemDetailsPage() {
       })
       .map((device) => {
         const ui = statusUi(device.status);
+        const serialFormatted = formatSerialWithPrefix(device.serialNumber || device.terminalId, itemType);
         return {
           id: `rc-${device.id}`,
           productName: productNameAr,
-          serial: device.serialNumber || "-",
+          serial: serialFormatted,
           status: ui.text,
           statusClass: ui.className,
           datetime: formatDateTime(device.createdAt),
-          raw: device,
+          raw: {
+            ...device,
+            serialNumber: serialFormatted !== "-" ? serialFormatted : device.serialNumber,
+          },
           type: "device" as const,
         };
       });
@@ -450,20 +501,21 @@ export default function TechnicianItemDetailsPage() {
       })
       .map((transfer) => {
         const ui = statusUi(transfer.status);
+        const serialFormatted = formatSerialWithPrefix(transfer.notes || transfer.reason, itemType);
         return {
           id: `tr-${transfer.id}`,
           productName: productNameAr,
-          serial: "-",
+          serial: serialFormatted,
           status: ui.text,
           statusClass: ui.className,
           datetime: formatDateTime(transfer.createdAt),
           raw: transfer,
-          type: "transfer" as const,
+          type: "device" as const,
         };
       });
 
-    // Prefer v3 delivered/active over legacy received rows for same serial
-    const rows = [...deliveredV3Rows, ...activeSerializedRows, ...receivedRows, ...transferRows];
+    // Prefer active serialized (hard-deletable) over delivered/legacy for same serial
+    const rows = [...activeSerializedRows, ...deliveredV3Rows, ...receivedRows, ...transferRows];
     const seenSerials = new Set<string>();
     const uniqueRows: ProductOperationRow[] = [];
 
@@ -545,90 +597,143 @@ export default function TechnicianItemDetailsPage() {
     },
   });
 
-  // Edit & Delete modal states
-  const [editingRow, setEditingRow] = useState<ProductOperationRow | null>(null);
-  const [editingSerialInput, setEditingSerialInput] = useState<string>("");
-  const [deletingRow, setDeletingRow] = useState<ProductOperationRow | null>(null);
+  const openEditModal = (row: ProductOperationRow, event?: MouseEvent) => {
+    event?.stopPropagation();
+    event?.preventDefault();
+    setEditingRow(row);
+    setEditSerialNumber(row.serial && row.serial !== "-" ? row.serial : row.raw?.serialNumber || "");
+    setEditTerminalId(row.raw?.terminalId || "");
+    setEditSimCardType(row.raw?.simCardType || row.raw?.carrierName || "");
+    setEditAdminNotes(row.raw?.adminNotes || row.raw?.notes || "");
+    setEditStatus(
+      row.raw?.status || (row.status === t('common.completed_3') ? "delivered" : "approved")
+    );
+  };
 
-  const editSerialMutation = useMutation({
-    mutationFn: async ({ row, serialNumber }: { row: ProductOperationRow; serialNumber: string }) => {
-      const cleanSerial = serialNumber.trim();
-      if (!cleanSerial) throw new Error("يرجى إدخال الرقم التسلسلي");
-      const id = row.raw?.id || row.id.replace(/^(rc-|active-|delivered-|tr-)/, "");
-      
-      if (row.id.startsWith("rc-")) {
-        const res = await apiRequest("PATCH", `/api/received-devices/${id}`, { serialNumber: cleanSerial });
+  const updateDeviceMutation = useMutation({
+    mutationFn: async ({
+      row,
+      serialNumber,
+      terminalId,
+      simCardType,
+      adminNotes,
+      status,
+    }: {
+      row: ProductOperationRow;
+      serialNumber: string;
+      terminalId: string;
+      simCardType: string;
+      adminNotes: string;
+      status: string;
+    }) => {
+      const rawId = row.raw?.id;
+      if (!rawId) throw new Error("معرّف المادة غير موجود");
+
+      const isSerializedItem =
+        row.isActiveSerialized ||
+        row.id.startsWith("active-") ||
+        row.id.startsWith("delivered-");
+
+      if (isSerializedItem) {
+        const res = await apiRequest("PATCH", `/api/serialized-items/${rawId}`, {
+          serialNumber,
+          simCardType,
+          carrierName: simCardType,
+          status,
+        });
         return res.json();
-      } else if (row.id.startsWith("tr-")) {
-        try {
-          const res = await apiRequest("POST", `/api/warehouse-transfers/${id}/scan-serial`, { 
-            serialNumber: cleanSerial,
-            itemType: itemTypeId || "n950" 
-          });
-          return await res.json();
-        } catch {
-          const res = await apiRequest("POST", "/api/serialized-items/scan-in", {
-            serialNumber: cleanSerial,
-            itemTypeId,
-            technicianId,
-          });
-          return await res.json();
-        }
       } else {
-        const res = await apiRequest("PATCH", `/api/serialized-items/${id}`, { serialNumber: cleanSerial });
+        const res = await apiRequest("PATCH", `/api/received-devices/${rawId}`, {
+          serialNumber,
+          terminalId,
+          simCardType,
+          adminNotes,
+          status,
+        });
         return res.json();
       }
     },
     onSuccess: () => {
       toast({
-        title: "تم تحديث الرقم التسلسلي بنجاح",
-        description: "تمت إضافة وتحديث السيريال الخاص بالجهاز",
+        title: "تم تحديث البيانات",
+        description: "تم حفظ التعديلات على الجهاز بنجاح",
       });
-      refreshData();
       setEditingRow(null);
-      setEditingSerialInput("");
-      if (selectedRow) setSelectedRow(null);
+      setSelectedRow(null);
+      refreshData();
     },
     onError: (err: any) => {
       toast({
-        title: "فشل تحديث السيريال",
-        description: err.message || "حدث خطأ أثناء تعديل السيريال",
+        title: "فشل التحديث",
+        description: err?.message || "حدث خطأ أثناء تعديل البيانات",
         variant: "destructive",
       });
     },
   });
 
-  const deleteRowMutation = useMutation({
+  const hardDeleteSerializedMutation = useMutation({
     mutationFn: async (row: ProductOperationRow) => {
-      const id = row.raw?.id || row.id.replace(/^(rc-|active-|delivered-|tr-)/, "");
-      if (row.id.startsWith("rc-")) {
-        const res = await apiRequest("DELETE", `/api/received-devices/${id}`);
-        return res.json();
-      } else if (row.id.startsWith("tr-")) {
-        const res = await apiRequest("DELETE", `/api/warehouse-transfers/${id}`);
-        return res.json();
+      const rawId = row.raw?.id;
+      if (!rawId) throw new Error("معرّف المادة غير موجود");
+
+      const isSerializedItem =
+        row.isActiveSerialized ||
+        row.id.startsWith("active-") ||
+        row.id.startsWith("delivered-");
+
+      if (isSerializedItem) {
+        const res = await apiRequest("DELETE", `/api/serialized-items/${rawId}`);
+        const data = await res.json().catch(() => ({}));
+        return { ...data, deletedId: rawId };
       } else {
-        const res = await apiRequest("DELETE", `/api/serialized-items/${id}`);
-        return res.json();
+        const res = await apiRequest("DELETE", `/api/received-devices/${rawId}`);
+        const data = await res.json().catch(() => ({}));
+        return { ...data, deletedId: rawId };
       }
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      const label = deleteLabelForCategory(itemType?.category);
+      const deletedId = data?.deletedId || rowPendingDelete?.raw?.id;
+
+      // Optimistic: drop from serialized custody cache immediately
+      if (deletedId && technicianId) {
+        queryClient.setQueryData(
+          [`/api/technicians/${technicianId}/serialized-items`],
+          (prev: any) => (Array.isArray(prev) ? prev.filter((x: any) => x?.id !== deletedId) : prev)
+        );
+      }
+
       toast({
-        title: "تم حذف الجهاز بنجاح",
-        description: "تم إزالة الجهاز من عهدة الفني بنجاح",
+        title: "تم الحذف",
+        description: `تم حذف ${label} نهائياً من قاعدة البيانات`,
       });
+      if (selectedRow?.raw?.id && deletedId && selectedRow.raw.id === deletedId) {
+        setSelectedRow(null);
+      }
+      setRowPendingDelete(null);
       refreshData();
-      setDeletingRow(null);
-      if (selectedRow) setSelectedRow(null);
     },
     onError: (err: any) => {
+      const label = deleteLabelForCategory(itemType?.category);
+      const status = err?.status;
+      const description =
+        status === 429
+          ? "تم تجاوز حد الطلبات. انتظر لحظات ثم أعد المحاولة."
+          : err?.message || `تعذر حذف ${label} من قاعدة البيانات`;
       toast({
-        title: "فشل عملية الحذف",
-        description: err.message || "حدث خطأ أثناء حذف الجهاز من العهدة",
+        title: `فشل حذف ${label}`,
+        description,
         variant: "destructive",
       });
     },
   });
+
+  const requestHardDelete = (row: ProductOperationRow, event?: MouseEvent) => {
+    event?.stopPropagation();
+    event?.preventDefault();
+    if (!row.raw?.id) return;
+    setRowPendingDelete(row);
+  };
 
   const isStepCompleted = (stepIndex: number, device: ReceivedDevice) => {
     const status = (device.status || "").toLowerCase();
@@ -647,14 +752,14 @@ export default function TechnicianItemDetailsPage() {
   };
 
   const renderDetailItem = (label: string, value: string, copyable = false) => (
-    <div className="flex justify-between items-center py-3 border-b border-slate-800/60 last:border-0 text-sm">
-      <span className="text-slate-400 font-medium">{label}</span>
+    <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]/60 last:border-0 text-sm">
+      <span className="text-[#6B7280] font-medium">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className="font-bold text-slate-100">{value || "-"}</span>
+        <span className="font-bold text-[#2D3135]">{value || "-"}</span>
         {copyable && value && value !== "-" && (
           <button
             onClick={() => copyToClipboard(value)}
-            className="text-cyan-400 hover:text-cyan-300 p-1 hover:bg-cyan-400/5 rounded transition-all"
+            className="text-[#18B2B0] hover:text-[#149D9B] p-1 hover:bg-[#18B2B0]/10 rounded transition-all"
           >
             {copiedText === value ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
@@ -666,7 +771,7 @@ export default function TechnicianItemDetailsPage() {
   const renderAccessoryChip = (label: string, isPresent: boolean, Icon: any) => {
     const colorClass = isPresent 
       ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400" 
-      : "border-slate-800 bg-slate-950/40 text-slate-500";
+      : "border-[#E2E8F0] bg-[#F8FAFC] text-[#6B7280]";
     return (
       <div className={`flex items-center justify-between p-3.5 rounded-xl border ${colorClass} transition-all`}>
         <div className="flex items-center gap-2.5">
@@ -684,57 +789,57 @@ export default function TechnicianItemDetailsPage() {
     const nameEn = itemType?.nameEn || "";
     const name = (nameAr + " " + nameEn + " " + (row.raw?.simCardType || "")).toLowerCase();
 
-    let gradient = "from-blue-600/35 to-indigo-900/35 border-blue-500/30";
+    let gradient = "from-[#E8F7F7] to-[#F0F4F8] border-[#18B2B0]/35";
     let Icon = Smartphone;
     let brandText = "";
-    let brandTextColor = "text-white";
+    let brandTextColor = "text-[#18B2B0]";
     let imageSrc = "";
 
     if (category === "sim") {
       Icon = Handshake; // or CreditCard
       if (name.includes("stc") || name.includes(t('common.item_9611'))) {
-        gradient = "from-purple-900/60 to-indigo-950/80 border-purple-500/60";
+        gradient = "from-purple-50 to-indigo-50 border-purple-200";
         brandText = "stc";
-        brandTextColor = "text-purple-300";
+        brandTextColor = "text-purple-700";
         imageSrc = "/assets/stc.jpg";
       } else if (name.includes("zain") || name.includes(t('common.zain'))) {
-        gradient = "from-neutral-900/80 to-slate-950/90 border-lime-500/50";
+        gradient = "from-lime-50 to-neutral-50 border-lime-300";
         brandText = "Zain";
-        brandTextColor = "text-lime-400";
+        brandTextColor = "text-lime-700";
         imageSrc = "/assets/zein.png";
       } else if (name.includes("mobily") || name.includes(t('common.mobily'))) {
-        gradient = "from-cyan-900/60 to-blue-950/80 border-cyan-500/60";
+        gradient = "from-cyan-50 to-blue-50 border-cyan-200";
         brandText = "Mobily";
-        brandTextColor = "text-cyan-300";
+        brandTextColor = "text-cyan-700";
         imageSrc = "/assets/mobile.png";
       } else if (name.includes("lebara") || name.includes(t('common.lebara'))) {
-        gradient = "from-red-900/60 to-blue-950/80 border-red-500/60";
+        gradient = "from-red-50 to-rose-50 border-red-200";
         brandText = "Lebara";
-        brandTextColor = "text-red-400";
+        brandTextColor = "text-red-700";
         imageSrc = "/assets/libar.png";
       } else {
-        gradient = "from-teal-900/50 to-slate-950/80 border-teal-500/40";
+        gradient = "from-teal-50 to-[#F0F9F9] border-teal-200";
         brandText = "SIM";
-        brandTextColor = "text-teal-300";
+        brandTextColor = "text-teal-700";
       }
     } else if (category === "devices") {
       Icon = Smartphone;
       imageSrc = "/assets/1.png";
       if (name.includes("950")) {
-        gradient = "from-blue-900/60 to-slate-950/80 border-blue-500/50";
+        gradient = "from-blue-50 to-[#E8F7F7] border-[#18B2B0]/40";
         brandText = "N950";
       } else if (name.includes("9100")) {
-        gradient = "from-indigo-900/60 to-slate-950/80 border-indigo-500/50";
+        gradient = "from-indigo-50 to-blue-50 border-indigo-200";
         brandText = "I9100";
       } else if (name.includes("9000")) {
-        gradient = "from-slate-800/60 to-slate-950/80 border-slate-600/50";
+        gradient = "from-slate-50 to-gray-50 border-slate-200";
         brandText = "I9000";
       } else {
-        gradient = "from-slate-700/60 to-slate-900/80 border-slate-500/40";
+        gradient = "from-[#F8FAFB] to-[#EEF2F6] border-[#E2E8F0]";
         brandText = "POS";
       }
     } else if (category === "accessories") {
-      gradient = "from-purple-900/50 to-slate-950/80 border-purple-500/40";
+      gradient = "from-purple-50 to-fuchsia-50 border-purple-200";
       Icon = Cable;
       if (name.includes("battery") || name.includes(t('common.battery'))) {
         Icon = Plug;
@@ -743,29 +848,53 @@ export default function TechnicianItemDetailsPage() {
         brandText = t('common.item_6392');
       }
     } else if (category === "stickers" || name.includes(t('common.sticker')) || name.includes("sticker") || name.includes("mol") || name.includes("label") || name.includes(t('common.stickers_1')) || name.includes("stickers")) {
-      gradient = "from-emerald-900/50 to-slate-950/80 border-emerald-500/40";
+      gradient = "from-emerald-50 to-teal-50 border-emerald-200";
       Icon = FileText;
       brandText = t('common.sticker');
       imageSrc = "/assets/mol.png";
     } else if (category === "papers") {
-      gradient = "from-amber-900/50 to-slate-950/80 border-amber-500/40";
+      gradient = "from-amber-50 to-orange-50 border-amber-200";
       Icon = FileText;
       brandText = t('common.paper');
+    } else if (
+      name.includes("950") ||
+      name.includes("9100") ||
+      name.includes("9000") ||
+      name.includes("pos") ||
+      (itemTypeId || "").toLowerCase().includes("n950") ||
+      (itemTypeId || "").toLowerCase().includes("i9000") ||
+      (itemTypeId || "").toLowerCase().includes("i9100")
+    ) {
+      // Fallback when category is missing/other but product is clearly a POS device
+      Icon = Smartphone;
+      imageSrc = "/assets/1.png";
+      if (name.includes("950") || (itemTypeId || "").toLowerCase().includes("n950")) {
+        gradient = "from-blue-50 to-[#E8F7F7] border-[#18B2B0]/40";
+        brandText = "N950";
+      } else if (name.includes("9100") || (itemTypeId || "").toLowerCase().includes("i9100")) {
+        gradient = "from-indigo-50 to-blue-50 border-indigo-200";
+        brandText = "I9100";
+      } else if (name.includes("9000") || (itemTypeId || "").toLowerCase().includes("i9000")) {
+        gradient = "from-slate-50 to-gray-50 border-slate-200";
+        brandText = "I9000";
+      } else {
+        gradient = "from-[#F8FAFB] to-[#EEF2F6] border-[#E2E8F0]";
+        brandText = "POS";
+      }
     }
 
     return (
-      <div className={`relative w-12 h-12 rounded-xl border bg-gradient-to-tr ${gradient} flex flex-col items-center justify-center shadow-inner overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-200`}>
-        {/* Glow effect */}
-        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className={`relative w-14 h-14 rounded-xl border bg-gradient-to-tr ${gradient} flex flex-col items-center justify-center shadow-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-200`}>
+        <div className="absolute inset-0 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity" />
         
         {imageSrc ? (
-          <img src={imageSrc} alt={brandText || category} className="w-10 h-10 object-contain drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)]" />
+          <img src={imageSrc} alt={brandText || category} className="w-11 h-11 object-contain" />
         ) : (
-          <Icon className="w-5 h-5 text-white/80 drop-shadow-[0_2px_8px_rgba(255,255,255,0.3)] mt-0.5" />
+          <Icon className="w-5 h-5 text-[#18B2B0] mt-0.5" />
         )}
         
         {brandText && (
-          <span className={`absolute bottom-0.5 text-[8px] font-black tracking-tighter ${brandTextColor} bg-slate-950/70 px-1 rounded-sm uppercase scale-90`}>
+          <span className={`absolute bottom-0.5 text-[8px] font-black tracking-tighter ${brandTextColor} bg-white/90 px-1 rounded-sm uppercase scale-90 border border-[#E6E8EC]`}>
             {brandText}
           </span>
         )}
@@ -800,28 +929,28 @@ export default function TechnicianItemDetailsPage() {
   }
 
   return (
-    <div className="space-y-8" dir={dir}>
+    <div className="rassco-page rassco-light-surface space-y-8" dir={dir}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-100 tracking-tight">{t('common.item_19145')}</h2>
-          <p className="text-slate-400 mt-1">{t('common.view_details_4')}{displayItemName}</p>
-          <p className="text-xs text-cyan-300 mt-1">{t('common.technician_1')}{displayTechnicianName}</p>
+          <h2 className="text-3xl font-black text-[#2D3135] tracking-tight">{t('common.item_19145')}</h2>
+          <p className="text-[#6B7280] mt-1">{t('common.view_details_4')}{displayItemName}</p>
+          <p className="text-xs text-[#18B2B0] mt-1">{t('common.technician_1')}{displayTechnicianName}</p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <Button
             onClick={refreshData}
             variant="outline"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-400/10 text-cyan-300 border-cyan-400/20 font-bold text-sm hover:bg-cyan-400/20"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#18B2B0]/10 text-[#18B2B0] border-[#18B2B0]/30 font-bold text-sm hover:bg-[#18B2B0]/15"
           >
             <RefreshCw className="h-4 w-4" />
             {t('common.update_data')}
           </Button>
-          <Button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-400 text-slate-900 font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-cyan-400/20">
+          <Button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#18B2B0] text-white font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-[#18B2B0]/20">
             <Plus className="h-4 w-4" />
             {t('common.add')}
           </Button>
           <Link href={`/technician-details/${technicianId}`}>
-            <Button variant="outline" className="inline-flex items-center gap-2 border-slate-700 text-slate-200 hover:bg-slate-800">
+            <Button variant="outline" className="inline-flex items-center gap-2 border-[#E2E8F0] text-[#4B5563] hover:bg-[rgba(24,178,176,0.06)]">
               <ArrowLeft className="h-4 w-4 shrink-0" />
               {t('common.item_6366')}
             </Button>
@@ -830,31 +959,31 @@ export default function TechnicianItemDetailsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-slate-900/60 border-cyan-400/10">
+        <Card className="bg-white border-[rgba(24,178,176,0.18)]">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.total_scan_active')}</p>
+            <p className="text-[#6B7280] text-sm font-medium mb-2">{t('common.total_scan_active')}</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-3xl font-black text-slate-100">{arNumber(effectiveTotalStock)}</h3>
+              <h3 className="text-3xl font-black text-[#2D3135]">{arNumber(effectiveTotalStock)}</h3>
               <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 mb-1">+5%</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/60 border-cyan-400/10">
+        <Card className="bg-white border-[rgba(24,178,176,0.18)]">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.inventory_5')}</p>
+            <p className="text-[#6B7280] text-sm font-medium mb-2">{t('common.inventory_5')}</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-3xl font-black text-slate-100">{arNumber(deliveredCount)}</h3>
+              <h3 className="text-3xl font-black text-[#2D3135]">{arNumber(deliveredCount)}</h3>
               <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 mb-1">+12%</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/60 border-orange-500/20">
+        <Card className="bg-white border-orange-500/20">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.total_inventory_1')}</p>
+            <p className="text-[#6B7280] text-sm font-medium mb-2">{t('common.total_inventory_1')}</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-3xl font-black text-slate-100">{arNumber(remainingDisplay)}</h3>
+              <h3 className="text-3xl font-black text-[#2D3135]">{arNumber(remainingDisplay)}</h3>
               <span className="text-orange-400 text-sm font-bold flex items-center gap-1 mb-1">
                 <AlertTriangle className="h-3 w-3" />
                 {urgentCount > 0 ? t('common.item_6352') : t('common.item_7957')}
@@ -863,12 +992,12 @@ export default function TechnicianItemDetailsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900/60 border-cyan-400/10">
+        <Card className="bg-white border-[rgba(24,178,176,0.18)]">
           <CardContent className="p-6">
-            <p className="text-slate-400 text-sm font-medium mb-2">{t('common.total_value')}</p>
+            <p className="text-[#6B7280] text-sm font-medium mb-2">{t('common.total_value')}</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-3xl font-black text-slate-100">{arNumber(estimatedValue)}</h3>
-              <span className="text-cyan-300 text-xs font-bold mb-1">SAR</span>
+              <h3 className="text-3xl font-black text-[#2D3135]">{arNumber(estimatedValue)}</h3>
+              <span className="text-[#18B2B0] text-xs font-bold mb-1">SAR</span>
             </div>
           </CardContent>
         </Card>
@@ -877,32 +1006,32 @@ export default function TechnicianItemDetailsPage() {
       <div className="mb-6">
         <div className="relative group">
           <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-            <Search className="h-4 w-4 text-cyan-300/60" />
+            <Search className="h-4 w-4 text-[#18B2B0]/60" />
           </div>
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full md:w-96 py-3 pr-11 pl-4 rounded-xl text-sm text-slate-100 bg-slate-900/60 border-cyan-400/20"
+            className="w-full md:w-96 py-3 pr-11 pl-4 rounded-xl text-sm text-[#2D3135] bg-white border-[#18B2B0]/30"
             placeholder={t('common.serial_3')}
           />
           <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-            <span className="text-[10px] text-slate-600 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">Ctrl + K</span>
+            <span className="text-[10px] text-[#6B7280] bg-[#F3F4F6] px-2 py-1 rounded border border-[#E2E8F0]">Ctrl + K</span>
           </div>
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as ProductTab)} className="w-full">
-        <TabsList className="bg-transparent border-b border-cyan-400/10 mb-6 rounded-none p-0 h-auto gap-8">
+        <TabsList className="bg-transparent border-b border-[rgba(24,178,176,0.18)] mb-6 rounded-none p-0 h-auto gap-8">
           <TabsTrigger
             value="available"
-            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-[#18B2B0] text-[#6B7280] rounded-none leading-none"
           >
             <Warehouse className="h-4 w-4 shrink-0" />
             {t('inventory.inventory_present_count', { count: availableRows.length })}
           </TabsTrigger>
           <TabsTrigger
             value="delivered"
-            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-300 text-slate-500 rounded-none leading-none"
+            className="inline-flex items-center justify-center gap-2 pb-4 px-2 border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:text-[#18B2B0] text-[#6B7280] rounded-none leading-none"
           >
             <Truck className="h-4 w-4 shrink-0" />
             {t('inventory.inventory_count', { count: deliveredCount })}
@@ -910,22 +1039,22 @@ export default function TechnicianItemDetailsPage() {
         </TabsList>
       </Tabs>
 
-      <div className="rounded-xl overflow-hidden border border-cyan-400/10 shadow-2xl shadow-black/20 bg-slate-900/60">
+      <div className="rounded-xl overflow-hidden border border-[rgba(24,178,176,0.18)] shadow-2xl shadow-black/20 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-right border-collapse">
             <thead>
-              <tr className="bg-cyan-400/5 border-b border-cyan-400/10">
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider">{t('common.name_6')}</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t('common.number_serial_1')}</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t('common.status_4')}</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-center">{t('common.date')}</th>
-                <th className="px-6 py-4 text-slate-300 font-bold text-xs uppercase tracking-wider text-left">{t('common.item_11035')}</th>
+              <tr className="bg-cyan-400/5 border-b border-[rgba(24,178,176,0.18)]">
+                <th className="px-6 py-4 text-[#4B5563] font-bold text-xs uppercase tracking-wider">{t('common.name_6')}</th>
+                <th className="px-6 py-4 text-[#4B5563] font-bold text-xs uppercase tracking-wider text-center">{t('common.number_serial_1')}</th>
+                <th className="px-6 py-4 text-[#4B5563] font-bold text-xs uppercase tracking-wider text-center">{t('common.status_4')}</th>
+                <th className="px-6 py-4 text-[#4B5563] font-bold text-xs uppercase tracking-wider text-center">{t('common.date')}</th>
+                <th className="px-6 py-4 text-[#4B5563] font-bold text-xs uppercase tracking-wider text-left">{t('common.item_11035')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-cyan-400/5">
               {shownRows.length === 0 ? (
                 <tr>
-                  <td className="px-6 py-8 text-center text-slate-400" colSpan={5}>
+                  <td className="px-6 py-8 text-center text-[#6B7280]" colSpan={5}>
                     {t('inventory.no_data_no_active')}
                   </td>
                 </tr>
@@ -957,87 +1086,74 @@ export default function TechnicianItemDetailsPage() {
                       <div className="flex items-center gap-3">
                         {renderProductImage(row)}
                         <div>
-                          <p className="text-sm font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">{row.productName}</p>
-                          <p className="text-[10px] text-slate-500">{itemType?.nameEn || "Product"}</p>
+                          <p className="text-sm font-bold text-[#2D3135] group-hover:text-[#18B2B0] transition-colors">{row.productName}</p>
+                          <p className="text-[10px] text-[#6B7280]">{itemType?.nameEn || "Product"}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      {row.serial && row.serial !== "-" ? (
-                        <span className="font-mono text-xs text-cyan-300 bg-cyan-400/5 px-2.5 py-1 rounded border border-cyan-400/20">
-                          {row.serial}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingRow(row);
-                            setEditingSerialInput("");
-                          }}
-                          className="inline-flex items-center gap-1.5 font-mono text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded border border-amber-500/30 transition-all font-semibold"
-                        >
-                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                          <span>بدون سيريال (إضافة)</span>
-                          <Edit3 className="w-3 h-3 ml-0.5" />
-                        </button>
-                      )}
+                      <div className="inline-flex items-center justify-center gap-1.5">
+                        <span className="font-mono text-xs text-[#18B2B0] bg-cyan-400/5 px-2.5 py-1 rounded-md font-bold">{row.serial}</span>
+                        {row.raw?.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-[#18B2B0] hover:bg-[#18B2B0]/10 hover:text-[#149D9B] rounded-lg transition-colors"
+                            title="تعديل الرقم التسلسلي"
+                            data-testid={`button-edit-serial-${row.raw?.id}`}
+                            onClick={(event) => openEditModal(row, event)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <span className="text-sm font-bold text-slate-100">{row.status}</span>
+                      <span className="text-sm font-bold text-[#2D3135]">{row.status}</span>
                     </td>
                     <td className="px-6 py-5 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${row.statusClass}`}>
                         {row.datetime}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-left" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-cyan-300 hover:bg-cyan-400/10">
-                            <MoreVertical className="h-4 w-4" />
+                    <td className="px-6 py-5 text-left">
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {row.raw?.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-[#18B2B0] hover:bg-[#18B2B0]/10 hover:text-[#149D9B] rounded-lg transition-colors"
+                            title="تعديل بيانات الجهاز"
+                            data-testid={`button-edit-device-${row.raw?.id}`}
+                            onClick={(event) => openEditModal(row, event)}
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-slate-900 border border-cyan-400/20 text-slate-100 min-w-[170px] shadow-xl">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedRow(row);
-                              setActiveStepIndex(
-                                row.raw?.status === "delivered" 
-                                  ? 3 
-                                  : row.raw?.status === "approved" 
-                                  ? 2 
-                                  : row.raw?.status === "rejected"
-                                  ? 1
-                                  : 0
-                              );
-                              setAdminNotesText("");
-                            }}
-                            className="cursor-pointer hover:bg-cyan-400/10 flex items-center gap-2"
+                        )}
+                        {row.raw?.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors"
+                            title={`حذف ${deleteLabelForCategory(itemType?.category)} نهائياً`}
+                            data-testid={`button-hard-delete-serialized-${row.raw?.id}`}
+                            onClick={(event) => requestHardDelete(row, event)}
                           >
-                            <Eye className="w-4 h-4 text-cyan-400" />
-                            <span>عرض التفاصيل</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingRow(row);
-                              setEditingSerialInput(row.serial !== "-" ? row.serial : "");
-                            }}
-                            className="cursor-pointer hover:bg-cyan-400/10 flex items-center gap-2"
-                          >
-                            <Edit3 className="w-4 h-4 text-amber-400" />
-                            <span>تعديل السيريال</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-slate-800" />
-                          <DropdownMenuItem
-                            onClick={() => setDeletingRow(row)}
-                            className="cursor-pointer hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2 font-bold"
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-400" />
-                            <span>حذف من العهدة</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[#6B7280] hover:text-[#18B2B0] rounded-lg"
+                          title="عرض التفاصيل"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1046,14 +1162,14 @@ export default function TechnicianItemDetailsPage() {
           </table>
         </div>
 
-        <div className="bg-cyan-400/5 px-6 py-4 border-t border-cyan-400/10 flex items-center justify-between">
-          <p className="text-xs text-slate-500">{t('common.view')}{shownRows.length}{t('common.item_8007')}{productOperations.length}{t('common.item_1')}</p>
+        <div className="bg-cyan-400/5 px-6 py-4 border-t border-[rgba(24,178,176,0.18)] flex items-center justify-between">
+          <p className="text-xs text-[#6B7280]">{t('common.view')}{shownRows.length}{t('common.item_8007')}{productOperations.length}{t('common.item_1')}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" className="w-8 h-8 border-cyan-400/20 text-slate-400" disabled>
+            <Button variant="outline" size="icon" className="w-8 h-8 border-[#18B2B0]/30 text-[#6B7280]" disabled>
               <ChevronRight className="h-3 w-3" />
             </Button>
-            <Button size="icon" className="w-8 h-8 bg-cyan-400 text-slate-900 text-xs">1</Button>
-            <Button variant="outline" size="icon" className="w-8 h-8 border-cyan-400/20 text-slate-400" disabled>
+            <Button size="icon" className="w-8 h-8 bg-[#18B2B0] text-white text-xs">1</Button>
+            <Button variant="outline" size="icon" className="w-8 h-8 border-[#18B2B0]/30 text-[#6B7280]" disabled>
               <ChevronLeft className="h-3 w-3" />
             </Button>
           </div>
@@ -1061,48 +1177,60 @@ export default function TechnicianItemDetailsPage() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-xl p-4 flex items-center justify-between border border-cyan-400/10 bg-slate-900/60">
+        <div className="rounded-xl p-4 flex items-center justify-between border border-[rgba(24,178,176,0.18)] bg-white">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded bg-cyan-400/10 text-cyan-300">
+            <div className="p-2 rounded bg-[#18B2B0]/10 text-[#18B2B0]">
               <RefreshCw className="h-4 w-4" />
             </div>
-            <p className="text-xs text-slate-400">{t('common.data_5')}</p>
+            <p className="text-xs text-[#6B7280]">{t('common.data_5')}</p>
           </div>
-          <button className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">{t('common.update_2')}</button>
+          <button className="text-[10px] font-bold text-[#18B2B0] underline underline-offset-4">{t('common.update_2')}</button>
         </div>
-        <div className="rounded-xl p-4 flex items-center justify-between border border-cyan-400/10 bg-slate-900/60">
+        <div className="rounded-xl p-4 flex items-center justify-between border border-[rgba(24,178,176,0.18)] bg-white">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded bg-cyan-400/10 text-cyan-300">
+            <div className="p-2 rounded bg-[#18B2B0]/10 text-[#18B2B0]">
               <Boxes className="h-4 w-4" />
             </div>
-            <p className="text-xs text-slate-400">{t('common.technician_7')}</p>
+            <p className="text-xs text-[#6B7280]">{t('common.technician_7')}</p>
           </div>
-          <button className="text-[10px] font-bold text-cyan-300 underline underline-offset-4">{t('common.item_20697')}</button>
+          <button className="text-[10px] font-bold text-[#18B2B0] underline underline-offset-4">{t('common.item_20697')}</button>
         </div>
       </div>
 
       {/* Details Dialog for Scanned Devices / Transfers */}
       <Dialog open={!!selectedRow} onOpenChange={(open) => !open && setSelectedRow(null)}>
-        <DialogContent className="sm:max-w-2xl bg-slate-950/95 border border-cyan-400/20 backdrop-blur-2xl text-slate-100 p-6 rounded-2xl max-h-[90vh] overflow-y-auto" dir={dir}>
-          <DialogHeader className="text-right border-b border-slate-800 pb-4 mb-4">
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Smartphone className="w-5 h-5 text-cyan-400" />
-              {selectedRow?.type === "device" ? t('common.details_device_sim') : t('common.details_transaction_inventory')}
-            </DialogTitle>
-            <DialogDescription className="text-slate-400 text-xs mt-1">
-              {selectedRow?.type === "device" 
-                ? t('common.track_details_1')
-                : t('common.view_details_document_transfer')}
-            </DialogDescription>
+        <DialogContent className="sm:max-w-2xl bg-white border border-[rgba(24,178,176,0.22)] text-[#2D3135] p-6 rounded-2xl max-h-[90vh] overflow-y-auto shadow-xl" dir={dir}>
+          <DialogHeader className="text-right border-b border-[#E6E8EC] pb-4 mb-4">
+            <div className="flex items-start gap-3">
+              {selectedRow ? (
+                <div className="shrink-0 scale-125 origin-top">
+                  {renderProductImage(selectedRow)}
+                </div>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-xl font-bold flex items-center gap-2 text-[#2D3135]">
+                  <Smartphone className="w-5 h-5 text-[#18B2B0]" />
+                  {selectedRow?.type === "device" ? t('common.details_device_sim') : t('common.details_transaction_inventory')}
+                </DialogTitle>
+                <DialogDescription className="text-[#6B7280] text-xs mt-1">
+                  {selectedRow?.type === "device" 
+                    ? t('common.track_details_1')
+                    : t('common.view_details_document_transfer')}
+                </DialogDescription>
+                {selectedRow?.productName ? (
+                  <p className="text-sm font-semibold text-[#18B2B0] mt-1.5">{selectedRow.productName}</p>
+                ) : null}
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedRow?.type === "device" ? (
             <div className="space-y-6">
               {/* Stepper/Timeline */}
-              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+              <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]/80">
                 <div className="relative flex justify-between items-center">
                   {/* Progress Line */}
-                  <div className="absolute top-[22px] left-[10%] right-[10%] h-[2px] bg-slate-800 -z-0">
+                  <div className="absolute top-[22px] left-[10%] right-[10%] h-[2px] bg-[#E2E8F0] -z-0">
                     <div 
                       className="h-full bg-emerald-500 transition-all duration-300"
                       style={{
@@ -1122,13 +1250,13 @@ export default function TechnicianItemDetailsPage() {
                     const isCompleted = isStepCompleted(idx, selectedRow.raw);
                     const isActive = activeStepIndex === idx;
                     
-                    let stateColor = "text-slate-600 border-slate-800 bg-slate-900";
+                    let stateColor = "text-[#9CA3AF] border-[#E2E8F0] bg-white";
                     if (isActive) {
-                      stateColor = "text-cyan-400 border-cyan-400 bg-cyan-950/40 shadow-lg shadow-cyan-400/10";
+                      stateColor = "text-[#18B2B0] border-[#18B2B0] bg-[#18B2B0]/10 shadow-md shadow-[#18B2B0]/15";
                     } else if (isCompleted) {
-                      stateColor = "text-emerald-400 border-emerald-500 bg-emerald-950/20";
+                      stateColor = "text-emerald-600 border-emerald-400 bg-emerald-50";
                     } else if (selectedRow.raw?.status === "rejected" && idx === 1) {
-                      stateColor = "text-rose-400 border-rose-500 bg-rose-950/20";
+                      stateColor = "text-rose-600 border-rose-400 bg-rose-50";
                     }
 
                     return (
@@ -1139,7 +1267,7 @@ export default function TechnicianItemDetailsPage() {
                         >
                           <StepIcon className="w-4 h-4 shrink-0" />
                         </button>
-                        <span className={`text-[11px] mt-1.5 font-bold ${isActive ? "text-cyan-300" : isCompleted ? "text-emerald-400" : "text-slate-500"}`}>
+                        <span className={`text-[11px] mt-1.5 font-bold ${isActive ? "text-[#18B2B0]" : isCompleted ? "text-emerald-400" : "text-[#6B7280]"}`}>
                           {step.title}
                         </span>
                       </div>
@@ -1149,13 +1277,13 @@ export default function TechnicianItemDetailsPage() {
               </div>
 
               {/* Detail Step Box */}
-              <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80">
-                <div className="flex items-center gap-2 mb-4 border-b border-slate-800/60 pb-3">
-                  {activeStepIndex === 0 && <Activity className="w-4 h-4 text-cyan-400" />}
-                  {activeStepIndex === 1 && <ShieldCheck className="w-4 h-4 text-cyan-400" />}
-                  {activeStepIndex === 2 && <Boxes className="w-4 h-4 text-cyan-400" />}
-                  {activeStepIndex === 3 && <Truck className="w-4 h-4 text-cyan-400" />}
-                  <h4 className="text-sm font-bold text-slate-200">
+              <div className="bg-white p-5 rounded-xl border border-[#E2E8F0]/80">
+                <div className="flex items-center gap-2 mb-4 border-b border-[#E2E8F0]/60 pb-3">
+                  {activeStepIndex === 0 && <Activity className="w-4 h-4 text-[#18B2B0]" />}
+                  {activeStepIndex === 1 && <ShieldCheck className="w-4 h-4 text-[#18B2B0]" />}
+                  {activeStepIndex === 2 && <Boxes className="w-4 h-4 text-[#18B2B0]" />}
+                  {activeStepIndex === 3 && <Truck className="w-4 h-4 text-[#18B2B0]" />}
+                  <h4 className="text-sm font-bold text-[#4B5563]">
                     {activeStepIndex === 0 && t('common.details_7')}
                     {activeStepIndex === 1 && t('common.supervisor_2')}
                     {activeStepIndex === 2 && t('common.status_10')}
@@ -1163,7 +1291,7 @@ export default function TechnicianItemDetailsPage() {
                   </h4>
                 </div>
 
-                <div className="divide-y divide-slate-800/60">
+                <div className="divide-y divide-[#E6E8EC]">
                   {activeStepIndex === 0 && (
                     <>
                       {renderDetailItem(t('common.item_9548'), selectedRow.productName)}
@@ -1208,41 +1336,41 @@ export default function TechnicianItemDetailsPage() {
                       {renderDetailItem(t('common.received_admin'), t('common.manager_branch'))}
                       
                       {/* Customer Signature display */}
-                      <div className="py-3 border-b border-slate-800/60">
-                        <span className="text-slate-400 text-xs block mb-2 font-medium">{t('common.signature_digital')}</span>
-                        <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-800/60 flex items-center justify-center h-24 relative overflow-hidden">
+                      <div className="py-3 border-b border-[#E2E8F0]/60">
+                        <span className="text-[#6B7280] text-xs block mb-2 font-medium">{t('common.signature_digital')}</span>
+                        <div className="bg-[#F8FAFB] rounded-xl p-3 border border-[#E6E8EC] flex items-center justify-center h-24 relative overflow-hidden">
                           {/* Signature mock graphic */}
-                          <svg className="w-48 h-16 text-cyan-400/80 stroke-current opacity-75" viewBox="0 0 200 60" fill="none" strokeWidth="2" strokeLinecap="round">
+                          <svg className="w-48 h-16 text-[#18B2B0]/80 stroke-current opacity-75" viewBox="0 0 200 60" fill="none" strokeWidth="2" strokeLinecap="round">
                             <path d="M20,40 Q40,10 60,30 T100,20 T140,40 T180,25 Q190,15 170,45" />
                           </svg>
-                          <span className="absolute bottom-1.5 right-3 text-[10px] text-slate-500 font-mono">{t('common.completed_signature')}</span>
+                          <span className="absolute bottom-1.5 right-3 text-[10px] text-[#6B7280] font-mono">{t('common.completed_signature')}</span>
                         </div>
                       </div>
 
                       {/* Evidence Photo display */}
                       <div className="py-3">
-                        <span className="text-slate-400 text-xs block mb-2 font-medium">{t('common.image_proof')}</span>
-                        <div className="relative rounded-xl border border-slate-800 overflow-hidden bg-slate-900 aspect-video flex items-center justify-center">
+                        <span className="text-[#6B7280] text-xs block mb-2 font-medium">{t('common.image_proof')}</span>
+                        <div className="relative rounded-xl border border-[#E6E8EC] overflow-hidden bg-[#F3F4F6] aspect-video flex items-center justify-center">
                           <img 
                             src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=400" 
                             alt={t('common.proof')} 
                             className="object-cover w-full h-full opacity-60"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
-                          <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] text-slate-300">
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] text-white">
                             <span className="font-bold">{t('common.image_device_signed')}</span>
-                            <span className="font-mono text-slate-400">TID: {selectedRow.raw?.terminalId || "N/A"}</span>
+                            <span className="font-mono text-[#6B7280]">TID: {selectedRow.raw?.terminalId || "N/A"}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* GPS verification map */}
-                      <div className="py-3 border-t border-slate-800/60 flex items-center justify-between">
+                      <div className="py-3 border-t border-[#E2E8F0]/60 flex items-center justify-between">
                         <div>
-                          <span className="text-slate-400 text-xs font-medium block">{t('common.verification')}</span>
-                          <span className="font-mono text-xs text-slate-300 font-bold">24.7136° N, 46.6753° E</span>
+                          <span className="text-[#6B7280] text-xs font-medium block">{t('common.verification')}</span>
+                          <span className="font-mono text-xs text-[#2D3135] font-bold">24.7136° N, 46.6753° E</span>
                         </div>
-                        <Button size="sm" variant="outline" className="border-slate-800 text-cyan-400 hover:bg-cyan-400/5 text-xs">
+                        <Button size="sm" variant="outline" className="border-[#E2E8F0] text-[#18B2B0] hover:bg-[#18B2B0]/5 text-xs">
                           <MapPin className="w-3.5 h-3.5 ml-1" />
                           {t('common.view_3')}
                         </Button>
@@ -1255,7 +1383,7 @@ export default function TechnicianItemDetailsPage() {
               {/* Hardware Diagnostic Profile (If item category is pos/devices) */}
               {(!itemType || itemType.category === "devices") && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400">{t('common.technician_4')}</h4>
+                  <h4 className="text-xs font-bold text-[#6B7280]">{t('common.technician_4')}</h4>
                   <div className="grid grid-cols-2 gap-3">
                     {renderAccessoryChip(t('common.battery_1'), !!selectedRow.raw?.battery, Smartphone)}
                     {renderAccessoryChip(t('common.item_12740'), !!selectedRow.raw?.chargerCable, Cable)}
@@ -1274,7 +1402,7 @@ export default function TechnicianItemDetailsPage() {
                 <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex gap-3 items-start">
                   <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="text-sm font-bold text-rose-300">{t('common.report')}</h5>
+                    <h5 className="text-sm font-bold text-rose-700">{t('common.report')}</h5>
                     <p className="text-xs text-rose-400/90 mt-1">{selectedRow.raw.damagePart}</p>
                   </div>
                 </div>
@@ -1282,22 +1410,22 @@ export default function TechnicianItemDetailsPage() {
 
               {/* Inline Supervisor Decisions Form */}
               {selectedRow.raw?.status === "pending" && (
-                <div className="mt-6 pt-5 border-t border-slate-800">
-                  <h5 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-cyan-400" />
+                <div className="mt-6 pt-5 border-t border-[#E2E8F0]">
+                  <h5 className="text-sm font-bold text-[#2D3135] mb-3 flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-[#18B2B0]" />
                     {t('common.receive')}
                   </h5>
                   <textarea
                     value={adminNotesText}
                     onChange={(e) => setAdminNotesText(e.target.value)}
                     placeholder={t('common.notes_device_1')}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-400/40 mb-4 h-20 placeholder:text-slate-600"
+                    className="w-full bg-[#F8FAFB] border border-[#E2E8F0] rounded-xl p-3 text-sm text-[#2D3135] focus:outline-none focus:border-[#18B2B0]/50 mb-4 h-20 placeholder:text-[#9CA3AF]"
                   />
                   <div className="flex gap-3">
                     <Button
                       onClick={() => updateStatusMutation.mutate({ status: "approved", adminNotes: adminNotesText })}
                       disabled={updateStatusMutation.isPending}
-                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black"
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black"
                     >
                       {updateStatusMutation.isPending ? t('common.item_19208') : t('common.approve_device')}
                     </Button>
@@ -1315,56 +1443,53 @@ export default function TechnicianItemDetailsPage() {
           ) : (
             /* Layout for Warehouse Transfer */
             <div className="space-y-4">
-              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 divide-y divide-slate-800/60">
-                {renderDetailItem("المنتج", selectedRow?.productName || "-")}
-                {renderDetailItem("نوع المستند", "تحويل مخزون (Warehouse Transfer)")}
-                {renderDetailItem("رقم مستند التحويل", selectedRow?.id || "-", true)}
-                {renderDetailItem("الحالة", selectedRow?.status || "-")}
-                {renderDetailItem("التاريخ", selectedRow?.datetime || "-")}
-                {renderDetailItem("الجهة المرسلة", "المستودع الرئيسي")}
-                {renderDetailItem("المستلم", displayTechnicianName)}
+              <div className="bg-white p-4 rounded-xl border border-[#E2E8F0]/80 divide-y divide-slate-800/60">
+                {renderDetailItem(t('common.item_9548'), selectedRow?.productName || "-")}
+                {renderDetailItem(t('common.type_document'), t('common.transfer_4'))}
+                {renderDetailItem(t('common.number_document_transfer'), selectedRow?.id || "-", true)}
+                {renderDetailItem(t('common.status'), selectedRow?.status || "-")}
+                {renderDetailItem(t('common.date'), selectedRow?.datetime || "-")}
+                {renderDetailItem(t('common.item_19112'), t('common.warehouse_primary'))}
+                {renderDetailItem(t('common.received_1'), displayTechnicianName)}
               </div>
-              <div className="p-4 rounded-xl border border-cyan-400/10 bg-cyan-400/5 flex gap-3 items-center">
-                <Info className="w-5 h-5 text-cyan-400 shrink-0" />
-                <p className="text-xs text-slate-400">هذا السجل يمثل شحنة/تحويل للمندوب من المستودع الرئيسي ولا يتبع دورة حياة الأجهزة الذكية الفردية.</p>
+              <div className="p-4 rounded-xl border border-[rgba(24,178,176,0.18)] bg-cyan-400/5 flex gap-3 items-center">
+                <Info className="w-5 h-5 text-[#18B2B0] shrink-0" />
+                <p className="text-xs text-[#6B7280]">{t('common.log_batch_transfer_warehouse_p')}</p>
               </div>
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap gap-3 items-center justify-between border-t border-slate-800/80 pt-4">
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                onClick={() => {
-                  if (selectedRow) {
-                    setEditingRow(selectedRow);
-                    setEditingSerialInput(selectedRow.serial !== "-" ? selectedRow.serial : "");
-                  }
-                }}
-                className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold gap-2 text-xs"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>تعديل / تعيين السيريال</span>
-              </Button>
-
-              <Button
-                type="button"
-                onClick={() => {
-                  if (selectedRow) {
-                    setDeletingRow(selectedRow);
-                  }
-                }}
-                className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold gap-2 text-xs"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>حذف من العهدة</span>
-              </Button>
+          <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#E6E8EC] pt-4">
+            <div className="flex items-center gap-2">
+              {selectedRow?.raw?.id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openEditModal(selectedRow)}
+                  className="border-[#18B2B0]/40 text-[#18B2B0] hover:bg-[#18B2B0]/10 font-bold text-xs"
+                  data-testid="button-edit-device-dialog"
+                >
+                  <Pencil className="h-4 w-4 ml-1.5" />
+                  تعديل البيانات
+                </Button>
+              )}
+              {selectedRow?.raw?.id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => requestHardDelete(selectedRow)}
+                  className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-bold text-xs"
+                  data-testid="button-hard-delete-serialized-dialog"
+                >
+                  <Trash2 className="h-4 w-4 ml-1.5" />
+                  حذف نهائياً
+                </Button>
+              )}
             </div>
-
             <Button
               type="button"
               onClick={() => setSelectedRow(null)}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6 text-xs"
+              className="bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#2D3135] border border-[#E2E8F0] font-bold px-6 text-xs"
             >
               {t('common.close')}
             </Button>
@@ -1372,81 +1497,172 @@ export default function TechnicianItemDetailsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Serial Number Modal */}
+      {/* Edit Device Dialog */}
       <Dialog open={!!editingRow} onOpenChange={(open) => !open && setEditingRow(null)}>
-        <DialogContent className="bg-slate-950 border border-cyan-400/20 text-slate-100 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-cyan-300 flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-amber-400" />
-              تعديل / تعيين الرقم التسلسلي (Serial Number)
+        <DialogContent className="sm:max-w-md bg-white border border-[rgba(24,178,176,0.22)] text-[#2D3135] p-6 rounded-2xl shadow-xl" dir={dir}>
+          <DialogHeader className="text-right border-b border-[#E6E8EC] pb-3 mb-4">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-[#2D3135]">
+              <Pencil className="w-5 h-5 text-[#18B2B0]" />
+              تعديل بيانات {deleteLabelForCategory(itemType?.category)}
             </DialogTitle>
-            <DialogDescription className="text-slate-400 text-xs mt-1">
-              قم بإدخال أو تحديث الرقم التسلسلي للجهاز ({editingRow?.productName || "POS"}) للحفاظ على سلامة العهدة.
+            <DialogDescription className="text-[#6B7280] text-xs mt-1">
+              قم بتعديل الرقم التسلسلي، رقم الجهاز، أو الملاحظات ثم اضغط حفظ
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!editingRow) return;
+              updateDeviceMutation.mutate({
+                row: editingRow,
+                serialNumber: editSerialNumber,
+                terminalId: editTerminalId,
+                simCardType: editSimCardType,
+                adminNotes: editAdminNotes,
+                status: editStatus,
+              });
+            }}
+            className="space-y-4 text-right"
+          >
             <div>
-              <label className="text-xs font-bold text-slate-300 mb-1.5 block">الرقم التسلسلي الجديد:</label>
+              <label className="block text-xs font-bold text-[#4B5563] mb-1.5">اسم المنتج</label>
+              <div className="p-2.5 rounded-xl bg-[#F8FAFB] border border-[#E2E8F0] text-xs font-bold text-[#2D3135]">
+                {editingRow?.productName || displayItemName}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#4B5563] mb-1.5">الرقم التسلسلي (Serial Number)</label>
               <Input
-                value={editingSerialInput}
-                onChange={(e) => setEditingSerialInput(e.target.value)}
-                placeholder="أدخل الرقم التسلسلي (مثال: N950-XXXXXX)..."
-                className="bg-slate-900 border-slate-800 font-mono text-cyan-300 focus:border-cyan-400/50 text-sm"
+                value={editSerialNumber}
+                onChange={(e) => setEditSerialNumber(e.target.value)}
+                placeholder="أدخل الرقم التسلسلي..."
+                className="font-mono text-sm border-[#18B2B0]/40 focus:border-[#18B2B0] bg-white text-[#2D3135]"
+                required
               />
             </div>
-          </div>
 
-          <div className="flex gap-3 justify-end pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => setEditingRow(null)}
-              className="text-slate-400 hover:text-slate-200"
-            >
-              إلغاء
-            </Button>
-            <Button
-              onClick={() => editingRow && editSerialMutation.mutate({ row: editingRow, serialNumber: editingSerialInput })}
-              disabled={editSerialMutation.isPending || !editingSerialInput.trim()}
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold"
-            >
-              {editSerialMutation.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
-            </Button>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-[#4B5563] mb-1.5">رقم الجهاز (Terminal ID)</label>
+              <Input
+                value={editTerminalId}
+                onChange={(e) => setEditTerminalId(e.target.value)}
+                placeholder="رقم TID..."
+                className="font-mono text-sm border-[#E2E8F0] focus:border-[#18B2B0] bg-white text-[#2D3135]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#4B5563] mb-1.5">مزود الشريحة / الشبكة</label>
+              <Select value={editSimCardType} onValueChange={(val) => setEditSimCardType(val)}>
+                <SelectTrigger className="bg-white border-[#E2E8F0] text-xs text-[#2D3135]">
+                  <SelectValue placeholder="اختر المشغل..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-[100]">
+                  <SelectItem value="STC">STC</SelectItem>
+                  <SelectItem value="Zain">Zain</SelectItem>
+                  <SelectItem value="Mobily">Mobily</SelectItem>
+                  <SelectItem value="Lebara">Lebara</SelectItem>
+                  <SelectItem value="Other">أخرى / غير محدد</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#4B5563] mb-1.5">حالة المادة</label>
+              <Select value={editStatus} onValueChange={(val) => setEditStatus(val)}>
+                <SelectTrigger className="bg-white border-[#E2E8F0] text-xs text-[#2D3135]">
+                  <SelectValue placeholder="اختر الحالة..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-[100]">
+                  <SelectItem value="approved">في العهدة / متوفر</SelectItem>
+                  <SelectItem value="delivered">مكتمل / مسلّم للعميل</SelectItem>
+                  <SelectItem value="pending">معلق / قيد المراجعة</SelectItem>
+                  <SelectItem value="rejected">مرفوض</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#4B5563] mb-1.5">الملاحظات</label>
+              <textarea
+                value={editAdminNotes}
+                onChange={(e) => setEditAdminNotes(e.target.value)}
+                placeholder="أضف أي ملاحظات إضافية..."
+                rows={3}
+                className="w-full rounded-xl border border-[#E2E8F0] p-3 text-xs text-[#2D3135] bg-white focus:border-[#18B2B0] focus:outline-none placeholder:text-[#9CA3AF]"
+              />
+            </div>
+
+            <DialogFooter className="flex-row-reverse gap-2 pt-2 border-t border-[#E6E8EC] mt-4">
+              <Button
+                type="submit"
+                disabled={updateDeviceMutation.isPending}
+                className="bg-[#18B2B0] hover:bg-[#149D9B] text-white font-bold text-xs px-5 shadow-md shadow-[#18B2B0]/20"
+              >
+                {updateDeviceMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  "حفظ التعديلات"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingRow(null)}
+                disabled={updateDeviceMutation.isPending}
+                className="border-[#E2E8F0] text-[#6B7280] font-bold text-xs"
+              >
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={!!deletingRow} onOpenChange={(open) => !open && setDeletingRow(null)}>
-        <DialogContent className="bg-slate-950 border border-rose-500/20 text-slate-100 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-rose-400 flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-rose-500" />
-              تأكيد حذف الجهاز من العهدة
-            </DialogTitle>
-            <DialogDescription className="text-slate-400 text-xs mt-1">
-              هل أنت تأكد من رغبتك في حذف الجهاز ({deletingRow?.productName || "المنتج"}) بالسيريال ({deletingRow?.serial || "-"})؟ هذا الإجراء لا يمكن التراجع عنه.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex gap-3 justify-end pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => setDeletingRow(null)}
-              className="text-slate-400 hover:text-slate-200"
+      <AlertDialog
+        open={!!rowPendingDelete}
+        onOpenChange={(open) => {
+          if (!open && !hardDeleteSerializedMutation.isPending) {
+            setRowPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-white border border-[rgba(24,178,176,0.22)]" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#2D3135]">تأكيد الحذف النهائي</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#6B7280]">
+              {`هل أنت متأكد من حذف ${deleteLabelForCategory(itemType?.category)} نهائياً من قاعدة البيانات؟`}
+              {rowPendingDelete?.serial && rowPendingDelete.serial !== "-" ? (
+                <span className="block mt-2 font-mono text-[#18B2B0] text-sm" dir="ltr">
+                  {rowPendingDelete.serial}
+                </span>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              disabled={hardDeleteSerializedMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!rowPendingDelete) return;
+                hardDeleteSerializedMutation.mutate(rowPendingDelete);
+              }}
             >
+              {hardDeleteSerializedMutation.isPending ? "جاري الحذف..." : "حذف نهائياً"}
+            </AlertDialogAction>
+            <AlertDialogCancel disabled={hardDeleteSerializedMutation.isPending}>
               إلغاء
-            </Button>
-            <Button
-              onClick={() => deletingRow && deleteRowMutation.mutate(deletingRow)}
-              disabled={deleteRowMutation.isPending}
-              className="bg-rose-600 hover:bg-rose-500 text-white font-bold"
-            >
-              {deleteRowMutation.isPending ? "جاري الحذف..." : "تأكيد الحذف"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

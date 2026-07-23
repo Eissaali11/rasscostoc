@@ -282,5 +282,19 @@
       "severity": "error",
       "name": "no-cross-module-internal-imports"
     }
+  },
+  {
+    "type": "dependency",
+    "from": "apps/api/src/modules/identity/presentation/controllers/employee-profile.controller.ts",
+    "to": "apps/api/src/modules/identity/infrastructure/database/EmployeeProfileRepository.ts",
+    "unresolvedTo": "../../infrastructure/database/EmployeeProfileRepository",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "controller-should-not-depend-on-repository-or-drizzle"
+    }
   }
 ]

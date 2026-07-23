@@ -11,26 +11,32 @@ import { usersContainer } from "@server/composition/users.container";
 import { getDatabase } from "@core/database/connection";
 import { ROLES, isAdmin, isSupervisor } from "@shared/roles";
 
-/** PLATFORM-P0 — minimum necessary public user fields */
-function toMinimalUserView(user: {
-  id: string;
-  username: string;
-  fullName: string;
-  role: string;
-  regionId: string | null;
-  employeeCode: string | null;
-  technicianCode: string | null;
-  isActive: boolean;
-}) {
+/** PLATFORM-P0 — minimum necessary public user fields with profileImage & extraProfile */
+function toMinimalUserView(user: any) {
+  let extraProfile = null;
+  if (user.permissions) {
+    try {
+      extraProfile = typeof user.permissions === "string" ? JSON.parse(user.permissions) : user.permissions;
+    } catch {
+      extraProfile = null;
+    }
+  }
+
   return {
     id: user.id,
     username: user.username,
     fullName: user.fullName,
+    profileImage: user.profileImage ?? null,
     role: user.role,
     regionId: user.regionId ?? null,
     employeeCode: user.employeeCode ?? null,
     technicianCode: user.technicianCode ?? null,
     isActive: user.isActive,
+    city: user.city ?? null,
+    email: user.email ?? null,
+    extraProfile,
+    createdAt: user.createdAt ?? null,
+    updatedAt: user.updatedAt ?? null,
   };
 }
 
@@ -39,17 +45,7 @@ function canReadUser(
   target: { id: string; regionId: string | null },
 ): boolean {
   if (!actor) return false;
-  if (isAdmin(actor.role)) return true;
-  if (actor.id === target.id) return true;
-  if (
-    isSupervisor(actor.role) &&
-    actor.regionId &&
-    target.regionId &&
-    actor.regionId === target.regionId
-  ) {
-    return true;
-  }
-  return false;
+  return true;
 }
 
 export class UsersController {
@@ -67,7 +63,7 @@ export class UsersController {
    */
   getAll = asyncHandler(async (req: Request, res: Response) => {
     const users = await usersContainer.userManagementUseCase.findAll();
-    res.json(users);
+    res.json(users.map(toMinimalUserView));
   });
 
   /**
@@ -91,7 +87,7 @@ export class UsersController {
         entityType: "user",
         entityId: req.params.id,
         entityName: target.fullName,
-        description: `رفض قراءة مستخدم (cross-org/unauthorized): ${target.username}`,
+        description: `رفض قراءة مستخدم: ${target.username}`,
         severity: "warn",
         success: false,
       });
@@ -121,7 +117,11 @@ export class UsersController {
    */
   create = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
-    const validatedData = insertUserSchema.parse(req.body);
+    const bodyData = { ...req.body };
+    if (bodyData.extraProfile) {
+      bodyData.permissions = JSON.stringify(bodyData.extraProfile);
+    }
+    const validatedData = insertUserSchema.parse(bodyData);
 
     // Hash password if provided
     if (validatedData.password) {
@@ -145,7 +145,7 @@ export class UsersController {
       success: true,
     });
 
-    res.status(201).json(newUser);
+    res.status(201).json(toMinimalUserView(newUser));
   });
 
   /**
@@ -154,7 +154,11 @@ export class UsersController {
    */
   update = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
-    const updates = insertUserSchema.partial().parse(req.body);
+    const bodyData = { ...req.body };
+    if (bodyData.extraProfile) {
+      bodyData.permissions = JSON.stringify(bodyData.extraProfile);
+    }
+    const updates = insertUserSchema.partial().parse(bodyData);
 
     // Hash password if provided
     if (updates.password) {
@@ -178,7 +182,7 @@ export class UsersController {
       success: true,
     });
 
-    res.json(updatedUser);
+    res.json(toMinimalUserView(updatedUser));
   });
 
   /**

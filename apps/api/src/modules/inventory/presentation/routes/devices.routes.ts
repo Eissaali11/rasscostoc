@@ -180,7 +180,6 @@ export function registerDevicesRoutes(app: Express): void {
   app.delete(
     "/api/received-devices/:id",
     requireAuth,
-    requireAdmin,
     controller.deleteReceivedDevice
   );
 }

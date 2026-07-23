@@ -119,6 +119,7 @@ export default function EmployeeEditProfileTemplatePage() {
     ...INITIAL_FORM_DATA,
     nationality: t('users.item_7981')
   }));
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [jobOfferFile, setJobOfferFile] = useState<EmployeeStoredFile | null>(null);
   const [promissoryNoteFile, setPromissoryNoteFile] = useState<EmployeeStoredFile | null>(null);
   const [carHandoverFile, setCarHandoverFile] = useState<EmployeeStoredFile | null>(null);
@@ -157,7 +158,8 @@ export default function EmployeeEditProfileTemplatePage() {
   useEffect(() => {
     if (!shownUser) return;
 
-    const extra = getEmployeeProfileExtra(shownUser.id) || {};
+    setProfileImage(shownUser.profileImage || null);
+    const extra = (shownUser as any).extraProfile || getEmployeeProfileExtra(shownUser.id) || {};
     setJobOfferFile(extra.jobOfferFile || null);
     setPromissoryNoteFile(extra.promissoryNoteFile || null);
     setCarHandoverFile(extra.carHandoverFile || null);
@@ -167,9 +169,9 @@ export default function EmployeeEditProfileTemplatePage() {
       ...prev,
       ...extra,
       fullName: shownUser.fullName || "",
-      city: shownUser.city || "",
-      employeeNumber: employeeCode(shownUser.id),
-      jobTitle: getRoleLabel(shownUser.role || ""),
+      city: shownUser.city || prev.city,
+      employeeNumber: extra.employeeNumber || employeeCode(shownUser.id),
+      jobTitle: extra.jobTitle || getRoleLabel(shownUser.role || ""),
       projectName: regionName ? t('users.item_8979', { var_0: regionName }) : extra.projectName || prev.projectName,
     }));
   }, [regionName, shownUser]);
@@ -234,21 +236,7 @@ export default function EmployeeEditProfileTemplatePage() {
         throw new Error(t('users.no_2'));
       }
 
-      const payload = {
-        username: shownUser.username,
-        email: shownUser.email,
-        fullName: formData.fullName.trim(),
-        role: shownUser.role,
-        regionId: shownUser.regionId || undefined,
-        isActive: shownUser.isActive,
-        city: formData.city.trim() || undefined,
-      };
-
-      const response = await apiRequest("PATCH", `/api/users/${shownUser.id}`, payload);
-      return (await response.json()) as UserSafe;
-    },
-    onSuccess: async (updatedUser) => {
-      const extraSaved = setEmployeeProfileExtra(updatedUser.id, {
+      const extraData = {
         nationalId: formData.nationalId,
         phoneNumber: formData.phoneNumber,
         birthDate: formData.birthDate,
@@ -276,7 +264,55 @@ export default function EmployeeEditProfileTemplatePage() {
         promissoryNoteFile,
         carHandoverFile,
         otherFiles,
-      });
+      };
+
+      const payload = {
+        username: shownUser.username,
+        email: shownUser.email,
+        fullName: formData.fullName.trim(),
+        role: shownUser.role,
+        regionId: shownUser.regionId || undefined,
+        isActive: shownUser.isActive,
+        city: formData.city.trim() || undefined,
+        profileImage: profileImage || undefined,
+        extraProfile: extraData,
+      };
+
+      const response = await apiRequest("PATCH", `/api/users/${shownUser.id}`, payload);
+      return (await response.json()) as UserSafe;
+    },
+    onSuccess: async (updatedUser) => {
+      const extraData = {
+        nationalId: formData.nationalId,
+        phoneNumber: formData.phoneNumber,
+        birthDate: formData.birthDate,
+        nationalIdExpiryDate: formData.nationalIdExpiryDate,
+        sponsorName: formData.sponsorName,
+        licenseExpiryDate: formData.licenseExpiryDate,
+        passportNumber: formData.passportNumber,
+        passportExpiryDate: formData.passportExpiryDate,
+        nationality: formData.nationality,
+        absherNumber: formData.absherNumber,
+        qualification: formData.qualification,
+        jobTitle: formData.jobTitle,
+        employeeNumber: formData.employeeNumber,
+        projectName: formData.projectName,
+        city: formData.city,
+        carPlateNumber: formData.carPlateNumber,
+        carType: formData.carType,
+        carModel: formData.carModel,
+        carYear: formData.carYear,
+        phoneType: formData.phoneType,
+        phoneSerial: formData.phoneSerial,
+        businessPhoneNumber: formData.businessPhoneNumber,
+        simType: formData.simType,
+        jobOfferFile,
+        promissoryNoteFile,
+        carHandoverFile,
+        otherFiles,
+      };
+
+      const extraSaved = setEmployeeProfileExtra(updatedUser.id, extraData);
 
       if (!extraSaved) {
         toast({
@@ -386,6 +422,47 @@ export default function EmployeeEditProfileTemplatePage() {
             <div>
               <h3 className="text-xl font-bold">{t('users.info_2')}</h3>
               <p className="text-slate-400 text-sm">{t('users.submit_data')}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 mb-8 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+            <div className="relative group">
+              <div className="size-24 rounded-2xl overflow-hidden border-2 border-cyan-400/30 bg-slate-900 flex items-center justify-center">
+                <img
+                  className="w-full h-full object-cover"
+                  src={profileImage || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2318b2b0'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.83-2.61.03-.99 2.03-1.53 3.83-1.53 1.79 0 3.79.54 3.82 1.53C15.8 18.96 14.03 20 12 20z'/%3E%3C/svg%3E"}
+                  alt="Profile"
+                />
+              </div>
+              <label className="absolute -bottom-2 -left-2 size-8 rounded-full bg-cyan-400 text-slate-900 flex items-center justify-center cursor-pointer shadow-md hover:bg-cyan-300 transition-all">
+                <FileImage className="h-4 w-4" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (!validateFileSize(file)) return;
+                      const stored = await fileToStoredFile(file, t);
+                      setProfileImage(stored.dataUrl);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-cyan-300">الصورة الشخصية للموظف</h4>
+              <p className="text-xs text-slate-400 mt-1">اضغط على أيقونة الصورة لرفع صورة شخصية رسمية جديدة للموظف</p>
+              {profileImage && (
+                <button
+                  type="button"
+                  onClick={() => setProfileImage(null)}
+                  className="text-xs text-rose-400 hover:text-rose-300 mt-2 block font-medium"
+                >
+                  حذف الصورة
+                </button>
+              )}
             </div>
           </div>
 

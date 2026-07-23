@@ -8,9 +8,23 @@ import { requireAuth, requireAdmin } from "@core/middlewares/auth.middleware";
 import { validateBody } from "@core/middlewares/validation";
 import { insertUserSchema } from "@shared/schema";
 
+import { employeeProfileController } from "../controllers/employee-profile.controller";
+
 export function registerUsersRoutes(app: Express): void {
   // Get all users
   app.get("/api/users", requireAuth, requireAdmin, usersController.getAll);
+
+  // Employee detailed profile (portal ↔ mobile sync) — before :id catch-alls
+  app.get(
+    "/api/users/:id/employee-profile",
+    requireAuth,
+    employeeProfileController.get,
+  );
+  app.put(
+    "/api/users/:id/employee-profile",
+    requireAuth,
+    employeeProfileController.upsert,
+  );
 
   // Get single user — PLATFORM-P0: auth + authorization enforced in controller
   app.get("/api/users/:id", requireAuth, usersController.getById);

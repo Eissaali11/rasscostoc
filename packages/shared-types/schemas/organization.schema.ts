@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, unique, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { itemTypes, regions } from "./catalog.schema";
@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   department: text("department"),
   permissions: text("permissions"), // JSON string representation of custom permissions
   isActive: boolean("is_active").notNull().default(true),
+  fcmToken: text("fcm_token"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -36,6 +37,67 @@ export const warehouses = pgTable("warehouses", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+/** Stored file attachment (image/PDF as data URL) for employee profile docs */
+export const employeeStoredFileSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  size: z.number(),
+  dataUrl: z.string(),
+  uploadedAt: z.string(),
+});
+
+export type EmployeeStoredFile = z.infer<typeof employeeStoredFileSchema>;
+
+/** Extended HR / custody / documents for an employee — synced portal ↔ mobile */
+export const employeeProfileDataSchema = z.object({
+  nationalId: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  birthDate: z.string().optional(),
+  nationalIdExpiryDate: z.string().optional(),
+  sponsorName: z.string().optional(),
+  licenseExpiryDate: z.string().optional(),
+  passportNumber: z.string().optional(),
+  passportExpiryDate: z.string().optional(),
+  nationality: z.string().optional(),
+  absherNumber: z.string().optional(),
+  qualification: z.string().optional(),
+  jobTitle: z.string().optional(),
+  employeeNumber: z.string().optional(),
+  projectName: z.string().optional(),
+  city: z.string().optional(),
+  carPlateNumber: z.string().optional(),
+  carType: z.string().optional(),
+  carModel: z.string().optional(),
+  carYear: z.string().optional(),
+  phoneType: z.string().optional(),
+  phoneSerial: z.string().optional(),
+  businessPhoneNumber: z.string().optional(),
+  simType: z.string().optional(),
+  jobOfferFile: employeeStoredFileSchema.nullish(),
+  promissoryNoteFile: employeeStoredFileSchema.nullish(),
+  carHandoverFile: employeeStoredFileSchema.nullish(),
+  otherFiles: z.array(employeeStoredFileSchema).max(5).optional(),
+});
+
+export type EmployeeProfileData = z.infer<typeof employeeProfileDataSchema>;
+
+export const employeeProfiles = pgTable("employee_profiles", {
+  userId: varchar("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  profileData: jsonb("profile_data").$type<EmployeeProfileData>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const upsertEmployeeProfileSchema = employeeProfileDataSchema.extend({
+  fullName: z.string().min(1).optional(),
+  city: z.string().optional(),
+  profileImage: z.string().optional(),
+});
+
+export type UpsertEmployeeProfileInput = z.infer<typeof upsertEmployeeProfileSchema>;
 
 // Supervisor-Technician Assignments - ربط المشرف بالمندوبين
 export const supervisorTechnicians = pgTable("supervisor_technicians", {
@@ -198,6 +260,7 @@ export const insertInventoryRequestSchema = createInsertSchema(inventoryRequests
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UserSafe = Omit<User, "password">;
+export type EmployeeProfile = typeof employeeProfiles.$inferSelect;
 export type SupervisorTechnician = typeof supervisorTechnicians.$inferSelect;
 export type InsertSupervisorTechnician = z.infer<typeof insertSupervisorTechnicianSchema>;
 export type SupervisorWarehouse = typeof supervisorWarehouses.$inferSelect;

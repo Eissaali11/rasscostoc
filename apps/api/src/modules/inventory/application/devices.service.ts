@@ -128,6 +128,13 @@ export class DevicesService {
   }
 
   /**
+   * Update received device
+   */
+  async updateReceivedDevice(id: string, updates: Partial<InsertReceivedDevice>): Promise<ReceivedDevice> {
+    return this.devicesRepository.updateReceivedDevice(id, updates);
+  }
+
+  /**
    * Update received device status
    */
   async updateReceivedDeviceStatus(

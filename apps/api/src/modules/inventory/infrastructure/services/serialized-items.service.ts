@@ -398,11 +398,32 @@ export class SerializedItemsService {
       );
   }
 
-  async updateSerial(id: string, serialNumber: string) {
-    const cleanSerial = serialNumber.trim();
+  async updateSerial(id: string, updates: string | { serialNumber?: string; carrierName?: string; simCardType?: string; status?: string }) {
+    let patch: any = { updatedAt: new Date() };
+    if (typeof updates === "string") {
+      const cleanSerial = updates.trim();
+      patch.serialNumber = cleanSerial;
+      patch.barcode = cleanSerial;
+    } else {
+      if (updates.serialNumber !== undefined && updates.serialNumber !== null) {
+        const cleanSerial = String(updates.serialNumber).trim();
+        patch.serialNumber = cleanSerial;
+        patch.barcode = cleanSerial;
+      }
+      if (updates.carrierName !== undefined) {
+        patch.carrierName = updates.carrierName ? String(updates.carrierName).trim() : null;
+      }
+      if (updates.simCardType !== undefined) {
+        patch.simPackageType = updates.simCardType ? String(updates.simCardType).trim() : null;
+      }
+      if (updates.status !== undefined) {
+        patch.status = String(updates.status).trim();
+      }
+    }
+
     const [updated] = await db
       .update(items)
-      .set({ serialNumber: cleanSerial, barcode: cleanSerial, updatedAt: new Date() })
+      .set(patch)
       .where(eq(items.id, id))
       .returning();
     return updated || null;

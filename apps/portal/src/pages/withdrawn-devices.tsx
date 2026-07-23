@@ -101,17 +101,17 @@ export default function WithdrawnDevicesPage() {
   > = {
     pending: {
       text: t('reports.pending_review_1'),
-      badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
       icon: TriangleAlert,
     },
     approved: {
       text: t('reports.ok_1'),
-      badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
       icon: CheckCircle2,
     },
     rejected: {
       text: t('reports.item_9566'),
-      badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
       icon: XCircle,
     },
   };
@@ -274,41 +274,41 @@ export default function WithdrawnDevicesPage() {
   }, [analytics.monthlyTrend]);
 
   if (isLoading) {
-    return <div className="text-center py-8 text-slate-300">{t('reports.loading')}</div>;
+    return <div className="text-center py-8 text-[#6B7280]">{t('reports.loading')}</div>;
   }
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-900/50 backdrop-blur-md p-6">
+    <div className="space-y-8 rassco-light-surface">
+      <section className="rounded-2xl border border-[#18B2B0]/20 bg-white p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
-            <Button asChild variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800/70 hover:text-white w-fit">
+            <Button asChild variant="ghost" size="sm" className="text-[#6B7280] hover:bg-[#F8FAFB] hover:text-[#2D3135] w-fit">
               <Link href="/home" data-testid="button-back-home">
                 <ArrowRight className="h-4 w-4 ml-2" />
                 <span>{t('reports.item_22323')}</span>
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center">
-                <BarChart3 className="h-6 w-6 text-cyan-300" />
+              <div className="h-12 w-12 rounded-xl bg-[#18B2B0]/10 border border-[#18B2B0]/20 flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-[#18B2B0]" />
               </div>
               <div>
-                <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                  {t('reports.text')} <span className="text-cyan-300">Returns Analytics</span>
+                <h2 className="text-2xl md:text-3xl font-black text-[#2D3135] tracking-tight">
+                  {t('reports.text')} <span className="text-[#18B2B0]">Returns Analytics</span>
                 </h2>
-                <p className="text-sm text-slate-400">{t('reports.finance')}</p>
+                <p className="text-sm text-[#6B7280]">{t('reports.finance')}</p>
               </div>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20">
+            <Button asChild variant="outline" className="border-[#18B2B0]/30 bg-[#18B2B0]/10 text-[#18B2B0] hover:bg-[#18B2B0]/20">
               <Link href="/withdrawn-devices/all">
                 <FileClock className="h-4 w-4 ml-2" />
                 {t('reports.log_operations_returned')}
               </Link>
             </Button>
-            <Button asChild className="bg-cyan-600 hover:bg-cyan-500 text-white">
+            <Button asChild className="bg-[#18B2B0] hover:bg-[#149D9B] text-white">
               <Link href="/withdrawn-devices/management" data-testid="button-open-management">
                 <Settings2 className="h-4 w-4 ml-2" />
                 {t('reports.management_returned')}
@@ -319,61 +319,61 @@ export default function WithdrawnDevicesPage() {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card className="border-cyan-500/25 bg-slate-900/50">
+        <Card className="border-[#18B2B0]/20 bg-white shadow-sm">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">{t('reports.total')}</p>
-              <h3 className="text-3xl font-bold text-white">{analytics.total}</h3>
-              <p className={`text-xs mt-2 flex items-center gap-1 ${analytics.monthlyDelta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+              <p className="text-sm text-[#6B7280] mb-1">{t('reports.total')}</p>
+              <h3 className="text-3xl font-bold text-[#2D3135]">{analytics.total}</h3>
+              <p className={`text-xs mt-2 flex items-center gap-1 ${analytics.monthlyDelta >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                 {analytics.monthlyDelta >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
                 {t('common.vs_previous_month', { delta: `${analytics.monthlyDelta >= 0 ? "+" : ""}${analytics.monthlyDelta}` })}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-cyan-500/15 text-cyan-300 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-[#18B2B0]/10 text-[#18B2B0] flex items-center justify-center">
               <PackageX className="h-5 w-5" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-emerald-500/25 bg-slate-900/50">
+        <Card className="border-emerald-200 bg-white shadow-sm">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">{t('reports.rate')}</p>
-              <h3 className="text-3xl font-bold text-white">{analytics.approvalRate}%</h3>
-              <p className="text-xs text-emerald-300 mt-2 flex items-center gap-1">
+              <p className="text-sm text-[#6B7280] mb-1">{t('reports.rate')}</p>
+              <h3 className="text-3xl font-bold text-[#2D3135]">{analytics.approvalRate}%</h3>
+              <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
                 <ClipboardCheck className="h-3.5 w-3.5" />
                 {t('reports.journey')}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-amber-500/25 bg-slate-900/50">
+        <Card className="border-amber-200 bg-white shadow-sm">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">{t('reports.item_20736')}</p>
-              <h3 className="text-3xl font-bold text-white">{analytics.pending}</h3>
-              <p className="text-xs text-amber-300 mt-2">{t('reports.followup_supervisor')}</p>
+              <p className="text-sm text-[#6B7280] mb-1">{t('reports.item_20736')}</p>
+              <h3 className="text-3xl font-bold text-[#2D3135]">{analytics.pending}</h3>
+              <p className="text-xs text-amber-600 mt-2">{t('reports.followup_supervisor')}</p>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <TriangleAlert className="h-5 w-5" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-rose-500/25 bg-slate-900/50">
+        <Card className="border-rose-200 bg-white shadow-sm">
           <div className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">{t('reports.item_20660')}</p>
-              <h3 className="text-3xl font-bold text-rose-300">
-                {analytics.estimatedLoss.toLocaleString("en-US")} <span className="text-sm text-slate-400">SAR</span>
+              <p className="text-sm text-[#6B7280] mb-1">{t('reports.item_20660')}</p>
+              <h3 className="text-3xl font-bold text-rose-600">
+                {analytics.estimatedLoss.toLocaleString("en-US")} <span className="text-sm text-[#6B7280]">SAR</span>
               </h3>
-              <p className="text-xs text-rose-300 mt-2">{t('reports.item_51106')}</p>
+              <p className="text-xs text-rose-600 mt-2">{t('reports.item_51106')}</p>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-rose-500/15 text-rose-300 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <XCircle className="h-5 w-5" />
             </div>
           </div>
@@ -381,25 +381,25 @@ export default function WithdrawnDevicesPage() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="xl:col-span-2 border-white/10 bg-slate-900/50 p-5">
+        <Card className="xl:col-span-2 border-[#E6E8EC] bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-white font-bold">{t('reports.item_34991')}</h3>
+            <h3 className="text-[#2D3135] font-bold">{t('reports.item_34991')}</h3>
             <div className="text-left">
-              <span className="text-xs text-slate-400 block">{t('reports.item_11206')}</span>
-              <span className="text-xs text-cyan-300 block mt-1">
+              <span className="text-xs text-[#6B7280] block">{t('reports.item_11206')}</span>
+              <span className="text-xs text-[#18B2B0] font-semibold block mt-1">
                 {activeTrendPoint ? t('reports.item_19846', { var_0: activeTrendPoint.label, var_1: activeTrendPoint.count }) : t('reports.item_9664')}
               </span>
             </div>
           </div>
           <div className="h-[240px] px-2">
             <div className="h-[185px] grid grid-cols-[42px_1fr] gap-2">
-              <div className="flex flex-col justify-between pb-2 text-[11px] text-slate-500">
+              <div className="flex flex-col justify-between pb-2 text-[11px] text-[#6B7280]">
                 <span>{chartScale.maxValue}</span>
                 <span>{chartScale.midValue}</span>
                 <span>0</span>
               </div>
 
-              <div className="h-full flex items-end gap-3 border-b border-cyan-500/15 pb-2">
+              <div className="h-full flex items-end gap-3 border-b border-[#E6E8EC] pb-2">
                 {analytics.monthlyTrend.map((month) => (
                   <div
                     key={month.key}
@@ -409,16 +409,16 @@ export default function WithdrawnDevicesPage() {
                   >
                     <div className="relative w-full flex flex-col items-center">
                       {hoveredMonthKey === month.key && (
-                        <div className="absolute -top-8 text-[11px] px-2 py-1 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 whitespace-nowrap">
+                        <div className="absolute -top-8 text-[11px] px-2 py-1 rounded bg-[#18B2B0]/10 border border-[#18B2B0]/30 text-[#18B2B0] font-bold whitespace-nowrap shadow-sm">
                           {t('reports.operation_2', { count: month.count })}
                         </div>
                       )}
-                      <span className={`text-[11px] font-mono mb-1 ${month.isCurrentMonth ? "text-cyan-200" : "text-slate-400"}`}>{month.count}</span>
+                      <span className={`text-[11px] font-mono mb-1 ${month.isCurrentMonth ? "text-[#18B2B0] font-bold" : "text-[#6B7280]"}`}>{month.count}</span>
                       <div
                         className={
                           month.isCurrentMonth
-                            ? "w-full rounded-t-md bg-gradient-to-t from-cyan-600 to-cyan-300 border border-cyan-300/50 shadow-[0_0_18px_rgba(6,249,249,0.35)] transition-all"
-                            : "w-full rounded-t-md bg-cyan-500/55 border border-cyan-300/25 transition-all"
+                            ? "w-full rounded-t-md bg-gradient-to-t from-[#18B2B0] to-[#40C9C7] border border-[#18B2B0] shadow-sm transition-all"
+                            : "w-full rounded-t-md bg-[#18B2B0]/30 border border-[#18B2B0]/20 transition-all hover:bg-[#18B2B0]/50"
                         }
                         style={{ height: `${month.barHeightPx}px` }}
                       />
@@ -431,27 +431,27 @@ export default function WithdrawnDevicesPage() {
             <div className="mt-2 ml-[44px] flex items-start gap-3">
               {analytics.monthlyTrend.map((month) => (
                 <div key={`${month.key}-label`} className="flex-1 min-w-[56px] text-center">
-                  <span className={`text-xs ${month.isCurrentMonth ? "text-slate-200 font-semibold" : "text-slate-500"}`}>{month.label}</span>
+                  <span className={`text-xs ${month.isCurrentMonth ? "text-[#2D3135] font-bold" : "text-[#6B7280]"}`}>{month.label}</span>
                 </div>
               ))}
             </div>
           </div>
         </Card>
 
-        <Card className="border-white/10 bg-slate-900/50 p-5">
-          <h3 className="text-white font-bold mb-5">{t('reports.item_22190')}</h3>
+        <Card className="border-[#E6E8EC] bg-white p-5 shadow-sm">
+          <h3 className="text-[#2D3135] font-bold mb-5">{t('reports.item_22190')}</h3>
           <div className="space-y-4">
             {analytics.reasons.map((reason) => (
               <div key={reason.key}>
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-slate-300">{reason.label}</span>
-                  <span className="text-white font-semibold">{reason.percentage}%</span>
+                  <span className="text-[#6B7280]">{reason.label}</span>
+                  <span className="text-[#2D3135] font-semibold">{reason.percentage}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                <div className="h-2 rounded-full bg-[#F3F4F6] overflow-hidden">
                   <div
                     className={
                       reason.key === "damaged"
-                        ? "h-full bg-cyan-400"
+                        ? "h-full bg-[#18B2B0]"
                         : reason.key === "mismatch"
                           ? "h-full bg-amber-400"
                           : "h-full bg-rose-400"
@@ -459,24 +459,24 @@ export default function WithdrawnDevicesPage() {
                     style={{ width: `${Math.max(3, reason.percentage)}%` }}
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">{t('reports.item_15941')}{reason.count}</p>
+                <p className="text-[11px] text-[#6B7280] mt-1">{t('reports.item_15941')}{reason.count}</p>
               </div>
             ))}
           </div>
         </Card>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-900/45 p-5 space-y-4">
+      <section className="rounded-2xl border border-[#E6E8EC] bg-white p-5 space-y-4 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <h3 className="text-xl font-bold text-white">{t('reports.operations_1')}</h3>
+          <h3 className="text-xl font-bold text-[#2D3135]">{t('reports.operations_1')}</h3>
           <div className="relative w-full sm:w-80">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] h-4 w-4" />
             <Input
               type="text"
               placeholder={t('reports.operations_2')}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="pr-9 bg-slate-950/40 border-white/10 text-white placeholder:text-slate-500"
+              className="pr-9 bg-[#F8FAFB] border-[#E6E8EC] text-[#2D3135] placeholder:text-[#6B7280]"
               data-testid="input-search-latest"
             />
           </div>
@@ -489,32 +489,32 @@ export default function WithdrawnDevicesPage() {
               const StatusIcon = cfg.icon;
 
               return (
-                <Card key={device.id} className="bg-slate-900/55 border border-white/10 overflow-hidden" data-testid={`card-latest-${device.id}`}>
+                <Card key={device.id} className="bg-white border border-[#E6E8EC] overflow-hidden shadow-sm hover:border-[#18B2B0]/40 transition-colors" data-testid={`card-latest-${device.id}`}>
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded border ${cfg.badgeClass}`}>
                         <StatusIcon className="h-3.5 w-3.5" />
                         {cfg.text}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-[#6B7280]">
                         {formatCardDate(device.createdAt)} - {formatCardTime(device.createdAt)}
                       </span>
                     </div>
 
-                    <h4 className="text-sm md:text-base font-bold text-cyan-300" dir="ltr">
+                    <h4 className="text-sm md:text-base font-bold text-[#18B2B0]" dir="ltr">
                       ID: {device.terminalId} | SN: {device.serialNumber}
                     </h4>
 
-                    <div className="flex items-center gap-2 text-sm text-slate-300">
-                      <User className="h-4 w-4 text-cyan-300" />
-                      <span>{device.technicianName}</span>
-                      <span className="text-slate-500">•</span>
+                    <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+                      <User className="h-4 w-4 text-[#18B2B0]" />
+                      <span className="text-[#2D3135] font-semibold">{device.technicianName}</span>
+                      <span className="text-[#6B7280]">•</span>
                       <span>{device.city}</span>
                       {device.simCardType ? (
                         <>
-                          <span className="text-slate-500">•</span>
+                          <span className="text-[#6B7280]">•</span>
                           <span className="inline-flex items-center gap-1">
-                            <Smartphone className="h-3.5 w-3.5 text-slate-400" />
+                            <Smartphone className="h-3.5 w-3.5 text-[#6B7280]" />
                             {device.simCardType}
                           </span>
                         </>
@@ -522,11 +522,11 @@ export default function WithdrawnDevicesPage() {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-slate-950/40 border-t border-white/10 flex justify-end">
+                  <div className="p-3 bg-[#F8FAFB] border-t border-[#E6E8EC] flex justify-end">
                     <Button
                       asChild
                       variant="outline"
-                      className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+                      className="border-[#18B2B0]/30 bg-[#18B2B0]/10 text-[#18B2B0] hover:bg-[#18B2B0]/20"
                       data-testid={`button-latest-details-${device.id}`}
                     >
                       <Link href={`/withdrawn-devices/${device.id}`}>
@@ -540,9 +540,9 @@ export default function WithdrawnDevicesPage() {
             })}
           </div>
         ) : (
-          <Card className="bg-slate-900/40 border-white/10">
+          <Card className="bg-[#F8FAFB] border-[#E6E8EC]">
             <div className="py-10 text-center">
-              <p className="text-slate-300">{t('reports.no_1')}</p>
+              <p className="text-[#6B7280]">{t('reports.no_1')}</p>
             </div>
           </Card>
         )}
