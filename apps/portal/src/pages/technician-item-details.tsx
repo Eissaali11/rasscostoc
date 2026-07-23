@@ -626,7 +626,7 @@ export default function TechnicianItemDetailsPage() {
       adminNotes: string;
       status: string;
     }) => {
-      const rawId = row.raw?.id;
+      const rawId = row.raw?.id || row.id.replace(/^(active-|delivered-|rc-|tr-)/, "");
       if (!rawId) throw new Error("معرّف المادة غير موجود");
 
       const isSerializedItem =
@@ -640,6 +640,12 @@ export default function TechnicianItemDetailsPage() {
           simCardType,
           carrierName: simCardType,
           status,
+        });
+        return res.json();
+      } else if (row.id.startsWith("tr-")) {
+        const res = await apiRequest("PATCH", `/api/warehouse-transfers/${rawId}`, {
+          status,
+          notes: adminNotes,
         });
         return res.json();
       } else {
@@ -673,7 +679,7 @@ export default function TechnicianItemDetailsPage() {
 
   const hardDeleteSerializedMutation = useMutation({
     mutationFn: async (row: ProductOperationRow) => {
-      const rawId = row.raw?.id;
+      const rawId = row.raw?.id || row.id.replace(/^(active-|delivered-|rc-|tr-)/, "");
       if (!rawId) throw new Error("معرّف المادة غير موجود");
 
       const isSerializedItem =
@@ -683,6 +689,10 @@ export default function TechnicianItemDetailsPage() {
 
       if (isSerializedItem) {
         const res = await apiRequest("DELETE", `/api/serialized-items/${rawId}`);
+        const data = await res.json().catch(() => ({}));
+        return { ...data, deletedId: rawId };
+      } else if (row.id.startsWith("tr-")) {
+        const res = await apiRequest("DELETE", `/api/warehouse-transfers/${rawId}`);
         const data = await res.json().catch(() => ({}));
         return { ...data, deletedId: rawId };
       } else {
@@ -1094,19 +1104,17 @@ export default function TechnicianItemDetailsPage() {
                     <td className="px-6 py-5 text-center">
                       <div className="inline-flex items-center justify-center gap-1.5">
                         <span className="font-mono text-xs text-[#18B2B0] bg-cyan-400/5 px-2.5 py-1 rounded-md font-bold">{row.serial}</span>
-                        {row.raw?.id && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-[#18B2B0] hover:bg-[#18B2B0]/10 hover:text-[#149D9B] rounded-lg transition-colors"
-                            title="تعديل الرقم التسلسلي"
-                            data-testid={`button-edit-serial-${row.raw?.id}`}
-                            onClick={(event) => openEditModal(row, event)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-[#18B2B0] hover:bg-[#18B2B0]/10 hover:text-[#149D9B] rounded-lg transition-colors"
+                          title="تعديل الرقم التسلسلي"
+                          data-testid={`button-edit-serial-${row.id}`}
+                          onClick={(event) => openEditModal(row, event)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-center">
@@ -1119,32 +1127,28 @@ export default function TechnicianItemDetailsPage() {
                     </td>
                     <td className="px-6 py-5 text-left">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {row.raw?.id && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-[#18B2B0] hover:bg-[#18B2B0]/10 hover:text-[#149D9B] rounded-lg transition-colors"
-                            title="تعديل بيانات الجهاز"
-                            data-testid={`button-edit-device-${row.raw?.id}`}
-                            onClick={(event) => openEditModal(row, event)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {row.raw?.id && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors"
-                            title={`حذف ${deleteLabelForCategory(itemType?.category)} نهائياً`}
-                            data-testid={`button-hard-delete-serialized-${row.raw?.id}`}
-                            onClick={(event) => requestHardDelete(row, event)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[#18B2B0] hover:bg-[#18B2B0]/10 hover:text-[#149D9B] rounded-lg transition-colors"
+                          title="تعديل بيانات الجهاز"
+                          data-testid={`button-edit-device-${row.id}`}
+                          onClick={(event) => openEditModal(row, event)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors"
+                          title={`حذف ${deleteLabelForCategory(itemType?.category)} نهائياً`}
+                          data-testid={`button-hard-delete-serialized-${row.id}`}
+                          onClick={(event) => requestHardDelete(row, event)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
