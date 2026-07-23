@@ -123,35 +123,27 @@ export class DeleteWarehouseTransfersUseCase {
 
       for (const [warehouseId, updates] of Array.from(warehouseUpdates.entries())) {
         const currentInventory = await repository.getWarehouseInventoryByWarehouseId(warehouseId);
-        if (!currentInventory) {
-          throw new Error(`Warehouse inventory not found for warehouse ID: ${warehouseId}`);
+        if (currentInventory) {
+          const nextInventory = emptyLegacyStock();
+          for (const field of legacyFields) {
+            nextInventory[field] = currentInventory[field] + updates[field];
+          }
+          await repository.updateWarehouseInventoryByWarehouseId(warehouseId, nextInventory);
         }
-
-        const nextInventory = emptyLegacyStock();
-        for (const field of legacyFields) {
-          nextInventory[field] = currentInventory[field] + updates[field];
-        }
-
-        await repository.updateWarehouseInventoryByWarehouseId(warehouseId, nextInventory);
       }
 
       for (const [technicianId, updates] of Array.from(technicianUpdates.entries())) {
         const technicianName = await repository.getTechnicianFullNameById(technicianId);
-        if (!technicianName) {
-          throw new Error(`Technician not found for ID: ${technicianId}`);
+        if (technicianName) {
+          const currentMovingInventory = await repository.getTechnicianMovingInventoryByName(technicianName);
+          if (currentMovingInventory) {
+            const nextMovingInventory = emptyLegacyStock();
+            for (const field of legacyFields) {
+              nextMovingInventory[field] = Math.max(0, currentMovingInventory[field] - updates[field]);
+            }
+            await repository.updateTechnicianMovingInventoryByName(technicianName, nextMovingInventory);
+          }
         }
-
-        const currentMovingInventory = await repository.getTechnicianMovingInventoryByName(technicianName);
-        if (!currentMovingInventory) {
-          throw new Error(`Moving inventory not found for technician: ${technicianName}`);
-        }
-
-        const nextMovingInventory = emptyLegacyStock();
-        for (const field of legacyFields) {
-          nextMovingInventory[field] = Math.max(0, currentMovingInventory[field] - updates[field]);
-        }
-
-        await repository.updateTechnicianMovingInventoryByName(technicianName, nextMovingInventory);
       }
 
       await repository.deleteTransfersByIds(input.ids);
