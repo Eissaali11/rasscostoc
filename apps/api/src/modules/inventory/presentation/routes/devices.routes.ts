@@ -169,6 +169,13 @@ export function registerDevicesRoutes(app: Express): void {
     controller.updateReceivedDeviceStatus
   );
 
+  // Update received device details (serialNumber, etc.)
+  app.patch(
+    "/api/received-devices/:id",
+    requireAuth,
+    controller.patchReceivedDevice
+  );
+
   // Delete received device
   app.delete(
     "/api/received-devices/:id",
@@ -177,3 +184,4 @@ export function registerDevicesRoutes(app: Express): void {
     controller.deleteReceivedDevice
   );
 }
+

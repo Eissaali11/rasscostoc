@@ -397,6 +397,24 @@ export class SerializedItemsService {
         )
       );
   }
+
+  async updateSerial(id: string, serialNumber: string) {
+    const cleanSerial = serialNumber.trim();
+    const [updated] = await db
+      .update(items)
+      .set({ serialNumber: cleanSerial, barcode: cleanSerial, updatedAt: new Date() })
+      .where(eq(items.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteItem(id: string) {
+    const [deleted] = await db
+      .delete(items)
+      .where(eq(items.id, id))
+      .returning();
+    return !!deleted;
+  }
 }
 
 export const serializedItemsService = new SerializedItemsService();

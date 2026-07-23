@@ -436,6 +436,21 @@ export class DevicesController {
   });
 
   /**
+   * PATCH /api/received-devices/:id
+   * Partial update received device (e.g. serialNumber)
+   */
+  patchReceivedDevice = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { serialNumber, terminalId } = req.body;
+    const updates: any = {};
+    if (serialNumber !== undefined) updates.serialNumber = String(serialNumber).trim();
+    if (terminalId !== undefined) updates.terminalId = String(terminalId).trim();
+
+    const updated = await this.devicesService.updateReceivedDevice(id, updates);
+    res.json(updated);
+  });
+
+  /**
    * POST /api/received-devices/deliver
    * Deliver device by barcode scan
    */

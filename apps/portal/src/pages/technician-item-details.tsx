@@ -39,6 +39,9 @@ import {
   Navigation,
   Handshake,
   Info,
+  Edit3,
+  Trash2,
+  Eye,
 } from "lucide-react";
 import { useActiveItemTypes } from "@/hooks/use-item-types";
 import type { TechnicianFixedInventoryEntry, TechnicianMovingInventoryEntry } from "@shared/schema";
@@ -51,6 +54,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 type ProductTab = "available" | "delivered";
 
@@ -535,6 +545,74 @@ export default function TechnicianItemDetailsPage() {
     },
   });
 
+  // Edit & Delete modal states
+  const [editingRow, setEditingRow] = useState<ProductOperationRow | null>(null);
+  const [editingSerialInput, setEditingSerialInput] = useState<string>("");
+  const [deletingRow, setDeletingRow] = useState<ProductOperationRow | null>(null);
+
+  const editSerialMutation = useMutation({
+    mutationFn: async ({ row, serialNumber }: { row: ProductOperationRow; serialNumber: string }) => {
+      const cleanSerial = serialNumber.trim();
+      if (!cleanSerial) throw new Error("يرجى إدخال الرقم التسلسلي");
+      const id = row.raw?.id || row.id.replace(/^(rc-|active-|delivered-|tr-)/, "");
+      
+      if (row.id.startsWith("rc-")) {
+        const res = await apiRequest("PATCH", `/api/received-devices/${id}`, { serialNumber: cleanSerial });
+        return res.json();
+      } else {
+        const res = await apiRequest("PATCH", `/api/serialized-items/${id}`, { serialNumber: cleanSerial });
+        return res.json();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم تحديث الرقم التسلسلي بنجاح",
+        description: "تمت إضافة وتحديث السيريال الخاص بالجهاز",
+      });
+      refreshData();
+      setEditingRow(null);
+      setEditingSerialInput("");
+    },
+    onError: (err: any) => {
+      toast({
+        title: "فشل تحديث السيريال",
+        description: err.message || "حدث خطأ أثناء تعديل السيريال",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteRowMutation = useMutation({
+    mutationFn: async (row: ProductOperationRow) => {
+      const id = row.raw?.id || row.id.replace(/^(rc-|active-|delivered-|tr-)/, "");
+      if (row.id.startsWith("rc-")) {
+        const res = await apiRequest("DELETE", `/api/received-devices/${id}`);
+        return res.json();
+      } else if (row.id.startsWith("tr-")) {
+        const res = await apiRequest("DELETE", `/api/warehouse-transfers`, { ids: [id] });
+        return res.json();
+      } else {
+        const res = await apiRequest("DELETE", `/api/serialized-items/${id}`);
+        return res.json();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم حذف الجهاز بنجاح",
+        description: "تم إزالة الجهاز من عهدة الفني بنجاح",
+      });
+      refreshData();
+      setDeletingRow(null);
+    },
+    onError: (err: any) => {
+      toast({
+        title: "فشل عملية الحذف",
+        description: err.message || "حدث خطأ أثناء حذف الجهاز من العهدة",
+        variant: "destructive",
+      });
+    },
+  });
+
   const isStepCompleted = (stepIndex: number, device: ReceivedDevice) => {
     const status = (device.status || "").toLowerCase();
     switch (stepIndex) {
@@ -868,7 +946,25 @@ export default function TechnicianItemDetailsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <span className="font-mono text-xs text-cyan-300 bg-cyan-400/5 px-2 py-1 rounded">{row.serial}</span>
+                      {row.serial && row.serial !== "-" ? (
+                        <span className="font-mono text-xs text-cyan-300 bg-cyan-400/5 px-2.5 py-1 rounded border border-cyan-400/20">
+                          {row.serial}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingRow(row);
+                            setEditingSerialInput("");
+                          }}
+                          className="inline-flex items-center gap-1.5 font-mono text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded border border-amber-500/30 transition-all font-semibold"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                          <span>بدون سيريال (إضافة)</span>
+                          <Edit3 className="w-3 h-3 ml-0.5" />
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-5 text-center">
                       <span className="text-sm font-bold text-slate-100">{row.status}</span>
@@ -878,10 +974,53 @@ export default function TechnicianItemDetailsPage() {
                         {row.datetime}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-left">
-                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-cyan-300">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+                    <td className="px-6 py-5 text-left" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-cyan-300 hover:bg-cyan-400/10">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-slate-900 border border-cyan-400/20 text-slate-100 min-w-[170px] shadow-xl">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedRow(row);
+                              setActiveStepIndex(
+                                row.raw?.status === "delivered" 
+                                  ? 3 
+                                  : row.raw?.status === "approved" 
+                                  ? 2 
+                                  : row.raw?.status === "rejected"
+                                  ? 1
+                                  : 0
+                              );
+                              setAdminNotesText("");
+                            }}
+                            className="cursor-pointer hover:bg-cyan-400/10 flex items-center gap-2"
+                          >
+                            <Eye className="w-4 h-4 text-cyan-400" />
+                            <span>عرض التفاصيل</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingRow(row);
+                              setEditingSerialInput(row.serial !== "-" ? row.serial : "");
+                            }}
+                            className="cursor-pointer hover:bg-cyan-400/10 flex items-center gap-2"
+                          >
+                            <Edit3 className="w-4 h-4 text-amber-400" />
+                            <span>تعديل السيريال</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-slate-800" />
+                          <DropdownMenuItem
+                            onClick={() => setDeletingRow(row)}
+                            className="cursor-pointer hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2 font-bold"
+                          >
+                            <Trash2 className="w-4 h-4 text-rose-400" />
+                            <span>حذف من العهدة</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -1182,6 +1321,82 @@ export default function TechnicianItemDetailsPage() {
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6"
             >
               {t('common.close')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Serial Number Modal */}
+      <Dialog open={!!editingRow} onOpenChange={(open) => !open && setEditingRow(null)}>
+        <DialogContent className="bg-slate-950 border border-cyan-400/20 text-slate-100 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-cyan-300 flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-amber-400" />
+              تعديل / تعيين الرقم التسلسلي (Serial Number)
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-xs mt-1">
+              قم بإدخال أو تحديث الرقم التسلسلي للجهاز ({editingRow?.productName || "POS"}) للحفاظ على سلامة العهدة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div>
+              <label className="text-xs font-bold text-slate-300 mb-1.5 block">الرقم التسلسلي الجديد:</label>
+              <Input
+                value={editingSerialInput}
+                onChange={(e) => setEditingSerialInput(e.target.value)}
+                placeholder="أدخل الرقم التسلسلي (مثال: N950-XXXXXX)..."
+                className="bg-slate-900 border-slate-800 font-mono text-cyan-300 focus:border-cyan-400/50 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => setEditingRow(null)}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              إلغاء
+            </Button>
+            <Button
+              onClick={() => editingRow && editSerialMutation.mutate({ row: editingRow, serialNumber: editingSerialInput })}
+              disabled={editSerialMutation.isPending || !editingSerialInput.trim()}
+              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold"
+            >
+              {editSerialMutation.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!deletingRow} onOpenChange={(open) => !open && setDeletingRow(null)}>
+        <DialogContent className="bg-slate-950 border border-rose-500/20 text-slate-100 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-rose-400 flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-rose-500" />
+              تأكيد حذف الجهاز من العهدة
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-xs mt-1">
+              هل أنت تأكد من رغبتك في حذف الجهاز ({deletingRow?.productName || "المنتج"}) بالسيريال ({deletingRow?.serial || "-"})؟ هذا الإجراء لا يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-3 justify-end pt-4">
+            <Button
+              variant="ghost"
+              onClick={() => setDeletingRow(null)}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              إلغاء
+            </Button>
+            <Button
+              onClick={() => deletingRow && deleteRowMutation.mutate(deletingRow)}
+              disabled={deleteRowMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-500 text-white font-bold"
+            >
+              {deleteRowMutation.isPending ? "جاري الحذف..." : "تأكيد الحذف"}
             </Button>
           </div>
         </DialogContent>
