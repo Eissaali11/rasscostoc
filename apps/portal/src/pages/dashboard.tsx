@@ -1,4 +1,4 @@
-﻿import { useTranslation } from "@/lib/language";
+import { useTranslation } from "@/lib/language";
 import { useMemo, useState, lazy, Suspense } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -1509,26 +1509,28 @@ export default function Dashboard() {
           {/* TAB 5: COURIER & INSTALLATION */}
           <TabsContent value="courier" className="space-y-6 outline-none">
             {/* Quick Access Shortcuts */}
-            <div className="bg-white border border-rassco-border rounded-2xl p-4 shadow-lg space-y-3">
-              <h2 className="text-xs font-bold text-rassco uppercase tracking-wide flex items-center gap-1.5">
-                {t('dashboard.unit_delivery')}
+            <div className="courier-panel courier-panel-static p-5 space-y-4">
+              <h2 className="text-sm font-extrabold text-[#18B2B0] uppercase tracking-wide flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#18B2B0]" />
+                <span>{t('dashboard.unit_delivery')}</span>
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {[
-                  { label: t('dashboard.data'), path: "/courier/raw-data", icon: Database, color: "hover:bg-blue-500/10 hover:border-blue-500/30" },
-                  { label: t('dashboard.verification'), path: "/courier/requests", icon: ClipboardCheck, color: "hover:bg-emerald-500/10 hover:border-emerald-500/30" },
-                  { label: t('dashboard.item_9785'), path: "/courier/pdf", icon: FileText, color: "hover:bg-rassco/10 hover:border-rassco/30" },
-                  { label: t('dashboard.reports'), path: "/courier/reports", icon: BarChart3, color: "hover:bg-rassco/10 hover:border-rassco/30" },
-                  { label: t('dashboard.export'), path: "/courier/export", icon: Download, color: "hover:bg-amber-500/10 hover:border-amber-500/30" },
+                  { label: t('dashboard.data'), path: "/courier/raw-data", icon: Database },
+                  { label: t('dashboard.verification'), path: "/courier/requests", icon: ClipboardCheck },
+                  { label: t('dashboard.item_9785'), path: "/courier/pdf", icon: FileText },
+                  { label: t('dashboard.reports'), path: "/courier/reports", icon: BarChart3 },
+                  { label: t('dashboard.export'), path: "/courier/export", icon: Download },
                 ].map((btn) => {
                   const BtnIcon = btn.icon;
                   return (
                     <button
                       key={btn.label}
+                      type="button"
                       onClick={() => setLocation(btn.path)}
-                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold bg-rassco-bg border border-rassco-border text-rassco-text transition-all duration-300 hover:-translate-y-0.5 shadow-sm ${btn.color}`}
+                      className="courier-quick-link"
                     >
-                      <BtnIcon className="w-4 h-4 text-rassco-muted" />
+                      <BtnIcon className="w-4 h-4 text-[#18B2B0]" />
                       <span>{btn.label}</span>
                     </button>
                   );

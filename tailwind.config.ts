@@ -101,10 +101,11 @@ export default {
         teal: rasscoTeal,
       },
       fontFamily: {
-        sans: ["Montserrat", "Noto Kufi Arabic", "var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        serif: ["Montserrat", "Noto Kufi Arabic", "var(--font-serif)", "Georgia", "serif"],
+        sans: ["Cairo", "Noto Kufi Arabic", "Montserrat", "var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        cairo: ["Cairo", "Noto Kufi Arabic", "sans-serif"],
+        serif: ["Cairo", "Montserrat", "Noto Kufi Arabic", "var(--font-serif)", "Georgia", "serif"],
         mono: ["var(--font-mono)"],
-        arabic: ["Noto Kufi Arabic", "ui-sans-serif", "system-ui", "sans-serif"],
+        arabic: ["Cairo", "Noto Kufi Arabic", "ui-sans-serif", "system-ui", "sans-serif"],
         montserrat: ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       keyframes: {

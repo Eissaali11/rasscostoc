@@ -256,7 +256,7 @@ describe('DeleteWarehouseTransfersUseCase', () => {
     );
   });
 
-  it('rolls back all changes when warehouse inventory is missing', async () => {
+  it('deletes transfer gracefully when warehouse inventory record is missing', async () => {
     const repository = InMemoryWarehouseTransferAdminRepository.fromSeed({
       transfers: [
         {
@@ -276,15 +276,16 @@ describe('DeleteWarehouseTransfersUseCase', () => {
     const unitOfWork = new TransactionalFakeInventoryUnitOfWork(repository);
     const useCase = new DeleteWarehouseTransfersUseCase(unitOfWork);
 
-    await expect(useCase.execute({ ids: ['t1'] })).rejects.toThrow(
-      'Warehouse inventory not found for warehouse ID: w-missing'
-    );
+    const result = await useCase.execute({ ids: ['t1'] });
 
-    expect(repository.hasTransfer('t1')).toBe(true);
-    expect(repository.getMovingStockByName('Tech One')).toMatchObject({ n950Boxes: 3 });
+    expect(result).toEqual({
+      message: 'Transfers deleted successfully and inventory returned to warehouse',
+      count: 1,
+    });
+    expect(repository.hasTransfer('t1')).toBe(false);
   });
 
-  it('rolls back warehouse updates when accepted technician moving inventory is missing', async () => {
+  it('deletes transfer gracefully when accepted technician moving inventory record is missing', async () => {
     const repository = InMemoryWarehouseTransferAdminRepository.fromSeed({
       transfers: [
         {
@@ -304,11 +305,12 @@ describe('DeleteWarehouseTransfersUseCase', () => {
     const unitOfWork = new TransactionalFakeInventoryUnitOfWork(repository);
     const useCase = new DeleteWarehouseTransfersUseCase(unitOfWork);
 
-    await expect(useCase.execute({ ids: ['t1'] })).rejects.toThrow(
-      'Moving inventory not found for technician: Tech One'
-    );
+    const result = await useCase.execute({ ids: ['t1'] });
 
-    expect(repository.hasTransfer('t1')).toBe(true);
-    expect(repository.getWarehouseStock('w1')).toMatchObject({ n950Boxes: 10 });
+    expect(result).toEqual({
+      message: 'Transfers deleted successfully and inventory returned to warehouse',
+      count: 1,
+    });
+    expect(repository.hasTransfer('t1')).toBe(false);
   });
 });
