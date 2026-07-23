@@ -396,6 +396,7 @@ export default function TechnicianItemDetailsPage() {
   const formatSerialWithPrefix = (serialRaw?: string | null, type?: any) => {
     if (!serialRaw || serialRaw === "-") return "-";
     const s = String(serialRaw).trim();
+    if (/[\s\u0600-\u06FF]/.test(s)) return "-";
     if (!type?.serialPrefix) return s;
     const prefixes = String(type.serialPrefix).split(",").map((p) => p.trim().toUpperCase());
     const alphabeticPrefix = prefixes.find((p) => /^[A-Z]+$/.test(p));
@@ -501,7 +502,8 @@ export default function TechnicianItemDetailsPage() {
       })
       .map((transfer) => {
         const ui = statusUi(transfer.status);
-        const serialFormatted = formatSerialWithPrefix((transfer as any).notes || (transfer as any).reason, itemType);
+        const rawSerial = (transfer as any).serialNumber || (transfer as any).serial;
+        const serialFormatted = rawSerial ? formatSerialWithPrefix(rawSerial, itemType) : "-";
         return {
           id: `tr-${transfer.id}`,
           productName: productNameAr,
