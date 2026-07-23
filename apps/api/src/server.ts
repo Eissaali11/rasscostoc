@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { app } from "./app";
 import { initializeDatabase, getDatabase, closeDatabase } from "@core/database/connection";
@@ -60,8 +61,9 @@ async function startServer() {
     // apply — so any error that still occurs is genuine and must halt
     // startup (the outer catch exits 1, which PM2 surfaces immediately)
     // rather than let this instance serve on an unknown schema.
-    // migrations/ lives at monorepo root, two levels above apps/api/src
-    const migrationsFolder = path.resolve(__dirname, "../../../migrations");
+    const migrationsFolder = fs.existsSync(path.resolve(process.cwd(), "migrations"))
+      ? path.resolve(process.cwd(), "migrations")
+      : path.resolve(__dirname, "../../../migrations");
     log(`⏳ Running database migrations from: ${migrationsFolder}`);
     const db = getDatabase();
     const MIGRATION_ADVISORY_LOCK_KEY = 823008; // shared constant, all instances

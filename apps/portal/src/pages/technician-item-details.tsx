@@ -559,6 +559,21 @@ export default function TechnicianItemDetailsPage() {
       if (row.id.startsWith("rc-")) {
         const res = await apiRequest("PATCH", `/api/received-devices/${id}`, { serialNumber: cleanSerial });
         return res.json();
+      } else if (row.id.startsWith("tr-")) {
+        try {
+          const res = await apiRequest("POST", `/api/warehouse-transfers/${id}/scan-serial`, { 
+            serialNumber: cleanSerial,
+            itemType: itemTypeId || "n950" 
+          });
+          return await res.json();
+        } catch {
+          const res = await apiRequest("POST", "/api/serialized-items/scan-in", {
+            serialNumber: cleanSerial,
+            itemTypeId,
+            technicianId,
+          });
+          return await res.json();
+        }
       } else {
         const res = await apiRequest("PATCH", `/api/serialized-items/${id}`, { serialNumber: cleanSerial });
         return res.json();
@@ -572,6 +587,7 @@ export default function TechnicianItemDetailsPage() {
       refreshData();
       setEditingRow(null);
       setEditingSerialInput("");
+      if (selectedRow) setSelectedRow(null);
     },
     onError: (err: any) => {
       toast({
@@ -589,7 +605,7 @@ export default function TechnicianItemDetailsPage() {
         const res = await apiRequest("DELETE", `/api/received-devices/${id}`);
         return res.json();
       } else if (row.id.startsWith("tr-")) {
-        const res = await apiRequest("DELETE", `/api/warehouse-transfers`, { ids: [id] });
+        const res = await apiRequest("DELETE", `/api/warehouse-transfers/${id}`);
         return res.json();
       } else {
         const res = await apiRequest("DELETE", `/api/serialized-items/${id}`);
@@ -603,6 +619,7 @@ export default function TechnicianItemDetailsPage() {
       });
       refreshData();
       setDeletingRow(null);
+      if (selectedRow) setSelectedRow(null);
     },
     onError: (err: any) => {
       toast({
@@ -1299,26 +1316,55 @@ export default function TechnicianItemDetailsPage() {
             /* Layout for Warehouse Transfer */
             <div className="space-y-4">
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 divide-y divide-slate-800/60">
-                {renderDetailItem(t('common.item_9548'), selectedRow?.productName || "-")}
-                {renderDetailItem(t('common.type_document'), t('common.transfer_4'))}
-                {renderDetailItem(t('common.number_document_transfer'), selectedRow?.id || "-", true)}
-                {renderDetailItem(t('common.status'), selectedRow?.status || "-")}
-                {renderDetailItem(t('common.date'), selectedRow?.datetime || "-")}
-                {renderDetailItem(t('common.item_19112'), t('common.warehouse_primary'))}
-                {renderDetailItem(t('common.received_1'), displayTechnicianName)}
+                {renderDetailItem("المنتج", selectedRow?.productName || "-")}
+                {renderDetailItem("نوع المستند", "تحويل مخزون (Warehouse Transfer)")}
+                {renderDetailItem("رقم مستند التحويل", selectedRow?.id || "-", true)}
+                {renderDetailItem("الحالة", selectedRow?.status || "-")}
+                {renderDetailItem("التاريخ", selectedRow?.datetime || "-")}
+                {renderDetailItem("الجهة المرسلة", "المستودع الرئيسي")}
+                {renderDetailItem("المستلم", displayTechnicianName)}
               </div>
               <div className="p-4 rounded-xl border border-cyan-400/10 bg-cyan-400/5 flex gap-3 items-center">
                 <Info className="w-5 h-5 text-cyan-400 shrink-0" />
-                <p className="text-xs text-slate-400">{t('common.log_batch_transfer_warehouse_p')}</p>
+                <p className="text-xs text-slate-400">هذا السجل يمثل شحنة/تحويل للمندوب من المستودع الرئيسي ولا يتبع دورة حياة الأجهزة الذكية الفردية.</p>
               </div>
             </div>
           )}
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex flex-wrap gap-3 items-center justify-between border-t border-slate-800/80 pt-4">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  if (selectedRow) {
+                    setEditingRow(selectedRow);
+                    setEditingSerialInput(selectedRow.serial !== "-" ? selectedRow.serial : "");
+                  }
+                }}
+                className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold gap-2 text-xs"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>تعديل / تعيين السيريال</span>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => {
+                  if (selectedRow) {
+                    setDeletingRow(selectedRow);
+                  }
+                }}
+                className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold gap-2 text-xs"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>حذف من العهدة</span>
+              </Button>
+            </div>
+
             <Button
               type="button"
               onClick={() => setSelectedRow(null)}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6 text-xs"
             >
               {t('common.close')}
             </Button>
