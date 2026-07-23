@@ -140,7 +140,7 @@ interface DirectoryUser {
 function getStatusBadge(status: string) {
   if (status === "pending") {
     return (
-      <Badge className="bg-yellow-500/10 text-yellow-300 border border-yellow-500/30">
+      <Badge className="bg-amber-50 text-amber-700 border border-amber-200/80 font-semibold">
         {t('notifications.pending_waiting')}
       </Badge>
     );
@@ -148,14 +148,14 @@ function getStatusBadge(status: string) {
 
   if (status === "approved" || status === "accepted") {
     return (
-      <Badge className="bg-green-500/10 text-green-300 border border-green-500/30">
+      <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-semibold">
         {t('notifications.approved')}
       </Badge>
     );
   }
 
   return (
-    <Badge className="bg-red-500/10 text-red-300 border border-red-500/30">
+    <Badge className="bg-rose-50 text-rose-700 border border-rose-200/80 font-semibold">
       {t('notifications.rejected')}
     </Badge>
   );
@@ -716,15 +716,15 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="rounded-3xl border border-cyan-400/20 bg-slate-900/45 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="space-y-6 font-sans">
+        <div className="courier-panel courier-panel-static p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm bg-white/90">
           <div className="flex items-start gap-3">
-            <div className="size-11 rounded-2xl bg-cyan-400/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+            <div className="size-11 rounded-2xl bg-[#18b2b0]/10 border border-[#18b2b0]/25 flex items-center justify-center text-[#18b2b0]">
               <Bell className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">{t('notifications.item_28728')}</h2>
-              <p className="text-slate-400 text-sm mt-1">
+              <h2 className="text-2xl font-bold text-slate-900">{t('notifications.item_28728')}</h2>
+              <p className="text-slate-500 text-sm mt-1">
                 {isAdminOrSupervisor
                   ? t('notifications.management_requests_inventory_')
                   : t('notifications.management_requests')}
@@ -735,7 +735,7 @@ export default function NotificationsPage() {
           <Button
             onClick={markAllAsRead}
             variant="outline"
-            className="bg-cyan-400/10 border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/20"
+            className="bg-[#18b2b0]/10 border-[#18b2b0]/25 text-[#18b2b0] hover:bg-[#18b2b0]/20 font-bold"
             type="button"
           >
             <Check className="h-4 w-4 ml-2" />
@@ -756,8 +756,8 @@ export default function NotificationsPage() {
               variant={filter === tab.value ? "default" : "outline"}
               className={
                 filter === tab.value
-                  ? "bg-cyan-400/20 text-cyan-200 border border-cyan-400/40"
-                  : "bg-slate-900/50 border-slate-700/60 text-slate-300 hover:bg-slate-800/60"
+                  ? "bg-[#18b2b0] text-white border border-[#18b2b0] shadow-xs font-bold"
+                  : "bg-white/80 border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
               }
               data-testid={`button-filter-${tab.value}`}
             >
@@ -767,19 +767,19 @@ export default function NotificationsPage() {
         </div>
 
         {!isAdminOrSupervisor && filter === "pending" && notificationSettings.daily && pendingBatches.length > 0 && (
-          <div className="p-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06]">
+          <div className="p-4 rounded-2xl border border-[#18b2b0]/25 bg-[#18b2b0]/5 shadow-xs">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <Button
                   onClick={toggleSelectAll}
                   variant="outline"
                   size="sm"
-                  className="bg-slate-900/50 border-slate-700 text-slate-200 hover:bg-slate-800/60"
+                  className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
                   data-testid="button-select-all"
                 >
                   {isAllSelected ? (
                     <>
-                      <CheckSquare className="h-4 w-4 ml-2" />{t('notifications.cancel_all')}
+                      <CheckSquare className="h-4 w-4 ml-2 text-[#18b2b0]" />{t('notifications.cancel_all')}
                     </>
                   ) : (
                     <>
@@ -788,7 +788,7 @@ export default function NotificationsPage() {
                   )}
                 </Button>
                 {selectedBatchIds.length > 0 && (
-                  <Badge className="bg-cyan-400/15 text-cyan-300 border border-cyan-400/30">
+                  <Badge className="bg-[#18b2b0]/15 text-[#18b2b0] border border-[#18b2b0]/30 font-bold">
                     {t('notifications.item_7433', { count: selectedBatchIds.length })}
                   </Badge>
                 )}
@@ -799,7 +799,7 @@ export default function NotificationsPage() {
                   <Button
                     onClick={() => setBulkApproveDialogOpen(true)}
                     disabled={bulkApproveMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                     data-testid="button-bulk-approve"
                   >
                     <Check className="h-4 w-4 ml-2" />
@@ -809,7 +809,7 @@ export default function NotificationsPage() {
                     onClick={() => setBulkRejectDialogOpen(true)}
                     disabled={bulkRejectMutation.isPending}
                     variant="outline"
-                    className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
+                    className="bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 font-bold"
                     data-testid="button-bulk-reject"
                   >
                     <X className="h-4 w-4 ml-2" />
@@ -824,29 +824,29 @@ export default function NotificationsPage() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           <div className="xl:col-span-8 space-y-4">
             {isLoading ? (
-              <div className="text-center py-12 rounded-2xl border border-slate-700/60 bg-slate-900/40">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-400" />
-                <p className="mt-4 text-slate-400">{t('notifications.loading_notifications')}</p>
+              <div className="text-center py-12 rounded-2xl border border-slate-200 bg-white/80 shadow-xs">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#18b2b0]" />
+                <p className="mt-4 text-slate-500 font-medium">{t('notifications.loading_notifications')}</p>
               </div>
             ) : (
               <>
                 {isAdminOrSupervisor ? (
                   <>
                     {notificationSettings.stock && (
-                      <Card className="bg-slate-900/45 border-slate-700/60 overflow-hidden">
-                        <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-white font-semibold">
-                            <Package className="h-4 w-4 text-cyan-300" />
+                      <Card className="courier-panel courier-panel-static border border-slate-200/80 shadow-sm overflow-hidden bg-white/90">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-slate-900 font-bold">
+                            <Package className="h-4 w-4 text-[#18b2b0]" />
                             {t('notifications.requests_inventory')}
                           </div>
-                          <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                          <Badge className="bg-[#18b2b0]/10 text-[#18b2b0] border border-[#18b2b0]/20 font-bold">
                             {filteredInventoryRequests.length}
                           </Badge>
                         </div>
 
                         <div className="p-4 space-y-3">
                           {filteredInventoryRequests.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests')}</div>
+                            <div className="text-center py-6 text-slate-400 font-medium">{t('notifications.no_requests')}</div>
                           ) : (
                             filteredInventoryRequests.map((request) => {
                               const cardId = `stock-${request.id}`;
@@ -858,27 +858,27 @@ export default function NotificationsPage() {
                                   onClick={() => setReadNotificationIds((current) => Array.from(new Set([...current, cardId])))}
                                   className={`rounded-xl border p-4 transition-all ${
                                     unread
-                                      ? "border-cyan-400/40 bg-cyan-500/[0.06] border-r-4 border-r-cyan-400"
-                                      : "border-slate-700/60 bg-slate-950/30 hover:bg-slate-900/40"
+                                      ? "border-[#18b2b0]/40 bg-[#18b2b0]/[0.04] border-r-4 border-r-[#18b2b0] shadow-xs"
+                                      : "border-slate-200/80 bg-white hover:bg-slate-50/80"
                                   }`}
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">{t('notifications.request_7')}{request.technicianName}</h3>
+                                      <h3 className="text-slate-900 font-bold text-base">{t('notifications.request_7')}{request.technicianName}</h3>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                        <Clock3 className="h-3.5 w-3.5" />
+                                        <Clock3 className="h-3.5 w-3.5 text-slate-400" />
                                         {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true, locale: ar })}
                                       </p>
                                       <div className="flex flex-wrap gap-1.5 mt-3">
                                         {getRequestedItems(request).slice(0, 5).map((itemText, idx) => (
-                                          <Badge key={idx} className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs">
+                                          <Badge key={idx} className="bg-slate-100 text-slate-700 border border-slate-200/70 text-xs font-semibold">
                                             {itemText}
                                           </Badge>
                                         ))}
                                       </div>
                                       {request.notes && (
-                                        <p className="text-xs text-slate-400 mt-3 flex items-start gap-1">
-                                          <FileText className="h-3.5 w-3.5 mt-0.5" />
+                                        <p className="text-xs text-slate-600 mt-3 flex items-start gap-1">
+                                          <FileText className="h-3.5 w-3.5 mt-0.5 text-slate-400" />
                                           {request.notes}
                                         </p>
                                       )}
@@ -894,7 +894,7 @@ export default function NotificationsPage() {
                                           handleApproveClick(request);
                                         }}
                                         disabled={approveMutation.isPending}
-                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                                         data-testid={`button-approve-${request.id}`}
                                       >
                                         <Check className="h-4 w-4 ml-1" />
@@ -907,7 +907,7 @@ export default function NotificationsPage() {
                                         }}
                                         disabled={rejectMutation.isPending}
                                         variant="outline"
-                                        className="flex-1 bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
+                                        className="flex-1 bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 font-bold"
                                         data-testid={`button-reject-${request.id}`}
                                       >
                                         <X className="h-4 w-4 ml-1" />
@@ -924,20 +924,20 @@ export default function NotificationsPage() {
                     )}
 
                     {isAdminOrSupervisor && notificationSettings.daily && (
-                      <Card className="bg-slate-900/45 border-slate-700/60 overflow-hidden">
-                        <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-white font-semibold">
-                            <Smartphone className="h-4 w-4 text-cyan-300" />
+                      <Card className="courier-panel courier-panel-static border border-slate-200/80 shadow-sm overflow-hidden bg-white/90">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-slate-900 font-bold">
+                            <Smartphone className="h-4 w-4 text-[#18b2b0]" />
                             {t('notifications.requests_withdraw_devices')}
                           </div>
-                          <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                          <Badge className="bg-[#18b2b0]/10 text-[#18b2b0] border border-[#18b2b0]/20 font-bold">
                             {filteredReceivedDevices.length}
                           </Badge>
                         </div>
 
                         <div className="p-4 space-y-3">
                           {filteredReceivedDevices.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests_devices')}</div>
+                            <div className="text-center py-6 text-slate-400 font-medium">{t('notifications.no_requests_devices')}</div>
                           ) : (
                             filteredReceivedDevices.map((device) => {
                               const cardId = `device-${device.id}`;
@@ -952,24 +952,24 @@ export default function NotificationsPage() {
                                   }}
                                   className={`rounded-xl border p-4 cursor-pointer transition-all ${
                                     unread
-                                      ? "border-cyan-400/40 bg-cyan-500/[0.06] border-r-4 border-r-cyan-400"
-                                      : "border-slate-700/60 bg-slate-950/30 hover:bg-slate-900/40"
+                                      ? "border-[#18b2b0]/40 bg-[#18b2b0]/[0.04] border-r-4 border-r-[#18b2b0] shadow-xs"
+                                      : "border-slate-200/80 bg-white hover:bg-slate-50/80"
                                   }`}
                                   data-testid={`received-device-request-${device.id}`}
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">{t('notifications.request_withdraw_device_1')}{device.terminalId}</h3>
-                                      <p className="text-xs text-slate-400 mt-1">{t('notifications.number_serial')}{device.serialNumber}</p>
+                                      <h3 className="text-slate-900 font-bold text-base">{t('notifications.request_withdraw_device_1')}{device.terminalId}</h3>
+                                      <p className="text-xs text-slate-600 mt-1">{t('notifications.number_serial')}{device.serialNumber}</p>
                                       <p className="text-xs text-slate-500 mt-1">
                                         {t('notifications.technician_label', { name: technicianNameById.get(device.technicianId) || t('notifications.item_9013', { var_0: device.technicianId.slice(0, 8) }) })}
                                       </p>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                        <Clock3 className="h-3.5 w-3.5" />
+                                        <Clock3 className="h-3.5 w-3.5 text-slate-400" />
                                         {formatDistanceToNow(new Date(device.createdAt), { addSuffix: true, locale: ar })}
                                       </p>
                                       {(device.damagePart || device.adminNotes) && (
-                                        <p className="text-xs text-slate-400 mt-2">{device.damagePart || device.adminNotes}</p>
+                                        <p className="text-xs text-slate-600 mt-2 font-medium">{device.damagePart || device.adminNotes}</p>
                                       )}
                                     </div>
                                     {getStatusBadge(device.status)}
@@ -984,7 +984,7 @@ export default function NotificationsPage() {
                                             handleDeviceActionClick(device, "approve");
                                           }}
                                           disabled={reviewDeviceStatusMutation.isPending}
-                                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                                           data-testid={`button-approve-device-${device.id}`}
                                         >
                                           <Check className="h-4 w-4 ml-1" />
@@ -997,7 +997,7 @@ export default function NotificationsPage() {
                                           }}
                                           disabled={reviewDeviceStatusMutation.isPending}
                                           variant="outline"
-                                          className="flex-1 bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
+                                          className="flex-1 bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 font-bold"
                                           data-testid={`button-reject-device-${device.id}`}
                                         >
                                           <X className="h-4 w-4 ml-1" />
@@ -1012,7 +1012,7 @@ export default function NotificationsPage() {
                                         setLocation(`/received-devices/${device.id}`);
                                       }}
                                       variant="outline"
-                                      className="bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
+                                      className="bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold"
                                       type="button"
                                     >
                                       <ArrowRight className="h-4 w-4 ml-1" />
@@ -1030,20 +1030,20 @@ export default function NotificationsPage() {
                 ) : (
                   <>
                     {notificationSettings.daily && (
-                      <Card className="bg-slate-900/45 border-slate-700/60 overflow-hidden">
-                        <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-white font-semibold">
-                            <Warehouse className="h-4 w-4 text-cyan-300" />
+                      <Card className="courier-panel courier-panel-static border border-slate-200/80 shadow-sm overflow-hidden bg-white/90">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-slate-900 font-bold">
+                            <Warehouse className="h-4 w-4 text-[#18b2b0]" />
                             {t('notifications.requests_warehouses')}
                           </div>
-                          <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                          <Badge className="bg-[#18b2b0]/10 text-[#18b2b0] border border-[#18b2b0]/20 font-bold">
                             {filteredGroupedTransfers.length}
                           </Badge>
                         </div>
 
                         <div className="p-4 space-y-3">
                           {filteredGroupedTransfers.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests_1')}</div>
+                            <div className="text-center py-6 text-slate-400 font-medium">{t('notifications.no_requests_1')}</div>
                           ) : (
                             filteredGroupedTransfers.map((group) => {
                               const cardId = `transfer-${group.requestId}`;
@@ -1055,25 +1055,25 @@ export default function NotificationsPage() {
                                   onClick={() => setReadNotificationIds((current) => Array.from(new Set([...current, cardId])))}
                                   className={`rounded-xl border p-4 transition-all ${
                                     unread
-                                      ? "border-cyan-400/40 bg-cyan-500/[0.06] border-r-4 border-r-cyan-400"
-                                      : "border-slate-700/60 bg-slate-950/30 hover:bg-slate-900/40"
+                                      ? "border-[#18b2b0]/40 bg-[#18b2b0]/[0.04] border-r-4 border-r-[#18b2b0] shadow-xs"
+                                      : "border-slate-200/80 bg-white hover:bg-slate-50/80"
                                   }`}
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">{t('notifications.request_8')}{group.warehouseName}</h3>
+                                      <h3 className="text-slate-900 font-bold text-base">{t('notifications.request_8')}{group.warehouseName}</h3>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                        <Clock3 className="h-3.5 w-3.5" />
+                                        <Clock3 className="h-3.5 w-3.5 text-slate-400" />
                                         {formatDistanceToNow(new Date(group.createdAt), { addSuffix: true, locale: ar })}
                                       </p>
                                       <div className="flex flex-wrap gap-1.5 mt-3">
                                         {getRequestedItems(group).slice(0, 5).map((itemText, idx) => (
-                                          <Badge key={idx} className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs">
+                                          <Badge key={idx} className="bg-slate-100 text-slate-700 border border-slate-200/70 text-xs font-semibold">
                                             {itemText}
                                           </Badge>
                                         ))}
                                       </div>
-                                      {group.notes && <p className="text-xs text-slate-400 mt-2">{group.notes}</p>}
+                                      {group.notes && <p className="text-xs text-slate-600 mt-2 font-medium">{group.notes}</p>}
                                     </div>
                                     {getStatusBadge(group.status)}
                                   </div>
@@ -1087,7 +1087,7 @@ export default function NotificationsPage() {
                                             handleTechApproveBatchClick(group);
                                           }}
                                           disabled={techApproveBatchMutation.isPending}
-                                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                                           data-testid={`button-approve-${group.requestId}`}
                                         >
                                           <Check className="h-4 w-4 ml-1" />
@@ -1100,7 +1100,7 @@ export default function NotificationsPage() {
                                           }}
                                           disabled={techRejectBatchMutation.isPending}
                                           variant="outline"
-                                          className="flex-1 bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
+                                          className="flex-1 bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 font-bold"
                                           data-testid={`button-reject-${group.requestId}`}
                                         >
                                           <X className="h-4 w-4 ml-1" />
@@ -1115,15 +1115,15 @@ export default function NotificationsPage() {
                                           event.stopPropagation();
                                           toggleSelectBatch(group.requestId);
                                         }}
-                                        className={`w-full ${
+                                        className={`w-full font-semibold ${
                                           selectedBatchIds.includes(group.requestId)
-                                            ? "bg-cyan-500/20 border-cyan-400/40 text-cyan-300"
-                                            : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
+                                            ? "bg-[#18b2b0]/15 border-[#18b2b0]/40 text-[#18b2b0]"
+                                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                                         }`}
                                         data-testid={`checkbox-${group.requestId}`}
                                       >
                                         {selectedBatchIds.includes(group.requestId) ? (
-                                          <CheckSquare className="h-4 w-4 ml-1" />
+                                          <CheckSquare className="h-4 w-4 ml-1 text-[#18b2b0]" />
                                         ) : (
                                           <Square className="h-4 w-4 ml-1" />
                                         )}
@@ -1140,20 +1140,20 @@ export default function NotificationsPage() {
                     )}
 
                     {notificationSettings.stock && (
-                      <Card className="bg-slate-900/45 border-slate-700/60 overflow-hidden">
-                        <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-white font-semibold">
-                            <Package className="h-4 w-4 text-cyan-300" />
+                      <Card className="courier-panel courier-panel-static border border-slate-200/80 shadow-sm overflow-hidden bg-white/90">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-slate-900 font-bold">
+                            <Package className="h-4 w-4 text-[#18b2b0]" />
                             {t('notifications.item_22311')}
                           </div>
-                          <Badge className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                          <Badge className="bg-[#18b2b0]/10 text-[#18b2b0] border border-[#18b2b0]/20 font-bold">
                             {filteredMyInventoryRequests.length}
                           </Badge>
                         </div>
 
                         <div className="p-4 space-y-3">
                           {filteredMyInventoryRequests.length === 0 ? (
-                            <div className="text-center py-6 text-slate-500">{t('notifications.no_requests_2')}</div>
+                            <div className="text-center py-6 text-slate-400 font-medium">{t('notifications.no_requests_2')}</div>
                           ) : (
                             filteredMyInventoryRequests.map((request) => {
                               const cardId = `mine-${request.id}`;
@@ -1165,27 +1165,27 @@ export default function NotificationsPage() {
                                   onClick={() => setReadNotificationIds((current) => Array.from(new Set([...current, cardId])))}
                                   className={`rounded-xl border p-4 transition-all ${
                                     unread
-                                      ? "border-cyan-400/40 bg-cyan-500/[0.06] border-r-4 border-r-cyan-400"
-                                      : "border-slate-700/60 bg-slate-950/30 hover:bg-slate-900/40"
+                                      ? "border-[#18b2b0]/40 bg-[#18b2b0]/[0.04] border-r-4 border-r-[#18b2b0] shadow-xs"
+                                      : "border-slate-200/80 bg-white hover:bg-slate-50/80"
                                   }`}
                                   data-testid={`my-request-${request.id}`}
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                      <h3 className="text-white font-bold text-base">{t('notifications.request')}</h3>
+                                      <h3 className="text-slate-900 font-bold text-base">{t('notifications.request')}</h3>
                                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                        <Calendar className="h-3.5 w-3.5" />
+                                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
                                         {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true, locale: ar })}
                                       </p>
                                       <div className="flex flex-wrap gap-1.5 mt-3">
                                         {getRequestedItems(request).slice(0, 4).map((itemText, idx) => (
-                                          <Badge key={idx} className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs">
+                                          <Badge key={idx} className="bg-slate-100 text-slate-700 border border-slate-200/70 text-xs font-semibold">
                                             {itemText}
                                           </Badge>
                                         ))}
                                       </div>
                                       {request.adminNotes && request.status !== "pending" && (
-                                        <p className="text-xs text-yellow-300 mt-3">{t('notifications.supervisor')}{request.adminNotes}</p>
+                                        <p className="text-xs text-amber-700 mt-3 font-semibold">{t('notifications.supervisor')}{request.adminNotes}</p>
                                       )}
                                     </div>
                                     {getStatusBadge(request.status)}
@@ -1203,7 +1203,7 @@ export default function NotificationsPage() {
                 <div className="flex justify-center pt-1">
                   <button
                     type="button"
-                    className="text-slate-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1.5 transition-colors"
+                    className="text-slate-500 hover:text-[#18b2b0] text-sm font-semibold flex items-center gap-1.5 transition-colors"
                   >
                     <ChevronDown className="h-4 w-4" />
                     {t('notifications.view_notifications')}
@@ -1213,9 +1213,9 @@ export default function NotificationsPage() {
             )}
           </div>
 
-          <aside className="xl:col-span-4 rounded-3xl border border-slate-700/60 bg-slate-900/45 p-5 space-y-6 h-fit">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-cyan-300" />
+          <aside className="xl:col-span-4 courier-panel courier-panel-static p-5 space-y-6 h-fit bg-white/90 border border-slate-200/80 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-[#18b2b0]" />
               {t('notifications.item_25401')}
             </h3>
 
@@ -1229,16 +1229,16 @@ export default function NotificationsPage() {
                 return (
                   <div key={setting.key} className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-slate-200">{setting.label}</p>
+                      <p className="text-sm font-bold text-slate-800">{setting.label}</p>
                       <p className="text-xs text-slate-500 mt-0.5">{setting.hint}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => toggleSetting(setting.key)}
-                      className={`w-11 h-6 rounded-full transition-colors relative ${enabled ? "bg-cyan-400" : "bg-slate-700"}`}
+                      className={`w-11 h-6 rounded-full transition-colors relative ${enabled ? "bg-[#18b2b0]" : "bg-slate-200"}`}
                     >
                       <span
-                        className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${enabled ? "right-1" : "right-6"}`}
+                        className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-xs transition-all ${enabled ? "right-1" : "right-6"}`}
                       />
                     </button>
                   </div>
@@ -1246,41 +1246,41 @@ export default function NotificationsPage() {
               })}
             </div>
 
-            <div className="border-t border-slate-700/60 pt-5">
-              <h4 className="text-sm font-semibold text-slate-300 mb-4">{t('notifications.week')}</h4>
-              <div className="rounded-xl border border-slate-700/60 bg-black/20 p-4">
+            <div className="border-t border-slate-200/80 pt-5">
+              <h4 className="text-sm font-bold text-slate-800 mb-4">{t('notifications.week')}</h4>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                 <div className="flex items-end justify-between h-24 gap-1.5">
                   {weeklySummaryHeights.map((height, idx) => (
-                    <div key={idx} className="w-full bg-cyan-400/15 rounded-t relative">
-                      <div className="absolute bottom-0 w-full bg-cyan-400/80 rounded-t" style={{ height }} />
+                    <div key={idx} className="w-full bg-[#18b2b0]/15 rounded-t relative">
+                      <div className="absolute bottom-0 w-full bg-[#18b2b0] rounded-t" style={{ height }} />
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between mt-2 text-[10px] text-slate-500">
+                <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-semibold">
                   <span>{t('notifications.item_7920')}</span>
                   <span>{t('notifications.item_9534')}</span>
                 </div>
               </div>
 
               <div className="mt-4 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <span className="w-2 h-2 rounded-full bg-cyan-300" />
+                <div className="flex items-center gap-2 text-slate-600 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#18b2b0]" />
                   {t('notifications.total_count', { count: allCount })}
                 </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <span className="w-2 h-2 rounded-full bg-yellow-300" />
+                <div className="flex items-center gap-2 text-slate-600 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
                   {t('notifications.pending_count', { count: pendingCount })}
                 </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                <div className="flex items-center gap-2 text-slate-600 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
                   {t('notifications.rejected_count', { count: rejectedCount })}
                 </div>
               </div>
             </div>
 
             {notificationSettings.security && (
-              <div className="rounded-xl border border-slate-700/60 bg-slate-950/30 p-3 text-xs text-slate-400 flex items-start gap-2">
-                <ShieldAlert className="h-4 w-4 text-orange-300 mt-0.5" />
+              <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 text-xs text-amber-900 flex items-start gap-2 font-medium">
+                <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                 {t('notifications.no_security')}
               </div>
             )}
@@ -1289,31 +1289,31 @@ export default function NotificationsPage() {
       </div>
 
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('notifications.approve_request_inventory')}</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-xl font-bold text-slate-900">{t('notifications.approve_request_inventory')}</DialogTitle>
+            <DialogDescription className="text-slate-500">
               {t('notifications.warehouse_withdraw')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-4">
             {selectedRequest && (
-              <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-                <p className="text-sm text-gray-400 mb-1">{t('notifications.technician')}</p>
-                <p className="text-white font-bold">{selectedRequest.technicianName}</p>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-sm text-slate-500 mb-1">{t('notifications.technician')}</p>
+                <p className="text-slate-900 font-bold">{selectedRequest.technicianName}</p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label className="text-white">{t('notifications.warehouse')}</Label>
+              <Label className="text-slate-700 font-semibold">{t('notifications.warehouse')}</Label>
               <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="select-warehouse">
+                <SelectTrigger className="bg-white border-slate-200 text-slate-900" data-testid="select-warehouse">
                   <SelectValue placeholder={t('notifications.warehouse_2')} />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f0f15] border-[#18B2B0]/20">
+                <SelectContent className="bg-white border-slate-200 text-slate-900">
                   {warehouses.map((warehouse) => (
-                    <SelectItem key={warehouse.id} value={warehouse.id} className="text-white hover:bg-white/10">
+                    <SelectItem key={warehouse.id} value={warehouse.id} className="text-slate-800 hover:bg-slate-100">
                       {warehouse.name}
                     </SelectItem>
                   ))}
@@ -1329,14 +1329,14 @@ export default function NotificationsPage() {
                 setApproveDialogOpen(false);
                 setSelectedWarehouseId("");
               }}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmApprove}
               disabled={!selectedWarehouseId || approveMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               data-testid="button-confirm-approve"
             >
               {t('notifications.confirm_approve')}
@@ -1346,10 +1346,10 @@ export default function NotificationsPage() {
       </Dialog>
 
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('notifications.reject_request_inventory')}</DialogTitle>
-            <DialogDescription className="text-gray-400">{t('notifications.submit_reason_reject')}</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-slate-900">{t('notifications.reject_request_inventory')}</DialogTitle>
+            <DialogDescription className="text-slate-500">{t('notifications.submit_reason_reject')}</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
@@ -1357,7 +1357,7 @@ export default function NotificationsPage() {
               value={adminNotes}
               onChange={(event) => setAdminNotes(event.target.value)}
               placeholder={t('notifications.reason_reject_3')}
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 min-h-[100px]"
               data-testid="textarea-admin-notes"
             />
           </div>
@@ -1369,14 +1369,14 @@ export default function NotificationsPage() {
                 setRejectDialogOpen(false);
                 setAdminNotes("");
               }}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmReject}
               disabled={!adminNotes.trim() || rejectMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
               data-testid="button-confirm-reject"
             >
               {t('notifications.confirm_reject')}
@@ -1386,12 +1386,12 @@ export default function NotificationsPage() {
       </Dialog>
 
       <Dialog open={deviceActionDialogOpen} onOpenChange={setDeviceActionDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">
+            <DialogTitle className="text-xl font-bold text-slate-900">
               {deviceActionType === "approve" ? t('notifications.request_withdraw_device') : t('notifications.reject_request_withdraw_device')}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-slate-500">
               {deviceActionType === "approve"
                 ? t('notifications.request_1')
                 : t('notifications.submit_reason_reject_followup')}
@@ -1399,9 +1399,9 @@ export default function NotificationsPage() {
           </DialogHeader>
 
           {selectedDeviceRequest && (
-            <div className="py-2 px-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="text-sm text-gray-400">{t('notifications.device')}</p>
-              <p className="text-white font-semibold">
+            <div className="py-2 px-3 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-500">{t('notifications.device')}</p>
+              <p className="text-slate-900 font-bold">
                 {selectedDeviceRequest.terminalId} • {selectedDeviceRequest.serialNumber}
               </p>
             </div>
@@ -1412,7 +1412,7 @@ export default function NotificationsPage() {
               value={deviceAdminNotes}
               onChange={(event) => setDeviceAdminNotes(event.target.value)}
               placeholder={deviceActionType === "approve" ? t('notifications.notes') : t('notifications.reason_reject_3')}
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 min-h-[100px]"
               data-testid="textarea-device-action-notes"
             />
           </div>
@@ -1426,7 +1426,7 @@ export default function NotificationsPage() {
                 setDeviceActionType(null);
                 setDeviceAdminNotes("");
               }}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
@@ -1438,8 +1438,8 @@ export default function NotificationsPage() {
               }
               className={
                 deviceActionType === "approve"
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "bg-red-600 hover:bg-red-700 text-white"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                  : "bg-rose-600 hover:bg-rose-700 text-white font-bold"
               }
               data-testid="button-confirm-device-action"
             >
@@ -1450,19 +1450,19 @@ export default function NotificationsPage() {
       </Dialog>
 
       <Dialog open={techApproveDialogOpen} onOpenChange={setTechApproveDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('notifications.approve_request')}</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-xl font-bold text-slate-900">{t('notifications.approve_request')}</DialogTitle>
+            <DialogDescription className="text-slate-500">
               {t('notifications.add')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedBatch && (
-            <div className="py-4 p-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="text-sm text-gray-400 mb-1">{t('notifications.warehouse_1')}</p>
-              <p className="text-white font-bold">{selectedBatch.warehouseName}</p>
-              <p className="text-xs text-gray-500 mt-2">{t('notifications.item_15970')}{selectedBatch.transfers.length}</p>
+            <div className="py-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-500 mb-1">{t('notifications.warehouse_1')}</p>
+              <p className="text-slate-900 font-bold">{selectedBatch.warehouseName}</p>
+              <p className="text-xs text-slate-500 mt-2">{t('notifications.item_15970')}{selectedBatch.transfers.length}</p>
             </div>
           )}
 
@@ -1470,14 +1470,14 @@ export default function NotificationsPage() {
             <Button
               variant="outline"
               onClick={() => setTechApproveDialogOpen(false)}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleTechConfirmApprove}
               disabled={techApproveBatchMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               data-testid="button-tech-confirm-approve"
             >
               {t('notifications.confirm_approve')}
@@ -1487,10 +1487,10 @@ export default function NotificationsPage() {
       </Dialog>
 
       <Dialog open={techRejectDialogOpen} onOpenChange={setTechRejectDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('notifications.reject_request')}</DialogTitle>
-            <DialogDescription className="text-gray-400">{t('notifications.submit_reason_reject')}</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-slate-900">{t('notifications.reject_request')}</DialogTitle>
+            <DialogDescription className="text-slate-500">{t('notifications.submit_reason_reject')}</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
@@ -1498,7 +1498,7 @@ export default function NotificationsPage() {
               value={techRejectionReason}
               onChange={(event) => setTechRejectionReason(event.target.value)}
               placeholder={t('notifications.reason_reject_3')}
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 min-h-[100px]"
               data-testid="textarea-tech-rejection-reason"
             />
           </div>
@@ -1510,14 +1510,14 @@ export default function NotificationsPage() {
                 setTechRejectDialogOpen(false);
                 setTechRejectionReason("");
               }}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleTechConfirmReject}
               disabled={!techRejectionReason.trim() || techRejectBatchMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
               data-testid="button-tech-confirm-reject"
             >
               {t('notifications.confirm_reject')}
@@ -1527,10 +1527,10 @@ export default function NotificationsPage() {
       </Dialog>
 
       <Dialog open={bulkApproveDialogOpen} onOpenChange={setBulkApproveDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('notifications.approve_requests')}</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-xl font-bold text-slate-900">{t('notifications.approve_requests')}</DialogTitle>
+            <DialogDescription className="text-slate-500">
               {t('notifications.accept_batch_confirm', { count: selectedBatchIds.length })}
             </DialogDescription>
           </DialogHeader>
@@ -1539,14 +1539,14 @@ export default function NotificationsPage() {
             <Button
               variant="outline"
               onClick={() => setBulkApproveDialogOpen(false)}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
             <Button
               onClick={() => bulkApproveMutation.mutate(selectedBatchIds)}
               disabled={bulkApproveMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               data-testid="button-confirm-bulk-approve"
             >
               {bulkApproveMutation.isPending ? t('notifications.approve') : t('notifications.confirm_approve')}
@@ -1556,10 +1556,10 @@ export default function NotificationsPage() {
       </Dialog>
 
       <Dialog open={bulkRejectDialogOpen} onOpenChange={setBulkRejectDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f0f15] border-[#18B2B0]/20 text-white">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('notifications.reject_requests')}</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-xl font-bold text-slate-900">{t('notifications.reject_requests')}</DialogTitle>
+            <DialogDescription className="text-slate-500">
               {t('notifications.reject_batch_reason_prompt', { count: selectedBatchIds.length })}
             </DialogDescription>
           </DialogHeader>
@@ -1569,7 +1569,7 @@ export default function NotificationsPage() {
               value={bulkRejectionReason}
               onChange={(event) => setBulkRejectionReason(event.target.value)}
               placeholder={t('notifications.reason_reject_3')}
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 min-h-[100px]"
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 min-h-[100px]"
               data-testid="textarea-bulk-rejection-reason"
             />
           </div>
@@ -1581,14 +1581,14 @@ export default function NotificationsPage() {
                 setBulkRejectDialogOpen(false);
                 setBulkRejectionReason("");
               }}
-              className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
             >
               {t('notifications.cancel')}
             </Button>
             <Button
               onClick={handleConfirmBulkReject}
               disabled={!bulkRejectionReason.trim() || bulkRejectMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
               data-testid="button-confirm-bulk-reject"
             >
               {t('notifications.confirm_reject')}
