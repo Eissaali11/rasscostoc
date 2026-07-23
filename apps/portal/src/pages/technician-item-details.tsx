@@ -393,11 +393,11 @@ export default function TechnicianItemDetailsPage() {
     : Number(movingEntry?.boxes || 0) + Number(movingEntry?.units || 0);
   const totalStock = fixedTotal + movingTotal;
 
-  const formatSerialWithPrefix = (serialRaw?: string | null, type?: { serialPrefix?: string | null }) => {
+  const formatSerialWithPrefix = (serialRaw?: string | null, type?: any) => {
     if (!serialRaw || serialRaw === "-") return "-";
     const s = String(serialRaw).trim();
     if (!type?.serialPrefix) return s;
-    const prefixes = type.serialPrefix.split(",").map((p) => p.trim().toUpperCase());
+    const prefixes = String(type.serialPrefix).split(",").map((p) => p.trim().toUpperCase());
     const alphabeticPrefix = prefixes.find((p) => /^[A-Z]+$/.test(p));
     if (alphabeticPrefix && !s.toUpperCase().startsWith(alphabeticPrefix)) {
       return `${alphabeticPrefix}${s}`;
@@ -501,7 +501,7 @@ export default function TechnicianItemDetailsPage() {
       })
       .map((transfer) => {
         const ui = statusUi(transfer.status);
-        const serialFormatted = formatSerialWithPrefix(transfer.notes || transfer.reason, itemType);
+        const serialFormatted = formatSerialWithPrefix((transfer as any).notes || (transfer as any).reason, itemType);
         return {
           id: `tr-${transfer.id}`,
           productName: productNameAr,
@@ -1295,7 +1295,7 @@ export default function TechnicianItemDetailsPage() {
                   {activeStepIndex === 0 && (
                     <>
                       {renderDetailItem(t('common.item_9548'), selectedRow.productName)}
-                      {renderDetailItem(t('common.number_serial_3'), selectedRow.raw?.serialNumber, true)}
+                      {renderDetailItem(t('common.number_serial_3'), selectedRow.serial || selectedRow.raw?.serialNumber, true)}
                       {renderDetailItem(t('common.number_device_2'), selectedRow.raw?.terminalId || "-", true)}
                       {renderDetailItem(t('common.date_scan'), formatDateTime(selectedRow.raw?.createdAt))}
                       {renderDetailItem(t('common.type_warehouse'), selectedRow.raw?.inventoryType === "moving" ? t('common.item_24030') : t('common.item_14327'))}
@@ -1459,14 +1459,14 @@ export default function TechnicianItemDetailsPage() {
             </div>
           )}
 
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#E6E8EC] pt-4">
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#E6E8EC] pt-4">
             <div className="flex items-center gap-2">
               {selectedRow?.raw?.id && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="default"
                   onClick={() => openEditModal(selectedRow)}
-                  className="border-[#18B2B0]/40 text-[#18B2B0] hover:bg-[#18B2B0]/10 font-bold text-xs"
+                  className="bg-[#18B2B0] hover:bg-[#149D9B] text-white font-bold text-xs px-4 shadow-sm"
                   data-testid="button-edit-device-dialog"
                 >
                   <Pencil className="h-4 w-4 ml-1.5" />
