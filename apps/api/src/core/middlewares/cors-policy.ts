@@ -7,6 +7,10 @@ export const DEFAULT_PRODUCTION_ORIGINS = [
   "https://www.stc1.fun",
   "https://stoc.fun",
   "https://www.stoc.fun",
+  "https://nuzum.fun",
+  "https://www.nuzum.fun",
+  "https://fani.nuzum.fun",
+  "https://owner.nuzum.fun",
 ] as const;
 
 export const DEFAULT_DEVELOPMENT_ORIGINS = [
