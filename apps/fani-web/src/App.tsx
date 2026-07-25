@@ -10,6 +10,26 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'transfers' | 'scan'>('transfers');
   const [activeTransferId, setActiveTransferId] = useState<string | undefined>(undefined);
 
+  // Hash Router Listener & URL Permalinks
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash || '#/transfers';
+      if (hash.startsWith('#/scan')) {
+        const parts = hash.split('/');
+        const id = parts[2];
+        setActiveTransferId(id && id.trim().length > 0 ? id : undefined);
+        setCurrentView('scan');
+      } else {
+        setCurrentView('transfers');
+        setActiveTransferId(undefined);
+      }
+    };
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -31,30 +51,38 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     api.logout();
     setUser(null);
+    window.location.hash = '#/login';
   };
 
   const handleOpenScan = (transferId?: string) => {
-    setActiveTransferId(transferId);
-    setCurrentView('scan');
+    if (transferId) {
+      window.location.hash = `#/scan/${transferId}`;
+    } else {
+      window.location.hash = '#/scan';
+    }
+  };
+
+  const handleBackToTransfers = () => {
+    window.location.hash = '#/transfers';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0b1322] flex items-center justify-center text-white">
-        <div className="text-sm font-medium animate-pulse text-cyan-400">جاري تحميل نظام RASSCO الويب...</div>
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center text-slate-900 font-bold">
+        <div className="text-sm animate-pulse text-[#0F5EA8]">جاري تحميل نظام RASSCO الويب...</div>
       </div>
     );
   }
 
   if (!user) {
-    return <LoginPage onLoginSuccess={(u) => setUser(u)} />;
+    return <LoginPage onLoginSuccess={(u) => { setUser(u); window.location.hash = '#/transfers'; }} />;
   }
 
   if (currentView === 'scan') {
     return (
       <ShipmentScanPage
         transferId={activeTransferId}
-        onBack={() => setCurrentView('transfers')}
+        onBack={handleBackToTransfers}
       />
     );
   }

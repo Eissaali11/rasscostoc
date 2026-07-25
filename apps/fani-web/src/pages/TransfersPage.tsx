@@ -4,23 +4,18 @@ import {
   Scan, 
   LogOut, 
   RefreshCw, 
-  ChevronLeft,
   Boxes,
   Truck,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   XCircle,
   Search,
   Bell,
   User as UserIcon,
-  Filter,
-  ArrowUpRight,
-  Cpu,
-  Smartphone
 } from 'lucide-react';
 import { api, User } from '../api/client';
 import { RasscoLogo } from '../components/RasscoLogo';
+import { NotificationsDrawer, NotificationItem } from '../components/NotificationsDrawer';
 
 interface TransfersPageProps {
   user: User;
@@ -33,6 +28,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -64,6 +60,24 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
 
   const pendingCount = transfers.filter((t) => t.status === 'pending' || t.status === 'PENDING').length;
   const acceptedCount = transfers.filter((t) => t.status === 'accepted' || t.status === 'ACCEPTED' || t.status === 'COMPLETED').length;
+
+  // Build Notifications List dynamically from Transfers
+  const notifications: NotificationItem[] = transfers.map((t) => {
+    const isPending = t.status === 'pending' || t.status === 'PENDING';
+    const trfCode = `TRF-${(t.id || '1001').substring(0, 8).toUpperCase()}`;
+
+    return {
+      id: `notif-${t.id}`,
+      title: isPending ? `⚠️ شحنة محولة بانتظار استلامك: ${trfCode}` : `✅ تم اعتماد الشحنة: ${trfCode}`,
+      message: isPending
+        ? `قام ${t.warehouseName || 'المستودع الرئيسي'} بتحويل شحنة أجهزة/شرائح لك (${t.quantity || 1} قطعة). يرجى إجراء المسح الضوئي والمطابقة للاستلام.`
+        : `تم قبول الشحنة وإضافتها لعهدتك المخزنية الرسمية بنجاح.`,
+      type: isPending ? 'transfer_pending' : 'transfer_accepted',
+      createdAt: t.createdAt ? new Date(t.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : 'اليوم',
+      transferId: t.id,
+      read: !isPending,
+    };
+  });
 
   // Status Badge Helper
   const renderStatusBadge = (status: string) => {
@@ -138,15 +152,16 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Notifications Badge Button */}
+            {/* Notifications Badge Button (Active Click Handler) */}
             <div className="relative">
               <button
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-                title="الإشعارات"
+                onClick={() => setIsNotificationsOpen(true)}
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#0F5EA8] transition-all cursor-pointer relative"
+                title="مركز الإشعارات والتنبيهات"
               >
                 <Bell className="w-4 h-4" />
                 {pendingCount > 0 && (
-                  <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[9px] font-black animate-pulse">
+                  <span className="absolute -top-1 -left-1 px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[9px] font-black animate-pulse shadow-xs">
                     {pendingCount}
                   </span>
                 )}
@@ -176,10 +191,18 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
         </div>
       </header>
 
+      {/* Notifications Drawer Component */}
+      <NotificationsDrawer
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        onSelectNotification={(transferId) => onOpenScan(transferId)}
+      />
+
       {/* Main Workspace Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
         
-        {/* 2. KPI Cards Dashboard (4 Clean White Cards) */}
+        {/* 2. KPI Cards Dashboard */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           
           {/* KPI 1: New Shipments */}
@@ -218,7 +241,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
             </div>
           </div>
 
-          {/* KPI 4: Completed Today */}
+          {/* KPI 4: Status */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
               <div className="text-xs font-bold text-slate-500 mb-1">حالة الحساب</div>
