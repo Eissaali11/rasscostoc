@@ -78,6 +78,19 @@ const getItemMetadata = (itemTypeKey: string): ItemMeta => {
     };
   }
 
+  if (key.toLowerCase().includes('n950')) {
+    return {
+      name: 'جهاز POS — Newland N950',
+      categoryName: 'أجهزة نقاط البيع الذكية',
+      category: 'devices',
+      manufacturer: 'Newland Payment Tech',
+      barcodeFormat: 'سيريال خلف الجهاز (S/N)',
+      iconType: 'pos',
+      themeColor: '#0F5EA8',
+      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
+    };
+  }
+
   if (key.toLowerCase().includes('stc')) {
     return {
       name: 'شريحة اتصال — STC 5G Data SIM',
@@ -164,41 +177,59 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
   const loadTransferData = async () => {
     setLoading(true);
 
+    let rawData: any = null;
     if (transferId) {
-      const data: any = await api.getTransferDetails(transferId);
-      if (data) {
-        // Normalize Items from backend record
-        let normalizedItems: TransferItem[] = [];
-        if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-          normalizedItems = data.items;
-        } else {
-          const itemMeta = getItemMetadata(data.itemType || 'A960');
-          normalizedItems = [
-            {
-              id: 'item-main',
-              itemTypeId: data.itemType || 'A960',
-              itemTypeName: itemMeta.name,
-              category: itemMeta.category,
-              requestedQuantity: Number(data.quantity) || 1,
-              scannedQuantity: 0,
-              scannedSerials: [],
-            },
-          ];
-        }
-
-        const normTransfer: WarehouseTransfer = {
-          id: data.id || transferId,
-          transferNumber: `TRF-${(data.id || transferId).substring(0, 8).toUpperCase()}`,
-          sourceWarehouseName: data.warehouseName || 'المستودع الرئيسي',
-          targetWarehouseName: data.technicianName || 'عهدة الفني',
-          status: (data.status || 'PENDING').toUpperCase() as any,
-          createdAt: data.createdAt || new Date().toISOString(),
-          items: normalizedItems,
-        };
-
-        setTransfer(normTransfer);
-        setSelectedItemTypeId(normalizedItems[0]?.itemTypeId || 'A960');
+      rawData = await api.getTransferDetails(transferId);
+      if (!rawData) {
+        const list = await api.getTransfers();
+        rawData = list.find((t: any) => t.id === transferId);
       }
+    }
+
+    if (rawData) {
+      const itemTypeKey = rawData.itemType || rawData.itemTypeId || 'A960';
+      const itemMeta = getItemMetadata(itemTypeKey);
+
+      let normalizedItems: TransferItem[] = [];
+      if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
+        normalizedItems = rawData.items.map((it: any, idx: number) => {
+          const meta = getItemMetadata(it.itemTypeId || it.itemType || it.itemTypeName);
+          return {
+            id: it.id || `item-${idx}`,
+            itemTypeId: it.itemTypeId || it.itemType || 'A960',
+            itemTypeName: meta.name,
+            category: meta.category,
+            requestedQuantity: Number(it.requestedQuantity || it.quantity) || 1,
+            scannedQuantity: Number(it.scannedQuantity) || 0,
+            scannedSerials: it.scannedSerials || [],
+          };
+        });
+      } else {
+        normalizedItems = [
+          {
+            id: 'item-main',
+            itemTypeId: itemTypeKey,
+            itemTypeName: itemMeta.name,
+            category: itemMeta.category,
+            requestedQuantity: Number(rawData.quantity) || 1,
+            scannedQuantity: 0,
+            scannedSerials: [],
+          },
+        ];
+      }
+
+      const normTransfer: WarehouseTransfer = {
+        id: rawData.id || transferId || 'trf-1',
+        transferNumber: `TRF-${(rawData.id || transferId || '1001').substring(0, 8).toUpperCase()}`,
+        sourceWarehouseName: rawData.warehouseName || rawData.sourceWarehouseName || 'المستودع الرئيسي',
+        targetWarehouseName: rawData.technicianName || rawData.targetWarehouseName || 'عهدة الفني',
+        status: (rawData.status || 'PENDING').toUpperCase() as any,
+        createdAt: rawData.createdAt || new Date().toISOString(),
+        items: normalizedItems,
+      };
+
+      setTransfer(normTransfer);
+      setSelectedItemTypeId(normalizedItems[0]?.itemTypeId || itemTypeKey);
     } else {
       // Demo Transfer Data for Web Testing with full visual metadata
       const demoItems: TransferItem[] = [
@@ -383,7 +414,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
             <h3 className="text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-4 flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-[#0F5EA8]" />
-                <span>1. حدد الصنف المني لمسحه الآن (عرض صور وتفاصيل الأصناف)</span>
+                <span>1. اختر نوع واسم الجهاز / الشريحة المراد مسحها الآن:</span>
               </span>
               <span className="text-[11px] font-extrabold text-[#0F5EA8]">
                 المصنع: {activeMeta.manufacturer}

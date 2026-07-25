@@ -11,7 +11,7 @@ export interface TransferItem {
   id: string;
   itemTypeId: string;
   itemTypeName: string;
-  category: 'devices' | 'sim';
+  category: 'devices' | 'sim' | 'accessories';
   requestedQuantity: number;
   scannedQuantity: number;
   scannedSerials: string[];
@@ -79,7 +79,7 @@ class ApiClient {
     localStorage.removeItem('fani_user');
   }
 
-  async getTransfers(): Promise<WarehouseTransfer[]> {
+  async getTransfers(): Promise<any[]> {
     try {
       const res = await fetch(`${this.baseUrl}/warehouse-transfers`, {
         headers: this.getHeaders(),
@@ -92,17 +92,25 @@ class ApiClient {
     }
   }
 
-  async getTransferDetails(id: string): Promise<WarehouseTransfer | null> {
+  async getTransferDetails(id: string): Promise<any | null> {
     try {
       const res = await fetch(`${this.baseUrl}/warehouse-transfers/${id}`, {
         headers: this.getHeaders(),
       });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.transfer || data;
-    } catch {
-      return null;
-    }
+      if (res.ok) {
+        const data = await res.json();
+        return data.transfer || data;
+      }
+    } catch {}
+
+    // Fallback: search transfers list
+    try {
+      const list = await this.getTransfers();
+      const found = list.find((t: any) => t.id === id);
+      if (found) return found;
+    } catch {}
+
+    return null;
   }
 
   async acceptTransfer(id: string): Promise<{ success: boolean; message?: string }> {
