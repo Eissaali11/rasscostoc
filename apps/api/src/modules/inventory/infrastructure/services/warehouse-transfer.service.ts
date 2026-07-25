@@ -231,7 +231,7 @@ export class WarehouseTransferService {
       throw new Error("الرقم التسلسلي فارغ بعد التنظيف");
     }
 
-    const [result] = await db
+    const [itemResult] = await db
       .select({
         id: items.id,
         serialNumber: items.serialNumber,
@@ -242,15 +242,70 @@ export class WarehouseTransferService {
         updatedAt: items.updatedAt,
         itemTypeName: itemTypes.nameAr,
         itemTypeCategory: itemTypes.category,
-        ownerName: sql<string>`(SELECT full_name FROM users WHERE id = ${items.currentOwnerId})`,
         ownerId: items.currentOwnerId,
+        ownerName: sql<string>`(SELECT full_name FROM users WHERE id = ${items.currentOwnerId})`,
+        ownerUsername: sql<string>`(SELECT username FROM users WHERE id = ${items.currentOwnerId})`,
+        ownerProfileImage: sql<string>`(SELECT profile_image FROM users WHERE id = ${items.currentOwnerId})`,
+        ownerCity: sql<string>`(SELECT city FROM users WHERE id = ${items.currentOwnerId})`,
+        ownerRegionName: sql<string>`(SELECT r.name FROM users u LEFT JOIN regions r ON u.region_id = r.id WHERE u.id = ${items.currentOwnerId})`,
+        ownerPhone: sql<string>`(SELECT profile_data->>'phoneNumber' FROM employee_profiles WHERE user_id = ${items.currentOwnerId})`,
       })
       .from(items)
       .leftJoin(itemTypes, eq(items.itemTypeId, itemTypes.id))
       .where(inArray(items.serialNumber, candidates))
       .limit(1);
 
-    return result || null;
+    if (!itemResult) return null;
+
+    // Fetch Delivery / Closure / Last action info
+    const [closureResult] = await db
+      .select({
+        closedById: custodyMovements.performedById,
+        closedByName: sql<string>`(SELECT full_name FROM users WHERE id = ${custodyMovements.performedById})`,
+        closedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${custodyMovements.performedById})`,
+        closedByProfileImage: sql<string>`(SELECT profile_image FROM users WHERE id = ${custodyMovements.performedById})`,
+        deliveredAt: custodyMovements.performedAt,
+        orderNumber: custodyMovements.notes,
+      })
+      .from(custodyMovements)
+      .where(and(eq(custodyMovements.itemId, itemResult.id), inArray(custodyMovements.reason, ["DELIVERY", "DELIVERED"])))
+      .orderBy(desc(custodyMovements.performedAt))
+      .limit(1);
+
+    // Fetch History Logs timeline for item lifecycle sequence
+    const logs = await db
+      .select({
+        id: itemHistoryLogs.id,
+        fromStatus: itemHistoryLogs.fromStatus,
+        toStatus: itemHistoryLogs.toStatus,
+        changedById: itemHistoryLogs.changedById,
+        changedByName: sql<string>`(SELECT full_name FROM users WHERE id = ${itemHistoryLogs.changedById})`,
+        changedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${itemHistoryLogs.changedById})`,
+        changedByProfileImage: sql<string>`(SELECT profile_image FROM users WHERE id = ${itemHistoryLogs.changedById})`,
+        notes: itemHistoryLogs.notes,
+        changedAt: itemHistoryLogs.changedAt,
+      })
+      .from(itemHistoryLogs)
+      .where(eq(itemHistoryLogs.itemId, itemResult.id))
+      .orderBy(desc(itemHistoryLogs.changedAt));
+
+    return {
+      ...itemResult,
+      technicianId: itemResult.ownerId,
+      technicianName: itemResult.ownerName,
+      technicianUsername: itemResult.ownerUsername,
+      technicianProfileImage: itemResult.ownerProfileImage,
+      technicianCity: itemResult.ownerCity,
+      technicianRegionName: itemResult.ownerRegionName,
+      technicianPhone: itemResult.ownerPhone,
+      closedById: closureResult?.closedById ?? null,
+      closedByName: closureResult?.closedByName ?? null,
+      closedByUsername: closureResult?.closedByUsername ?? null,
+      closedByProfileImage: closureResult?.closedByProfileImage ?? null,
+      deliveredAt: closureResult?.deliveredAt ?? itemResult.updatedAt,
+      orderNumber: closureResult?.orderNumber ?? null,
+      historyLogs: logs || [],
+    };
   }
 
   async updateItemStatus(adminId: string, id: string, status: string, orderNumber?: string, warehouseId?: string) {

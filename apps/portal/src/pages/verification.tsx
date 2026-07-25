@@ -31,10 +31,29 @@ import {
   Building2,
   PackageCheck,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  Phone,
+  MessageCircle,
+  AtSign,
+  Activity,
+  GitCommit,
+  UserCheck,
+  ChevronLeft
 } from "lucide-react";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+type HistoryLogItem = {
+  id: string;
+  fromStatus: string;
+  toStatus: string;
+  changedById: string;
+  changedByName: string;
+  changedByUsername?: string | null;
+  changedByProfileImage?: string | null;
+  notes?: string | null;
+  changedAt: string;
+};
 
 type SerialLookupResult = {
   id: string;
@@ -52,6 +71,8 @@ type SerialLookupResult = {
   ownerRegionName?: string | null;
   technicianId?: string | null;
   technicianName?: string | null;
+  technicianUsername?: string | null;
+  technicianPhone?: string | null;
   technicianCity?: string | null;
   technicianRegionName?: string | null;
   technicianProfileImage?: string | null;
@@ -59,7 +80,9 @@ type SerialLookupResult = {
   orderNumber?: string | null;
   closedById?: string | null;
   closedByName?: string | null;
+  closedByUsername?: string | null;
   closedByProfileImage?: string | null;
+  historyLogs?: HistoryLogItem[];
 };
 
 export default function VerificationPage() {
@@ -134,7 +157,7 @@ export default function VerificationPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Helper to resolve category badge & colors with modern light-glass theme
+  // Helper to resolve category badge & colors
   const getCategoryDetails = (category?: string | null) => {
     switch (category) {
       case "devices":
@@ -181,7 +204,7 @@ export default function VerificationPage() {
       case "RECEIVED_BY_TECHNICIAN":
         return { 
           label: t('verification.technician_1'), 
-          color: "bg-emerald-100 text-emerald-800 border-emerald-300 shadow-xs",
+          color: "bg-emerald-100 text-emerald-900 border-emerald-300 shadow-xs",
           icon: User
         };
       case "DELIVERED":
@@ -191,16 +214,23 @@ export default function VerificationPage() {
           icon: PackageCheck
         };
       case "PENDING_RECEIPT":
+      case "PENDING_ACCEPTANCE":
         return { 
           label: t('verification.pending_technician'), 
-          color: "bg-amber-100 text-amber-800 border-amber-300 shadow-xs",
+          color: "bg-amber-100 text-amber-900 border-amber-300 shadow-xs",
           icon: Clock
         };
       case "RETURNED":
         return { 
           label: t('verification.returned'), 
-          color: "bg-rose-100 text-rose-800 border-rose-300 shadow-xs",
+          color: "bg-rose-100 text-rose-900 border-rose-300 shadow-xs",
           icon: RotateCcw
+        };
+      case "WAREHOUSE":
+        return {
+          label: "موجود بالمستودع",
+          color: "bg-blue-100 text-blue-900 border-blue-300 shadow-xs",
+          icon: Building2
         };
       default:
         return { 
@@ -211,13 +241,41 @@ export default function VerificationPage() {
     }
   };
 
+  // Helper to format date & time with hours, minutes and seconds
+  const formatFullDateTime = (dateStr?: string | null) => {
+    if (!dateStr) return "غير متوفر";
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString("ar-SA", {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   const cat = getCategoryDetails(itemData?.itemTypeCategory);
   const IconComponent = cat.icon;
   const statusDetails = getStatusDetails(itemData?.status);
   const StatusIcon = statusDetails.icon;
 
+  const techName = itemData?.technicianName || itemData?.ownerName;
+  const techId = itemData?.technicianId || itemData?.ownerId;
+  const techUsername = itemData?.technicianUsername;
+  const techPhone = itemData?.technicianPhone;
+  const techCity = itemData?.technicianCity || itemData?.ownerCity;
+  const techRegion = itemData?.technicianRegionName || itemData?.ownerRegionName;
+  const techAvatar = itemData?.technicianProfileImage;
+
   return (
-    <div className="space-y-8 font-['Cairo'] pb-12" dir="rtl">
+    <div className="space-y-8 font-['Cairo'] pb-16" dir="rtl">
       {/* Top Banner Header */}
       <header className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-800 p-8 text-white shadow-xl shadow-teal-900/10">
         <div className="absolute -left-12 -top-12 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
@@ -225,9 +283,9 @@ export default function VerificationPage() {
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-teal-100 border border-white/20">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" />
-              <span>محرك التحقق الفوري والتدقيق المالي</span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-teal-100 border border-white/20">
+              <ShieldCheck className="w-4 h-4 text-cyan-300" />
+              <span>محرك التدقيق الشامل وتتبع حركة العهد والأجهزة</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
               <QrCode className="w-8 h-8 text-cyan-300 animate-pulse" />
@@ -275,7 +333,7 @@ export default function VerificationPage() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
                     <span>الرقم التسلسلي / S/N</span>
-                    <span className="text-slate-400 font-normal">يدعم جميع الأجهزة</span>
+                    <span className="text-slate-400 font-normal">جميع الأجهزة والشرائح</span>
                   </label>
                   <div className="relative">
                     <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -347,7 +405,7 @@ export default function VerificationPage() {
         </Card>
 
         {/* Results Panel (8 Columns) */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 space-y-6">
           {/* Loading State */}
           {isLoading && (
             <Card className="bg-white/85 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-200/50 rounded-3xl h-full min-h-[420px] flex items-center justify-center p-12">
@@ -379,7 +437,7 @@ export default function VerificationPage() {
                 </div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-xs font-bold text-slate-600">
                   <Sparkles className="w-4 h-4 text-teal-600" />
-                  <span>يدعم المسح بالباربود وقارئ الأجهزة الذكية مباشرة</span>
+                  <span>عرض تلقائي لبيانات الفني المسند ومسؤول الإغلاق والتاريخ والتأطير</span>
                 </div>
               </div>
             </Card>
@@ -405,250 +463,315 @@ export default function VerificationPage() {
 
           {/* Success / Item Loaded State */}
           {itemData && !isLoading && (
-            <Card className="bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden transition-all">
-              {/* Item Header */}
-              <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-6 md:p-8 text-white relative">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 text-teal-300 flex items-center justify-center shrink-0 backdrop-blur-md shadow-inner">
-                      <IconComponent className="w-8 h-8" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge className={`${cat.badgeBg} font-bold text-xs px-2.5 py-0.5`}>
-                          {cat.label}
-                        </Badge>
-                        {itemData.carrierName && (
-                          <Badge className="bg-purple-500/20 text-purple-200 border border-purple-400/30 text-xs font-bold">
-                            {itemData.carrierName}
+            <>
+              <Card className="bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden transition-all">
+                {/* Item Header */}
+                <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-6 md:p-8 text-white relative">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 text-teal-300 flex items-center justify-center shrink-0 backdrop-blur-md shadow-inner">
+                        <IconComponent className="w-8 h-8" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${cat.badgeBg} font-bold text-xs px-2.5 py-0.5`}>
+                            {cat.label}
                           </Badge>
-                        )}
-                      </div>
-                      <CardTitle className="text-2xl font-bold tracking-tight text-white">
-                        {itemData.itemTypeName || t('verification.item_17641')}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 text-slate-300 text-sm pt-0.5">
-                        <span>S/N:</span>
-                        <span className="font-mono text-cyan-300 font-bold text-base bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/15">
-                          {itemData.serialNumber}
-                        </span>
-                        <button
-                          onClick={() => copySerialToClipboard(itemData.serialNumber)}
-                          className="p-1.5 hover:bg-white/15 rounded-lg text-slate-300 hover:text-white transition-all"
-                          title="نسخ الرقم التسلسلي"
-                        >
-                          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Badge className={`${statusDetails.color} text-sm font-extrabold px-4 py-2 rounded-2xl flex items-center gap-2 border self-start sm:self-auto`}>
-                    <StatusIcon className="w-4 h-4" />
-                    <span>{statusDetails.label}</span>
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              {/* Item Content Metadata */}
-              <CardContent className="p-6 md:p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Linked Technician */}
-                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5 hover:bg-teal-50/30 transition-all">
-                    <Avatar className="h-12 w-12 border-2 border-teal-500/30 shrink-0 shadow-xs">
-                      <AvatarImage
-                        src={itemData.technicianProfileImage || undefined}
-                        alt={itemData.technicianName || itemData.ownerName || "technician"}
-                      />
-                      <AvatarFallback className="bg-teal-600 text-white font-bold">
-                        <User className="w-6 h-6" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-400">{t('verification.linked_technician')}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5 truncate">
-                        {(itemData.technicianName || itemData.ownerName) ? (
-                          itemData.technicianId || itemData.ownerId ? (
-                            <Link
-                              href={`/technician-details/${itemData.technicianId || itemData.ownerId}`}
-                              className="hover:underline text-teal-700 flex items-center gap-1 font-bold"
-                            >
-                              <span>{itemData.technicianName || itemData.ownerName}</span>
-                              <ArrowUpRight className="w-3.5 h-3.5" />
-                            </Link>
-                          ) : (
-                            <span className="text-teal-700">
-                              {itemData.technicianName || itemData.ownerName}
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-slate-600 flex items-center gap-1">
-                            <Building2 className="w-4 h-4 text-slate-400" />
-                            {t('verification.warehouse_primary_1')}
+                          {itemData.carrierName && (
+                            <Badge className="bg-purple-500/20 text-purple-200 border border-purple-400/30 text-xs font-bold">
+                              {itemData.carrierName}
+                            </Badge>
+                          )}
+                        </div>
+                        <CardTitle className="text-2xl font-bold tracking-tight text-white">
+                          {itemData.itemTypeName || t('verification.item_17641')}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 text-slate-300 text-sm pt-0.5">
+                          <span>S/N:</span>
+                          <span className="font-mono text-cyan-300 font-bold text-base bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/15">
+                            {itemData.serialNumber}
                           </span>
-                        )}
-                      </p>
+                          <button
+                            onClick={() => copySerialToClipboard(itemData.serialNumber)}
+                            className="p-1.5 hover:bg-white/15 rounded-lg text-slate-300 hover:text-white transition-all"
+                            title="نسخ الرقم التسلسلي"
+                          >
+                            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* City */}
-                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400">{t('verification.technician_city')}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {itemData.technicianCity || itemData.ownerCity || t('verification.not_available')}
-                      </p>
-                    </div>
+                    <Badge className={`${statusDetails.color} text-sm font-extrabold px-4 py-2 rounded-2xl flex items-center gap-2 border self-start sm:self-auto`}>
+                      <StatusIcon className="w-4 h-4" />
+                      <span>{statusDetails.label}</span>
+                    </Badge>
                   </div>
+                </CardHeader>
 
-                  {/* Region */}
-                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5" />
+                {/* Section 1: Detailed Technician / Custody Info */}
+                <CardContent className="p-6 md:p-8 space-y-6">
+                  <div className="border border-teal-500/25 rounded-2xl bg-gradient-to-b from-teal-500/5 via-slate-50/50 to-white p-5 space-y-4 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-teal-500/15 pb-3">
+                      <h4 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                        <UserCheck className="w-4 h-4 text-teal-600" />
+                        <span>بيانات الفني المسند / صاحب العهدة الحالي</span>
+                      </h4>
+                      {techId && (
+                        <Link href={`/technician-details/${techId}`}>
+                          <span className="text-xs font-bold text-teal-700 hover:underline flex items-center gap-1">
+                            <span>عرض سجل الفني الكامل</span>
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          </span>
+                        </Link>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400">{t('verification.technician_region')}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {itemData.technicianRegionName || itemData.ownerRegionName || t('verification.not_available')}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Category */}
-                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
-                      <Tag className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400">{t('verification.category')}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">{cat.label}</p>
-                    </div>
-                  </div>
-
-                  {/* Created At */}
-                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
-                      <Calendar className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400">{t('verification.date')}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {new Date(itemData.createdAt).toLocaleDateString("ar-SA", {
-                          weekday: 'short',
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Updated At */}
-                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
-                      <History className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400">{t('verification.update')}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {itemData.updatedAt ? new Date(itemData.updatedAt).toLocaleDateString("ar-SA", {
-                          weekday: 'short',
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        }) : "-"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Closure Details (If Delivered or Closed) */}
-                {(itemData.status === "DELIVERED" || itemData.closedByName || itemData.deliveredAt) && (
-                  <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-cyan-500/10 border border-teal-500/20 space-y-4 shadow-xs">
-                    <p className="text-sm font-extrabold text-teal-900 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-teal-600" />
-                      {t('verification.closure_data')}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-3 bg-white/80 p-3 rounded-xl border border-teal-500/15">
-                        <Avatar className="h-10 w-10 border border-teal-500/30 shrink-0">
-                          <AvatarImage
-                            src={itemData.closedByProfileImage || undefined}
-                            alt={itemData.closedByName || "closer"}
-                          />
-                          <AvatarFallback className="bg-teal-700 text-white font-bold">
-                            <User className="w-4 h-4" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Tech Profile & Name */}
+                      <div className="flex items-center gap-3.5 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <Avatar className="h-12 w-12 border-2 border-teal-500/30 shrink-0 shadow-xs">
+                          <AvatarImage src={techAvatar || undefined} alt={techName || "Fani"} />
+                          <AvatarFallback className="bg-teal-600 text-white font-bold text-sm">
+                            {techName ? techName.slice(0, 2) : "فني"}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-slate-400">{t('verification.closed_by')}</p>
-                          <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
-                            {itemData.closedByName || t('verification.not_available')}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-400">اسم الفني والمستخدم</p>
+                          <p className="text-sm font-extrabold text-slate-900 truncate mt-0.5">
+                            {techName || "المستودع الرئيسي / لم يُسند"}
+                          </p>
+                          {techUsername && (
+                            <p className="text-xs font-mono text-teal-700 font-semibold flex items-center gap-1 mt-0.5">
+                              <AtSign className="w-3 h-3 text-teal-500" />
+                              <span>{techUsername}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tech Phone & Contact */}
+                      <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                            <Phone className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-400">رقم التواصل / الهاتف</p>
+                            <p className="text-sm font-mono font-bold text-slate-900 mt-0.5">
+                              {techPhone || "غير مسجل"}
+                            </p>
+                          </div>
+                        </div>
+                        {techPhone && (
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={`tel:${techPhone}`}
+                              className="p-2 bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 rounded-lg transition-all"
+                              title="اتصال تلفوني"
+                            >
+                              <Phone className="w-4 h-4" />
+                            </a>
+                            <a
+                              href={`https://wa.me/${techPhone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-all"
+                              title="مراسلة واتساب"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* City */}
+                      <div className="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-400">المدينة</p>
+                          <p className="text-sm font-bold text-slate-900 mt-0.5">
+                            {techCity || "غير محددة"}
                           </p>
                         </div>
                       </div>
 
-                      <div className="bg-white/80 p-3 rounded-xl border border-teal-500/15">
-                        <p className="text-[11px] font-bold text-slate-400">{t('verification.delivered_at')}</p>
-                        <p className="text-xs font-bold text-slate-900 mt-0.5">
-                          {itemData.deliveredAt
-                            ? new Date(itemData.deliveredAt).toLocaleString("ar-SA", {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : t('verification.not_available')}
-                        </p>
-                      </div>
-
-                      <div className="bg-white/80 p-3 rounded-xl border border-teal-500/15">
-                        <p className="text-[11px] font-bold text-slate-400">{t('verification.order_number')}</p>
-                        <p className="text-xs font-bold font-mono text-teal-700 mt-0.5">
-                          {itemData.orderNumber || t('verification.not_available')}
-                        </p>
+                      {/* Region */}
+                      <div className="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-400">المنطقة والفرع</p>
+                          <p className="text-sm font-bold text-slate-900 mt-0.5">
+                            {techRegion || "غير محددة"}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
 
-              {/* Status Update Actions */}
-              <CardFooter className="bg-slate-50/90 border-t border-slate-200/80 p-6 flex flex-col sm:flex-row gap-3">
-                {itemData.status === "RECEIVED_BY_TECHNICIAN" ? (
-                  <Button
-                    onClick={() => updateStatusMutation.mutate({ status: "DELIVERED" })}
-                    disabled={updateStatusMutation.isPending}
-                    className="flex-1 h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-extrabold text-base rounded-xl shadow-md shadow-teal-600/20 active:scale-[0.98] transition-all"
-                  >
-                    {updateStatusMutation.isPending ? t('verification.save') : t('verification.device_close_request')}
-                  </Button>
-                ) : itemData.status === "DELIVERED" ? (
-                  <Button
-                    onClick={() => updateStatusMutation.mutate({ status: "RECEIVED_BY_TECHNICIAN" })}
-                    disabled={updateStatusMutation.isPending}
-                    className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-base rounded-xl shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all"
-                  >
-                    {updateStatusMutation.isPending ? t('verification.save') : t('verification.item_28690')}
-                  </Button>
-                ) : null}
+                  {/* Section 2: Closing Admin / Responsible Person details */}
+                  {(itemData.status === "DELIVERED" || itemData.closedByName || itemData.deliveredAt) && (
+                    <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-500/10 via-cyan-500/5 to-teal-50 border border-teal-500/25 space-y-4 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-teal-500/20 pb-3">
+                        <p className="text-sm font-extrabold text-teal-950 flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-teal-600" />
+                          <span>بيانات المسؤول عن عملية الإغلاق أو الاستلام والتاريخ والوقت بالكامل</span>
+                        </p>
+                        <Badge className="bg-teal-600 text-white text-xs font-bold px-2.5 py-0.5">
+                          عملية مكتملة
+                        </Badge>
+                      </div>
 
-                {itemData.status !== "RETURNED" && (
-                  <Button
-                    onClick={() => updateStatusMutation.mutate({ status: "RETURNED" })}
-                    disabled={updateStatusMutation.isPending}
-                    variant="outline"
-                    className="h-12 px-6 border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-extrabold rounded-xl transition-all"
-                  >
-                    {t('verification.primary')}
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Admin Info */}
+                        <div className="flex items-center gap-3.5 bg-white/90 p-3.5 rounded-xl border border-teal-500/20 shadow-2xs">
+                          <Avatar className="h-12 w-12 border-2 border-teal-600/40 shrink-0">
+                            <AvatarImage src={itemData.closedByProfileImage || undefined} alt={itemData.closedByName || "Admin"} />
+                            <AvatarFallback className="bg-teal-800 text-white font-bold text-sm">
+                              {itemData.closedByName ? itemData.closedByName.slice(0, 2) : "أدمن"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-400">مسؤول الإغلاق / الأكشن</p>
+                            <p className="text-sm font-extrabold text-slate-900 truncate mt-0.5">
+                              {itemData.closedByName || "مشرف النظام الإداري"}
+                            </p>
+                            {itemData.closedByUsername && (
+                              <p className="text-xs font-mono text-teal-700 font-semibold flex items-center gap-1 mt-0.5">
+                                <AtSign className="w-3 h-3 text-teal-500" />
+                                <span>{itemData.closedByUsername}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Exact Timestamp */}
+                        <div className="bg-white/90 p-3.5 rounded-xl border border-teal-500/20 shadow-2xs space-y-1">
+                          <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-teal-600" />
+                            <span>الوقت والتاريخ الدقيق للعملية (بالساعة والدقيقة والثانية)</span>
+                          </p>
+                          <p className="text-sm font-bold text-teal-900 font-mono pt-0.5">
+                            {formatFullDateTime(itemData.deliveredAt || itemData.updatedAt)}
+                          </p>
+                          {itemData.orderNumber && (
+                            <p className="text-xs font-bold text-slate-500 pt-1 border-t border-slate-100 flex items-center justify-between">
+                              <span>رقم الطلب / المرجع:</span>
+                              <span className="font-mono text-teal-700 font-extrabold">{itemData.orderNumber}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 3: Status History / Lifecycle Audit Sequence Timeline */}
+                  {itemData.historyLogs && itemData.historyLogs.length > 0 && (
+                    <div className="p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                          <GitCommit className="w-4 h-4 text-teal-600" />
+                          <span>تسلسل وتاريخ حالات الجهاز (Lifecycle Audit Sequence)</span>
+                        </h4>
+                        <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs font-mono font-bold">
+                          {itemData.historyLogs.length} حركة مسجلة
+                        </Badge>
+                      </div>
+
+                      <div className="relative pr-4 border-r-2 border-teal-500/30 space-y-6 pt-2">
+                        {itemData.historyLogs.map((log) => {
+                          const toStatusDetail = getStatusDetails(log.toStatus);
+                          const fromStatusDetail = getStatusDetails(log.fromStatus);
+                          const StatusIconLocal = toStatusDetail.icon;
+
+                          return (
+                            <div key={log.id} className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+                              {/* Dot on line */}
+                              <div className="absolute -right-[23px] top-5 w-3.5 h-3.5 rounded-full bg-teal-500 border-2 border-white ring-2 ring-teal-500/20" />
+
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge className={`${fromStatusDetail.color} text-xs px-2 py-0.5`}>
+                                    {fromStatusDetail.label}
+                                  </Badge>
+                                  <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
+                                  <Badge className={`${toStatusDetail.color} text-xs font-bold px-2.5 py-0.5 flex items-center gap-1`}>
+                                    <StatusIconLocal className="w-3 h-3" />
+                                    <span>{toStatusDetail.label}</span>
+                                  </Badge>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-0.5">
+                                  <Avatar className="h-6 w-6 border border-slate-200">
+                                    <AvatarImage src={log.changedByProfileImage || undefined} />
+                                    <AvatarFallback className="bg-teal-700 text-white text-[10px] font-bold">
+                                      {log.changedByName ? log.changedByName.slice(0, 1) : "م"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs font-bold text-slate-800">{log.changedByName}</span>
+                                  {log.changedByUsername && (
+                                    <span className="text-[11px] font-mono text-slate-400">(@{log.changedByUsername})</span>
+                                  )}
+                                </div>
+
+                                {log.notes && (
+                                  <p className="text-xs text-slate-600 italic bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                    {log.notes}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="text-left sm:text-right shrink-0">
+                                <p className="text-xs font-mono font-bold text-slate-600 flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{formatFullDateTime(log.changedAt)}</span>
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+
+                {/* Status Update Actions */}
+                <CardFooter className="bg-slate-50/90 border-t border-slate-200/80 p-6 flex flex-col sm:flex-row gap-3">
+                  {itemData.status === "RECEIVED_BY_TECHNICIAN" ? (
+                    <Button
+                      onClick={() => updateStatusMutation.mutate({ status: "DELIVERED" })}
+                      disabled={updateStatusMutation.isPending}
+                      className="flex-1 h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-extrabold text-base rounded-xl shadow-md shadow-teal-600/20 active:scale-[0.98] transition-all"
+                    >
+                      {updateStatusMutation.isPending ? t('verification.save') : t('verification.device_close_request')}
+                    </Button>
+                  ) : itemData.status === "DELIVERED" ? (
+                    <Button
+                      onClick={() => updateStatusMutation.mutate({ status: "RECEIVED_BY_TECHNICIAN" })}
+                      disabled={updateStatusMutation.isPending}
+                      className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-base rounded-xl shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all"
+                    >
+                      {updateStatusMutation.isPending ? t('verification.save') : t('verification.item_28690')}
+                    </Button>
+                  ) : null}
+
+                  {itemData.status !== "RETURNED" && (
+                    <Button
+                      onClick={() => updateStatusMutation.mutate({ status: "RETURNED" })}
+                      disabled={updateStatusMutation.isPending}
+                      variant="outline"
+                      className="h-12 px-6 border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-extrabold rounded-xl transition-all"
+                    >
+                      {t('verification.primary')}
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            </>
           )}
         </div>
       </section>
