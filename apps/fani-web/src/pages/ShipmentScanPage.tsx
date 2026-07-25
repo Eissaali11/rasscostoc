@@ -10,7 +10,8 @@ import {
   Sparkles,
   Check,
   Send,
-  ShieldCheck
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 import { api, WarehouseTransfer } from '../api/client';
 import { RasscoLogo } from '../components/RasscoLogo';
@@ -174,61 +175,67 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
   const totalRequested = transfer?.items.reduce((sum, item) => sum + item.requestedQuantity, 0) || 0;
   const totalScanned = transfer?.items.reduce((sum, item) => sum + item.scannedQuantity, 0) || scannedItems.length;
   const isMatchComplete = totalRequested > 0 && totalScanned >= totalRequested;
+  const overallPercentage = totalRequested > 0 ? Math.round((totalScanned / totalRequested) * 100) : 0;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#070d18] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA] text-slate-900">
         <div className="text-center">
-          <Scan className="w-12 h-12 text-[#18B2B0] animate-spin mx-auto mb-4" />
-          <p className="text-slate-300 font-medium">جاري تحميل تفاصيل الشحنة والطلب...</p>
+          <Scan className="w-12 h-12 text-[#0F5EA8] animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-bold">جاري تحميل تفاصيل الشحنة والطلب...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#070d18] text-slate-100 p-4 sm:p-6 lg:p-8" onClick={enforceFocus}>
-      {/* Top RASSCO Header Navigation */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between mb-8 pb-4 border-b border-[#18B2B0]/20">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-[#18B2B0] transition-all cursor-pointer shadow-md"
-          >
-            <ArrowRight className="w-6 h-6" />
-          </button>
+    <div className="min-h-screen bg-[#F5F7FA] text-slate-900 pb-12" onClick={enforceFocus}>
+      
+      {/* Top Header Navigation Bar */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer"
+              title="العودة لجدول الشحنات"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
 
-          <RasscoLogo size="md" subtitle={`طلب شحنة: ${transfer?.transferNumber || 'جديد'}`} />
-        </div>
+            <RasscoLogo size="md" subtitle={`استلام الشحنة: ${transfer?.transferNumber || 'جديد'}`} lightMode={true} />
+          </div>
 
-        {/* Global RASSCO Progress Badge */}
-        <div className="hidden sm:flex items-center gap-4 bg-slate-900/90 p-3.5 px-6 rounded-2xl border border-[#18B2B0]/30 shadow-lg">
-          <div className="text-right">
-            <div className="text-xs text-slate-400 font-bold">إجمالي مطابقة الشحنة</div>
-            <div className="text-lg font-black text-white">
-              {totalScanned} / {totalRequested} <span className="text-xs font-normal text-slate-400">قطعة</span>
+          {/* Global Progress Indicator */}
+          <div className="flex items-center gap-4 bg-slate-50 p-2.5 px-5 rounded-2xl border border-slate-200">
+            <div className="text-right">
+              <div className="text-[11px] text-slate-500 font-bold">نسبة المطابقة والكمال</div>
+              <div className="text-base font-black text-[#0F5EA8]">
+                {totalScanned} / {totalRequested} <span className="text-xs font-bold text-slate-500">({overallPercentage}%)</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-[#0F5EA8] text-white flex items-center justify-center shadow-xs">
+              {isMatchComplete ? (
+                <CheckCircle2 className="w-5 h-5 text-[#12C6E8]" />
+              ) : (
+                <Scan className="w-5 h-5 animate-pulse" />
+              )}
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-[#18B2B0]/15 border border-[#18B2B0]/30 flex items-center justify-center">
-            {isMatchComplete ? (
-              <CheckCircle2 className="w-6 h-6 text-[#18B2B0]" />
-            ) : (
-              <Scan className="w-6 h-6 text-[#18B2B0] animate-pulse" />
-            )}
-          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main Workspace Body */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Product Selection & Hardware Scanner Box (7 Cols) */}
+        {/* Left Column: Product Selector & Barcode Scanner Workstation (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
           
-          {/* Step 1: Product Category Selector */}
-          <div className="rassco-glass-card p-6 rounded-3xl border border-slate-800">
-            <h3 className="text-sm font-black text-slate-200 mb-4 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#18B2B0]" />
-              <span>1. تحديد نوع المنتج المراد مسحه</span>
+          {/* Step 1: Category Selector */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+            <h3 className="text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#0F5EA8]" />
+              <span>1. اختر نوع المنتج المراد مسحه الآن</span>
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
@@ -237,16 +244,16 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                 onClick={() => setSelectedCategory('devices')}
                 className={`p-4 rounded-2xl border transition-all flex items-center gap-4 cursor-pointer ${
                   selectedCategory === 'devices'
-                    ? 'bg-[#18B2B0]/20 border-[#18B2B0] text-white shadow-lg shadow-[#18B2B0]/10'
-                    : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-blue-50 border-[#0F5EA8] text-[#0F5EA8] shadow-xs'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <div className={`p-3.5 rounded-xl ${selectedCategory === 'devices' ? 'bg-[#18B2B0] text-slate-950 font-black' : 'bg-slate-800 text-slate-400'}`}>
-                  <Cpu className="w-6 h-6" />
+                <div className={`p-3 rounded-xl ${selectedCategory === 'devices' ? 'bg-[#0F5EA8] text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  <Cpu className="w-5 h-5" />
                 </div>
                 <div className="text-right">
-                  <div className="font-extrabold text-sm text-white">أجهزة POS والتطبيقات</div>
-                  <div className="text-xs text-slate-400 mt-0.5">مسح السيريال (Serial Number)</div>
+                  <div className="font-extrabold text-sm text-slate-900">أجهزة POS والتطبيقات</div>
+                  <div className="text-xs text-slate-500">مسح السيريال (Serial Number)</div>
                 </div>
               </button>
 
@@ -255,30 +262,30 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                 onClick={() => setSelectedCategory('sim')}
                 className={`p-4 rounded-2xl border transition-all flex items-center gap-4 cursor-pointer ${
                   selectedCategory === 'sim'
-                    ? 'bg-[#18B2B0]/20 border-[#18B2B0] text-white shadow-lg shadow-[#18B2B0]/10'
-                    : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-blue-50 border-[#0F5EA8] text-[#0F5EA8] shadow-xs'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <div className={`p-3.5 rounded-xl ${selectedCategory === 'sim' ? 'bg-[#18B2B0] text-slate-950 font-black' : 'bg-slate-800 text-slate-400'}`}>
-                  <Smartphone className="w-6 h-6" />
+                <div className={`p-3 rounded-xl ${selectedCategory === 'sim' ? 'bg-[#0F5EA8] text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  <Smartphone className="w-5 h-5" />
                 </div>
                 <div className="text-right">
-                  <div className="font-extrabold text-sm text-white">شرائح الاتصال (SIM)</div>
-                  <div className="text-xs text-slate-400 mt-0.5">مسح رقم الـ ICCID</div>
+                  <div className="font-extrabold text-sm text-slate-900">شرائح الاتصال (SIM)</div>
+                  <div className="text-xs text-slate-500">مسح رقم الـ ICCID</div>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Step 2: Auto-Focus Hardware Barcode Input Box */}
-          <div className="rassco-glass-card p-6 rounded-3xl border border-[#18B2B0]/30 relative scan-pulse-active">
+          {/* Step 2: Auto-Focus Hardware Barcode Workstation Box */}
+          <div className="bg-white p-6 rounded-3xl border-2 border-[#12C6E8] shadow-md relative scan-pulse-ring">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-slate-200 flex items-center gap-2">
-                <Scan className="w-5 h-5 text-[#18B2B0]" />
-                <span>2. شاشة المسح الفوري بجهاز USB / Bluetooth Scanner</span>
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <Scan className="w-5 h-5 text-[#0F5EA8]" />
+                <span>2. حقل المسح السريع بجهاز USB / Bluetooth Scanner</span>
               </h3>
-              <div className="flex items-center gap-2 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/15 px-3.5 py-1.5 rounded-full border border-[#18B2B0]/30">
-                <span className="w-2 h-2 rounded-full bg-[#18B2B0] animate-ping" />
+              <div className="flex items-center gap-2 text-xs font-bold text-[#0F5EA8] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                <span className="w-2 h-2 rounded-full bg-[#12C6E8] animate-ping" />
                 <span>التركيز تلقائي الآن (Auto-Focus Active)</span>
               </div>
             </div>
@@ -291,15 +298,15 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
                   placeholder={selectedCategory === 'devices' ? 'امسح باركود الجهاز هنا...' : 'امسح باركود الشريحة (ICCID)...'}
-                  className="w-full py-5 px-6 rounded-2xl glass-input text-xl font-mono text-[#18B2B0] placeholder-slate-500 border-2 border-[#18B2B0]/40 focus:border-[#18B2B0] shadow-inner font-bold"
+                  className="w-full py-4 px-5 rounded-2xl rassco-scan-input text-lg font-mono text-slate-900 placeholder-slate-400 font-bold"
                   autoFocus
                 />
                 <button
                   type="submit"
-                  className="absolute left-3 top-3 bottom-3 px-6 rounded-xl rassco-btn-primary text-slate-950 font-black text-sm flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                  className="absolute left-3 top-2.5 bottom-2.5 px-6 rounded-xl rassco-btn-primary text-sm flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <span>إدخال</span>
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 text-[#12C6E8]" />
                 </button>
               </div>
             </form>
@@ -309,14 +316,14 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
               <div
                 className={`mt-4 p-4 rounded-2xl border flex items-center gap-3 text-sm font-bold animate-fade-in ${
                   scanMessage.type === 'success'
-                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                    : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
                 }`}
               >
                 {scanMessage.type === 'success' ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
                 )}
                 <span>{scanMessage.text}</span>
               </div>
@@ -324,35 +331,35 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
           </div>
 
           {/* Action Step 3: Confirmation Button */}
-          <div className="rassco-glass-card p-6 rounded-3xl border border-slate-800 flex items-center justify-between">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <div className="text-base font-black text-white">تأكيد الاعتماد والمطابقة النهائي</div>
-              <div className="text-xs text-slate-400 mt-1">
-                {isMatchComplete ? 'تمت مطابقة جميع عناصر الشحنة بنجاح! يمكنك الاعتماد الآن' : 'قم بمسح جميع القطع المطلوبة لتفعيل زر التأكيد'}
+              <div className="text-base font-extrabold text-slate-900">تأكيد الاعتماد والمطابقة النهائي</div>
+              <div className="text-xs text-slate-500 mt-1">
+                {isMatchComplete ? 'تمت مطابقة جميع عناصر الشحنة بنجاح! جاهز للاعتماد' : 'قم بمسح جميع القطع المطلوبة لتفعيل التأكيد'}
               </div>
             </div>
 
             <button
               onClick={handleConfirmAccept}
               disabled={accepting || completed}
-              className={`px-8 py-4 rounded-2xl font-black text-base transition-all duration-300 flex items-center gap-3 cursor-pointer shadow-xl ${
+              className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-extrabold text-base transition-all duration-300 flex items-center justify-center gap-3 cursor-pointer shadow-md ${
                 completed
-                  ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/20'
+                  ? 'bg-emerald-600 text-white shadow-emerald-600/20'
                   : isMatchComplete
-                  ? 'rassco-btn-primary scale-105 shadow-[#18B2B0]/30'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  ? 'rassco-btn-primary scale-105 shadow-blue-600/30'
+                  : 'bg-slate-100 text-slate-400 hover:bg-slate-200 cursor-not-allowed'
               }`}
             >
               {completed ? (
                 <>
-                  <Check className="w-5 h-5" />
+                  <Check className="w-5 h-5 text-[#12C6E8]" />
                   <span>تم استلام الشحنة بنجاح ✅</span>
                 </>
               ) : accepting ? (
                 <span>جاري إرسال الاعتماد...</span>
               ) : (
                 <>
-                  <PackageCheck className="w-5 h-5" />
+                  <PackageCheck className="w-5 h-5 text-[#12C6E8]" />
                   <span>تأكيد الاستلام</span>
                 </>
               )}
@@ -360,14 +367,14 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
           </div>
         </div>
 
-        {/* Right Column: Live Quantity Match & Scanned History (5 Cols) */}
+        {/* Right Column: Live Quantity Matcher & History Log (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
           
           {/* Quantity Matching Cards */}
-          <div className="rassco-glass-card p-6 rounded-3xl border border-slate-800">
-            <h3 className="text-sm font-black text-slate-200 mb-4 flex items-center justify-between">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <h3 className="text-sm font-extrabold text-slate-900 flex items-center justify-between">
               <span>مطابقة كميات الشحنة الحالية</span>
-              <span className="text-xs font-bold text-[#18B2B0]">RASSCO Live Verification</span>
+              <span className="text-xs font-bold text-[#0F5EA8]">RASSCO Live Matching</span>
             </h3>
 
             <div className="space-y-4">
@@ -376,20 +383,23 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                 const isComplete = item.scannedQuantity >= item.requestedQuantity;
 
                 return (
-                  <div key={item.id} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                  <div key={item.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-sm text-white">{item.itemTypeName}</span>
-                      <span className={`text-xs font-black px-3 py-1 rounded-full ${isComplete ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
+                      <span className="font-extrabold text-sm text-slate-900">{item.itemTypeName}</span>
+                      <span className={`text-xs font-black px-3 py-1 rounded-full ${isComplete ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
                         {item.scannedQuantity} / {item.requestedQuantity}
                       </span>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-500 ${isComplete ? 'bg-emerald-400' : 'bg-[#18B2B0]'}`}
+                        className={`h-full transition-all duration-500 ${isComplete ? 'bg-emerald-500' : 'bg-[#0F5EA8]'}`}
                         style={{ width: `${Math.min(percent, 100)}%` }}
                       />
+                    </div>
+                    <div className="text-left text-[10px] font-bold text-slate-500 mt-1">
+                      {percent}% مكتمل
                     </div>
                   </div>
                 );
@@ -397,24 +407,24 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
             </div>
           </div>
 
-          {/* Scanned Serials History List */}
-          <div className="rassco-glass-card p-6 rounded-3xl border border-slate-800">
+          {/* Scanned Items Log */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-slate-200">سجل القطع الممسوحة مؤخراً</h3>
-              <span className="text-xs font-bold text-[#18B2B0]">{scannedItems.length} عنصر</span>
+              <h3 className="text-sm font-extrabold text-slate-900">سجل القطع الممسوحة مؤخراً</h3>
+              <span className="text-xs font-bold text-[#0F5EA8]">{scannedItems.length} عنصر</span>
             </div>
 
             {scannedItems.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 text-xs">
+              <div className="text-center py-8 text-slate-400 text-xs">
                 لم يتم مسح أي قطع بعد. استخدم جهاز السكانر لبدء المسح.
               </div>
             ) : (
               <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                 {scannedItems.map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs">
+                  <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                      <span className="font-mono text-[#18B2B0] font-black">{item.serial}</span>
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="font-mono text-[#0F5EA8] font-black">{item.serial}</span>
                     </div>
                     <span className="text-slate-500 font-semibold">{item.time}</span>
                   </div>
@@ -424,7 +434,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
           </div>
         </div>
 
-      </div>
+      </main>
     </div>
   );
 };

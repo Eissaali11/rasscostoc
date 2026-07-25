@@ -3,74 +3,89 @@
 @tailwind utilities;
 
 :root {
-  --brand-primary: #18B2B0;
-  --brand-[#18B2B0]-hover: #149c9a;
-  --brand-dark: #070d18;
-  --brand-card: rgba(15, 23, 42, 0.82);
+  --primary-white: #FFFFFF;
+  --bg-main: #F5F7FA;
+  --surface-white: #FFFFFF;
+  --primary-blue: #0F5EA8;
+  --accent-cyan: #12C6E8;
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #DC2626;
+  --border-light: #E5E7EB;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
 }
 
 body {
-  background-color: #070d18;
-  color: #f1f5f9;
+  background-color: #F5F7FA;
+  color: #111827;
   font-family: 'Cairo', system-ui, -apple-system, sans-serif;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(24, 178, 176, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
-  background-attachment: fixed;
 }
 
-/* RASSCO Glassmorphism Cards */
-.rassco-glass-card {
-  background: rgba(13, 22, 38, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(24, 178, 176, 0.18);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6),
-              0 0 30px rgba(24, 178, 176, 0.05);
+/* RASSCO Enterprise Light Cards */
+.rassco-light-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05),
+              0 2px 4px -2px rgba(15, 23, 42, 0.03);
 }
 
-.rassco-[#18B2B0]-gradient {
-  background: linear-gradient(135deg, #18B2B0 0%, #06b6d4 100%);
+.rassco-light-card:hover {
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.08),
+              0 4px 6px -2px rgba(15, 23, 42, 0.04);
 }
 
 .rassco-btn-primary {
-  background: linear-gradient(135deg, #18B2B0 0%, #06b6d4 100%);
-  color: #070d18;
-  font-weight: 800;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 10px 25px -5px rgba(24, 178, 176, 0.35);
+  background-color: #0F5EA8;
+  color: #FFFFFF;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(15, 94, 168, 0.25);
 }
 
 .rassco-btn-primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
-  box-shadow: 0 15px 30px -5px rgba(24, 178, 176, 0.5);
+  background-color: #0c4e8c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 94, 168, 0.35);
 }
 
-.glass-input {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(24, 178, 176, 0.25);
-  color: #ffffff;
+.rassco-btn-accent {
+  background-color: #12C6E8;
+  color: #0F5EA8;
+  font-weight: 800;
   transition: all 0.2s ease-in-out;
 }
 
-.glass-input:focus {
-  border-color: #18B2B0;
-  box-shadow: 0 0 0 4px rgba(24, 178, 176, 0.2);
+.rassco-btn-accent:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+/* Scanner Input Focus Ring */
+.rassco-scan-input {
+  background-color: #FFFFFF;
+  border: 2px solid #E5E7EB;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+}
+
+.rassco-scan-input:focus {
+  border-color: #12C6E8;
+  box-shadow: 0 0 0 4px rgba(18, 198, 232, 0.2);
   outline: none;
 }
 
-.scan-pulse-active {
-  animation: pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.scan-pulse-ring {
+  animation: pulse-ring-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@keyframes pulse-border {
+@keyframes pulse-ring-light {
   0%, 100% {
-    border-color: rgba(24, 178, 176, 0.8);
-    box-shadow: 0 0 30px rgba(24, 178, 176, 0.3);
+    border-color: #12C6E8;
+    box-shadow: 0 0 15px rgba(18, 198, 232, 0.25);
   }
   50% {
-    border-color: rgba(24, 178, 176, 0.3);
-    box-shadow: 0 0 10px rgba(24, 178, 176, 0.1);
+    border-color: #93C5FD;
+    box-shadow: 0 0 5px rgba(18, 198, 232, 0.1);
   }
 }
