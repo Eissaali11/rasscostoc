@@ -162,6 +162,18 @@ export class WarehouseTransferController {
     res.json(result);
   });
 
+  lookupAssetTracking = asyncHandler(async (req: Request, res: Response) => {
+    const { identifier } = req.params;
+    const { assetTrackingService } = await import("../../infrastructure/services/asset-tracking.service");
+    const result = await assetTrackingService.getUnifiedAssetTracking(identifier);
+
+    if (!result) {
+      return res.status(404).json({ message: `لم يُعثر على أصل بالسيريال / الباركود: ${identifier}` });
+    }
+
+    res.json(result);
+  });
+
   updateItemStatus = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, orderNumber, warehouseId } = req.body;

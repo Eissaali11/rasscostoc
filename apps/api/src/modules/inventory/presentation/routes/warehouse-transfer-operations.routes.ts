@@ -84,6 +84,9 @@ export function registerWarehouseTransferOperationsRoutes(app: Express): void {
   // بحث الأدمن بالسيريال (لصفحة التحقق) — عبر Central Serial Engine
   app.get("/api/items/lookup/:serialNumber", requireAuth, controller.lookupSerial);
 
+  // بوابة التحقق المتقدمة والأصل — تتبع شامل وبصري للدورة الحياتية
+  app.get("/api/verification/assets/:identifier", requireAuth, controller.lookupAssetTracking);
+
   // تحديث حالة السيريال من الأدمن (باستخدام محرك العهدة الموحد)
   app.patch("/api/items/:id/status", requireAuth, controller.updateItemStatus);
 }
