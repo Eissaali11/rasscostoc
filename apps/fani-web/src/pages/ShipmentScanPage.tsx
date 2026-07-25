@@ -12,7 +12,9 @@ import {
   Send,
   ShieldCheck,
   Layers,
-  ChevronDown
+  Info,
+  Radio,
+  HardDrive
 } from 'lucide-react';
 import { api, WarehouseTransfer, TransferItem } from '../api/client';
 import { RasscoLogo } from '../components/RasscoLogo';
@@ -21,6 +23,112 @@ interface ShipmentScanPageProps {
   transferId?: string;
   onBack: () => void;
 }
+
+// Professional Metadata & Visual Mapping for POS Devices & SIM Cards
+interface ItemMeta {
+  name: string;
+  categoryName: string;
+  category: 'devices' | 'sim' | 'accessories';
+  manufacturer: string;
+  barcodeFormat: string;
+  iconType: 'pos' | 'sim' | 'box';
+  themeColor: string;
+  badgeBg: string;
+}
+
+const getItemMetadata = (itemTypeKey: string): ItemMeta => {
+  const key = (itemTypeKey || '').trim();
+
+  if (key.toUpperCase().includes('A960')) {
+    return {
+      name: 'جهاز POS — PAX A960 Smart',
+      categoryName: 'أجهزة نقاط البيع ذكية (Android)',
+      category: 'devices',
+      manufacturer: 'PAX Technology — Touch & Printer',
+      barcodeFormat: 'السيريال عالي الدقة (SN: 8-12 رقم)',
+      iconType: 'pos',
+      themeColor: '#0F5EA8',
+      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
+    };
+  }
+
+  if (key.toLowerCase().includes('verifone') || key.toLowerCase().includes('vx680')) {
+    return {
+      name: 'جهاز POS — Verifone VX680',
+      categoryName: 'أجهزة نقاط البيع المحمولة',
+      category: 'devices',
+      manufacturer: 'Verifone Systems Inc.',
+      barcodeFormat: 'سيريال الجهاز الخلفي (S/N)',
+      iconType: 'pos',
+      themeColor: '#0F5EA8',
+      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
+    };
+  }
+
+  if (key.toLowerCase().includes('i9100') || key.toLowerCase().includes('i9000')) {
+    return {
+      name: 'جهاز POS — Urovo i9100 / i9000s',
+      categoryName: 'أجهزة نقاط البيع الذكية',
+      category: 'devices',
+      manufacturer: 'Urovo Payment Systems',
+      barcodeFormat: 'سيريال أسفل البطارية (SN)',
+      iconType: 'pos',
+      themeColor: '#0F5EA8',
+      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
+    };
+  }
+
+  if (key.toLowerCase().includes('stc')) {
+    return {
+      name: 'شريحة اتصال — STC 5G Data SIM',
+      categoryName: 'شرائح الاتصال والبيانات',
+      category: 'sim',
+      manufacturer: 'شركة الاتصالات السعودية (STC)',
+      barcodeFormat: 'باركود الـ ICCID (يبدأ بـ 89966...)',
+      iconType: 'sim',
+      themeColor: '#16A34A',
+      badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    };
+  }
+
+  if (key.toLowerCase().includes('mobily')) {
+    return {
+      name: 'شريحة اتصال — Mobily Business SIM',
+      categoryName: 'شرائح الاتصال والبيانات',
+      category: 'sim',
+      manufacturer: 'شركة موبايلي (Mobily)',
+      barcodeFormat: 'باركود الـ ICCID (يبدأ بـ 89966...)',
+      iconType: 'sim',
+      themeColor: '#0284C7',
+      badgeBg: 'bg-sky-50 text-sky-800 border-sky-200',
+    };
+  }
+
+  if (key.toLowerCase().includes('zain')) {
+    return {
+      name: 'شريحة اتصال — Zain M2M Data SIM',
+      categoryName: 'شرائح الاتصال والبيانات',
+      category: 'sim',
+      manufacturer: 'شركة زين السعودية (Zain)',
+      barcodeFormat: 'باركود الـ ICCID (يبدأ بـ 89966...)',
+      iconType: 'sim',
+      themeColor: '#7C3AED',
+      badgeBg: 'bg-purple-50 text-purple-800 border-purple-200',
+    };
+  }
+
+  // Fallback for custom device names
+  return {
+    name: `صنف — ${key || 'أجهزة ومستلزمات'}`,
+    categoryName: 'مستلزمات وأجهزة مخزنية',
+    category: key.toLowerCase().includes('sim') ? 'sim' : 'devices',
+    manufacturer: 'نظام RASSCO للمخزون والعهدة',
+    barcodeFormat: 'باركود أو سيريال القطعة',
+    iconType: key.toLowerCase().includes('sim') ? 'sim' : 'pos',
+    themeColor: '#0F5EA8',
+    badgeBg: 'bg-slate-100 text-slate-800 border-slate-200',
+  };
+};
 
 export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, onBack }) => {
   const [transfer, setTransfer] = useState<WarehouseTransfer | null>(null);
@@ -50,42 +158,63 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
   }, []);
 
   useEffect(() => {
+    loadTransferData();
+  }, [transferId]);
+
+  const loadTransferData = async () => {
+    setLoading(true);
+
     if (transferId) {
-      loadTransferDetails();
+      const data: any = await api.getTransferDetails(transferId);
+      if (data) {
+        // Normalize Items from backend record
+        let normalizedItems: TransferItem[] = [];
+        if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+          normalizedItems = data.items;
+        } else {
+          const itemMeta = getItemMetadata(data.itemType || 'A960');
+          normalizedItems = [
+            {
+              id: 'item-main',
+              itemTypeId: data.itemType || 'A960',
+              itemTypeName: itemMeta.name,
+              category: itemMeta.category,
+              requestedQuantity: Number(data.quantity) || 1,
+              scannedQuantity: 0,
+              scannedSerials: [],
+            },
+          ];
+        }
+
+        const normTransfer: WarehouseTransfer = {
+          id: data.id || transferId,
+          transferNumber: `TRF-${(data.id || transferId).substring(0, 8).toUpperCase()}`,
+          sourceWarehouseName: data.warehouseName || 'المستودع الرئيسي',
+          targetWarehouseName: data.technicianName || 'عهدة الفني',
+          status: (data.status || 'PENDING').toUpperCase() as any,
+          createdAt: data.createdAt || new Date().toISOString(),
+          items: normalizedItems,
+        };
+
+        setTransfer(normTransfer);
+        setSelectedItemTypeId(normalizedItems[0]?.itemTypeId || 'A960');
+      }
     } else {
-      // Demo Transfer Data for Web Testing with specific device & SIM models
-      const mockItems: TransferItem[] = [
+      // Demo Transfer Data for Web Testing with full visual metadata
+      const demoItems: TransferItem[] = [
         {
           id: 'item-1',
-          itemTypeId: 'type-pos-verifone',
-          itemTypeName: 'جهاز POS — Verifone VX680',
+          itemTypeId: 'A960',
+          itemTypeName: 'جهاز POS — PAX A960 Smart',
           category: 'devices',
-          requestedQuantity: 5,
-          scannedQuantity: 2,
-          scannedSerials: ['SN-VF680-101', 'SN-VF680-102'],
-        },
-        {
-          id: 'item-2',
-          itemTypeId: 'type-pos-pax',
-          itemTypeName: 'جهاز POS — PAX A960',
-          category: 'devices',
-          requestedQuantity: 8,
+          requestedQuantity: 3,
           scannedQuantity: 0,
           scannedSerials: [],
         },
         {
-          id: 'item-3',
-          itemTypeId: 'type-sim-stc',
-          itemTypeName: 'شريحة اتصال — STC 5G Data',
-          category: 'sim',
-          requestedQuantity: 15,
-          scannedQuantity: 5,
-          scannedSerials: [],
-        },
-        {
-          id: 'item-4',
-          itemTypeId: 'type-sim-mobily',
-          itemTypeName: 'شريحة اتصال — Mobily Business',
+          id: 'item-2',
+          itemTypeId: 'stcSim',
+          itemTypeName: 'شريحة اتصال — STC 5G Data SIM',
           category: 'sim',
           requestedQuantity: 10,
           scannedQuantity: 0,
@@ -94,28 +223,17 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
       ];
 
       setTransfer({
-        id: 'trf-1001',
-        transferNumber: 'TRF-2026-0892',
+        id: 'trf-demo-1001',
+        transferNumber: 'TRF-DEMO-892',
         sourceWarehouseName: 'المستودع الرئيسي — الرياض',
         targetWarehouseName: 'عهدة الفني (عيسى)',
         status: 'PENDING',
         createdAt: new Date().toISOString(),
-        items: mockItems,
+        items: demoItems,
       });
-
-      // Default selected item type to the first pending item
-      setSelectedItemTypeId(mockItems[0].itemTypeId);
-      setLoading(false);
+      setSelectedItemTypeId('A960');
     }
-  }, [transferId]);
 
-  const loadTransferDetails = async () => {
-    setLoading(true);
-    const data = await api.getTransferDetails(transferId!);
-    setTransfer(data);
-    if (data?.items && data.items.length > 0) {
-      setSelectedItemTypeId(data.items[0].itemTypeId);
-    }
     setLoading(false);
   };
 
@@ -134,6 +252,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
   };
 
   const selectedItemObj = transfer?.items.find((it) => it.itemTypeId === selectedItemTypeId) || transfer?.items[0];
+  const activeMeta = getItemMetadata(selectedItemObj?.itemTypeId || selectedItemObj?.itemTypeName || 'A960');
 
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,10 +274,9 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
     const res = await api.scanItem(serial, transferId, selectedItemTypeId || undefined);
 
     if (res.success) {
-      const activeName = selectedItemObj?.itemTypeName || 'صنف محدد';
       const newItem = {
         serial,
-        itemTypeName: activeName,
+        itemTypeName: activeMeta.name,
         time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       };
 
@@ -179,7 +297,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
         setTransfer({ ...transfer, items: updatedItems });
       }
 
-      setScanMessage({ type: 'success', text: `✅ تم مسح ومطابقة (${serial}) لصنف [${activeName}] بنجاح` });
+      setScanMessage({ type: 'success', text: `✅ تم مسح ومطابقة (${serial}) لصنف [${activeMeta.name}] بنجاح` });
       playChime(true);
     } else {
       setScanMessage({ type: 'error', text: res.message || `⚠️ خطأ في مسح السيريال (${serial})` });
@@ -211,7 +329,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
       <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA] text-slate-900">
         <div className="text-center">
           <Scan className="w-12 h-12 text-[#0F5EA8] animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-bold">جاري تحميل تفاصيل الشحنة والأصناف...</p>
+          <p className="text-slate-600 font-bold">جاري تحميل تفاصيل الشحنة وصور الأصناف...</p>
         </div>
       </div>
     );
@@ -232,13 +350,13 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
               <ArrowRight className="w-5 h-5" />
             </button>
 
-            <RasscoLogo size="md" subtitle={`استلام الشحنة: ${transfer?.transferNumber || 'جديد'}`} lightMode={true} />
+            <RasscoLogo size="md" subtitle={`مطابقة استلام الشحنة: ${transfer?.transferNumber || 'جديد'}`} lightMode={true} />
           </div>
 
           {/* Global Progress Indicator */}
           <div className="flex items-center gap-4 bg-slate-50 p-2.5 px-5 rounded-2xl border border-slate-200">
             <div className="text-right">
-              <div className="text-[11px] text-slate-500 font-bold">إجمالي استلام الشحنة</div>
+              <div className="text-[11px] text-slate-500 font-bold">إجمالي قطع الشحنة</div>
               <div className="text-base font-black text-[#0F5EA8]">
                 {totalScanned} / {totalRequested} <span className="text-xs font-bold text-slate-500">({overallPercentage}%)</span>
               </div>
@@ -257,61 +375,73 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
       {/* Main Workspace Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Specific Item Selector & Barcode Scanner Workstation (7 Cols) */}
+        {/* Left Column: Device & SIM Visual Selector + Barcode Scanner Workstation (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
           
-          {/* Step 1: Specific Item Model Selector Pills */}
+          {/* Step 1: Professional Visual Item Card Selector */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
             <h3 className="text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-4 flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-[#0F5EA8]" />
-                <span>1. اختر نوع واسم الجهاز / الشريحة المراد مسحها الآن</span>
+                <span>1. حدد الصنف المني لمسحه الآن (عرض صور وتفاصيل الأصناف)</span>
               </span>
-              <span className="text-[11px] font-bold text-[#0F5EA8]">
-                محدد حالياً: {selectedItemObj?.itemTypeName}
+              <span className="text-[11px] font-extrabold text-[#0F5EA8]">
+                المصنع: {activeMeta.manufacturer}
               </span>
             </h3>
 
-            {/* List of Specific Transfer Items */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Grid of Visual Item Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {transfer?.items.map((item) => {
+                const meta = getItemMetadata(item.itemTypeId || item.itemTypeName);
                 const isSelected = item.itemTypeId === selectedItemTypeId;
                 const isItemDone = item.scannedQuantity >= item.requestedQuantity;
-                const isDevice = item.category === 'devices';
 
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
                     onClick={() => setSelectedItemTypeId(item.itemTypeId)}
-                    className={`p-4 rounded-2xl border text-right transition-all cursor-pointer relative flex items-start gap-3.5 ${
+                    className={`p-4 rounded-2xl border text-right transition-all cursor-pointer relative flex flex-col justify-between ${
                       isSelected
-                        ? 'bg-blue-50 border-[#0F5EA8] shadow-sm ring-2 ring-[#0F5EA8]/20'
+                        ? 'bg-blue-50/80 border-[#0F5EA8] shadow-md ring-2 ring-[#0F5EA8]/20'
                         : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? 'bg-[#0F5EA8] text-white' : 'bg-slate-200 text-slate-600'}`}>
-                      {isDevice ? <Cpu className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+                    {/* Top Row: Icon + Category Badge */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-xs ${meta.iconType === 'sim' ? 'bg-emerald-600' : 'bg-[#0F5EA8]'}`}>
+                        {meta.iconType === 'sim' ? (
+                          <Radio className="w-6 h-6" />
+                        ) : (
+                          <Cpu className="w-6 h-6" />
+                        )}
+                      </div>
+
+                      <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${meta.badgeBg}`}>
+                        {meta.categoryName}
+                      </span>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="font-extrabold text-xs text-slate-900 truncate">
-                        {item.itemTypeName}
-                      </div>
-                      <div className="flex items-center justify-between mt-1 text-[11px]">
-                        <span className="text-slate-500">المطلوب: {item.requestedQuantity} قطعة</span>
-                        <span className={`font-black ${isItemDone ? 'text-emerald-600' : 'text-[#0F5EA8]'}`}>
-                          {item.scannedQuantity} / {item.requestedQuantity}
-                        </span>
-                      </div>
+                    {/* Item Title & Specs */}
+                    <div className="space-y-1">
+                      <h4 className="font-black text-sm text-slate-900">{meta.name}</h4>
+                      <p className="text-[11px] font-semibold text-slate-500">{meta.manufacturer}</p>
+                    </div>
+
+                    {/* Quantity & Barcode Format Hint */}
+                    <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-500">{meta.barcodeFormat}</span>
+                      <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${isItemDone ? 'bg-emerald-100 text-emerald-800' : 'bg-[#0F5EA8] text-white'}`}>
+                        {item.scannedQuantity} / {item.requestedQuantity} قطعة
+                      </span>
                     </div>
 
                     {isItemDone && (
                       <div className="absolute top-2 left-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                       </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -322,12 +452,18 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                 <Scan className="w-5 h-5 text-[#0F5EA8]" />
-                <span>2. مسح باركود صنف [{selectedItemObj?.itemTypeName}]</span>
+                <span>2. مسح باركود صنف [{activeMeta.name}]</span>
               </h3>
               <div className="flex items-center gap-2 text-xs font-bold text-[#0F5EA8] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                 <span className="w-2 h-2 rounded-full bg-[#12C6E8] animate-ping" />
-                <span>التركيز تلقائي الآن (Auto-Focus Active)</span>
+                <span>التركيز تلقائي (Auto-Focus Active)</span>
               </div>
+            </div>
+
+            {/* Helper Info Tag */}
+            <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <Info className="w-4 h-4 text-[#0F5EA8] shrink-0" />
+              <span>صيغة الباركود المتوقعة: <strong className="text-slate-900 font-mono">{activeMeta.barcodeFormat}</strong></span>
             </div>
 
             <form onSubmit={handleScanSubmit} className="space-y-4">
@@ -337,7 +473,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                   type="text"
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder={`امسح باركود ${selectedItemObj?.itemTypeName}...`}
+                  placeholder={`امسح باركود ${activeMeta.name} هنا...`}
                   className="w-full py-4 px-5 rounded-2xl rassco-scan-input text-lg font-mono text-slate-900 placeholder-slate-400 font-bold"
                   autoFocus
                 />
@@ -375,7 +511,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
             <div>
               <div className="text-base font-extrabold text-slate-900">تأكيد الاعتماد والمطابقة النهائي</div>
               <div className="text-xs text-slate-500 mt-1">
-                {isMatchComplete ? 'تمت مطابقة جميع أنواع الأصناف بنجاح! جاهز للاعتماد' : 'قم بمسح جميع القطع لجميع الأصناف لتفعيل التأكيد'}
+                {isMatchComplete ? 'تمت مطابقة جميع قطع الشحنة بنجاح! جاهز للاعتماد' : 'قم بمسح جميع القطع لجميع الأصناف لتفعيل التأكيد'}
               </div>
             </div>
 
@@ -413,12 +549,13 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
           {/* Quantity Matching Cards */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <h3 className="text-sm font-extrabold text-slate-900 flex items-center justify-between">
-              <span>مطابقة أصناف الشحنة بالتفصيل</span>
+              <span>مطابقة كميات الأصناف بالتفصيل</span>
               <span className="text-xs font-bold text-[#0F5EA8]">Itemized Matching</span>
             </h3>
 
             <div className="space-y-4">
               {transfer?.items.map((item) => {
+                const meta = getItemMetadata(item.itemTypeId || item.itemTypeName);
                 const percent = Math.round((item.scannedQuantity / item.requestedQuantity) * 100);
                 const isComplete = item.scannedQuantity >= item.requestedQuantity;
                 const isSelected = item.itemTypeId === selectedItemTypeId;
@@ -432,9 +569,9 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-extrabold text-xs text-slate-900">{item.itemTypeName}</span>
+                      <span className="font-extrabold text-xs text-slate-900">{meta.name}</span>
                       <span className={`text-xs font-black px-3 py-0.5 rounded-full ${isComplete ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
-                        {item.scannedQuantity} / {item.requestedQuantity}
+                        {item.scannedQuantity} / {item.requestedQuantity} قطعة
                       </span>
                     </div>
 
@@ -460,7 +597,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
 
             {scannedItems.length === 0 ? (
               <div className="text-center py-8 text-slate-400 text-xs">
-                لم يتم مسح أي قطع بعد. حدد الصنف المني واستخدم جهاز السكانر لبدء المسح.
+                لم يتم مسح أي قطع بعد. استخدم جهاز السكانر لبدء مسح الأجهزة والشرائح.
               </div>
             ) : (
               <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
