@@ -22,7 +22,16 @@ import {
   Boxes, 
   History, 
   MapPin, 
-  ArrowLeft 
+  ArrowRight,
+  Copy,
+  Check,
+  Sparkles,
+  ShieldCheck,
+  RotateCcw,
+  Building2,
+  PackageCheck,
+  Clock,
+  ArrowUpRight
 } from "lucide-react";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -59,6 +68,7 @@ export default function VerificationPage() {
   const queryClient = useQueryClient();
   const [scanValue, setScanValue] = useState("");
   const [serialQuery, setSerialQuery] = useState("");
+  const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus scanning input on mount
@@ -97,10 +107,15 @@ export default function VerificationPage() {
     },
   });
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!scanValue.trim()) return;
     setSerialQuery(scanValue.trim());
+  };
+
+  const handleQuickScan = (sampleSerial: string) => {
+    setScanValue(sampleSerial);
+    setSerialQuery(sampleSerial);
   };
 
   const handleClear = () => {
@@ -109,19 +124,54 @@ export default function VerificationPage() {
     inputRef.current?.focus();
   };
 
-  // Helper to resolve category badge & colors
+  const copySerialToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast({
+      title: "تم نسخ الرقم التسلسلي",
+      description: text,
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Helper to resolve category badge & colors with modern light-glass theme
   const getCategoryDetails = (category?: string | null) => {
     switch (category) {
       case "devices":
-        return { label: t('verification.pos_devices'), icon: Smartphone, color: "text-blue-400 bg-blue-500/10 border-blue-500/20" };
+        return { 
+          label: t('verification.pos_devices'), 
+          icon: Smartphone, 
+          color: "text-teal-700 bg-teal-500/10 border-teal-500/25",
+          badgeBg: "bg-teal-50 text-teal-700 border-teal-200" 
+        };
       case "sim":
-        return { label: t('verification.sim_1'), icon: Handshake, color: "text-purple-400 bg-purple-500/10 border-purple-500/20" };
+        return { 
+          label: t('verification.sim_1'), 
+          icon: Handshake, 
+          color: "text-purple-700 bg-purple-500/10 border-purple-500/25",
+          badgeBg: "bg-purple-50 text-purple-700 border-purple-200" 
+        };
       case "papers":
-        return { label: t('verification.paper_print'), icon: FileText, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+        return { 
+          label: t('verification.paper_print'), 
+          icon: FileText, 
+          color: "text-amber-700 bg-amber-500/10 border-amber-500/25",
+          badgeBg: "bg-amber-50 text-amber-700 border-amber-200" 
+        };
       case "accessories":
-        return { label: t('verification.accessories_chargers'), icon: Cable, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
+        return { 
+          label: t('verification.accessories_chargers'), 
+          icon: Cable, 
+          color: "text-emerald-700 bg-emerald-500/10 border-emerald-500/25",
+          badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200" 
+        };
       default:
-        return { label: t('verification.item_9565'), icon: Boxes, color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
+        return { 
+          label: t('verification.item_9565'), 
+          icon: Boxes, 
+          color: "text-slate-700 bg-slate-500/10 border-slate-500/25",
+          badgeBg: "bg-slate-100 text-slate-700 border-slate-200" 
+        };
     }
   };
 
@@ -129,223 +179,385 @@ export default function VerificationPage() {
   const getStatusDetails = (status?: string | null) => {
     switch (status) {
       case "RECEIVED_BY_TECHNICIAN":
-        return { label: t('verification.technician_1'), color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" };
+        return { 
+          label: t('verification.technician_1'), 
+          color: "bg-emerald-100 text-emerald-800 border-emerald-300 shadow-xs",
+          icon: User
+        };
       case "DELIVERED":
-        return { label: t('verification.completed_2'), color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30" };
+        return { 
+          label: t('verification.completed_2'), 
+          color: "bg-teal-100 text-teal-900 border-teal-300 shadow-xs",
+          icon: PackageCheck
+        };
       case "PENDING_RECEIPT":
-        return { label: t('verification.pending_technician'), color: "bg-amber-500/10 text-amber-400 border-amber-500/30" };
+        return { 
+          label: t('verification.pending_technician'), 
+          color: "bg-amber-100 text-amber-800 border-amber-300 shadow-xs",
+          icon: Clock
+        };
       case "RETURNED":
-        return { label: t('verification.returned'), color: "bg-red-500/10 text-red-400 border-red-500/30" };
+        return { 
+          label: t('verification.returned'), 
+          color: "bg-rose-100 text-rose-800 border-rose-300 shadow-xs",
+          icon: RotateCcw
+        };
       default:
-        return { label: status || t('verification.item_11173'), color: "bg-slate-500/10 text-slate-400 border-slate-500/30" };
+        return { 
+          label: status || t('verification.item_11173'), 
+          color: "bg-slate-100 text-slate-800 border-slate-300 shadow-xs",
+          icon: AlertCircle
+        };
     }
   };
 
   const cat = getCategoryDetails(itemData?.itemTypeCategory);
   const IconComponent = cat.icon;
   const statusDetails = getStatusDetails(itemData?.status);
+  const StatusIcon = statusDetails.icon;
 
   return (
-    <div className="space-y-8" dir="rtl">
-      <header className="rounded-2xl border border-slate-700/60 bg-slate-900/35 backdrop-blur-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <QrCode className="w-7 h-7 text-cyan-400" />
-            {t('verification.verification_number_serial')}
-          </h1>
-          <p className="text-slate-400 mt-1">
-            {t('verification.search_status_devices')}
-          </p>
-        </div>
+    <div className="space-y-8 font-['Cairo'] pb-12" dir="rtl">
+      {/* Top Banner Header */}
+      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-800 p-8 text-white shadow-xl shadow-teal-900/10">
+        <div className="absolute -left-12 -top-12 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+        <div className="absolute right-1/3 -bottom-16 h-48 w-48 rounded-full bg-cyan-400/20 blur-2xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-teal-100 border border-white/20">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" />
+              <span>محرك التحقق الفوري والتدقيق المالي</span>
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
+              <QrCode className="w-8 h-8 text-cyan-300 animate-pulse" />
+              {t('verification.verification_number_serial')}
+            </h1>
+            <p className="text-teal-50 text-sm max-w-xl opacity-90 leading-relaxed">
+              {t('verification.search_status_devices')}
+            </p>
+          </div>
 
-        <Link href="/home">
-          <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-            <ArrowLeft className="ml-2 h-4 w-4" />
-            {t('verification.control')}
-          </Button>
-        </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/home">
+              <Button variant="outline" className="bg-white/15 hover:bg-white/25 text-white border-white/25 backdrop-blur-md transition-all font-bold rounded-2xl shadow-sm">
+                <ArrowRight className="ml-2 h-4 w-4" />
+                {t('verification.control')}
+              </Button>
+            </Link>
+          </div>
+        </div>
       </header>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Search / Scan Card */}
-        <Card className="bg-slate-900/40 border-slate-700/50 backdrop-blur-xl lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-slate-100 flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-cyan-400" />
-              {t('verification.scan')}
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              {t('verification.sim_number_serial')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleSearchSubmit} className="space-y-3">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  ref={inputRef}
-                  value={scanValue}
-                  onChange={(e) => setScanValue(e.target.value)}
-                  placeholder={t('verification.number_serial_3')}
-                  className="pr-10 bg-slate-950/40 border-slate-700 text-slate-200 focus-visible:ring-cyan-500/35 text-center font-mono placeholder:text-slate-600"
-                />
+      {/* Main Content Grid */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Search & Scan Panel (4 Columns) */}
+        <Card className="lg:col-span-4 bg-white/85 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-200/50 rounded-3xl overflow-hidden hover:border-teal-500/30 transition-all flex flex-col justify-between">
+          <div>
+            <CardHeader className="bg-gradient-to-b from-teal-50/80 to-transparent border-b border-slate-100 pb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-600 flex items-center justify-center shadow-inner">
+                  <QrCode className="w-6 h-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-slate-900 text-lg font-bold">
+                    {t('verification.scan')}
+                  </CardTitle>
+                  <CardDescription className="text-slate-500 text-xs mt-0.5">
+                    {t('verification.sim_number_serial')}
+                  </CardDescription>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold">
-                  {t('verification.search')}
-                </Button>
-                {(scanValue || serialQuery) && (
-                  <Button type="button" onClick={handleClear} variant="outline" className="border-slate-700 text-slate-300">
-                    {t('verification.scan_1')}
-                  </Button>
-                )}
-              </div>
-            </form>
-          </CardContent>
-          <CardFooter className="border-t border-slate-800/60 pt-4 text-xs text-slate-500 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-cyan-500 shrink-0" />
-            <span>{t('verification.scan_stickers_devices_mobily_z')}</span>
-          </CardFooter>
-        </Card>
+            </CardHeader>
 
-        {/* Right Details Display */}
-        <div className="lg:col-span-2">
-          {isLoading && (
-            <Card className="bg-slate-900/40 border-slate-700/50 backdrop-blur-xl h-full flex items-center justify-center p-12">
-              <div className="text-center space-y-3">
-                <div className="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-slate-400 text-sm">{t('verification.search_data')}</p>
-              </div>
-            </Card>
-          )}
-
-          {!serialQuery && !isLoading && (
-            <Card className="bg-slate-900/20 border-dashed border-slate-800 h-full flex items-center justify-center p-12 text-center">
-              <div className="max-w-md">
-                <QrCode className="w-16 h-16 text-slate-700 mx-auto mb-4 stroke-1 animate-pulse" />
-                <h3 className="text-lg font-bold text-slate-300">{t('verification.scan_number_serial')}</h3>
-                <p className="text-slate-500 text-sm mt-1">
-                  {t('verification.submit_number_search_details')}
-                </p>
-              </div>
-            </Card>
-          )}
-
-          {error && !isLoading && (
-            <Card className="bg-slate-900/40 border-red-500/20 backdrop-blur-xl h-full flex items-center justify-center p-12 text-center">
-              <div className="max-w-md">
-                <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-slate-100">{t('verification.fail_data')}</h3>
-                <p className="text-slate-400 text-sm mt-1">{(error as any)?.message || t('verification.error')}</p>
-              </div>
-            </Card>
-          )}
-
-          {itemData && !isLoading && (
-            <Card className="bg-slate-900/40 border-slate-700/60 backdrop-blur-xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-slate-950/80 to-slate-900/20 border-b border-slate-800/80 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl border ${cat.color} flex items-center justify-center`}>
-                    <IconComponent className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-slate-100 text-xl font-bold">{itemData.itemTypeName || t('verification.item_17641')}</CardTitle>
-                    <CardDescription className="text-slate-400 mt-0.5">
-                      S/N: <span className="font-mono text-cyan-300 font-bold">{itemData.serialNumber}</span>
-                    </CardDescription>
+            <CardContent className="p-6 space-y-6">
+              <form onSubmit={handleSearchSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>الرقم التسلسلي / S/N</span>
+                    <span className="text-slate-400 font-normal">يدعم جميع الأجهزة</span>
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input
+                      ref={inputRef}
+                      value={scanValue}
+                      onChange={(e) => setScanValue(e.target.value)}
+                      placeholder={t('verification.number_serial_3')}
+                      className="pr-11 pl-4 h-12 rassco-input-glow rounded-2xl font-mono text-center text-slate-800 text-base placeholder:text-slate-400 placeholder:font-sans font-bold shadow-xs"
+                    />
                   </div>
                 </div>
 
-                <Badge className={`${statusDetails.color} text-xs font-bold px-3 py-1`}>
-                  {statusDetails.label}
-                </Badge>
+                <div className="flex gap-2 pt-1">
+                  <Button 
+                    type="submit" 
+                    className="flex-1 h-11 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/20 transition-all active:scale-[0.98]"
+                  >
+                    <Search className="w-4 h-4 ml-2" />
+                    {t('verification.search')}
+                  </Button>
+                  {(scanValue || serialQuery) && (
+                    <Button 
+                      type="button" 
+                      onClick={handleClear} 
+                      variant="outline" 
+                      className="h-11 px-4 border-slate-200 text-slate-600 hover:bg-slate-100 font-bold rounded-xl"
+                    >
+                      {t('verification.scan_1')}
+                    </Button>
+                  )}
+                </div>
+              </form>
+
+              {/* Quick Sample Buttons */}
+              <div className="pt-4 border-t border-slate-100 space-y-2.5">
+                <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                  <span>نماذج سريعة للاختبار:</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleQuickScan("SAW43310018885")}
+                    className="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 hover:border-teal-300 transition-all font-semibold text-slate-700"
+                  >
+                    i9100: SAW43310018885
+                  </button>
+                  <button
+                    onClick={() => handleQuickScan("SAS30810004647")}
+                    className="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 hover:border-teal-300 transition-all font-semibold text-slate-700"
+                  >
+                    i9000S: SAS30810004647
+                  </button>
+                  <button
+                    onClick={() => handleQuickScan("1180234360")}
+                    className="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 hover:border-teal-300 transition-all font-semibold text-slate-700"
+                  >
+                    A960: 1180234360
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </div>
+
+          <CardFooter className="bg-slate-50/80 border-t border-slate-100 p-4 text-xs text-slate-500 flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+            <span className="leading-tight">{t('verification.scan_stickers_devices_mobily_z')}</span>
+          </CardFooter>
+        </Card>
+
+        {/* Results Panel (8 Columns) */}
+        <div className="lg:col-span-8">
+          {/* Loading State */}
+          {isLoading && (
+            <Card className="bg-white/85 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-200/50 rounded-3xl h-full min-h-[420px] flex items-center justify-center p-12">
+              <div className="text-center space-y-4">
+                <div className="relative w-16 h-16 mx-auto">
+                  <div className="w-16 h-16 border-4 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
+                  <QrCode className="w-6 h-6 text-teal-600 absolute inset-0 m-auto" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold text-slate-800">{t('verification.search_data')}</h4>
+                  <p className="text-slate-400 text-xs font-mono">{serialQuery}</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Initial / Empty State */}
+          {!serialQuery && !isLoading && (
+            <Card className="bg-white/60 backdrop-blur-md border border-dashed border-slate-300/80 shadow-sm rounded-3xl h-full min-h-[420px] flex items-center justify-center p-12 text-center">
+              <div className="max-w-md space-y-4">
+                <div className="w-20 h-20 rounded-3xl bg-teal-50 border border-teal-100 text-teal-600 mx-auto flex items-center justify-center shadow-inner">
+                  <QrCode className="w-10 h-10 stroke-[1.5] animate-pulse" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-slate-800">{t('verification.scan_number_serial')}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">
+                    {t('verification.submit_number_search_details')}
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-xs font-bold text-slate-600">
+                  <Sparkles className="w-4 h-4 text-teal-600" />
+                  <span>يدعم المسح بالباربود وقارئ الأجهزة الذكية مباشرة</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Error State */}
+          {error && !isLoading && (
+            <Card className="bg-white/85 backdrop-blur-xl border border-rose-200 shadow-lg shadow-rose-500/5 rounded-3xl h-full min-h-[420px] flex items-center justify-center p-12 text-center">
+              <div className="max-w-md space-y-4">
+                <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 text-rose-500 mx-auto flex items-center justify-center shadow-inner">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold text-slate-900">{t('verification.fail_data')}</h3>
+                  <p className="text-rose-600 text-sm font-semibold">{(error as any)?.message || t('verification.error')}</p>
+                </div>
+                <Button onClick={handleClear} variant="outline" className="border-slate-200 text-slate-700 font-bold rounded-xl mt-2">
+                  إعادة المحاولة
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Success / Item Loaded State */}
+          {itemData && !isLoading && (
+            <Card className="bg-white/90 backdrop-blur-xl border border-slate-200/90 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden transition-all">
+              {/* Item Header */}
+              <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-6 md:p-8 text-white relative">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 text-teal-300 flex items-center justify-center shrink-0 backdrop-blur-md shadow-inner">
+                      <IconComponent className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${cat.badgeBg} font-bold text-xs px-2.5 py-0.5`}>
+                          {cat.label}
+                        </Badge>
+                        {itemData.carrierName && (
+                          <Badge className="bg-purple-500/20 text-purple-200 border border-purple-400/30 text-xs font-bold">
+                            {itemData.carrierName}
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-2xl font-bold tracking-tight text-white">
+                        {itemData.itemTypeName || t('verification.item_17641')}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 text-slate-300 text-sm pt-0.5">
+                        <span>S/N:</span>
+                        <span className="font-mono text-cyan-300 font-bold text-base bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/15">
+                          {itemData.serialNumber}
+                        </span>
+                        <button
+                          onClick={() => copySerialToClipboard(itemData.serialNumber)}
+                          className="p-1.5 hover:bg-white/15 rounded-lg text-slate-300 hover:text-white transition-all"
+                          title="نسخ الرقم التسلسلي"
+                        >
+                          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Badge className={`${statusDetails.color} text-sm font-extrabold px-4 py-2 rounded-2xl flex items-center gap-2 border self-start sm:self-auto`}>
+                    <StatusIcon className="w-4 h-4" />
+                    <span>{statusDetails.label}</span>
+                  </Badge>
+                </div>
               </CardHeader>
 
-              <CardContent className="p-6 space-y-6">
+              {/* Item Content Metadata */}
+              <CardContent className="p-6 md:p-8 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border border-cyan-500/30 shrink-0">
+                  {/* Linked Technician */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5 hover:bg-teal-50/30 transition-all">
+                    <Avatar className="h-12 w-12 border-2 border-teal-500/30 shrink-0 shadow-xs">
                       <AvatarImage
                         src={itemData.technicianProfileImage || undefined}
                         alt={itemData.technicianName || itemData.ownerName || "technician"}
                       />
-                      <AvatarFallback className="bg-slate-800 text-cyan-300">
-                        <User className="w-5 h-5" />
+                      <AvatarFallback className="bg-teal-600 text-white font-bold">
+                        <User className="w-6 h-6" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-500">{t('verification.linked_technician')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5 truncate">
+                      <p className="text-xs font-bold text-slate-400">{t('verification.linked_technician')}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5 truncate">
                         {(itemData.technicianName || itemData.ownerName) ? (
                           itemData.technicianId || itemData.ownerId ? (
                             <Link
                               href={`/technician-details/${itemData.technicianId || itemData.ownerId}`}
-                              className="hover:underline text-cyan-300"
+                              className="hover:underline text-teal-700 flex items-center gap-1 font-bold"
                             >
-                              {itemData.technicianName || itemData.ownerName}
+                              <span>{itemData.technicianName || itemData.ownerName}</span>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
                             </Link>
                           ) : (
-                            <span className="text-cyan-300">
+                            <span className="text-teal-700">
                               {itemData.technicianName || itemData.ownerName}
                             </span>
                           )
-                        ) : t('verification.warehouse_primary_1')}
+                        ) : (
+                          <span className="text-slate-600 flex items-center gap-1">
+                            <Building2 className="w-4 h-4 text-slate-400" />
+                            {t('verification.warehouse_primary_1')}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <Tag className="w-5 h-5 text-cyan-400 shrink-0" />
-                    <div>
-                      <p className="text-xs text-slate-500">{t('verification.category')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5">{cat.label}</p>
+                  {/* City */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5" />
                     </div>
-                  </div>
-
-                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-cyan-400 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-500">{t('verification.technician_city')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5">
+                      <p className="text-xs font-bold text-slate-400">{t('verification.technician_city')}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">
                         {itemData.technicianCity || itemData.ownerCity || t('verification.not_available')}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-cyan-400 shrink-0" />
+                  {/* Region */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5" />
+                    </div>
                     <div>
-                      <p className="text-xs text-slate-500">{t('verification.technician_region')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5">
+                      <p className="text-xs font-bold text-slate-400">{t('verification.technician_region')}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">
                         {itemData.technicianRegionName || itemData.ownerRegionName || t('verification.not_available')}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-cyan-400 shrink-0" />
+                  {/* Category */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                      <Tag className="w-5 h-5" />
+                    </div>
                     <div>
-                      <p className="text-xs text-slate-500">{t('verification.date')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5">
+                      <p className="text-xs font-bold text-slate-400">{t('verification.category')}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">{cat.label}</p>
+                    </div>
+                  </div>
+
+                  {/* Created At */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400">{t('verification.date')}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">
                         {new Date(itemData.createdAt).toLocaleDateString("ar-SA", {
-                          weekday: 'long',
+                          weekday: 'short',
                           year: 'numeric',
-                          month: 'long',
+                          month: 'short',
                           day: 'numeric'
                         })}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 flex items-center gap-3">
-                    <History className="w-5 h-5 text-cyan-400 shrink-0" />
+                  {/* Updated At */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                      <History className="w-5 h-5" />
+                    </div>
                     <div>
-                      <p className="text-xs text-slate-500">{t('verification.update')}</p>
-                      <p className="text-sm font-bold text-slate-200 mt-0.5">
+                      <p className="text-xs font-bold text-slate-400">{t('verification.update')}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">
                         {itemData.updatedAt ? new Date(itemData.updatedAt).toLocaleDateString("ar-SA", {
-                          weekday: 'long',
+                          weekday: 'short',
                           year: 'numeric',
-                          month: 'long',
+                          month: 'short',
                           day: 'numeric'
                         }) : "-"}
                       </p>
@@ -353,38 +565,39 @@ export default function VerificationPage() {
                   </div>
                 </div>
 
+                {/* Closure Details (If Delivered or Closed) */}
                 {(itemData.status === "DELIVERED" || itemData.closedByName || itemData.deliveredAt) && (
-                  <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/15 space-y-3">
-                    <p className="text-sm font-bold text-cyan-300 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-cyan-500/10 border border-teal-500/20 space-y-4 shadow-xs">
+                    <p className="text-sm font-extrabold text-teal-900 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-teal-600" />
                       {t('verification.closure_data')}
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-slate-700 shrink-0">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-center gap-3 bg-white/80 p-3 rounded-xl border border-teal-500/15">
+                        <Avatar className="h-10 w-10 border border-teal-500/30 shrink-0">
                           <AvatarImage
                             src={itemData.closedByProfileImage || undefined}
                             alt={itemData.closedByName || "closer"}
                           />
-                          <AvatarFallback className="bg-slate-800 text-slate-300">
+                          <AvatarFallback className="bg-teal-700 text-white font-bold">
                             <User className="w-4 h-4" />
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-xs text-slate-500">{t('verification.closed_by')}</p>
-                          <p className="text-sm font-bold text-slate-200 mt-0.5 truncate">
+                          <p className="text-[11px] font-bold text-slate-400">{t('verification.closed_by')}</p>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
                             {itemData.closedByName || t('verification.not_available')}
                           </p>
                         </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-500">{t('verification.delivered_at')}</p>
-                        <p className="text-sm font-bold text-slate-200 mt-0.5">
+
+                      <div className="bg-white/80 p-3 rounded-xl border border-teal-500/15">
+                        <p className="text-[11px] font-bold text-slate-400">{t('verification.delivered_at')}</p>
+                        <p className="text-xs font-bold text-slate-900 mt-0.5">
                           {itemData.deliveredAt
                             ? new Date(itemData.deliveredAt).toLocaleString("ar-SA", {
-                                weekday: 'long',
                                 year: 'numeric',
-                                month: 'long',
+                                month: 'short',
                                 day: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit',
@@ -392,32 +605,25 @@ export default function VerificationPage() {
                             : t('verification.not_available')}
                         </p>
                       </div>
-                      <div className="md:col-span-2">
-                        <p className="text-xs text-slate-500">{t('verification.order_number')}</p>
-                        <p className="text-sm font-bold font-mono text-cyan-200 mt-0.5">
+
+                      <div className="bg-white/80 p-3 rounded-xl border border-teal-500/15">
+                        <p className="text-[11px] font-bold text-slate-400">{t('verification.order_number')}</p>
+                        <p className="text-xs font-bold font-mono text-teal-700 mt-0.5">
                           {itemData.orderNumber || t('verification.not_available')}
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
-
-                {itemData.itemTypeCategory === "sim" && itemData.carrierName && (
-                  <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 flex items-center justify-between">
-                    <span className="text-slate-400 text-sm">{t('verification.item_28346')}</span>
-                    <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold px-3">
-                      {itemData.carrierName}
-                    </Badge>
-                  </div>
-                )}
               </CardContent>
 
-              <CardFooter className="bg-slate-950/40 border-t border-slate-800 p-6 flex flex-col sm:flex-row gap-3">
+              {/* Status Update Actions */}
+              <CardFooter className="bg-slate-50/90 border-t border-slate-200/80 p-6 flex flex-col sm:flex-row gap-3">
                 {itemData.status === "RECEIVED_BY_TECHNICIAN" ? (
                   <Button
                     onClick={() => updateStatusMutation.mutate({ status: "DELIVERED" })}
                     disabled={updateStatusMutation.isPending}
-                    className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black"
+                    className="flex-1 h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-extrabold text-base rounded-xl shadow-md shadow-teal-600/20 active:scale-[0.98] transition-all"
                   >
                     {updateStatusMutation.isPending ? t('verification.save') : t('verification.device_close_request')}
                   </Button>
@@ -425,7 +631,7 @@ export default function VerificationPage() {
                   <Button
                     onClick={() => updateStatusMutation.mutate({ status: "RECEIVED_BY_TECHNICIAN" })}
                     disabled={updateStatusMutation.isPending}
-                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black"
+                    className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-base rounded-xl shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all"
                   >
                     {updateStatusMutation.isPending ? t('verification.save') : t('verification.item_28690')}
                   </Button>
@@ -436,7 +642,7 @@ export default function VerificationPage() {
                     onClick={() => updateStatusMutation.mutate({ status: "RETURNED" })}
                     disabled={updateStatusMutation.isPending}
                     variant="outline"
-                    className="border-red-500/30 hover:bg-red-500/10 text-red-400 font-bold"
+                    className="h-12 px-6 border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-extrabold rounded-xl transition-all"
                   >
                     {t('verification.primary')}
                   </Button>

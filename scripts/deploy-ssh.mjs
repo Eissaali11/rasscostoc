@@ -6,13 +6,13 @@ const require = createRequire(import.meta.url);
 const { Client } = require('ssh2');
 
 const conn = new Client();
-const PROJECT_PATH = '/home/stoc/htdocs/stoc.fun';
+const PROJECT_PATH = '/home/nuzum/htdocs/nuzum.fun';
 
 const COMMANDS = [
   `cd ${PROJECT_PATH}`,
   'git reset --hard',
   'git clean -f -d',
-  'git pull origin main',
+  'git pull origin erp-008/phase-2-financial-integrity',
   'npm install',
   'npm run build',
   'pm2 restart nulip-inventory',
