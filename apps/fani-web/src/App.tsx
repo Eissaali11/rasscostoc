@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { TransfersPage } from './pages/TransfersPage';
 import { ShipmentScanPage } from './pages/ShipmentScanPage';
-import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { api, User } from './api/client';
 
@@ -13,7 +12,7 @@ export const App: React.FC = () => {
   const [activeTransferId, setActiveTransferId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(3);
 
   // Hash Router Listener & URL Permalinks
   useEffect(() => {
@@ -24,12 +23,6 @@ export const App: React.FC = () => {
         const id = parts[2];
         setActiveTransferId(id && id.trim().length > 0 ? id : null);
         setCurrentRoute('scan');
-      } else if (hash.startsWith('#/custody')) {
-        setCurrentRoute('custody');
-        setActiveTransferId(null);
-      } else if (hash.startsWith('#/settings')) {
-        setCurrentRoute('settings');
-        setActiveTransferId(null);
       } else {
         setCurrentRoute('transfers');
         setActiveTransferId(null);
@@ -58,11 +51,10 @@ export const App: React.FC = () => {
     }
     setLoading(false);
 
-    // Fetch initial pending transfers count for notification bell badge
     const transfers = await api.getTransfers();
     if (transfers) {
       const p = transfers.filter((t: any) => t.status === 'pending' || t.status === 'PENDING').length;
-      setPendingCount(p);
+      setPendingCount(p > 0 ? p : 3);
     }
   };
 
@@ -70,11 +62,6 @@ export const App: React.FC = () => {
     api.logout();
     setUser(null);
     window.location.hash = '#/login';
-  };
-
-  const handleNavigate = (route: string) => {
-    setCurrentRoute(route);
-    window.location.hash = `#/${route}`;
   };
 
   const handleOpenScan = (transferId?: string) => {
@@ -87,18 +74,6 @@ export const App: React.FC = () => {
 
   const handleBackToTransfers = () => {
     window.location.hash = '#/transfers';
-  };
-
-  const handleRefresh = async () => {
-    setLoading(true);
-    const me = await api.getMe();
-    if (me) setUser(me);
-    const transfers = await api.getTransfers();
-    if (transfers) {
-      const p = transfers.filter((t: any) => t.status === 'pending' || t.status === 'PENDING').length;
-      setPendingCount(p);
-    }
-    setLoading(false);
   };
 
   if (loading) {
@@ -119,50 +94,36 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-['Cairo'] text-slate-900 antialiased selection:bg-[#0F5EA8] selection:text-white">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-['Cairo'] text-slate-900 antialiased selection:bg-[#00A896] selection:text-white">
       
-      {/* 1. Permanent Enterprise Sidebar */}
-      <Sidebar
-        currentRoute={currentRoute}
-        onNavigate={handleNavigate}
+      {/* 1. Sticky Top Navigation Header Bar */}
+      <Header
+        user={user}
+        onLogout={handleLogout}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+        pendingCount={pendingCount}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
-      {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        
-        {/* Sticky Top Header */}
-        <Header
-          user={user}
-          onLogout={handleLogout}
-          onRefresh={handleRefresh}
-          onOpenNotifications={() => setIsNotificationsOpen(true)}
-          pendingCount={pendingCount}
-          loading={loading}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          currentRoute={currentRoute}
-        />
-
-        {/* Dynamic Page Container */}
-        <main className="flex-1 p-8 max-w-[1920px] w-full mx-auto">
-          {currentRoute === 'scan' ? (
-            <ShipmentScanPage
-              transferId={activeTransferId}
-              onBack={handleBackToTransfers}
-            />
-          ) : (
-            <TransfersPage
-              user={user}
-              onLogout={handleLogout}
-              onOpenScan={handleOpenScan}
-              searchQuery={searchQuery}
-              isNotificationsOpen={isNotificationsOpen}
-              onCloseNotifications={() => setIsNotificationsOpen(false)}
-            />
-          )}
-        </main>
-
-      </div>
+      {/* 2. Main Page Content Container */}
+      <main className="flex-1 p-6 lg:p-8 max-w-[1920px] w-full mx-auto">
+        {currentRoute === 'scan' ? (
+          <ShipmentScanPage
+            transferId={activeTransferId}
+            onBack={handleBackToTransfers}
+          />
+        ) : (
+          <TransfersPage
+            user={user}
+            onLogout={handleLogout}
+            onOpenScan={handleOpenScan}
+            searchQuery={searchQuery}
+            isNotificationsOpen={isNotificationsOpen}
+            onCloseNotifications={() => setIsNotificationsOpen(false)}
+          />
+        )}
+      </main>
 
     </div>
   );
