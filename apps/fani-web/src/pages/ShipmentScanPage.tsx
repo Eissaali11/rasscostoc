@@ -7,141 +7,20 @@ import {
   Cpu, 
   Smartphone, 
   ArrowRight, 
-  Sparkles,
   Check,
   Send,
-  ShieldCheck,
   Layers,
   Info,
-  Radio,
-  HardDrive
+  Radio
 } from 'lucide-react';
 import { api, WarehouseTransfer, TransferItem } from '../api/client';
 import { RasscoLogo } from '../components/RasscoLogo';
+import { ItemProductAvatar, getItemMetadata } from '../components/ItemProductAvatar';
 
 interface ShipmentScanPageProps {
   transferId?: string;
   onBack: () => void;
 }
-
-// Professional Metadata & Visual Mapping for POS Devices & SIM Cards
-interface ItemMeta {
-  name: string;
-  categoryName: string;
-  category: 'devices' | 'sim' | 'accessories';
-  manufacturer: string;
-  barcodeFormat: string;
-  iconType: 'pos' | 'sim' | 'box';
-  themeColor: string;
-  badgeBg: string;
-}
-
-const getItemMetadata = (itemTypeKey: string): ItemMeta => {
-  const key = (itemTypeKey || '').trim();
-
-  if (key.toUpperCase().includes('A960')) {
-    return {
-      name: 'جهاز POS — PAX A960 Smart',
-      categoryName: 'أجهزة نقاط البيع ذكية (Android)',
-      category: 'devices',
-      manufacturer: 'PAX Technology — Touch & Printer',
-      barcodeFormat: 'السيريال عالي الدقة (SN: 8-12 رقم)',
-      iconType: 'pos',
-      themeColor: '#0F5EA8',
-      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
-    };
-  }
-
-  if (key.toLowerCase().includes('verifone') || key.toLowerCase().includes('vx680')) {
-    return {
-      name: 'جهاز POS — Verifone VX680',
-      categoryName: 'أجهزة نقاط البيع المحمولة',
-      category: 'devices',
-      manufacturer: 'Verifone Systems Inc.',
-      barcodeFormat: 'سيريال الجهاز الخلفي (S/N)',
-      iconType: 'pos',
-      themeColor: '#0F5EA8',
-      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
-    };
-  }
-
-  if (key.toLowerCase().includes('i9100') || key.toLowerCase().includes('i9000')) {
-    return {
-      name: 'جهاز POS — Urovo i9100 / i9000s',
-      categoryName: 'أجهزة نقاط البيع الذكية',
-      category: 'devices',
-      manufacturer: 'Urovo Payment Systems',
-      barcodeFormat: 'سيريال أسفل البطارية (SN)',
-      iconType: 'pos',
-      themeColor: '#0F5EA8',
-      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
-    };
-  }
-
-  if (key.toLowerCase().includes('n950')) {
-    return {
-      name: 'جهاز POS — Newland N950',
-      categoryName: 'أجهزة نقاط البيع الذكية',
-      category: 'devices',
-      manufacturer: 'Newland Payment Tech',
-      barcodeFormat: 'سيريال خلف الجهاز (S/N)',
-      iconType: 'pos',
-      themeColor: '#0F5EA8',
-      badgeBg: 'bg-blue-50 text-[#0F5EA8] border-blue-200',
-    };
-  }
-
-  if (key.toLowerCase().includes('stc')) {
-    return {
-      name: 'شريحة اتصال — STC 5G Data SIM',
-      categoryName: 'شرائح الاتصال والبيانات',
-      category: 'sim',
-      manufacturer: 'شركة الاتصالات السعودية (STC)',
-      barcodeFormat: 'باركود الـ ICCID (يبدأ بـ 89966...)',
-      iconType: 'sim',
-      themeColor: '#16A34A',
-      badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    };
-  }
-
-  if (key.toLowerCase().includes('mobily')) {
-    return {
-      name: 'شريحة اتصال — Mobily Business SIM',
-      categoryName: 'شرائح الاتصال والبيانات',
-      category: 'sim',
-      manufacturer: 'شركة موبايلي (Mobily)',
-      barcodeFormat: 'باركود الـ ICCID (يبدأ بـ 89966...)',
-      iconType: 'sim',
-      themeColor: '#0284C7',
-      badgeBg: 'bg-sky-50 text-sky-800 border-sky-200',
-    };
-  }
-
-  if (key.toLowerCase().includes('zain')) {
-    return {
-      name: 'شريحة اتصال — Zain M2M Data SIM',
-      categoryName: 'شرائح الاتصال والبيانات',
-      category: 'sim',
-      manufacturer: 'شركة زين السعودية (Zain)',
-      barcodeFormat: 'باركود الـ ICCID (يبدأ بـ 89966...)',
-      iconType: 'sim',
-      themeColor: '#7C3AED',
-      badgeBg: 'bg-purple-50 text-purple-800 border-purple-200',
-    };
-  }
-
-  // Fallback for custom device names
-  return {
-    name: `صنف — ${key || 'أجهزة ومستلزمات'}`,
-    categoryName: 'مستلزمات وأجهزة مخزنية',
-    category: key.toLowerCase().includes('sim') ? 'sim' : 'devices',
-    manufacturer: 'نظام RASSCO للمخزون والعهدة',
-    barcodeFormat: 'باركود أو سيريال القطعة',
-    iconType: key.toLowerCase().includes('sim') ? 'sim' : 'pos',
-    themeColor: '#0F5EA8',
-    badgeBg: 'bg-slate-100 text-slate-800 border-slate-200',
-  };
-};
 
 export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, onBack }) => {
   const [transfer, setTransfer] = useState<WarehouseTransfer | null>(null);
@@ -424,9 +303,9 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
             {/* Grid of Visual Item Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {transfer?.items.map((item) => {
-                const meta = getItemMetadata(item.itemTypeId || item.itemTypeName);
                 const isSelected = item.itemTypeId === selectedItemTypeId;
                 const isItemDone = item.scannedQuantity >= item.requestedQuantity;
+                const meta = getItemMetadata(item.itemTypeId || item.itemTypeName);
 
                 return (
                   <div
@@ -438,29 +317,13 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                         : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    {/* Top Row: Icon + Category Badge */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-xs ${meta.iconType === 'sim' ? 'bg-emerald-600' : 'bg-[#0F5EA8]'}`}>
-                        {meta.iconType === 'sim' ? (
-                          <Radio className="w-6 h-6" />
-                        ) : (
-                          <Cpu className="w-6 h-6" />
-                        )}
-                      </div>
-
-                      <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${meta.badgeBg}`}>
-                        {meta.categoryName}
-                      </span>
-                    </div>
-
-                    {/* Item Title & Specs */}
-                    <div className="space-y-1">
-                      <h4 className="font-black text-sm text-slate-900">{meta.name}</h4>
-                      <p className="text-[11px] font-semibold text-slate-500">{meta.manufacturer}</p>
+                    {/* Item Avatar Header */}
+                    <div className="mb-3">
+                      <ItemProductAvatar itemTypeKey={item.itemTypeId || item.itemTypeName} size="md" />
                     </div>
 
                     {/* Quantity & Barcode Format Hint */}
-                    <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                    <div className="mt-2 pt-3 border-t border-slate-200/60 flex items-center justify-between">
                       <span className="text-[10px] font-bold text-slate-500">{meta.barcodeFormat}</span>
                       <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${isItemDone ? 'bg-emerald-100 text-emerald-800' : 'bg-[#0F5EA8] text-white'}`}>
                         {item.scannedQuantity} / {item.requestedQuantity} قطعة
@@ -577,7 +440,7 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
         {/* Right Column: Detailed Specific Item Quantities & Scan Log (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
           
-          {/* Quantity Matching Cards */}
+          {/* Quantity Matching Cards with Product Avatars */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <h3 className="text-sm font-extrabold text-slate-900 flex items-center justify-between">
               <span>مطابقة كميات الأصناف بالتفصيل</span>
@@ -595,12 +458,13 @@ export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, 
                   <div
                     key={item.id}
                     onClick={() => setSelectedItemTypeId(item.itemTypeId)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all space-y-3 ${
                       isSelected ? 'bg-blue-50/70 border-[#0F5EA8]' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-extrabold text-xs text-slate-900">{meta.name}</span>
+                    <div className="flex items-center justify-between">
+                      <ItemProductAvatar itemTypeKey={item.itemTypeId || item.itemTypeName} size="sm" showCategoryPill={false} />
+                      
                       <span className={`text-xs font-black px-3 py-0.5 rounded-full ${isComplete ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
                         {item.scannedQuantity} / {item.requestedQuantity} قطعة
                       </span>

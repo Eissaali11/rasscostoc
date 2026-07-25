@@ -11,11 +11,14 @@ import {
   XCircle,
   Search,
   Bell,
-  User as UserIcon,
+  Building2,
+  Calendar,
+  Layers
 } from 'lucide-react';
 import { api, User } from '../api/client';
 import { RasscoLogo } from '../components/RasscoLogo';
 import { NotificationsDrawer, NotificationItem } from '../components/NotificationsDrawer';
+import { ItemProductAvatar, getItemMetadata } from '../components/ItemProductAvatar';
 
 interface TransfersPageProps {
   user: User;
@@ -65,13 +68,14 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
   const notifications: NotificationItem[] = transfers.map((t) => {
     const isPending = t.status === 'pending' || t.status === 'PENDING';
     const trfCode = `TRF-${(t.id || '1001').substring(0, 8).toUpperCase()}`;
+    const meta = getItemMetadata(t.itemType || 'A960');
 
     return {
       id: `notif-${t.id}`,
       title: isPending ? `⚠️ شحنة محولة بانتظار استلامك: ${trfCode}` : `✅ تم اعتماد الشحنة: ${trfCode}`,
       message: isPending
-        ? `قام ${t.warehouseName || 'المستودع الرئيسي'} بتحويل شحنة أجهزة/شرائح لك (${t.quantity || 1} قطعة). يرجى إجراء المسح الضوئي والمطابقة للاستلام.`
-        : `تم قبول الشحنة وإضافتها لعهدتك المخزنية الرسمية بنجاح.`,
+        ? `قام ${t.warehouseName || 'المستودع الرئيسي'} بتحويل شحنة [${meta.name}] لك (${t.quantity || 1} قطعة). يرجى إجراء المسح الضوئي والمطابقة للاستلام.`
+        : `تم قبول شحنة [${meta.name}] وإضافتها لعهدتك المخزنية الرسمية بنجاح.`,
       type: isPending ? 'transfer_pending' : 'transfer_accepted',
       createdAt: t.createdAt ? new Date(t.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : 'اليوم',
       transferId: t.id,
@@ -84,7 +88,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
     const s = (status || '').toLowerCase();
     if (s === 'pending') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-extrabold shadow-2xs">
           <Clock className="w-3.5 h-3.5 text-amber-500" />
           <span>بانتظار الاستلام</span>
         </span>
@@ -92,7 +96,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
     }
     if (s === 'accepted' || s === 'completed') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-extrabold shadow-2xs">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           <span>تم الاستلام (مكتمل)</span>
         </span>
@@ -100,14 +104,14 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
     }
     if (s === 'rejected') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-extrabold shadow-2xs">
           <XCircle className="w-3.5 h-3.5 text-rose-500" />
           <span>مرفوض</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-extrabold shadow-2xs">
         <Scan className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
         <span>قيد الاستلام</span>
       </span>
@@ -116,6 +120,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
 
   // Top active pending transfer
   const activePendingTransfer = transfers.find((t) => t.status === 'pending' || t.status === 'PENDING');
+  const activeMeta = activePendingTransfer ? getItemMetadata(activePendingTransfer.itemType || 'A960') : null;
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-slate-900 pb-12">
@@ -136,7 +141,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="البحث برقم الشحنة أو اسم المستودع..."
+              placeholder="البحث برقم الشحنة أو اسم المستودع أو نوع الصنف..."
               className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs font-semibold focus:bg-white focus:border-[#0F5EA8] outline-none transition-all"
             />
           </div>
@@ -152,7 +157,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Notifications Badge Button (Active Click Handler) */}
+            {/* Notifications Badge Button */}
             <div className="relative">
               <button
                 onClick={() => setIsNotificationsOpen(true)}
@@ -255,27 +260,31 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
 
         </section>
 
-        {/* 3. Featured Active Shipment Spotlight Card */}
-        {activePendingTransfer ? (
+        {/* 3. Featured Active Shipment Spotlight Card with Product Avatar */}
+        {activePendingTransfer && activeMeta ? (
           <section className="bg-white rounded-3xl p-6 border-2 border-[#12C6E8] shadow-md flex flex-col lg:flex-row items-center justify-between gap-6 relative overflow-hidden">
-            <div className="space-y-2 text-right w-full lg:w-auto">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0F5EA8]/10 text-[#0F5EA8] text-xs font-bold">
-                <Scan className="w-3.5 h-3.5" />
-                <span>⚠️ شحنة جديدة بانتظار استلامها بالسكانر الآن</span>
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900">
-                شحنة رقم: TRF-{activePendingTransfer.id.substring(0, 8).toUpperCase()}
-              </h3>
-              <div className="text-xs text-slate-500 flex items-center gap-4">
-                <span>المصدر: <strong className="text-slate-800">{activePendingTransfer.warehouseName || 'المستودع الرئيسي'}</strong></span>
-                <span>•</span>
-                <span>الصنف: <strong className="text-slate-800">{activePendingTransfer.itemType || 'أجهزة POS'}</strong> ({activePendingTransfer.quantity || 1} قطعة)</span>
+            <div className="flex items-center gap-5 text-right w-full lg:w-auto">
+              <ItemProductAvatar itemTypeKey={activePendingTransfer.itemType || 'A960'} size="lg" showCategoryPill={false} />
+
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#0F5EA8]/10 text-[#0F5EA8] text-xs font-bold">
+                  <Scan className="w-3.5 h-3.5" />
+                  <span>⚠️ شحنة جديدة بانتظار استلامها بالسكانر الآن</span>
+                </div>
+                <h3 className="text-xl font-black text-slate-900">
+                  {activeMeta.name} — شحنة رقم TRF-{activePendingTransfer.id.substring(0, 8).toUpperCase()}
+                </h3>
+                <div className="text-xs text-slate-500 flex items-center gap-3">
+                  <span>المصدر: <strong className="text-slate-800">{activePendingTransfer.warehouseName || 'المستودع الرئيسي'}</strong></span>
+                  <span>•</span>
+                  <span>الكمية المطلوبة: <strong className="text-[#0F5EA8] font-bold">{activePendingTransfer.quantity || 1} قطعة</strong></span>
+                </div>
               </div>
             </div>
 
             <button
               onClick={() => onOpenScan(activePendingTransfer.id)}
-              className="w-full lg:w-auto px-8 py-4 rounded-2xl rassco-btn-primary text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md animate-pulse"
+              className="w-full lg:w-auto px-8 py-4 rounded-2xl rassco-btn-primary text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md animate-pulse shrink-0"
             >
               <Scan className="w-5 h-5 text-[#12C6E8]" />
               <span>بدء مسح واستلام هذه الشحنة بالسكانر</span>
@@ -283,7 +292,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
           </section>
         ) : null}
 
-        {/* 4. Desktop Professional Data Table Section */}
+        {/* 4. Desktop Professional Data Table Section with Product Avatars */}
         <section className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
           
           {/* Table Header Controls */}
@@ -294,7 +303,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-slate-900">جدول الشحنات والتحويلات المخزنية المباشرة</h3>
-                <p className="text-xs text-slate-500">عرض دقيق ومباشر لجميع الأجهزة والشرائح المحولة للفني من المستودع</p>
+                <p className="text-xs text-slate-500">عرض دقيق ومجهّز بافتارات المنتجات لجميع الأجهزة والشرائح المحولة للفني</p>
               </div>
             </div>
 
@@ -302,19 +311,19 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600 w-full sm:w-auto overflow-x-auto">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'all' ? 'bg-white text-[#0F5EA8] shadow-xs font-black' : 'hover:text-slate-900'}`}
+                className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer ${activeTab === 'all' ? 'bg-white text-[#0F5EA8] shadow-xs font-black' : 'hover:text-slate-900'}`}
               >
                 الكل ({transfers.length})
               </button>
               <button
                 onClick={() => setActiveTab('pending')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'pending' ? 'bg-white text-amber-600 shadow-xs font-black' : 'hover:text-slate-900'}`}
+                className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer ${activeTab === 'pending' ? 'bg-white text-amber-600 shadow-xs font-black' : 'hover:text-slate-900'}`}
               >
                 بانتظار الاستلام ({pendingCount})
               </button>
               <button
                 onClick={() => setActiveTab('accepted')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'accepted' ? 'bg-white text-emerald-600 shadow-xs font-black' : 'hover:text-slate-900'}`}
+                className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer ${activeTab === 'accepted' ? 'bg-white text-emerald-600 shadow-xs font-black' : 'hover:text-slate-900'}`}
               >
                 مكتمل ومستلم ({acceptedCount})
               </button>
@@ -335,7 +344,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
                   <tr>
                     <th className="py-4 px-6">رقم الشحنة</th>
                     <th className="py-4 px-6">المستودع المصدر</th>
-                    <th className="py-4 px-6">نوع الصنف والموديل</th>
+                    <th className="py-4 px-6">افتار ونوع الصنف والموديل</th>
                     <th className="py-4 px-6">الكمية</th>
                     <th className="py-4 px-6">الحالة</th>
                     <th className="py-4 px-6">تاريخ التحويل</th>
@@ -347,27 +356,53 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({ user, onLogout, on
                     const isPending = (t.status || '').toLowerCase() === 'pending';
 
                     return (
-                      <tr key={t.id} className={`hover:bg-slate-50 transition-colors ${isPending ? 'bg-amber-50/30' : ''}`}>
-                        <td className="py-4 px-6 font-extrabold text-[#0F5EA8] font-mono text-sm">
-                          TRF-{t.id.substring(0, 8).toUpperCase()}
-                        </td>
+                      <tr key={t.id} className={`hover:bg-slate-50/80 transition-colors ${isPending ? 'bg-amber-50/20' : ''}`}>
+                        
+                        {/* 1. Transfer Number Badge */}
                         <td className="py-4 px-6">
-                          <div className="font-bold text-slate-900">{t.warehouseName || 'المستودع الرئيسي'}</div>
-                          <div className="text-[11px] text-slate-400">إلى عهدة: {user.name || user.username}</div>
+                          <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[#0F5EA8] font-mono font-black text-xs shadow-2xs">
+                            TRF-{t.id.substring(0, 8).toUpperCase()}
+                          </span>
                         </td>
+
+                        {/* 2. Source Warehouse */}
                         <td className="py-4 px-6">
-                          <div className="font-bold text-slate-900">{t.itemType || 'أجهزة POS والتطبيقات'}</div>
-                          <div className="text-[11px] text-slate-500">{t.packagingType === 'box' ? 'كرتون' : 'وحدة / قطعة'}</div>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-slate-400" />
+                            <div>
+                              <div className="font-bold text-slate-900">{t.warehouseName || 'المستودع الرئيسي'}</div>
+                              <div className="text-[10px] text-slate-400">إلى عهدة: {user.name || user.username}</div>
+                            </div>
+                          </div>
                         </td>
+
+                        {/* 3. Rich Item Product Avatar & Title */}
                         <td className="py-4 px-6">
-                          <div className="font-black text-slate-900 text-sm">{t.quantity || 1} قطعة</div>
+                          <ItemProductAvatar itemTypeKey={t.itemType || 'A960'} size="md" />
                         </td>
+
+                        {/* 4. Quantity Pill */}
+                        <td className="py-4 px-6">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-900 font-black text-xs">
+                            <Layers className="w-3.5 h-3.5 text-[#0F5EA8]" />
+                            <span>{t.quantity || 1} قطعة</span>
+                          </span>
+                        </td>
+
+                        {/* 5. Status Badge */}
                         <td className="py-4 px-6">
                           {renderStatusBadge(t.status)}
                         </td>
-                        <td className="py-4 px-6 text-slate-500 font-mono">
-                          {t.createdAt ? new Date(t.createdAt).toLocaleDateString('ar-SA') : 'اليوم'}
+
+                        {/* 6. Formatted Date */}
+                        <td className="py-4 px-6 text-slate-500">
+                          <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{t.createdAt ? new Date(t.createdAt).toLocaleDateString('ar-SA') : 'اليوم'}</span>
+                          </div>
                         </td>
+
+                        {/* 7. Action Button */}
                         <td className="py-4 px-6 text-center">
                           {isPending ? (
                             <button
