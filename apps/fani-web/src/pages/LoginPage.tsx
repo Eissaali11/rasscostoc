@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ShieldCheck, User, Lock, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { User, Lock, ArrowLeft, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { api, User as UserType } from '../api/client';
+import { RasscoLogo } from '../components/RasscoLogo';
 
 interface LoginPageProps {
   onLoginSuccess: (user: UserType) => void;
@@ -32,27 +33,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#0b1322] via-[#0f172a] to-[#040914] relative overflow-hidden">
-      {/* Background Decorative Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#070d18] relative overflow-hidden">
+      {/* Background Decorative RASSCO Glows */}
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-[#18B2B0]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Main Glass Card (Desktop Optimized) */}
-      <div className="w-full max-w-md glass-card rounded-3xl p-8 sm:p-10 relative z-10 border border-slate-700/50 shadow-2xl backdrop-blur-xl">
+      {/* Main RASSCO Brand Card */}
+      <div className="w-full max-w-md rassco-glass-card rounded-3xl p-8 sm:p-10 relative z-10 border border-[#18B2B0]/25 shadow-2xl backdrop-blur-xl">
         
-        {/* Header Branding */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-teal-400 p-0.5 shadow-lg shadow-cyan-500/20 mb-4">
-            <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-teal-400" />
-            </div>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2">
-            شركة رأس السعودية المحدودة
-          </h1>
-          <p className="text-slate-400 text-sm">
-            بوابة الفنيين — إدارة العهدة والاستلام السريع
-          </p>
+        {/* Official RASSCO Logo Header */}
+        <div className="flex flex-col items-center text-center mb-8">
+          <RasscoLogo size="xl" subtitle="بوابة الفنيين — إدارة وتأكيد الاستلام" />
         </div>
 
         {/* Error Alert */}
@@ -66,11 +57,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2 mr-1">
+            <label className="block text-xs font-bold text-slate-300 mb-2 mr-1">
               اسم المستخدم
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-[#18B2B0]">
                 <User className="w-5 h-5" />
               </div>
               <input
@@ -78,18 +69,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="أدخل اسم المستخدم"
-                className="w-full pl-4 pr-11 py-3.5 rounded-2xl glass-input text-white placeholder-slate-500 text-sm"
+                className="w-full pl-4 pr-12 py-4 rounded-2xl glass-input text-white placeholder-slate-500 text-sm font-semibold"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2 mr-1">
+            <label className="block text-xs font-bold text-slate-300 mb-2 mr-1">
               كلمة المرور
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-[#18B2B0]">
                 <Lock className="w-5 h-5" />
               </div>
               <input
@@ -97,7 +88,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="أدخل كلمة المرور"
-                className="w-full pl-4 pr-11 py-3.5 rounded-2xl glass-input text-white placeholder-slate-500 text-sm"
+                className="w-full pl-4 pr-12 py-4 rounded-2xl glass-input text-white placeholder-slate-500 text-sm font-semibold"
                 required
               />
             </div>
@@ -106,12 +97,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-bold text-base shadow-lg shadow-cyan-500/25 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full py-4 rounded-2xl rassco-btn-primary text-base shadow-xl flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>جاري تسجيل الدخول...</span>
+                <span>جاري المصادقة...</span>
               </>
             ) : (
               <>
@@ -122,8 +113,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        <div className="mt-8 text-center text-xs text-slate-500 border-t border-slate-800/80 pt-6">
-          نظام RASSCO Enterprise © 2026 — الإصدار المخصص للويب
+        <div className="mt-8 text-center text-xs text-slate-500 border-t border-slate-800/80 pt-6 flex items-center justify-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[#18B2B0]" />
+          <span>نظام RASSCO Enterprise STOCKPRO © 2026</span>
         </div>
       </div>
     </div>
