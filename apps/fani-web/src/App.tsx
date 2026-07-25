@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { TransfersPage } from './pages/TransfersPage';
 import { ShipmentScanPage } from './pages/ShipmentScanPage';
+import { Sidebar } from './components/Sidebar';
+import { Header } from './components/Header';
 import { api, User } from './api/client';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'transfers' | 'scan'>('transfers');
-  const [activeTransferId, setActiveTransferId] = useState<string | undefined>(undefined);
+  const [currentRoute, setCurrentRoute] = useState<string>('transfers');
+  const [activeTransferId, setActiveTransferId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Hash Router Listener & URL Permalinks
   useEffect(() => {
@@ -17,11 +22,17 @@ export const App: React.FC = () => {
       if (hash.startsWith('#/scan')) {
         const parts = hash.split('/');
         const id = parts[2];
-        setActiveTransferId(id && id.trim().length > 0 ? id : undefined);
-        setCurrentView('scan');
+        setActiveTransferId(id && id.trim().length > 0 ? id : null);
+        setCurrentRoute('scan');
+      } else if (hash.startsWith('#/custody')) {
+        setCurrentRoute('custody');
+        setActiveTransferId(null);
+      } else if (hash.startsWith('#/settings')) {
+        setCurrentRoute('settings');
+        setActiveTransferId(null);
       } else {
-        setCurrentView('transfers');
-        setActiveTransferId(undefined);
+        setCurrentRoute('transfers');
+        setActiveTransferId(null);
       }
     };
 
@@ -46,12 +57,24 @@ export const App: React.FC = () => {
       setUser(me);
     }
     setLoading(false);
+
+    // Fetch initial pending transfers count for notification bell badge
+    const transfers = await api.getTransfers();
+    if (transfers) {
+      const p = transfers.filter((t: any) => t.status === 'pending' || t.status === 'PENDING').length;
+      setPendingCount(p);
+    }
   };
 
   const handleLogout = () => {
     api.logout();
     setUser(null);
     window.location.hash = '#/login';
+  };
+
+  const handleNavigate = (route: string) => {
+    setCurrentRoute(route);
+    window.location.hash = `#/${route}`;
   };
 
   const handleOpenScan = (transferId?: string) => {
@@ -66,10 +89,27 @@ export const App: React.FC = () => {
     window.location.hash = '#/transfers';
   };
 
+  const handleRefresh = async () => {
+    setLoading(true);
+    const me = await api.getMe();
+    if (me) setUser(me);
+    const transfers = await api.getTransfers();
+    if (transfers) {
+      const p = transfers.filter((t: any) => t.status === 'pending' || t.status === 'PENDING').length;
+      setPendingCount(p);
+    }
+    setLoading(false);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center text-slate-900 font-bold">
-        <div className="text-sm animate-pulse text-[#0F5EA8]">جاري تحميل نظام RASSCO الويب...</div>
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center text-slate-900 font-bold space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#0F5EA8] text-white flex items-center justify-center text-xl font-black shadow-md animate-bounce">
+          R
+        </div>
+        <div className="text-sm font-extrabold text-[#0F5EA8] animate-pulse">
+          StockPro Enterprise ERP — جاري تحميل بوابة الفنيين...
+        </div>
       </div>
     );
   }
@@ -78,20 +118,52 @@ export const App: React.FC = () => {
     return <LoginPage onLoginSuccess={(u) => { setUser(u); window.location.hash = '#/transfers'; }} />;
   }
 
-  if (currentView === 'scan') {
-    return (
-      <ShipmentScanPage
-        transferId={activeTransferId}
-        onBack={handleBackToTransfers}
-      />
-    );
-  }
-
   return (
-    <TransfersPage
-      user={user}
-      onLogout={handleLogout}
-      onOpenScan={handleOpenScan}
-    />
+    <div className="min-h-screen bg-[#F8FAFC] flex font-['Cairo'] text-slate-900 antialiased selection:bg-[#0F5EA8] selection:text-white">
+      
+      {/* 1. Permanent Enterprise Sidebar */}
+      <Sidebar
+        currentRoute={currentRoute}
+        onNavigate={handleNavigate}
+      />
+
+      {/* 2. Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        
+        {/* Sticky Top Header */}
+        <Header
+          user={user}
+          onLogout={handleLogout}
+          onRefresh={handleRefresh}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          pendingCount={pendingCount}
+          loading={loading}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          currentRoute={currentRoute}
+        />
+
+        {/* Dynamic Page Container */}
+        <main className="flex-1 p-8 max-w-[1920px] w-full mx-auto">
+          {currentRoute === 'scan' ? (
+            <ShipmentScanPage
+              transferId={activeTransferId}
+              onBack={handleBackToTransfers}
+            />
+          ) : (
+            <TransfersPage
+              user={user}
+              onLogout={handleLogout}
+              onOpenScan={handleOpenScan}
+              searchQuery={searchQuery}
+              isNotificationsOpen={isNotificationsOpen}
+              onCloseNotifications={() => setIsNotificationsOpen(false)}
+            />
+          )}
+        </main>
+
+      </div>
+
+    </div>
   );
 };

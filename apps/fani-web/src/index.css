@@ -2,90 +2,168 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --primary-white: #FFFFFF;
-  --bg-main: #F5F7FA;
-  --surface-white: #FFFFFF;
-  --primary-blue: #0F5EA8;
-  --accent-cyan: #12C6E8;
-  --color-success: #16A34A;
-  --color-warning: #F59E0B;
-  --color-danger: #DC2626;
-  --border-light: #E5E7EB;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
+@layer base {
+  :root {
+    --primary-blue: #0F5EA8;
+    --accent-cyan: #12C6E8;
+    --bg-page: #F8FAFC;
+    --card-white: #FFFFFF;
+    --border-subtle: #E2E8F0;
+    --border-hover: #CBD5E1;
+    --text-heading: #0F172A;
+    --text-body: #334155;
+    --text-muted: #64748B;
+    --color-success: #16A34A;
+    --color-warning: #F59E0B;
+    --color-danger: #DC2626;
+  }
+
+  body {
+    background-color: #F8FAFC;
+    color: #0F172A;
+    font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
-body {
-  background-color: #F5F7FA;
-  color: #111827;
-  font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+/* Typography Hierarchy Tokens */
+.font-display {
+  font-family: 'Cairo', sans-serif;
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
-/* RASSCO Enterprise Light Cards */
-.rassco-light-card {
+.font-heading-xl {
+  font-family: 'Cairo', sans-serif;
+  font-size: 1.75rem;
+  line-height: 2.125rem;
+  font-weight: 800;
+}
+
+.font-heading-l {
+  font-family: 'Cairo', sans-serif;
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+  font-weight: 800;
+}
+
+.font-heading-m {
+  font-family: 'Cairo', sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+}
+
+.font-heading-s {
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  font-weight: 700;
+}
+
+.font-body-lg {
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+.font-body-md {
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.84375rem;
+  line-height: 1.375rem;
+  font-weight: 500;
+}
+
+.font-caption {
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  font-weight: 600;
+}
+
+/* Enterprise Fiori / Dynamics 365 Card Styles */
+.fiori-card {
   background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05),
-              0 2px 4px -2px rgba(15, 23, 42, 0.03);
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.rassco-light-card:hover {
-  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.08),
-              0 4px 6px -2px rgba(15, 23, 42, 0.04);
+.fiori-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  transform: translateY(-1px);
 }
 
+.fiori-card-spotlight {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+  border: 2px solid #12C6E8;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(15, 94, 168, 0.08), 0 8px 10px -6px rgba(15, 94, 168, 0.04);
+}
+
+/* Button Component Styles */
 .rassco-btn-primary {
   background-color: #0F5EA8;
   color: #FFFFFF;
   font-weight: 700;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(15, 94, 168, 0.25);
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(15, 94, 168, 0.2);
 }
 
 .rassco-btn-primary:hover {
-  background-color: #0c4e8c;
+  background-color: #0C4E8C;
+  box-shadow: 0 4px 14px rgba(15, 94, 168, 0.3);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 94, 168, 0.35);
 }
 
-.rassco-btn-accent {
-  background-color: #12C6E8;
-  color: #0F5EA8;
-  font-weight: 800;
+.rassco-btn-secondary {
+  background-color: #F1F5F9;
+  color: #334155;
+  border: 1px solid #E2E8F0;
+  font-weight: 700;
+  border-radius: 12px;
   transition: all 0.2s ease-in-out;
 }
 
-.rassco-btn-accent:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
+.rassco-btn-secondary:hover {
+  background-color: #E2E8F0;
+  color: #0F172A;
 }
 
-/* Scanner Input Focus Ring */
-.rassco-scan-input {
+/* Enterprise Table Custom Scrollbar & Selection */
+.fiori-table-container {
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
   background-color: #FFFFFF;
-  border: 2px solid #E5E7EB;
-  color: #111827;
-  transition: all 0.2s ease-in-out;
+  overflow: hidden;
 }
 
-.rassco-scan-input:focus {
-  border-color: #12C6E8;
-  box-shadow: 0 0 0 4px rgba(18, 198, 232, 0.2);
-  outline: none;
+.fiori-table tr {
+  transition: background-color 0.15s ease-in-out;
 }
 
-.scan-pulse-ring {
-  animation: pulse-ring-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.fiori-table tr:hover {
+  background-color: #F8FAFC;
 }
 
-@keyframes pulse-ring-light {
-  0%, 100% {
-    border-color: #12C6E8;
-    box-shadow: 0 0 15px rgba(18, 198, 232, 0.25);
-  }
-  50% {
-    border-color: #93C5FD;
-    box-shadow: 0 0 5px rgba(18, 198, 232, 0.1);
-  }
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }

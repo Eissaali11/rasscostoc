@@ -3,519 +3,433 @@ import {
   Scan, 
   CheckCircle2, 
   AlertCircle, 
-  PackageCheck, 
-  Cpu, 
-  Smartphone, 
+  XCircle, 
   ArrowRight, 
+  RefreshCw, 
+  Package, 
+  Building2, 
+  Layers, 
+  Trash2,
+  Barcode,
   Check,
-  Send,
-  Layers,
-  Info,
-  Radio
+  ShieldCheck,
+  Clock,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
-import { api, WarehouseTransfer, TransferItem } from '../api/client';
-import { RasscoLogo } from '../components/RasscoLogo';
+import { api } from '../api/client';
 import { ItemProductAvatar, getItemMetadata } from '../components/ItemProductAvatar';
 
 interface ShipmentScanPageProps {
-  transferId?: string;
+  transferId: string | null;
   onBack: () => void;
 }
 
 export const ShipmentScanPage: React.FC<ShipmentScanPageProps> = ({ transferId, onBack }) => {
-  const [transfer, setTransfer] = useState<WarehouseTransfer | null>(null);
+  const [transfer, setTransfer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedItemTypeId, setSelectedItemTypeId] = useState<string | null>(null);
-
-  // Hardware Scanner State
-  const [barcodeInput, setBarcodeInput] = useState('');
-  const [scannedItems, setScannedItems] = useState<{ serial: string; itemTypeName: string; time: string }[]>([]);
-  const [scanMessage, setScanMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [accepting, setAccepting] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  const [serialInput, setSerialInput] = useState('');
+  const [scannedItems, setScannedItems] = useState<Array<{ serial: string; itemType: string; timestamp: string }>>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [lastScanned, setLastScanned] = useState<{ serial: string; timestamp: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-Focus Enforcement
-  const enforceFocus = () => {
-    if (inputRef.current) {
-      inputRef.current.focus();
+  useEffect(() => {
+    if (transferId) {
+      loadTransferDetails();
+    } else {
+      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    enforceFocus();
-    const interval = setInterval(enforceFocus, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    loadTransferData();
   }, [transferId]);
 
-  const loadTransferData = async () => {
+  // Keep auto-focus on scanner input
+  useEffect(() => {
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(focusTimer);
+  }, [scannedItems, errorMsg, successMsg]);
+
+  const loadTransferDetails = async () => {
     setLoading(true);
-
-    let rawData: any = null;
-    if (transferId) {
-      rawData = await api.getTransferDetails(transferId);
-      if (!rawData) {
-        const list = await api.getTransfers();
-        rawData = list.find((t: any) => t.id === transferId);
-      }
-    }
-
-    if (rawData) {
-      const itemTypeKey = rawData.itemType || rawData.itemTypeId || 'A960';
-      const itemMeta = getItemMetadata(itemTypeKey);
-
-      let normalizedItems: TransferItem[] = [];
-      if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
-        normalizedItems = rawData.items.map((it: any, idx: number) => {
-          const meta = getItemMetadata(it.itemTypeId || it.itemType || it.itemTypeName);
-          return {
-            id: it.id || `item-${idx}`,
-            itemTypeId: it.itemTypeId || it.itemType || 'A960',
-            itemTypeName: meta.name,
-            category: meta.category,
-            requestedQuantity: Number(it.requestedQuantity || it.quantity) || 1,
-            scannedQuantity: Number(it.scannedQuantity) || 0,
-            scannedSerials: it.scannedSerials || [],
-          };
-        });
-      } else {
-        normalizedItems = [
-          {
-            id: 'item-main',
-            itemTypeId: itemTypeKey,
-            itemTypeName: itemMeta.name,
-            category: itemMeta.category,
-            requestedQuantity: Number(rawData.quantity) || 1,
-            scannedQuantity: 0,
-            scannedSerials: [],
-          },
-        ];
-      }
-
-      const normTransfer: WarehouseTransfer = {
-        id: rawData.id || transferId || 'trf-1',
-        transferNumber: `TRF-${(rawData.id || transferId || '1001').substring(0, 8).toUpperCase()}`,
-        sourceWarehouseName: rawData.warehouseName || rawData.sourceWarehouseName || 'المستودع الرئيسي',
-        targetWarehouseName: rawData.technicianName || rawData.targetWarehouseName || 'عهدة الفني',
-        status: (rawData.status || 'PENDING').toUpperCase() as any,
-        createdAt: rawData.createdAt || new Date().toISOString(),
-        items: normalizedItems,
-      };
-
-      setTransfer(normTransfer);
-      setSelectedItemTypeId(normalizedItems[0]?.itemTypeId || itemTypeKey);
-    } else {
-      // Demo Transfer Data for Web Testing with full visual metadata
-      const demoItems: TransferItem[] = [
-        {
-          id: 'item-1',
-          itemTypeId: 'A960',
-          itemTypeName: 'جهاز POS — PAX A960 Smart',
-          category: 'devices',
-          requestedQuantity: 3,
-          scannedQuantity: 0,
-          scannedSerials: [],
-        },
-        {
-          id: 'item-2',
-          itemTypeId: 'stcSim',
-          itemTypeName: 'شريحة اتصال — STC 5G Data SIM',
-          category: 'sim',
-          requestedQuantity: 10,
-          scannedQuantity: 0,
-          scannedSerials: [],
-        },
-      ];
-
-      setTransfer({
-        id: 'trf-demo-1001',
-        transferNumber: 'TRF-DEMO-892',
-        sourceWarehouseName: 'المستودع الرئيسي — الرياض',
-        targetWarehouseName: 'عهدة الفني (عيسى)',
-        status: 'PENDING',
-        createdAt: new Date().toISOString(),
-        items: demoItems,
-      });
-      setSelectedItemTypeId('A960');
-    }
-
+    const data = await api.getTransferById(transferId!);
+    setTransfer(data);
     setLoading(false);
   };
 
-  const playChime = (success: boolean) => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = success ? 880 : 300;
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    } catch (_) {}
-  };
+  const handleScanSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const raw = serialInput.trim().toUpperCase();
 
-  const selectedItemObj = transfer?.items.find((it) => it.itemTypeId === selectedItemTypeId) || transfer?.items[0];
-  const activeMeta = getItemMetadata(selectedItemObj?.itemTypeId || selectedItemObj?.itemTypeName || 'A960');
-
-  const handleScanSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const serial = barcodeInput.trim();
-    if (!serial) return;
-
-    setBarcodeInput('');
-    setScanMessage(null);
-
-    // Duplicate Check
-    if (scannedItems.some((item) => item.serial === serial)) {
-      setScanMessage({ type: 'error', text: `⚠️ السيريال (${serial}) ممسوح سابقاً في هذه الجلسة` });
-      playChime(false);
-      enforceFocus();
+    if (!raw) {
+      setErrorMsg('⚠️ الرجاء قراءة أو إدخال الرقم التسلسلي للسكانر');
+      setSuccessMsg(null);
       return;
     }
 
-    // Call API Scan-In or Local Validation
-    const res = await api.scanItem(serial, transferId, selectedItemTypeId || undefined);
+    // Sanitize Barcode prefixes
+    let cleanSerial = raw;
+    if (cleanSerial.startsWith(']C1')) cleanSerial = cleanSerial.substring(3);
+    else if (cleanSerial.startsWith('C1')) cleanSerial = cleanSerial.substring(2);
 
-    if (res.success) {
-      const newItem = {
-        serial,
-        itemTypeName: activeMeta.name,
-        time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      };
-
-      setScannedItems((prev) => [newItem, ...prev]);
-
-      // Update Local Quantities for the Selected Item Model
-      if (transfer && selectedItemObj) {
-        const updatedItems = transfer.items.map((it) => {
-          if (it.itemTypeId === selectedItemObj.itemTypeId) {
-            return {
-              ...it,
-              scannedQuantity: Math.min(it.scannedQuantity + 1, it.requestedQuantity),
-              scannedSerials: [...it.scannedSerials, serial],
-            };
-          }
-          return it;
-        });
-        setTransfer({ ...transfer, items: updatedItems });
-      }
-
-      setScanMessage({ type: 'success', text: `✅ تم مسح ومطابقة (${serial}) لصنف [${activeMeta.name}] بنجاح` });
-      playChime(true);
-    } else {
-      setScanMessage({ type: 'error', text: res.message || `⚠️ خطأ في مسح السيريال (${serial})` });
-      playChime(false);
+    // Duplicate Check
+    if (scannedItems.some((i) => i.serial === cleanSerial)) {
+      setErrorMsg(`⚠️ الرقم التسلسلي (${cleanSerial}) مضاف بالفعل في جدول القراءة!`);
+      setSuccessMsg(null);
+      setSerialInput('');
+      return;
     }
 
-    enforceFocus();
+    const currentItemType = transfer?.itemType || 'A960';
+    const nowStr = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    setScannedItems((prev) => [
+      { serial: cleanSerial, itemType: currentItemType, timestamp: nowStr },
+      ...prev,
+    ]);
+
+    setLastScanned({ serial: cleanSerial, timestamp: nowStr });
+    setSuccessMsg(`✓ تمت قراءة وتمييز الرقم التسلسلي [${cleanSerial}] بنجاح`);
+    setErrorMsg(null);
+    setSerialInput('');
   };
 
-  const handleConfirmAccept = async () => {
-    if (!transfer) return;
-    setAccepting(true);
-    const res = await api.acceptTransfer(transfer.id);
-    setAccepting(false);
+  const removeItem = (serial: string) => {
+    setScannedItems((prev) => prev.filter((i) => i.serial !== serial));
+  };
+
+  const handleFinalConfirm = async () => {
+    if (scannedItems.length === 0) {
+      setErrorMsg('⚠️ لا توجد أرقام تسلسلية ممسوحة للاعتماد!');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    const itemsToConfirm = scannedItems.map((i) => ({
+      serialNumber: i.serial,
+      itemTypeId: i.itemType,
+    }));
+
+    const res = await api.acceptTransferBatch(transferId || '1001', itemsToConfirm);
+
+    setIsSubmitting(false);
+
     if (res.success) {
-      setCompleted(true);
+      setSuccessMsg(`🎉 تم اعتماد الشحنة بنجاح! تم نقل قيد وحضانة (${scannedItems.length} قطعة) إلى عهدتك المخزنية الرسمية.`);
+      setTimeout(() => {
+        onBack();
+      }, 2000);
     } else {
-      alert(res.message || 'فشل تأكيد الاستلام');
+      setErrorMsg(res.message || 'فشل اعتماد الشحنة بالسيرفر. يرجى إعادة المحاولة.');
     }
   };
 
-  const totalRequested = transfer?.items.reduce((sum, item) => sum + item.requestedQuantity, 0) || 0;
-  const totalScanned = transfer?.items.reduce((sum, item) => sum + item.scannedQuantity, 0) || 0;
-  const isMatchComplete = totalRequested > 0 && totalScanned >= totalRequested;
-  const overallPercentage = totalRequested > 0 ? Math.round((totalScanned / totalRequested) * 100) : 0;
+  const totalRequired = transfer?.quantity || 1;
+  const progressPercent = Math.min(100, Math.round((scannedItems.length / totalRequired) * 100));
+  const meta = getItemMetadata(transfer?.itemType || 'A960');
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA] text-slate-900">
-        <div className="text-center">
-          <Scan className="w-12 h-12 text-[#0F5EA8] animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-bold">جاري تحميل تفاصيل الشحنة وصور الأصناف...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-24 text-slate-400 space-y-4">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#0F5EA8]" />
+        <p className="text-sm font-extrabold text-slate-700">جاري تحميل بيانات محطة المسح والمطابقة...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-slate-900 pb-12" onClick={enforceFocus}>
-      
-      {/* Top Header Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer"
-              title="العودة لجدول الشحنات"
-            >
-              <ArrowRight className="w-5 h-5" />
-            </button>
+    <div className="space-y-6">
 
-            <RasscoLogo size="md" subtitle={`مطابقة استلام الشحنة: ${transfer?.transferNumber || 'جديد'}`} lightMode={true} />
-          </div>
+      {/* Top Breadcrumb Header & Return Button */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+        >
+          <ChevronRight className="w-4 h-4 text-[#0F5EA8]" />
+          <span>العودة لجدول التحويلات الرئيسية</span>
+        </button>
 
-          {/* Global Progress Indicator */}
-          <div className="flex items-center gap-4 bg-slate-50 p-2.5 px-5 rounded-2xl border border-slate-200">
-            <div className="text-right">
-              <div className="text-[11px] text-slate-500 font-bold">إجمالي قطع الشحنة</div>
-              <div className="text-base font-black text-[#0F5EA8]">
-                {totalScanned} / {totalRequested} <span className="text-xs font-bold text-slate-500">({overallPercentage}%)</span>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-[#0F5EA8] text-white flex items-center justify-center shadow-xs">
-              {isMatchComplete ? (
-                <CheckCircle2 className="w-5 h-5 text-[#12C6E8]" />
-              ) : (
-                <Scan className="w-5 h-5 animate-pulse" />
-              )}
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-xs font-extrabold text-slate-500">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>جلسة مطابقة آمنة ومشفّرة</span>
         </div>
-      </header>
+      </div>
 
-      {/* Main Workspace Body */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Device & SIM Visual Selector + Barcode Scanner Workstation (7 Cols) */}
-        <div className="lg:col-span-7 space-y-6">
+      {/* Main Split Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        {/* 1. LEFT PANEL (Width 4/12): Shipment Summary & Visual Progress */}
+        <div className="lg:col-span-4 space-y-6">
           
-          {/* Step 1: Professional Visual Item Card Selector */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-            <h3 className="text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-4 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#0F5EA8]" />
-                <span>1. اختر نوع واسم الجهاز / الشريحة المراد مسحها الآن:</span>
-              </span>
-              <span className="text-[11px] font-extrabold text-[#0F5EA8]">
-                المصنع: {activeMeta.manufacturer}
-              </span>
-            </h3>
-
-            {/* Grid of Visual Item Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {transfer?.items.map((item) => {
-                const isSelected = item.itemTypeId === selectedItemTypeId;
-                const isItemDone = item.scannedQuantity >= item.requestedQuantity;
-                const meta = getItemMetadata(item.itemTypeId || item.itemTypeName);
-
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedItemTypeId(item.itemTypeId)}
-                    className={`p-4 rounded-2xl border text-right transition-all cursor-pointer relative flex flex-col justify-between ${
-                      isSelected
-                        ? 'bg-blue-50/80 border-[#0F5EA8] shadow-md ring-2 ring-[#0F5EA8]/20'
-                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {/* Item Avatar Header */}
-                    <div className="mb-3">
-                      <ItemProductAvatar itemTypeKey={item.itemTypeId || item.itemTypeName} size="md" />
-                    </div>
-
-                    {/* Quantity & Barcode Format Hint */}
-                    <div className="mt-2 pt-3 border-t border-slate-200/60 flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-slate-500">{meta.barcodeFormat}</span>
-                      <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${isItemDone ? 'bg-emerald-100 text-emerald-800' : 'bg-[#0F5EA8] text-white'}`}>
-                        {item.scannedQuantity} / {item.requestedQuantity} قطعة
-                      </span>
-                    </div>
-
-                    {isItemDone && (
-                      <div className="absolute top-2 left-2">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+          {/* Card: Shipment Info & Product Avatar */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-6">
+            
+            <div className="border-b border-slate-100 pb-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">تفاصيل الشحنة المحولة</span>
+              <h2 className="text-xl font-black text-slate-900 mt-1">
+                TRF-{(transferId || '1001').substring(0, 8).toUpperCase()}
+              </h2>
             </div>
-          </div>
 
-          {/* Step 2: Auto-Focus Hardware Barcode Workstation Box */}
-          <div className="bg-white p-6 rounded-3xl border-2 border-[#12C6E8] shadow-md relative scan-pulse-ring">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <Scan className="w-5 h-5 text-[#0F5EA8]" />
-                <span>2. مسح باركود صنف [{activeMeta.name}]</span>
-              </h3>
-              <div className="flex items-center gap-2 text-xs font-bold text-[#0F5EA8] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                <span className="w-2 h-2 rounded-full bg-[#12C6E8] animate-ping" />
-                <span>التركيز تلقائي (Auto-Focus Active)</span>
+            {/* Product Visual Avatar */}
+            <ItemProductAvatar itemTypeKey={transfer?.itemType || 'A960'} size="lg" showCategoryPill={true} />
+
+            {/* Shipment Metadata Details */}
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">المستودع المصدر:</span>
+                <span className="font-extrabold text-slate-900">{transfer?.warehouseName || 'المستودع الرئيسي'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">إجمالي القطع المطلوب استلامها:</span>
+                <span className="font-extrabold text-[#0F5EA8]">{totalRequired} قطعة</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">حالة الشحنة:</span>
+                <span className="font-extrabold text-amber-600">بانتظار المسح ضوئياً</span>
               </div>
             </div>
 
-            {/* Helper Info Tag */}
-            <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-600">
-              <Info className="w-4 h-4 text-[#0F5EA8] shrink-0" />
-              <span>صيغة الباركود المتوقعة: <strong className="text-slate-900 font-mono">{activeMeta.barcodeFormat}</strong></span>
+            {/* Visual Progress Gauge */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-700">نسبة مطابقة واستلام الشحنة</span>
+                <span className="text-[#0F5EA8] font-black">{progressPercent}%</span>
+              </div>
+
+              <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-[#0F5EA8] to-[#12C6E8] transition-all duration-300 shadow-xs"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              <div className="text-[11px] text-center text-slate-500 font-bold">
+                تم مسح <strong className="text-slate-900">{scannedItems.length}</strong> من أصل <strong className="text-slate-900">{totalRequired}</strong> قطعة
+              </div>
             </div>
 
-            <form onSubmit={handleScanSubmit} className="space-y-4">
-              <div className="relative">
+          </div>
+
+          {/* Pending Items Summary Widget */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-slate-900">الأصناف المطلوب استلامها بالشحنة</h3>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#0F5EA8] text-[10px] font-bold">نوع واحد</span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ItemProductAvatar itemTypeKey={transfer?.itemType || 'A960'} size="xs" showCategoryPill={false} />
+              </div>
+              <span className="text-xs font-black text-slate-900">{totalRequired}x قطعة</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* 2. RIGHT PANEL (Width 8/12): Live Scanner Input & Scanned Serials Grid */}
+        <div className="lg:col-span-8 space-y-6">
+
+          {/* Scanner Input Station Card */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-4">
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-50 text-[#0F5EA8]">
+                  <Scan className="w-5 h-5 text-[#12C6E8]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">محطة القراءة والمسح الضوئي المباشر</h3>
+                  <p className="text-xs text-slate-500">وجه قارئ الباركود أو أدخل الرقم التسلسلي SN / ICCID ووافق بالزر</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>جاهز للقراءة التلقائية</span>
+              </div>
+            </div>
+
+            {/* Scanner Input Form */}
+            <form onSubmit={handleScanSubmit} className="relative">
+              <div className="relative flex items-center">
                 <input
                   ref={inputRef}
                   type="text"
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder={`امسح باركود ${activeMeta.name} هنا...`}
-                  className="w-full py-4 px-5 rounded-2xl rassco-scan-input text-lg font-mono text-slate-900 placeholder-slate-400 font-bold"
+                  value={serialInput}
+                  onChange={(e) => setSerialInput(e.target.value)}
+                  placeholder="امسح الباركود بالسكانر أو أدخل الرقم التسلسلي هنا (مثال: SN89201982)..."
+                  className="w-full pl-36 pr-12 py-4 rounded-2xl rassco-scan-input text-slate-900 font-mono font-bold text-sm text-right placeholder-slate-400 outline-none transition-all shadow-2xs"
                   autoFocus
                 />
+                <Barcode className="w-5 h-5 text-slate-400 absolute right-4 pointer-events-none" />
+
                 <button
                   type="submit"
-                  className="absolute left-3 top-2.5 bottom-2.5 px-6 rounded-xl rassco-btn-primary text-sm flex items-center gap-2 transition-all cursor-pointer"
+                  className="absolute left-2.5 px-5 py-2.5 rounded-xl rassco-btn-primary text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <span>إدخال</span>
-                  <Send className="w-4 h-4 text-[#12C6E8]" />
+                  <PlusIcon className="w-4 h-4" />
+                  <span>إضافة للقائمة</span>
                 </button>
               </div>
             </form>
 
-            {/* Live Feedback Toast Banner */}
-            {scanMessage && (
-              <div
-                className={`mt-4 p-4 rounded-2xl border flex items-center gap-3 text-sm font-bold animate-fade-in ${
-                  scanMessage.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-rose-50 border-rose-200 text-rose-800'
-                }`}
-              >
-                {scanMessage.type === 'success' ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-                )}
-                <span>{scanMessage.text}</span>
+            {/* Real-time Feedback Banners */}
+            {errorMsg && (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-extrabold flex items-center gap-3 animate-fade-in">
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>{errorMsg}</span>
               </div>
             )}
-          </div>
 
-          {/* Action Step 3: Confirmation Button */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <div className="text-base font-extrabold text-slate-900">تأكيد الاعتماد والمطابقة النهائي</div>
-              <div className="text-xs text-slate-500 mt-1">
-                {isMatchComplete ? 'تمت مطابقة جميع قطع الشحنة بنجاح! جاهز للاعتماد' : 'قم بمسح جميع القطع لجميع الأصناف لتفعيل التأكيد'}
+            {successMsg && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold flex items-center gap-3 animate-fade-in">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{successMsg}</span>
               </div>
-            </div>
+            )}
 
-            <button
-              onClick={handleConfirmAccept}
-              disabled={accepting || completed}
-              className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-extrabold text-base transition-all duration-300 flex items-center justify-center gap-3 cursor-pointer shadow-md ${
-                completed
-                  ? 'bg-emerald-600 text-white shadow-emerald-600/20'
-                  : isMatchComplete
-                  ? 'rassco-btn-primary scale-105 shadow-blue-600/30'
-                  : 'bg-slate-100 text-slate-400 hover:bg-slate-200 cursor-not-allowed'
-              }`}
-            >
-              {completed ? (
-                <>
-                  <Check className="w-5 h-5 text-[#12C6E8]" />
-                  <span>تم استلام الشحنة بنجاح ✅</span>
-                </>
-              ) : accepting ? (
-                <span>جاري إرسال الاعتماد...</span>
-              ) : (
-                <>
-                  <PackageCheck className="w-5 h-5 text-[#12C6E8]" />
-                  <span>تأكيد الاستلام</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Right Column: Detailed Specific Item Quantities & Scan Log (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Quantity Matching Cards with Product Avatars */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="text-sm font-extrabold text-slate-900 flex items-center justify-between">
-              <span>مطابقة كميات الأصناف بالتفصيل</span>
-              <span className="text-xs font-bold text-[#0F5EA8]">Itemized Matching</span>
-            </h3>
-
-            <div className="space-y-4">
-              {transfer?.items.map((item) => {
-                const meta = getItemMetadata(item.itemTypeId || item.itemTypeName);
-                const percent = Math.round((item.scannedQuantity / item.requestedQuantity) * 100);
-                const isComplete = item.scannedQuantity >= item.requestedQuantity;
-                const isSelected = item.itemTypeId === selectedItemTypeId;
-
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedItemTypeId(item.itemTypeId)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all space-y-3 ${
-                      isSelected ? 'bg-blue-50/70 border-[#0F5EA8]' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <ItemProductAvatar itemTypeKey={item.itemTypeId || item.itemTypeName} size="sm" showCategoryPill={false} />
-                      
-                      <span className={`text-xs font-black px-3 py-0.5 rounded-full ${isComplete ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
-                        {item.scannedQuantity} / {item.requestedQuantity} قطعة
-                      </span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-500 ${isComplete ? 'bg-emerald-500' : 'bg-[#0F5EA8]'}`}
-                        style={{ width: `${Math.min(percent, 100)}%` }}
-                      />
-                    </div>
+            {/* Last Scanned Item Card */}
+            {lastScanned && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/50 to-slate-50 border border-blue-100 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-[#0F5EA8] text-white flex items-center justify-center font-bold">
+                    <Check className="w-4 h-4 text-[#12C6E8]" />
                   </div>
-                );
-              })}
-            </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold">آخر رقم ممسوح بالسكانر:</span>
+                    <div className="font-mono font-black text-slate-900 text-sm">{lastScanned.serial}</div>
+                  </div>
+                </div>
+                <span className="text-slate-400 font-mono text-[10px]">{lastScanned.timestamp}</span>
+              </div>
+            )}
+
           </div>
 
-          {/* Scanned Items Log with Item Model Name */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-extrabold text-slate-900">سجل القطع الممسوحة في الجلسة</h3>
-              <span className="text-xs font-bold text-[#0F5EA8]">{scannedItems.length} عنصر</span>
+          {/* Scanned Items Table Station */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+            
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#0F5EA8]" />
+                <h3 className="text-sm font-extrabold text-slate-900">جدول الأرقام التسلسلية الممسوحة ضوئياً ({scannedItems.length})</h3>
+              </div>
+
+              {scannedItems.length > 0 && (
+                <button
+                  onClick={() => setScannedItems([])}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                >
+                  تفريع القائمة
+                </button>
+              )}
             </div>
 
             {scannedItems.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-xs">
-                لم يتم مسح أي قطع بعد. استخدم جهاز السكانر لبدء مسح الأجهزة والشرائح.
+              <div className="text-center py-16 text-slate-400 space-y-3">
+                <Barcode className="w-12 h-12 text-slate-300 mx-auto" />
+                <p className="text-sm font-extrabold text-slate-600">جدول القراءة فارغ حالياً</p>
+                <p className="text-xs text-slate-400">قم بقراءة باركود الأجهزة والشرائح لإضافتها في الجدول قبل الاعتماد النهائي</p>
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                {scannedItems.map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                        <span className="font-mono text-[#0F5EA8] font-black">{item.serial}</span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 font-semibold mt-0.5 mr-4">
-                        {item.itemTypeName}
-                      </div>
-                    </div>
-                    <span className="text-slate-400 font-semibold text-[11px]">{item.time}</span>
-                  </div>
-                ))}
+              <div className="max-h-96 overflow-y-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-extrabold border-b border-slate-200 sticky top-0">
+                    <tr>
+                      <th className="py-3 px-6">#</th>
+                      <th className="py-3 px-6">الرقم التسلسلي (SN / ICCID)</th>
+                      <th className="py-3 px-6">نوع الصنف</th>
+                      <th className="py-3 px-6">توقيت المسح</th>
+                      <th className="py-3 px-6 text-center">إزالة</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
+                    {scannedItems.map((item, index) => (
+                      <tr key={item.serial} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5 px-6 font-mono text-slate-400">{scannedItems.length - index}</td>
+                        <td className="py-3.5 px-6 font-mono font-black text-slate-900">{item.serial}</td>
+                        <td className="py-3.5 px-6">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0F5EA8] text-[10px] font-bold">
+                            {meta.name}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-6 font-mono text-[11px] text-slate-500">{item.timestamp}</td>
+                        <td className="py-3.5 px-6 text-center">
+                          <button
+                            onClick={() => removeItem(item.serial)}
+                            className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            title="حذف الرقم"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* 3. Bottom Sticky Confirmation Bar */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-4 z-20">
+        
+        <div className="flex items-center gap-4 text-right">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-slate-900">جاهزية نقل الحضانة والعهدة</h4>
+            <p className="text-xs text-slate-500">تم تجهيز <strong className="text-emerald-600 font-bold">{scannedItems.length}</strong> قطعة ممسوحة للاعتماد وحفظها بعهدتك الرسمية</p>
           </div>
         </div>
 
-      </main>
+        <button
+          onClick={handleFinalConfirm}
+          disabled={scannedItems.length === 0 || isSubmitting}
+          className={`w-full sm:w-auto px-10 py-4 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            scannedItems.length > 0 && !isSubmitting
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+          }`}
+        >
+          {isSubmitting ? (
+            <>
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <span>جاري تسجيل ونقل العهدة بالسيرفر...</span>
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="w-5 h-5" />
+              <span>تأكيد واعتماد نقل العهدة إلى حسابي النهائي ✓</span>
+            </>
+          )}
+        </button>
+
+      </div>
+
     </div>
   );
 };
+
+// Helper Plus Icon
+function PlusIcon(props: any) {
+  return (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
