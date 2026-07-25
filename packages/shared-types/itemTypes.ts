@@ -37,6 +37,15 @@ export const ITEM_TYPES: ItemType[] = [
     sortOrder: 3
   },
   {
+    id: 'a960',
+    nameAr: 'A960',
+    nameEn: 'PAX A960',
+    category: 'devices',
+    unitsPerBox: 10,
+    isActive: true,
+    sortOrder: 4
+  },
+  {
     id: 'rollPaper',
     nameAr: 'ورق الطباعة',
     nameEn: 'Roll Paper',

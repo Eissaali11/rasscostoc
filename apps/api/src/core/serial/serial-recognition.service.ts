@@ -205,128 +205,171 @@ export class SerialRecognitionService {
     }
 
     // Fetch all active serialized item types from database
-    const allTypes = await txClient
+    let allTypes = await txClient
       .select()
       .from(itemTypes)
       .where(eq(itemTypes.isActive, true));
 
+    // Ensure enterprise device types exist in DB automatically with correct specifications
+    const hasA960 = allTypes.some((t: any) => t.id === 'a960');
+    const hasI9100 = allTypes.some((t: any) => t.id === 'i9100');
+    const hasI9000s = allTypes.some((t: any) => t.id === 'i9000s');
+
+    if (!hasA960 || !hasI9100 || !hasI9000s) {
+      try {
+        if (!hasA960) {
+          await txClient.insert(itemTypes).values({
+            id: 'a960',
+            nameAr: 'A960',
+            nameEn: 'PAX A960',
+            category: 'devices',
+            unitsPerBox: 1,
+            isActive: true,
+            isVisible: true,
+            sortOrder: 4,
+            icon: '📱',
+            color: '#6366F1',
+            requiresSerial: true,
+            serialPrefix: null,
+            serialLength: 10,
+            serialRegex: '^[0-9]{10}$',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).onConflictDoNothing();
+        }
+        if (!hasI9100) {
+          await txClient.insert(itemTypes).values({
+            id: 'i9100',
+            nameAr: 'I9100',
+            nameEn: 'I9100',
+            category: 'devices',
+            unitsPerBox: 1,
+            isActive: true,
+            isVisible: true,
+            sortOrder: 3,
+            icon: '📱',
+            color: '#8B5CF6',
+            requiresSerial: true,
+            serialPrefix: 'SAW',
+            serialLength: 14,
+            serialRegex: '^SAW[0-9]{11}$',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).onConflictDoNothing();
+        }
+        if (!hasI9000s) {
+          await txClient.insert(itemTypes).values({
+            id: 'i9000s',
+            nameAr: 'I9000S',
+            nameEn: 'I9000S',
+            category: 'devices',
+            unitsPerBox: 1,
+            isActive: true,
+            isVisible: true,
+            sortOrder: 2,
+            icon: '📱',
+            color: '#10B981',
+            requiresSerial: true,
+            serialPrefix: 'SAS',
+            serialLength: 14,
+            serialRegex: '^SAS[0-9]{11}$',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).onConflictDoNothing();
+        }
+        allTypes = await txClient
+          .select()
+          .from(itemTypes)
+          .where(eq(itemTypes.isActive, true));
+      } catch (e) {
+        // Safe fallback
+      }
+    }
+
     const serializedTypes = allTypes.filter((t: typeof itemTypes.$inferSelect) => t.requiresSerial);
 
-    const candidates: Array<{ type: typeof itemTypes.$inferSelect; matchedPrefix: string; cleanSerial: string }> = [];
+    // Resolve matched item type
+    let matchedType = hintItemTypeId
+      ? serializedTypes.find((t: any) => t.id.toLowerCase() === hintItemTypeId.toLowerCase())
+      : undefined;
 
-    for (const type of serializedTypes) {
-      if (!type.serialPrefix) continue;
-      const prefixes = type.serialPrefix.split(",").map((p: string) => p.trim().toUpperCase());
-      
-      for (const prefix of prefixes) {
-        if (cleaned.startsWith(prefix)) {
-          // If prefix is alphabetic (starts with letters), strip it. Otherwise (numeric), keep it.
-          const isAlphabetic = /^[A-Z]+$/.test(prefix);
-          const cleanSerial = isAlphabetic ? cleaned.substring(prefix.length) : cleaned;
-          
-          candidates.push({
-            type,
-            matchedPrefix: prefix,
-            cleanSerial
-          });
-        }
+    if (!matchedType) {
+      if (/^SAW[0-9]{11}$/i.test(cleaned)) {
+        matchedType = serializedTypes.find((t: any) => t.id === 'i9100');
+      } else if (/^SAS[0-9]{11}$/i.test(cleaned)) {
+        matchedType = serializedTypes.find((t: any) => t.id === 'i9000s');
+      } else if (/^(NCD|NCC)[0-9]{9}$/i.test(cleaned)) {
+        matchedType = serializedTypes.find((t: any) => t.id === 'n950');
+      } else if (/^89966[0-9]{13,14}$/.test(cleaned)) {
+        matchedType = serializedTypes.find((t: any) => t.id.startsWith('sim'));
       }
     }
 
-    // Fallback: If it did not match any prefix, check if it is already clean (matches length and regex directly)
-    for (const type of serializedTypes) {
-      if (type.serialLength !== null && type.serialLength !== undefined) {
-        if (cleaned.length === type.serialLength) {
-          let regexMatches = true;
-          if (type.serialRegex) {
-            try {
-              const regex = new RegExp(type.serialRegex);
-              // For stripped serials, also accept when prefixed form would match
-              const prefixes = (type.serialPrefix || "")
-                .split(",")
-                .map((p: string) => p.trim().toUpperCase())
-                .filter((p: string) => /^[A-Z]+$/.test(p));
-              regexMatches =
-                regex.test(cleaned) ||
-                prefixes.some((p: string) => regex.test(`${p}${cleaned}`));
-            } catch (e) {}
+    if (!matchedType) {
+      for (const type of serializedTypes) {
+        if (type.serialPrefix) {
+          const prefixes = type.serialPrefix.split(',').map((p: string) => p.trim().toUpperCase());
+          if (prefixes.some((p: string) => cleaned.startsWith(p))) {
+            matchedType = type;
+            break;
           }
-          if (regexMatches) {
-            candidates.push({
-              type,
-              matchedPrefix: "",
-              cleanSerial: cleaned
-            });
+        } else if (type.serialLength && cleaned.length === type.serialLength) {
+          if ((type.id === 'a960' || type.nameAr.includes('A960')) && /^[0-9]{10}$/.test(cleaned)) {
+            matchedType = type;
+            break;
           }
         }
       }
     }
 
-    if (candidates.length === 0) {
+    if (!matchedType) {
       for (const fixed of this.expandSaudiIccidTypoCandidates(cleaned)) {
         return this.recognize(fixed, hintItemTypeId, txClient);
       }
       throw new AppError(`لم يتم التعرف على نوع المنتج للباركود: ${rawBarcode}`, 400);
     }
 
-    // Filter candidates by length
-    const validLengthCandidates = candidates.filter(c => {
-      if (c.type.serialLength !== null && c.type.serialLength !== undefined) {
-        return c.cleanSerial.length === c.type.serialLength;
+    const type = matchedType;
+    const typeId = type.id.toLowerCase();
+
+    // Specific validation & exact error messages per Section 12 specifications
+    if (typeId === 'i9100') {
+      if (!cleaned.startsWith('SAW') || cleaned.length !== 14 || !/^SAW[0-9]{11}$/i.test(cleaned)) {
+        throw new AppError('الرقم يجب أن يبدأ بـ SAW ويتكون من 14 خانة.', 400);
       }
-      return true;
-    });
-
-    if (validLengthCandidates.length === 0) {
-      // If we matched prefixes but lengths were wrong, show a helpful length error
-      const firstCandidate = candidates[0];
-      throw new AppError(
-        `طول الرقم التسلسلي (${firstCandidate.cleanSerial}) غير صحيح لـ ${firstCandidate.type.nameAr}. الطول المطلوب: ${firstCandidate.type.serialLength} أرقام.`,
-        400
-      );
-    }
-
-    // Select the best candidate:
-    // 1. If hintItemTypeId matches one of the valid candidates, use it.
-    // 2. Otherwise, use the first valid candidate.
-    let selected = validLengthCandidates.find(c => c.type.id === hintItemTypeId);
-    if (!selected && hintItemTypeId) {
-      // If the hint is a general category hint or partial match, try to match it
-      selected = validLengthCandidates.find(c => c.type.id.toLowerCase().includes(hintItemTypeId.toLowerCase()));
-    }
-    if (!selected) {
-      selected = validLengthCandidates[0];
-    }
-
-    const { type, cleanSerial } = selected;
-
-    // Validate using regex if defined
-    if (type.serialRegex) {
-      try {
-        const regex = new RegExp(type.serialRegex);
-        // Test regex against the clean serial (or raw cleaned if regex expects prefix)
-        const prefixes = (type.serialPrefix || "")
-          .split(",")
-          .map((p: string) => p.trim().toUpperCase())
-          .filter((p: string) => /^[A-Z]+$/.test(p));
-        const isMatch =
-          regex.test(cleanSerial) ||
-          regex.test(cleaned) ||
-          prefixes.some((p: string) => regex.test(`${p}${cleanSerial}`));
-        if (!isMatch) {
-          throw new AppError(`الرقم التسلسلي ${rawBarcode} لا يطابق الصيغة المعتمدة لـ ${type.nameAr}`, 400);
+    } else if (typeId === 'i9000s' || typeId.includes('i9000')) {
+      if (!cleaned.startsWith('SAS') || cleaned.length !== 14 || !/^SAS[0-9]{11}$/i.test(cleaned)) {
+        throw new AppError('الرقم يجب أن يبدأ بـ SAS ويتكون من 14 خانة.', 400);
+      }
+    } else if (typeId === 'a960') {
+      if (cleaned.length !== 10 || !/^[0-9]{10}$/.test(cleaned)) {
+        throw new AppError('الرقم التسلسلي يجب أن يتكون من 10 أرقام.', 400);
+      }
+    } else {
+      if (type.serialLength && cleaned.length !== type.serialLength) {
+        throw new AppError(
+          `طول الرقم التسلسلي (${cleaned}) غير صحيح لـ ${type.nameAr}. الطول المطلوب: ${type.serialLength} أرقام.`,
+          400
+        );
+      }
+      if (type.serialRegex) {
+        try {
+          const regex = new RegExp(type.serialRegex, 'i');
+          if (!regex.test(cleaned)) {
+            throw new AppError(`الرقم التسلسلي ${rawBarcode} لا يطابق الصيغة المعتمدة لـ ${type.nameAr}`, 400);
+          }
+        } catch (e) {
+          if (e instanceof AppError) throw e;
         }
-      } catch (e) {
-        if (e instanceof AppError) throw e;
-        // Ignore regex compilation errors
       }
     }
 
     const carrierName = this.resolveCarrierName(type.id, type.nameEn, type.nameAr);
 
+    // OPAQUE FULL SERIAL (SAW43310018885, SAS30810004647, 1180234360) PRESERVED 100%!
     return {
       itemTypeId: type.id,
-      normalizedSerial: cleanSerial,
+      normalizedSerial: cleaned,
       rawBarcode,
       isValid: true,
       category: type.category,

@@ -399,8 +399,8 @@ export class ItemTypesService {
         color: '#10B981',
         requiresSerial: true,
         serialPrefix: 'SAS',
-        serialLength: 11,
-        serialRegex: '^SAS[A-Z0-9]{11}$'
+        serialLength: 14,
+        serialRegex: '^SAS[0-9]{11}$'
       },
       {
         id: 'i9100',
@@ -415,8 +415,24 @@ export class ItemTypesService {
         color: '#8B5CF6',
         requiresSerial: true,
         serialPrefix: 'SAW',
-        serialLength: 11,
-        serialRegex: '^SAW[A-Z0-9]{11}$'
+        serialLength: 14,
+        serialRegex: '^SAW[0-9]{11}$'
+      },
+      {
+        id: 'a960',
+        nameAr: 'A960',
+        nameEn: 'PAX A960',
+        category: 'devices' as const,
+        unitsPerBox: 1,
+        isActive: true,
+        isVisible: true,
+        sortOrder: 4,
+        icon: '📱',
+        color: '#6366F1',
+        requiresSerial: true,
+        serialPrefix: null,
+        serialLength: 10,
+        serialRegex: '^[0-9]{10}$'
       },
       {
         id: 'rollPaper',
