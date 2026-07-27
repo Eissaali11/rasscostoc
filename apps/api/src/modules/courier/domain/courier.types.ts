@@ -122,6 +122,9 @@ export interface CourierExecution {
   pushBack: string | null;
   installationStatus: string | null;
   paperRoll: string | null;
+  paperRollQty?: number | null;
+  stickersQty?: number | null;
+  nulipCardsQty?: number | null;
   time: string | null;
   deliveryDate: string | null;
   responseDate: string | null;

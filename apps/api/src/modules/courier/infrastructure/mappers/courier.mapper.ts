@@ -128,6 +128,9 @@ export class CourierExecutionMapper {
       pushBack: row.pushBack ?? null,
       installationStatus: row.installationStatus ?? null,
       paperRoll: row.paperRoll ?? null,
+      paperRollQty: row.paperRollQty ?? row.paper_roll_qty ?? 0,
+      stickersQty: row.stickersQty ?? row.stickers_qty ?? 0,
+      nulipCardsQty: row.nulipCardsQty ?? row.nulip_cards_qty ?? 0,
       time: row.time ?? null,
       deliveryDate: row.deliveryDate ?? null,
       responseDate: row.responseDate ?? null,
@@ -157,6 +160,9 @@ export class CourierExecutionMapper {
     if (domain.pushBack !== undefined) res.pushBack = domain.pushBack;
     if (domain.installationStatus !== undefined) res.installationStatus = domain.installationStatus;
     if (domain.paperRoll !== undefined) res.paperRoll = domain.paperRoll;
+    if (domain.paperRollQty !== undefined) res.paperRollQty = domain.paperRollQty;
+    if (domain.stickersQty !== undefined) res.stickersQty = domain.stickersQty;
+    if (domain.nulipCardsQty !== undefined) res.nulipCardsQty = domain.nulipCardsQty;
     if (domain.time !== undefined) res.time = domain.time;
     if (domain.deliveryDate !== undefined) res.deliveryDate = domain.deliveryDate;
     if (domain.responseDate !== undefined) res.responseDate = domain.responseDate;

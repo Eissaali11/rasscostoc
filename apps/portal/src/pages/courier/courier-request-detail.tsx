@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -46,6 +46,9 @@ interface Execution {
   deliveryDate: string | null;
   time: string | null;
   paperRoll: string | null;
+  paperRollQty?: number | null;
+  stickersQty?: number | null;
+  nulipCardsQty?: number | null;
   responseReasonCode: string | null;
   customerNotes: string | null;
   requestPriorityLevel: string | null;
@@ -283,6 +286,9 @@ export default function CourierRequestDetailPage() {
       mutation.mutate({
         installationStatus: currentForm.installationStatus,
         paperRoll: currentForm.paperRoll,
+        paperRollQty: Number(currentForm.paperRollQty) || 0,
+        stickersQty: Number(currentForm.stickersQty) || 0,
+        nulipCardsQty: Number(currentForm.nulipCardsQty) || 0,
         time: currentForm.time,
         deliveryDate: currentForm.deliveryDate,
         responseDate: currentForm.responseDate,
@@ -309,6 +315,9 @@ export default function CourierRequestDetailPage() {
     mutation.mutate({
       installationStatus: currentForm.installationStatus,
       paperRoll: currentForm.paperRoll,
+      paperRollQty: Number(currentForm.paperRollQty) || 0,
+      stickersQty: Number(currentForm.stickersQty) || 0,
+      nulipCardsQty: Number(currentForm.nulipCardsQty) || 0,
       time: currentForm.time,
       deliveryDate: currentForm.deliveryDate,
       responseDate: currentForm.responseDate,
@@ -785,18 +794,53 @@ export default function CourierRequestDetailPage() {
                   </div>
                 </div>
 
-                {/* Paper Roll */}
-                <div>
-                  <label className="block text-xs text-[#6B7280] mb-1.5 font-medium">رول الورق</label>
-                  <select
-                    value={currentForm.paperRoll || ""}
-                    onChange={(e) => handleChange("paperRoll", e.target.value)}
-                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
-                  >
-                    <option value="">اختر</option>
-                    <option value="Yes">نعم</option>
-                    <option value="No">لا</option>
-                  </select>
+                {/* Consumables Section */}
+                <div className="border-t border-[#E2E8F0] pt-3 mt-2 space-y-3">
+                  <label className="block text-xs text-[#18B2B0] font-semibold">المواد الاستهلاكية المسلمة للعميل (تُخصم من رصيد الفني)</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-[#6B7280] mb-1 font-medium">تسليم ورق رول</label>
+                      <select
+                        value={currentForm.paperRoll || ""}
+                        onChange={(e) => handleChange("paperRoll", e.target.value)}
+                        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                      >
+                        <option value="">اختر</option>
+                        <option value="Yes">نعم</option>
+                        <option value="No">لا</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#6B7280] mb-1 font-medium">كمية ورق رول (عدد)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={currentForm.paperRollQty ?? 0}
+                        onChange={(e) => handleChange("paperRollQty", e.target.value)}
+                        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#6B7280] mb-1 font-medium">بطاقات نيوليب (عدد)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={currentForm.nulipCardsQty ?? 0}
+                        onChange={(e) => handleChange("nulipCardsQty", e.target.value)}
+                        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#6B7280] mb-1 font-medium">ملصقات / استيكرات (عدد)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={currentForm.stickersQty ?? 0}
+                        onChange={(e) => handleChange("stickersQty", e.target.value)}
+                        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Failure Reason (conditional) */}

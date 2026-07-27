@@ -75,7 +75,7 @@ export function registerCourierRoutes(app: Express): void {
     upload.single("file"),
     validatePdfImageUploadMiddleware(),
     uploadErrorHandler,
-    async (req: any, res, next) => {
+    async (req: any, res: any, next: any) => {
       if (req.file) {
         try {
           req.file.buffer = fs.readFileSync(req.file.path);
@@ -91,4 +91,5 @@ export function registerCourierRoutes(app: Express): void {
   app.post("/api/courier/pdf/:id/apply", requireAuth, controller.applyPdf);
   app.post("/api/courier/pdf/:id/complete", requireAuthOrInternal, controller.completePdf);
   app.post("/api/courier/pdf/:id/reextract", requireAuth, controller.reextractPdf);
+  app.post("/api/courier/pdf/:id/reject", requireAuth, controller.rejectPdf);
 }

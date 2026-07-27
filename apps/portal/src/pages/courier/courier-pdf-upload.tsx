@@ -228,11 +228,12 @@ export default function CourierPdfUploadPage() {
   }
 
   return (
-    <div dir={dir} className="rassco-page space-y-6 max-w-6xl">
+    <div dir={dir} className="rassco-page space-y-6 w-full max-w-none">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full"
       >
         <h1 className="text-2xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-3">
           <span className="courier-icon-badge">
@@ -259,7 +260,7 @@ export default function CourierPdfUploadPage() {
           if (file) handleUpload(file);
         }}
         onClick={() => fileInputRef.current?.click()}
-        className={`courier-panel courier-panel-static !border-2 !border-dashed p-14 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+        className={`w-full courier-panel courier-panel-static !border-2 !border-dashed p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
           dragOver
             ? "!border-[#18B2B0] bg-[#18B2B0]/08"
             : "!border-[rgba(24,178,176,0.28)] hover:!border-[#18B2B0] hover:bg-[#18B2B0]/04"
@@ -295,7 +296,7 @@ export default function CourierPdfUploadPage() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
-        className="space-y-3"
+        className="w-full space-y-3"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-bold text-[#6B7280] uppercase tracking-wide">

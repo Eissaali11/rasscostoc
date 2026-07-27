@@ -1,9 +1,9 @@
-﻿import { useTranslation } from "@/lib/language";
+import { useTranslation } from "@/lib/language";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
   AlertCircle,
@@ -14,6 +14,18 @@ import {
   Link2,
   Plus,
   RefreshCw,
+  XCircle,
+  Send,
+  MessageSquare,
+  ShieldAlert,
+  User,
+  MapPin,
+  Calendar,
+  Clock,
+  FileText,
+  Building2,
+  CreditCard,
+  Barcode,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -61,6 +73,11 @@ interface PdfReportDetail {
   status: string;
   overallConfidence: number | null;
   requestId: number | null;
+  uploadedBy?: string | null;
+  technicianName?: string | null;
+  technicianCode?: string | null;
+  region?: string | null;
+  createdAt?: string | null;
   extractedJson: ExtractedPayload;
 }
 
@@ -100,23 +117,55 @@ function ConfidenceBadge({ value }: { value: number | null }) {
 function MatchBadge({ status }: { status: MatchStatus }) {
   if (status === "matched") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/12 border border-[#18B2B0]/25 px-2 py-0.5 rounded-full">
-        <CheckCircle2 className="w-3 h-3" />
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/12 border border-[#18B2B0]/25 px-2.5 py-1 rounded-full">
+        <CheckCircle2 className="w-3.5 h-3.5" />
         مطابقة ناجحة
       </span>
     );
   }
   if (status === "needs_review") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#B45309] bg-[#F4B740]/18 border border-[#F4B740]/35 px-2 py-0.5 rounded-full">
-        <AlertCircle className="w-3 h-3" />
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#B45309] bg-[#F4B740]/18 border border-[#F4B740]/35 px-2.5 py-1 rounded-full">
+        <AlertCircle className="w-3.5 h-3.5" />
         تحتاج مراجعة
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] border border-[#E2E8F0] px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] border border-[#E2E8F0] px-2.5 py-1 rounded-full">
       غير معروف
+    </span>
+  );
+}
+
+function StatusTag({ status }: { status: string }) {
+  if (status === "applied") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/15 border border-[#18B2B0]/30 px-3 py-1 rounded-full">
+        <CheckCircle2 className="w-4 h-4" />
+        مُعتمد ومُطبَّق
+      </span>
+    );
+  }
+  if (status === "rejected") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#E05252] bg-[#E05252]/15 border border-[#E05252]/30 px-3 py-1 rounded-full">
+        <XCircle className="w-4 h-4" />
+        مرتجع / مراجعة الفني
+      </span>
+    );
+  }
+  if (status === "manual_review") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#B45309] bg-[#F4B740]/20 border border-[#F4B740]/40 px-3 py-1 rounded-full">
+        <AlertCircle className="w-4 h-4" />
+        بانتظار المراجعة الإدارية
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] border border-[#E2E8F0] px-3 py-1 rounded-full">
+      قيد المعالجة
     </span>
   );
 }
@@ -185,6 +234,12 @@ export default function CourierPdfReviewPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  // Rejection Dialog State
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReasonCategory, setRejectReasonCategory] = useState("UNCLEAR_PHOTO");
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
   const { data: report, isLoading, error } = useQuery<PdfReportDetail>({
     queryKey: [`/api/courier/pdf/${id}`],
     queryFn: () =>
@@ -252,13 +307,8 @@ export default function CourierPdfReviewPage() {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setPreviewUrl(objectUrl);
-      } catch {
-        if (!cancelled) {
-          setPreviewUrl(null);
-          setPreviewError(
-            "تعذّر تحميل معاينة المستند. تأكد أن الخادم المحلي يعمل على المنفذ 3001 ثم أعد تحميل الصفحة.",
-          );
-        }
+      } catch (err: any) {
+        if (!cancelled) setPreviewError(err?.message || "فشل تحميل المعاينة");
       }
     })();
 
@@ -268,73 +318,52 @@ export default function CourierPdfReviewPage() {
     };
   }, [report?.id]);
 
-  const deviceCount = cards.length;
-
   const updateCard = (index: number, patch: Partial<DeviceCard>) => {
-    setCards((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)));
+    setCards((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, ...patch } : c)),
+    );
   };
 
-  async function lookupSerial(cardIndex: number, kind: "sn" | "sim_serial") {
-    const card = cards[cardIndex];
-    if (!card) return;
-    const serial = (kind === "sn" ? card.sn : card.sim_serial).trim();
-    if (!serial) {
-      toast({
-        title: t("courier.alert"),
-        description: "أدخل الرقم أولًا ثم ابحث",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updateCard(cardIndex, { lookupLoading: true, lookupMessage: null });
+  const lookupSerial = async (index: number) => {
+    const card = cards[index];
+    const sn = card?.sn?.trim();
+    if (!sn) return;
+    updateCard(index, { lookupLoading: true, lookupMessage: null });
     try {
-      const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn: serial });
+      const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn });
       const data: SerialLookupResult = await res.json();
-
-      if (kind === "sn") {
-        if (data.found && data.technician) {
-          updateCard(cardIndex, {
-            lookupLoading: false,
-            lookupMessage: data.message ?? null,
-            match: {
-              technician_name: data.technician.fullName,
-              technician_code:
-                data.technician.technicianCode ?? data.technician.username,
-              status: "matched",
-              confidence: 95,
-            },
-          });
-        } else {
-          updateCard(cardIndex, {
-            lookupLoading: false,
-            lookupMessage: data.message ?? "لم يُعثر على فني في العهدة",
-            match: {
-              technician_name: null,
-              technician_code: null,
-              status: "needs_review",
-              confidence: null,
-            },
-          });
-        }
-      } else {
-        updateCard(cardIndex, {
+      if (data.found && data.technician) {
+        updateCard(index, {
           lookupLoading: false,
-          lookupMessage:
-            data.message ?? (data.found ? "الشريحة موجودة" : "الشريحة غير موجودة"),
+          lookupMessage: `الفني: ${data.technician.fullName} (${data.technician.username})`,
+          match: {
+            technician_name: data.technician.fullName,
+            technician_code: data.technician.username,
+            status: "matched",
+            confidence: 100,
+          },
+        });
+      } else {
+        updateCard(index, {
+          lookupLoading: false,
+          lookupMessage: data.message || "الجهاز غير مخصص أو غير موجود في العهدة",
+          match: {
+            technician_name: null,
+            technician_code: null,
+            status: "needs_review",
+            confidence: 0,
+          },
         });
       }
-    } catch {
-      updateCard(cardIndex, { lookupLoading: false, lookupMessage: "فشل البحث" });
-      toast({
-        title: "تعذّر البحث",
-        description: `فشل البحث عن الرقم: ${serial}`,
-        variant: "destructive",
+    } catch (err: any) {
+      updateCard(index, {
+        lookupLoading: false,
+        lookupMessage: "تعذر التحقق من المخزون",
       });
     }
-  }
+  };
 
-  function addEmptyDevice() {
+  const addDeviceCard = () => {
     setCards((prev) => [
       ...prev,
       {
@@ -343,7 +372,7 @@ export default function CourierPdfReviewPage() {
         sim_serial: "",
         tid: "",
         merchant: "",
-        confidence: 0,
+        confidence: 100,
         match: {
           technician_name: null,
           technician_code: null,
@@ -352,416 +381,626 @@ export default function CourierPdfReviewPage() {
         },
       },
     ]);
-  }
+  };
 
-  async function handleReextract() {
-    if (!id) return;
-    setReextracting(true);
-    try {
-      const res = await apiRequest("POST", `/api/courier/pdf/${id}/reextract`);
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || data.error || "فشل إعادة الاستخراج");
-      }
-      const nextCards = toCards(data.extractedJson || data.fields || { devices: data.devices });
-      setCards(nextCards);
-      if (data.fields?.date?.value || data.extractedJson?.date?.value) {
-        setDeliveryDate(
-          data.extractedJson?.date?.value ?? data.fields?.date?.value ?? "",
-        );
-      }
-      if (data.fields?.time?.value || data.extractedJson?.time?.value) {
-        setTime(data.extractedJson?.time?.value ?? data.fields?.time?.value ?? "");
-      }
-      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
-      if (nextCards.length) {
-        toast({
-          title: "تم الاستخراج بالذكاء الاصطناعي",
-          description: `تم اكتشاف ${nextCards.length} جهازًا عبر Vision`,
-        });
-      } else {
-        toast({
-          title: "لم يُعثر على أجهزة",
-          description:
-            data.visionError ||
-            "تأكد من تفعيل المفتاح في إعدادات الذكاء الاصطناعي وأن الملف واضح",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      toast({
-        title: t("messages.error"),
-        description: err instanceof Error ? err.message : "فشل إعادة الاستخراج",
-        variant: "destructive",
-      });
-    } finally {
-      setReextracting(false);
-    }
-  }
+  const removeDeviceCard = (index: number) => {
+    setCards((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  async function handleComplete() {
-    if (!linkedRequestId) {
-      toast({
-        title: t("courier.alert"),
-        description: t("courier.report"),
-        variant: "destructive",
-      });
-      return;
-    }
-    if (cards.length === 0) {
-      toast({
-        title: t("courier.alert"),
-        description: "لا توجد أجهزة. أضف جهازًا يدويًا أو أعد رفع ملف قابل للاستخراج.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleComplete = async () => {
+    if (!report || !linkedRequestId) return;
     setCompleting(true);
     try {
-      const res = await apiRequest("POST", `/api/courier/pdf/${id}/complete`, {
+      const body = {
         request_id: linkedRequestId,
-        devices: cards.map((c) => ({
-          sn: c.sn || null,
-          sim_serial: c.sim_serial || null,
-          tid: c.tid || null,
-          technician_code: c.match.technician_code,
-          sales_technician: c.match.technician_name,
+        devices: cards.map((c, i) => ({
+          device_index: i + 1,
+          sn: c.sn.trim(),
+          sim_serial: c.sim_serial.trim(),
+          tid: c.tid.trim(),
+          merchant: c.merchant.trim(),
         })),
         deliveryDate: deliveryDate || null,
         time: time || null,
-        paperRoll: "Yes",
+      };
+
+      const res = await apiRequest(
+        "POST",
+        `/api/courier/pdf/${report.id}/complete`,
+        body,
+      );
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "فشل إكمال التقرير");
+      }
+
+      toast({
+        title: "تم الاعتماد وتطبيق البيانات بنجاح ✅",
+        description: "تم تحديث سجل السحب والمخزون وإرسال إشعار الاعتماد للفني عبر تيليجرام.",
       });
 
-      if (res.ok) {
-        toast({
-          title: t("courier.completed_successfully"),
-          description: t("courier.completed_report_data_successf"),
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf"] });
-        navigate(`/courier/requests/${linkedRequestId}`);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        toast({
-          title: t("courier.error"),
-          description: data.error || data.message || t("courier.fail_report"),
-          variant: "destructive",
-        });
-      }
-    } catch {
+      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf"] });
+      navigate("/courier/pdf");
+    } catch (err: any) {
       toast({
-        title: t("courier.error"),
-        description: t("courier.error_send_data"),
+        title: "خطأ أثناء الاعتماد",
+        description: err.message,
         variant: "destructive",
       });
     } finally {
       setCompleting(false);
     }
-  }
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!report) return;
+    setRejecting(true);
+    try {
+      const res = await apiRequest("POST", `/api/courier/pdf/${report.id}/reject`, {
+        reasonCategory: rejectReasonCategory,
+        notes: rejectNotes,
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "فشل إرجاع التقرير");
+      }
+
+      toast({
+        title: "تم إرجاع التقرير للفني ⚠️",
+        description: "تم إرسال إشعار التنبيه والتفاصيل المحددة إلى دردشة التليجرام الخاصة بالفني.",
+      });
+
+      setRejectModalOpen(false);
+      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf"] });
+      navigate("/courier/pdf");
+    } catch (err: any) {
+      toast({
+        title: "خطأ أثناء عملية الإرجاع",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const handleReextract = async () => {
+    if (!report) return;
+    setReextracting(true);
+    try {
+      const res = await apiRequest(
+        "POST",
+        `/api/courier/pdf/${report.id}/reextract`,
+      );
+      if (!res.ok) throw new Error("فشل إعادة الاستخراج");
+      const updated = await res.json();
+
+      toast({
+        title: "تمت إعادة الاستخراج بالذكاء الاصطناعي ✨",
+        description: `تم تحديد ${updated.devices?.length || 0} أجهزة بثقة ${Math.round(updated.overallConfidence || 0)}%.`,
+      });
+
+      setCards(toCards(updated.extractedJson));
+      setLinkedRequestId(updated.requestId || report.requestId);
+      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
+    } catch (err: any) {
+      toast({
+        title: "خطأ الاستخراج",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setReextracting(false);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-[#6B7280]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#18B2B0] mb-2" />
-        <p className="text-sm">{t("courier.loading_report_data")}</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-[#18B2B0]" />
+        <p className="text-sm font-medium text-[#6B7280]">جارٍ تحميل تفاصيل التقرير والبيانات المستخرجة…</p>
       </div>
     );
   }
 
   if (error || !report) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-[#6B7280]">
-        <AlertCircle className="w-8 h-8 text-red-400 mb-2" />
-        <p className="text-sm">{t("courier.fail_loading_details_report")}</p>
+      <div className="p-6 text-center max-w-lg mx-auto bg-white rounded-2xl border border-red-200 shadow-sm my-12">
+        <AlertCircle className="w-10 h-10 text-[#E05252] mx-auto mb-3" />
+        <h3 className="text-base font-bold text-[#2D3135]">تعذر تحميل التقرير</h3>
+        <p className="text-xs text-[#6B7280] mt-1">قد يكون الملف غير موجود أو تم حذفه من السيرفر.</p>
+        <button
+          onClick={() => navigate("/courier/pdf")}
+          className="mt-4 px-4 py-2 text-xs font-bold text-white bg-[#18B2B0] rounded-xl hover:bg-[#159A98] transition-colors"
+        >
+          العودة لقائمة التقارير
+        </button>
       </div>
     );
   }
 
-  const isImage = /\.(png|jpe?g|webp)$/i.test(report.fileName);
+  const isApplied = report.status === "applied";
 
   return (
-    <div dir={dir} className="rassco-page space-y-6 max-w-7xl mx-auto pb-12">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <button
-          onClick={() => navigate("/courier/pdf")}
-          className="flex items-center gap-1 text-xs font-semibold text-[#6B7280] hover:text-[#18B2B0] transition-colors mb-3"
-        >
-          <ArrowRight className="w-3.5 h-3.5" />
-          {t("courier.item_25514")}
-        </button>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#2D3135] flex items-center gap-3">
-          <span className="courier-icon-badge">
-            <Sparkles className="w-5 h-5" />
-          </span>
-          {t("courier.review_document_data_images")}
-        </h1>
-        <p className="text-sm text-[#6B7280] mt-1.5 ps-14">
-          {t("courier.file_1")}{" "}
-          <span className="font-mono text-[#18B2B0] font-semibold">{report.fileName}</span>
-        </p>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 courier-panel courier-panel-static flex flex-col">
-          <div className="bg-[#F8FAFC] px-4 py-3 border-b border-[rgba(24,178,176,0.16)] flex items-center justify-between">
-            <span className="text-xs font-bold text-[#4B5563]">{t("courier.document")}</span>
-            <ConfidenceBadge value={report.overallConfidence} />
+    <div className="w-full px-4 sm:px-8 py-6 space-y-6 font-sans bg-[#F8FAFC]/50 min-h-screen" dir={dir}>
+      {/* Top Header & Navigation Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/courier/pdf")}
+            className="p-2 text-[#6B7280] hover:text-[#18B2B0] hover:bg-[#18B2B0]/10 rounded-xl transition-colors"
+            title="رجوع"
+          >
+            <ArrowRight className="w-5 h-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-[#2D3135] font-cairo">
+                مراجعة وتدقيق تقرير التركيب #{report.id}
+              </h1>
+              <StatusTag status={report.status} />
+            </div>
+            <p className="text-xs text-[#6B7280] mt-0.5 dir-ltr text-end sm:text-start font-mono">
+              {report.fileName}
+            </p>
           </div>
-          {previewError ? (
-            <div className="w-full h-[650px] bg-[#F8FAFC] flex flex-col items-center justify-center gap-2 p-6 text-center">
-              <AlertCircle className="w-8 h-8 text-[#E05252]" />
-              <p className="text-sm text-[#E05252] font-semibold">{previewError}</p>
-            </div>
-          ) : !previewUrl ? (
-            <div className="w-full h-[650px] bg-[#F8FAFC] flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-[#18B2B0]" />
-            </div>
-          ) : isImage ? (
-            <div className="w-full h-[650px] bg-[#F8FAFC] flex items-center justify-center overflow-auto p-4">
-              <img
-                src={previewUrl}
-                alt={t("courier.document_1")}
-                className="max-w-full max-h-full object-contain rounded"
-              />
-            </div>
-          ) : (
-            <iframe src={previewUrl} className="w-full h-[650px] bg-[#F8FAFC]" title="PDF preview" />
-          )}
         </div>
 
-        <div className="lg:col-span-7 flex flex-col gap-4">
-          <div className="courier-panel courier-panel-static p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#18B2B0]">
-              {deviceCount > 0 ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  تم اكتشاف {deviceCount} جهازًا
-                  <span className="text-xs font-semibold text-[#6B7280]">
-                    · مطابقة: {matchedCount}/{deviceCount}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4 text-[#B45309]" />
-                  <span className="text-[#B45309]">
-                    لم يُستخرج أي جهاز تلقائيًا (الملف قد يكون صورة ممسوحة بدون نص)
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleReextract}
-                disabled={reextracting}
-                className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] hover:underline disabled:opacity-50"
-              >
-                {reextracting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3.5 h-3.5" />
-                )}
-                استخراج بالذكاء الاصطناعي
-              </button>
-              <button
-                type="button"
-                onClick={addEmptyDevice}
-                className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] hover:underline"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                إضافة جهاز
-              </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleReextract}
+            disabled={reextracting || isApplied}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 rounded-xl transition-colors disabled:opacity-50"
+          >
+            {reextracting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            إعادة الاستخراج بالذكاء الاصطناعي
+          </button>
+
+          {!isApplied && (
+            <button
+              onClick={() => setRejectModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-[#E05252] bg-[#E05252]/10 hover:bg-[#E05252]/20 rounded-xl transition-colors border border-[#E05252]/20"
+            >
+              <XCircle className="w-4 h-4" />
+              إرجاع للفني وإرسال إشعار
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Technician & Source Metadata Glass Panel */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.16)] flex items-center gap-3">
+          <div className="p-3 bg-[#18B2B0]/10 text-[#18B2B0] rounded-xl">
+            <User className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-[#6B7280]">الفني المسؤول</span>
+            <p className="text-xs font-bold text-[#2D3135] mt-0.5">
+              {report.technicianName || "فني ميداني (تليجرام)"}
+            </p>
+            {report.technicianCode && (
+              <span className="text-[10px] text-[#18B2B0] font-mono">@{report.technicianCode}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.16)] flex items-center gap-3">
+          <div className="p-3 bg-[#18B2B0]/10 text-[#18B2B0] rounded-xl">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-[#6B7280]">المنطقة / المدينة</span>
+            <p className="text-xs font-bold text-[#2D3135] mt-0.5">
+              {report.region || "الرياض - الوسطى"}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.16)] flex items-center gap-3">
+          <div className="p-3 bg-[#18B2B0]/10 text-[#18B2B0] rounded-xl">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-[#6B7280]">نسبة دقة الاستخراج</span>
+            <div className="mt-0.5">
+              <ConfidenceBadge value={report.overallConfidence} />
             </div>
           </div>
+        </div>
 
-          {deviceCount === 0 ? (
-            <div className="courier-panel courier-panel-static p-5 text-sm text-[#6B7280] leading-relaxed space-y-2">
-              <p>
-                لم تُستخرج أجهزة من طبقة النص. إذا كان الملف ممسوحًا ضوئيًا، اضغط «استخراج بالذكاء الاصطناعي»
-                بعد تفعيل المفتاح من صفحة إعدادات الذكاء الاصطناعي.
-              </p>
-              <p>أو أضف الأجهزة يدويًا بزر «إضافة جهاز»، ثم ابحث عن الفني وأكمل الطلب.</p>
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.16)] flex items-center gap-3">
+          <div className="p-3 bg-[#18B2B0]/10 text-[#18B2B0] rounded-xl">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-[#6B7280]">حالة مطابقة الأجهزة</span>
+            <p className="text-xs font-bold text-[#2D3135] mt-0.5">
+              {matchedCount} من أصل {cards.length} جهاز مطابق
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Left PDF Preview, Right Editable Device Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* PDF / Image Preview Column (5 cols) */}
+        <div className="lg:col-span-5 space-y-3">
+          <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm sticky top-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-[#2D3135] flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-[#18B2B0]" />
+                المستند الأصلي المرفوع
+              </span>
+              <a
+                href={`/api/courier/pdf/${report.id}?raw=1`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-bold text-[#18B2B0] hover:underline flex items-center gap-1"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                فتح في نافذة كاملة
+              </a>
             </div>
-          ) : null}
 
-          {cards.map((card, index) => (
-            <div key={`${card.device_index}-${index}`} className="courier-panel courier-panel-static p-5 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-bold text-[#2D3135]">الجهاز {card.device_index}</h2>
-                <div className="flex items-center gap-2">
-                  <ConfidenceBadge value={card.confidence} />
-                  <MatchBadge status={card.match.status} />
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl overflow-hidden min-h-[500px] flex items-center justify-center relative">
+              {previewUrl ? (
+                report.fileName.toLowerCase().endsWith(".pdf") ? (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-[580px] border-none"
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt="Document Proof"
+                    className="max-h-[580px] w-full object-contain p-2"
+                  />
+                )
+              ) : previewError ? (
+                <div className="p-4 text-center">
+                  <AlertCircle className="w-8 h-8 text-[#E05252] mx-auto mb-2" />
+                  <p className="text-xs text-[#E05252]">{previewError}</p>
                 </div>
-              </div>
+              ) : (
+                <Loader2 className="w-8 h-8 animate-spin text-[#18B2B0]" />
+              )}
+            </div>
+          </div>
+        </div>
 
-              {(
-                [
-                  ["sn", "الرقم التسلسلي", card.sn],
-                  ["sim_serial", "الشريحة", card.sim_serial],
-                  ["tid", "TID", card.tid],
-                ] as const
-              ).map(([key, label, value]) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-xs font-semibold text-[#4B5563]">{label}</label>
-                  <div className="flex gap-2">
-                    <input
-                      dir="ltr"
-                      className="courier-input font-mono flex-1"
-                      value={value}
-                      onChange={(e) =>
-                        updateCard(index, { [key]: e.target.value } as Partial<DeviceCard>)
-                      }
-                    />
-                    {(key === "sn" || key === "sim_serial") && (
+        {/* Editable Cards Column (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.18)]">
+            <div>
+              <h2 className="text-sm font-bold text-[#2D3135]">
+                بيانات الأجهزة والشرائح ({cards.length})
+              </h2>
+              <p className="text-[11px] text-[#6B7280]">
+                يمكنك التعديل مباشرة في الحقول أدناه قبل إكمال الاعتماد.
+              </p>
+            </div>
+            {!isApplied && (
+              <button
+                onClick={addDeviceCard}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 rounded-xl transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                إضافة جهاز
+              </button>
+            )}
+          </div>
+
+          {/* Cards List */}
+          <div className="space-y-4">
+            {cards.map((card, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm space-y-4 relative"
+              >
+                <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-[#18B2B0] text-white text-xs font-bold flex items-center justify-center font-mono">
+                      #{card.device_index}
+                    </span>
+                    <h3 className="text-xs font-bold text-[#2D3135]">
+                      بيانات الجهاز / الشريحة
+                    </h3>
+                    <ConfidenceBadge value={card.confidence} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MatchBadge status={card.match.status} />
+                    {!isApplied && cards.length > 1 && (
                       <button
-                        type="button"
-                        className="courier-btn-secondary px-3 shrink-0"
-                        disabled={card.lookupLoading}
-                        onClick={() => lookupSerial(index, key)}
-                        title="بحث ومطابقة العهدة"
+                        onClick={() => removeDeviceCard(idx)}
+                        className="text-[#E05252] hover:bg-red-50 p-1 rounded-lg transition-colors"
+                        title="حذف الجهاز"
                       >
-                        {card.lookupLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Search className="w-4 h-4" />
-                        )}
+                        <XCircle className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 </div>
-              ))}
 
-              <div className="rounded-xl bg-[#F8FAFC] border border-[rgba(24,178,176,0.16)] p-3 text-sm space-y-1">
-                <div className="flex justify-between gap-2">
-                  <span className="text-xs font-semibold text-[#6B7280]">الفني</span>
-                  <span className="font-bold text-[#2D3135]">
-                    {card.match.technician_name || "غير معروف"}
-                  </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* S/N Input */}
+                  <div>
+                    <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
+                      <Barcode className="w-3.5 h-3.5 text-[#18B2B0]" />
+                      الرقم التسلسلي للجهاز (S/N)
+                    </label>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={card.sn}
+                        onChange={(e) => updateCard(idx, { sn: e.target.value })}
+                        disabled={isApplied}
+                        placeholder="مثال: 95012345678"
+                        className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                      />
+                      <button
+                        onClick={() => lookupSerial(idx)}
+                        disabled={card.lookupLoading || !card.sn.trim()}
+                        className="px-2.5 py-1.5 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 rounded-xl transition-colors shrink-0 disabled:opacity-50"
+                        title="التحقق من العهدة"
+                      >
+                        {card.lookupLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* SIM Serial Input */}
+                  <div>
+                    <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
+                      <CreditCard className="w-3.5 h-3.5 text-[#18B2B0]" />
+                      رقم الشريحة (SIM ICCID)
+                    </label>
+                    <input
+                      type="text"
+                      value={card.sim_serial}
+                      onChange={(e) => updateCard(idx, { sim_serial: e.target.value })}
+                      disabled={isApplied}
+                      placeholder="مثال: 899660123456789"
+                      className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                    />
+                  </div>
+
+                  {/* TID Input */}
+                  <div>
+                    <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-[#18B2B0]" />
+                      رقم العميل / Terminal ID (TID)
+                    </label>
+                    <input
+                      type="text"
+                      value={card.tid}
+                      onChange={(e) => updateCard(idx, { tid: e.target.value })}
+                      disabled={isApplied}
+                      placeholder="مثال: 15805012"
+                      className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                    />
+                  </div>
+
+                  {/* Merchant Name Input */}
+                  <div>
+                    <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5 text-[#18B2B0]" />
+                      اسم المتجر / العميل
+                    </label>
+                    <input
+                      type="text"
+                      value={card.merchant}
+                      onChange={(e) => updateCard(idx, { merchant: e.target.value })}
+                      disabled={isApplied}
+                      placeholder="اسم المتجر"
+                      className="w-full text-xs px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                    />
+                  </div>
                 </div>
-                {card.lookupMessage ? (
-                  <p className="text-[11px] text-[#6B7280]">{card.lookupMessage}</p>
-                ) : (
-                  <p className="text-[11px] text-[#6B7280]">
-                    اضغط أيقونة البحث بجانب الرقم التسلسلي لإظهار الفني من العهدة.
+
+                {card.lookupMessage && (
+                  <p className="text-[11px] text-[#18B2B0] font-medium bg-[#18B2B0]/10 px-3 py-1.5 rounded-lg">
+                    {card.lookupMessage}
                   </p>
                 )}
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
 
-          <div className="courier-panel courier-panel-static p-5 space-y-4">
-            <h2 className="text-sm font-bold text-[#4B5563] border-b border-[rgba(24,178,176,0.16)] pb-2 flex items-center gap-1.5">
-              <Link2 className="w-4 h-4 text-[#18B2B0]" />
-              {t("courier.item_35123")}
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#4B5563]">تاريخ التنفيذ</label>
-                <input
-                  className="courier-input"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  placeholder="YYYY-MM-DD"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#4B5563]">الوقت</label>
-                <input
-                  className="courier-input"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  placeholder="HH:MM"
-                />
-              </div>
-            </div>
+          {/* Linking Request & Action Bar */}
+          <div className="bg-white/90 backdrop-blur-md p-5 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm space-y-4">
+            <h3 className="text-xs font-bold text-[#2D3135] border-b border-[#F1F5F9] pb-2">
+              ربط الطلب والتطبيق المباشر
+            </h3>
 
             {linkedRequestId ? (
-              <div className="space-y-3">
-                <div className="bg-[#18B2B0]/10 border border-[#18B2B0]/25 text-[#18B2B0] rounded-xl p-3 text-sm flex flex-col gap-1">
-                  <span className="font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                    {t("courier.linked_to_tid", {
-                      tid: linkedRequestTid || t("courier.loading"),
-                    })}
-                  </span>
-                  <span className="text-xs text-[#18B2B0]/80 font-mono">
-                    {t("courier.request_count", { count: linkedRequestId })}
-                  </span>
+              <div className="flex items-center justify-between p-3 bg-[#18B2B0]/10 border border-[#18B2B0]/25 rounded-xl">
+                <div>
+                  <span className="text-[10px] text-[#6B7280]">مرتبط بالطلب:</span>
+                  <p className="text-xs font-bold text-[#18B2B0]">
+                    طلب #{linkedRequestId} {linkedRequestTid ? `(${linkedRequestTid})` : ""}
+                  </p>
                 </div>
-                <button
-                  onClick={() => {
-                    setLinkedRequestId(null);
-                    setLinkedRequestTid(null);
-                  }}
-                  className="w-full text-xs font-bold text-[#E05252] hover:text-[#C93F3F] bg-[#E05252]/10 hover:bg-[#E05252]/15 py-2 rounded-xl transition-colors border border-[#E05252]/25"
-                >
-                  {t("courier.request")}
-                </button>
+                {!isApplied && (
+                  <button
+                    onClick={() => {
+                      setLinkedRequestId(null);
+                      setLinkedRequestTid(null);
+                    }}
+                    className="text-xs font-bold text-[#E05252] hover:underline"
+                  >
+                    تغيير الربط
+                  </button>
+                )}
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-[#6B7280] leading-relaxed">{t("courier.request_data")}</p>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[#6B7280]">
+                  البحث عن رقم طلب للربط به:
+                </label>
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
                   <input
                     value={linkQuery}
                     onChange={(e) => setLinkQuery(e.target.value)}
-                    placeholder={t("courier.mobile_name_customer_1")}
-                    className="courier-input pr-10"
+                    placeholder="ابحث برقم الطلب، اسم المتجر، أو رقم الهاتف…"
+                    className="w-full text-xs pr-9 pl-3 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0]"
                   />
                 </div>
-                {linkQuery && (
-                  <div className="bg-[#F8FAFC] border border-[rgba(24,178,176,0.16)] rounded-xl divide-y divide-[rgba(226,232,240,0.9)] overflow-hidden max-h-60 overflow-y-auto">
-                    {linkResults.length === 0 ? (
-                      <div className="p-3 text-xs text-[#6B7280] text-center">{t("courier.no_results")}</div>
-                    ) : (
-                      linkResults.map((r) => (
-                        <button
-                          key={r.id}
-                          onClick={() => {
-                            setLinkedRequestId(r.id);
-                            setLinkedRequestTid(r.tid || `ID: ${r.id}`);
-                          }}
-                          className="w-full text-start p-2.5 hover:bg-[#18B2B0]/05 flex flex-col gap-0.5 transition-colors"
-                        >
-                          <span className="text-xs font-bold text-[#2D3135]">
-                            {r.customerName || t("courier.customer")}
-                          </span>
-                          <span className="text-[10px] text-[#6B7280] font-mono">
-                            TID: {r.tid} | Terminal ID: {r.terminalId}
-                          </span>
-                        </button>
-                      ))
-                    )}
+
+                {linkQuery && linkResults.length > 0 && (
+                  <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-lg divide-y divide-[#F1F5F9] max-h-48 overflow-y-auto">
+                    {linkResults.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          setLinkedRequestId(r.id);
+                          setLinkedRequestTid(r.tid || `ID: ${r.id}`);
+                          setLinkQuery("");
+                        }}
+                        className="w-full text-start p-2.5 hover:bg-[#18B2B0]/10 flex flex-col gap-0.5 transition-colors"
+                      >
+                        <span className="text-xs font-bold text-[#2D3135]">
+                          {r.customerName || "عميل"} (طلب #{r.id})
+                        </span>
+                        <span className="text-[10px] text-[#6B7280] font-mono">
+                          TID: {r.tid} | Terminal: {r.terminalId}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
             )}
 
-            <button
-              onClick={handleComplete}
-              disabled={completing || !linkedRequestId || report.status === "applied"}
-              className="w-full courier-btn-primary em-ripple disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {completing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  جارٍ الإكمال…
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  إكمال جميع الأجهزة
-                </>
-              )}
-            </button>
+            {/* Action Buttons */}
+            {!isApplied && (
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <button
+                  onClick={handleComplete}
+                  disabled={completing || !linkedRequestId}
+                  className="w-full sm:flex-1 py-3 px-4 text-xs font-bold text-white bg-[#18B2B0] hover:bg-[#159A98] rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {completing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  إكمال جميع الأجهزة والاعتماد ✅
+                </button>
+
+                <button
+                  onClick={() => setRejectModalOpen(true)}
+                  className="w-full sm:w-auto py-3 px-4 text-xs font-bold text-[#E05252] bg-[#E05252]/10 hover:bg-[#E05252]/20 border border-[#E05252]/25 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  إرجاع للفني ⚠️
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Interactive Rejection Modal */}
+      <AnimatePresence>
+        {rejectModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-[rgba(24,178,176,0.18)] p-6 space-y-4 relative font-sans"
+            >
+              <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+                <div className="flex items-center gap-2 text-[#E05252]">
+                  <ShieldAlert className="w-5 h-5" />
+                  <h3 className="text-sm font-bold text-[#2D3135]">
+                    إرجاع تقرير التركيب للمراجعة (تليجرام)
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setRejectModalOpen(false)}
+                  className="text-[#6B7280] hover:text-[#2D3135] p-1 rounded-lg"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                سيؤدي هذا الإجراء إلى تحديث حالة التقرير إلى <strong className="text-[#E05252]">مرتجع</strong> وإرسال إشعار فوري للفني عبر دردشة التليجرام يتضمن سبب المشكلة وملاحظتك المباشرة.
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-[#4B5563] block mb-1">
+                    السبب الرئيسي للإرجاع:
+                  </label>
+                  <select
+                    value={rejectReasonCategory}
+                    onChange={(e) => setRejectReasonCategory(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135]"
+                  >
+                    <option value="UNCLEAR_PHOTO">📸 صورة المستند/الملصق غير واضحة</option>
+                    <option value="SERIAL_MISMATCH">🔢 الرقم التسلسلي للجهاز غير مطابق للعهدة</option>
+                    <option value="SIM_MISMATCH">💳 رقم الشريحة (SIM) غير مطابق</option>
+                    <option value="MERCHANT_TID_MISMATCH">🏬 بيانات التاجر أو TID غير مطابقة</option>
+                    <option value="OTHER">❓ سبب آخر (موضح بالملاحظات)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#4B5563] block mb-1">
+                    📝 ملاحظة المشرف المباشرة للفني:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={rejectNotes}
+                    onChange={(e) => setRejectNotes(e.target.value)}
+                    placeholder="اكتب التوضيح المباشر للفني (مثال: الرقم التسلسلي الأخير مغطى، يرجى إعادة التصوير)..."
+                    className="w-full text-xs p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                <button
+                  onClick={() => setRejectModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] hover:bg-[#E2E8F0] rounded-xl transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleRejectSubmit}
+                  disabled={rejecting}
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#E05252] hover:bg-[#C93F3F] rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {rejecting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  إرسال الإشعار وإرجاع التقرير
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

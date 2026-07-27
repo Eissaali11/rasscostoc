@@ -9,7 +9,7 @@ import * as jwt from "@server/utils/jwt";
 import { JWT_SECRET } from "@core/config/jwt.config";
 import { getDatabase } from "@core/database/connection";
 import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 // Extend Express Request type to include full user context
 declare global {
@@ -290,7 +290,7 @@ export async function requireAdminOrInternal(
   next: NextFunction
 ): Promise<void> {
   try {
-    const expected = process.env.INTERNAL_SERVICE_KEY;
+    const expected = process.env.INTERNAL_SERVICE_KEY || process.env.SYSTEM_INTERNAL_TOKEN;
     const provided = req.header("x-internal-service-key");
     if (expected && provided && provided === expected) {
       return next();
@@ -328,7 +328,7 @@ export async function requireAuthOrInternal(
   next: NextFunction
 ): Promise<void> {
   try {
-    const expected = process.env.INTERNAL_SERVICE_KEY;
+    const expected = process.env.INTERNAL_SERVICE_KEY || process.env.SYSTEM_INTERNAL_TOKEN;
     const provided = req.header("x-internal-service-key");
 
     if (expected && provided && provided === expected) {
@@ -339,6 +339,7 @@ export async function requireAuthOrInternal(
         );
       }
 
+      const cleanTgId = telegramUserId.replace(/^@/, "");
       const db = getDatabase();
       const [row] = await db
         .select({
@@ -352,7 +353,13 @@ export async function requireAuthOrInternal(
           isActive: users.isActive,
         })
         .from(users)
-        .where(eq(users.telegramUserId, telegramUserId))
+        .where(
+          or(
+            eq(users.telegramUserId, telegramUserId),
+            eq(users.telegramUserId, cleanTgId),
+            eq(users.telegramUserId, `@${cleanTgId}`)
+          )
+        )
         .limit(1);
 
       if (!row || !row.isActive) {

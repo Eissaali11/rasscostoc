@@ -55,6 +55,9 @@ export class CourierService {
       "pushBack",
       "installationStatus",
       "paperRoll",
+      "paperRollQty",
+      "stickersQty",
+      "nulipCardsQty",
       "time",
       "deliveryDate",
       "responseDate",
@@ -1094,10 +1097,81 @@ export class CourierService {
       changedBy: enteredBy,
     });
 
+    if (report && report.uploadedBy) {
+      const approveMsg = `<b>✅ تم اعتماد تقرير التركيب بنجاح</b>\n\n` +
+        `<b>رقم التقرير:</b> #${pdfId}\n` +
+        (requestId ? `<b>رقم الطلب:</b> #${requestId}\n` : "") +
+        `شكراً لالتزامك وتوثيق التركيب.`;
+      this.notifyTelegramUser(report.uploadedBy, approveMsg).catch(() => {});
+    }
+
     return {
       ...saved,
       pdf: { id: pdfId, status: "applied", requestId },
     };
+  }
+
+  async rejectPdfReport(
+    pdfId: number,
+    reasonCategory: string,
+    notes: string,
+    actorId: string
+  ): Promise<any> {
+    const report = await this.getPdfReportById(pdfId);
+    if (!report) {
+      throw new NotFoundError("PDF Report not found");
+    }
+
+    const updated = await this.pdfRepo.updatePdfReport(pdfId, {
+      status: "rejected",
+    });
+
+    await this.dashboardRepo.insertAuditLog({
+      tableName: "pdf_reports",
+      recordId: pdfId,
+      action: "reject",
+      changedBy: actorId,
+    });
+
+    if (report.uploadedBy) {
+      const reasonLabels: Record<string, string> = {
+        UNCLEAR_PHOTO: "صورة المستند/الملصق غير واضحة",
+        SERIAL_MISMATCH: "الرقم التسلسلي للجهاز غير مطابق",
+        SIM_MISMATCH: "رقم الشريحة غير مطابق",
+        MERCHANT_TID_MISMATCH: "بيانات التاجر / TID غير مطابقة",
+        OTHER: "أسباب أخرى",
+      };
+      const categoryLabel = reasonLabels[reasonCategory] || reasonCategory;
+      const msg = `<b>⚠️ تم إرجاع تقرير التركيب للمراجعة</b>\n\n` +
+        `<b>السبب الرئيسي:</b> ${categoryLabel}\n` +
+        (notes ? `<b>📝 ملاحظة المشرف:</b> ${notes}\n\n` : "\n") +
+        `🔄 يرجى إعادة تصوير التقرير ورفعه مجدداً عبر البوت.`;
+      
+      this.notifyTelegramUser(report.uploadedBy, msg).catch(() => {});
+    }
+
+    return { id: pdfId, status: "rejected", reasonCategory, notes };
+  }
+
+  private async notifyTelegramUser(userId: string, htmlMessage: string): Promise<void> {
+    try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN || "8829774810:AAG-bnlRiTZAoHfvijp7erQmRKDBPxBfOFw";
+      const techUser = await this.inventoryPort.findUserById(userId);
+      const chatId = (techUser as any)?.telegram_user_id || techUser?.username;
+      if (!chatId || !botToken) return;
+
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: htmlMessage,
+          parse_mode: "HTML",
+        }),
+      });
+    } catch (err) {
+      console.error("[TelegramNotify] Error sending notification:", err);
+    }
   }
 
   async applyPdfReport(pdfId: number, requestId: number, fields: any, confidence: any, uploadedBy: string): Promise<any> {

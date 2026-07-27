@@ -247,6 +247,24 @@ export class CourierController {
     res.json(result);
   });
 
+  rejectPdf = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const pdfId = Number(req.params.id);
+    if (isNaN(pdfId)) throw new ValidationError("Invalid PDF ID");
+
+    const reasonCategory = (req.body.reasonCategory || req.body.reason || "UNCLEAR_PHOTO").toString();
+    const notes = (req.body.notes || "").toString();
+
+    const result = await this.service.rejectPdfReport(
+      pdfId,
+      reasonCategory,
+      notes,
+      user.id
+    );
+
+    res.json(result);
+  });
+
   getPdfReport = asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     if (isNaN(id)) throw new ValidationError("Invalid PDF ID");

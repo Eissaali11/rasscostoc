@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +42,9 @@ interface Execution {
   deliveryDate: string | null;
   time: string | null;
   paperRoll: string | null;
+  paperRollQty?: number | null;
+  stickersQty?: number | null;
+  nulipCardsQty?: number | null;
   responseReasonCode: string | null;
   customerNotes: string | null;
   requestPriorityLevel: string | null;
@@ -225,6 +228,29 @@ export function EditCourierExecutionModal({
     if (!open || !request || loadedSerials) return;
     setLoadedSerials(true);
 
+    if (request.execution) {
+      setForm({
+        installationStatus: request.execution.installationStatus ?? undefined,
+        salesTechnician: request.execution.salesTechnician || undefined,
+        technicianCode: request.execution.technicianCode || undefined,
+        sn: request.execution.sn || undefined,
+        simSerial: request.execution.simSerial || undefined,
+        simType: request.execution.simType || undefined,
+        deliveryDate: request.execution.deliveryDate || undefined,
+        time: request.execution.time || undefined,
+        paperRoll: request.execution.paperRoll || undefined,
+        paperRollQty: request.execution.paperRollQty ?? 0,
+        stickersQty: request.execution.stickersQty ?? 0,
+        nulipCardsQty: request.execution.nulipCardsQty ?? 0,
+        responseReasonCode: request.execution.responseReasonCode || undefined,
+        customerNotes: request.execution.customerNotes || undefined,
+        requestPriorityLevel: request.execution.requestPriorityLevel || undefined,
+        pushBack: request.execution.pushBack || undefined,
+        responseDate: request.execution.responseDate || undefined,
+        version: request.execution.version,
+      });
+    }
+
     if (
       request.execution?.salesTechnician &&
       request.tecName &&
@@ -333,6 +359,9 @@ export function EditCourierExecutionModal({
       mutation.mutate({
         installationStatus: currentForm.installationStatus,
         paperRoll: currentForm.paperRoll,
+        paperRollQty: Number(currentForm.paperRollQty) || 0,
+        stickersQty: Number(currentForm.stickersQty) || 0,
+        nulipCardsQty: Number(currentForm.nulipCardsQty) || 0,
         time: currentForm.time,
         deliveryDate: currentForm.deliveryDate,
         responseDate: currentForm.responseDate,
@@ -360,6 +389,9 @@ export function EditCourierExecutionModal({
     mutation.mutate({
       installationStatus: currentForm.installationStatus,
       paperRoll: currentForm.paperRoll,
+      paperRollQty: Number(currentForm.paperRollQty) || 0,
+      stickersQty: Number(currentForm.stickersQty) || 0,
+      nulipCardsQty: Number(currentForm.nulipCardsQty) || 0,
       time: currentForm.time,
       deliveryDate: currentForm.deliveryDate,
       responseDate: currentForm.responseDate,
@@ -620,17 +652,52 @@ export function EditCourierExecutionModal({
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] text-slate-450 mb-1 font-medium">رول الورق</label>
-                        <select
-                          value={currentForm.paperRoll || ""}
-                          onChange={(e) => handleChange("paperRoll", e.target.value)}
-                          className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
-                        >
-                          <option value="">اختر</option>
-                          <option value="Yes">نعم</option>
-                          <option value="No">لا</option>
-                        </select>
+                      <div className="border-t border-[#E2E8F0] pt-3 mt-2">
+                        <label className="block text-[11px] text-[#18B2B0] mb-2 font-semibold">المواد الاستهلاكية المسلمة للعميل (تُخصم من رصيد الفني)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] text-slate-450 mb-1 font-medium">تسليم ورق رول</label>
+                            <select
+                              value={currentForm.paperRoll || ""}
+                              onChange={(e) => handleChange("paperRoll", e.target.value)}
+                              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                            >
+                              <option value="">اختر</option>
+                              <option value="Yes">نعم</option>
+                              <option value="No">لا</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-slate-450 mb-1 font-medium">كمية ورق رول (عدد)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={currentForm.paperRollQty ?? 0}
+                              onChange={(e) => handleChange("paperRollQty", e.target.value)}
+                              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-slate-450 mb-1 font-medium">بطاقات نيوليب (عدد)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={currentForm.nulipCardsQty ?? 0}
+                              onChange={(e) => handleChange("nulipCardsQty", e.target.value)}
+                              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-slate-450 mb-1 font-medium">ملصقات / استيكرات (عدد)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={currentForm.stickersQty ?? 0}
+                              onChange={(e) => handleChange("stickersQty", e.target.value)}
+                              className="w-full rassco-glass border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0]"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       {currentForm.installationStatus === "Not Completed" && (

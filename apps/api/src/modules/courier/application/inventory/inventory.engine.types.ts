@@ -19,6 +19,10 @@ export interface DeductionContext {
   referenceNumber: string;
   /** Vendor/model type for general inventory */
   vendorType?: string | null;
+  /** Consumable quantities */
+  paperRollQty?: number;
+  stickersQty?: number;
+  nulipCardsQty?: number;
   /** Free-text notes for general deduction log */
   notes?: string;
 }
