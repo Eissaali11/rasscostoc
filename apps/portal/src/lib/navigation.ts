@@ -22,6 +22,7 @@ import {
   Settings,
   Activity,
   QrCode,
+  Key,
   type LucideIcon
 } from "lucide-react";
 import { ROLES } from "@shared/roles";
@@ -187,6 +188,13 @@ export const navigationRegistry: NavigationItem[] = [
     labelKey: "nav.ai-engine-settings",
     icon: BrainCircuit,
     roles: [ROLES.ADMIN]
+  },
+  {
+    id: "leads-audit",
+    href: "/leads-audit",
+    labelKey: "nav.leads-audit",
+    icon: Key,
+    roles: [ROLES.ADMIN, ROLES.SUPERVISOR]
   }
 ];
 

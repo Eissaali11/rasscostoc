@@ -112,6 +112,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Engine provider settings (admin) — PR-006A-10
   registerAiEngineSettingsRoutes(app);
 
+  // Register lead discovery audit routes
+  const { registerLeadDiscoveryAuditRoutes } = await import("./modules/leads/leads-audit.routes");
+  registerLeadDiscoveryAuditRoutes(app);
+
   const httpServer = createServer(app);
   return httpServer;
 }
