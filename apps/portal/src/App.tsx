@@ -106,6 +106,7 @@ function AuthenticatedRouter() {
       <Route path="/devices" component={() => <Redirect to="/home" />} />
       <Route path="/stock" component={LandingPage} />
       <Route path="/home" component={withShell(Dashboard, "titles.home")} />
+      <Route path="/leads-audit" component={withShell(LeadDiscoveryAuditPage, "titles.leads_audit")} />
       <Route path="/transactions" component={withShell(TransactionHistoryPage, "titles.transactions")} />
       <Route path="/operations-search" component={withShell(OperationsSearchPage, "titles.operations_search")} />
       <Route path="/withdrawn-devices" component={withShell(WithdrawnDevicesPage, "titles.withdrawn_devices")} />
