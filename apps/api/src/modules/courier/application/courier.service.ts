@@ -873,8 +873,41 @@ export class CourierService {
     return { extraction, extractedPayload, status, visionError };
   }
 
-  async uploadPdfReport(fileName: string, storedName: string, buffer: Buffer, uploadedBy: string, requestId?: number): Promise<any> {
-    const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer, false, fileName);
+  async uploadPdfReport(
+    fileName: string,
+    storedName: string,
+    buffer: Buffer,
+    uploadedBy: string,
+    requestId?: number,
+    preExtractedJson?: string | object,
+    preConfidence?: number
+  ): Promise<any> {
+    let extraction: { fields: any; overallConfidence: number; rawText: string };
+    let extractedPayload: ReturnType<typeof buildExtractedPayloadFromOcr>;
+    let status = "pending";
+    let visionError: string | null = null;
+
+    if (preExtractedJson) {
+      let parsed: any;
+      try {
+        parsed = typeof preExtractedJson === "string" ? JSON.parse(preExtractedJson) : preExtractedJson;
+      } catch {
+        parsed = {};
+      }
+      extractedPayload = ensureDevicesInExtractedJson(parsed);
+      const conf = preConfidence ?? 90;
+      extraction = {
+        fields: extractedPayload,
+        overallConfidence: conf,
+        rawText: "[Pre-Extracted via Telegram Bot Vision]",
+      };
+    } else {
+      const res = await this.extractPdfPayload(buffer, false, fileName);
+      extraction = res.extraction;
+      extractedPayload = res.extractedPayload;
+      status = res.status;
+      visionError = res.visionError;
+    }
 
     let finalRequestId = requestId || null;
     if (!finalRequestId) {
@@ -894,17 +927,27 @@ export class CourierService {
           finalRequestId = req.id;
         }
       }
+      if (!finalRequestId && Array.isArray(payloadAny.devices)) {
+        for (const dev of payloadAny.devices) {
+          if (dev.tid) {
+            const req = await this.requestsRepo.findRequestByTid(dev.tid);
+            if (req) {
+              finalRequestId = req.id;
+              break;
+            }
+          }
+        }
+      }
     }
 
     let finalStatus = status;
     if (status === "pending") {
       const payloadAny = extractedPayload as any;
+      const hasDevices = Array.isArray(payloadAny.devices) && payloadAny.devices.length > 0;
       const isMissingCritical = 
         !finalRequestId || 
-        !payloadAny.sn?.value || 
-        !payloadAny.sim_serial?.value || 
-        !payloadAny.tid?.value;
-      if (isMissingCritical) {
+        (!hasDevices && (!payloadAny.sn?.value || !payloadAny.sim_serial?.value || !payloadAny.tid?.value));
+      if (isMissingCritical && extraction.overallConfidence < 80) {
         finalStatus = "manual_review";
       }
     }

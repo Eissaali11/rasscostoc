@@ -159,16 +159,35 @@ export class CourierController {
   uploadPdf = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
     const file = req.file;
-    const requestId = req.body.request_id ? Number(req.body.request_id) : undefined;
+    const requestId = req.body.request_id
+      ? Number(req.body.request_id)
+      : req.body.requestId
+      ? Number(req.body.requestId)
+      : undefined;
+    const extractedJson = req.body.extracted_json || req.body.extractedJson;
+    const overallConfidence =
+      req.body.overall_confidence || req.body.overallConfidence
+        ? Number(req.body.overall_confidence || req.body.overallConfidence)
+        : undefined;
 
     if (!file) throw new ValidationError("No PDF file uploaded");
 
+    // Fix UTF-8 latin1 filename encoding if necessary
+    let fileName = file.originalname;
+    try {
+      if (/[\u0080-\u00FF]/.test(fileName)) {
+        fileName = Buffer.from(fileName, "latin1").toString("utf8");
+      }
+    } catch {}
+
     const result = await this.service.uploadPdfReport(
-      file.originalname,
+      fileName,
       file.filename, // Using stored multer filename
       file.buffer || Buffer.alloc(0), // If using memoryStorage
       user.id,
-      requestId
+      requestId,
+      extractedJson,
+      overallConfidence
     );
 
     res.json(result);
