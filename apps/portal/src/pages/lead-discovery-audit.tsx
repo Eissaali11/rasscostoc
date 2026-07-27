@@ -84,7 +84,7 @@ export default function LeadDiscoveryAuditPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch, isRefetching } = useQuery<AuditSummaryResponse>({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery<AuditSummaryResponse>({
     queryKey: ["/api/leads/discovery/audit-summary"],
     refetchInterval: 20000,
   });
@@ -200,6 +200,29 @@ export default function LeadDiscoveryAuditPage() {
             تحديث البيانات
           </Button>
         </motion.div>
+
+        {isError && (
+          <Card className="border-red-200 bg-red-50/50">
+            <CardContent className="p-6 text-center space-y-3">
+              <ShieldAlert className="h-10 w-10 text-red-500 mx-auto" />
+              <h3 className="text-lg font-bold text-red-700">تعذر تحميل بيانات سجل التتبع</h3>
+              <p className="text-sm text-red-600 max-w-md mx-auto">
+                {(error as any)?.message || "قد تكون انتهت الجلسة أو ليس لديك الصلاحية الكافية للوصول إلى هذه الصفحة."}
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-100" onClick={() => refetch()}>
+                  <RefreshCw className="ml-2 h-4 w-4" />
+                  إعادة المحاولة
+                </Button>
+                <Link href="/login">
+                  <Button className="bg-[#18B2B0] hover:bg-[#149D9B] text-white">
+                    تسجيل الدخول
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
