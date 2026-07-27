@@ -140,6 +140,7 @@ function AuthenticatedRouter() {
           <Route path="/transfer-details/:id" component={withShell(TransferDetailsPage, "titles.transfer_details")} />
           <Route path="/operations" component={withShell(OperationsPage, "titles.operations")} />
           <Route path="/operation-details/:groupId" component={withShell(OperationDetailsPage, "titles.operation_details")} />
+          <Route path="/leads-audit" component={withShell(LeadDiscoveryAuditPage, "titles.leads_audit")} />
         </>
       )}
       <Route path="/accounting" component={withShell(AccountingDashboardPage, "titles.accounting")} />
@@ -170,7 +171,6 @@ function AuthenticatedRouter() {
           <Route path="/item-types" component={withShell(ItemTypesManagement, "titles.item_types")} />
           <Route path="/item-types/:id/details" component={withShell(ItemTypeDetailsPage, "titles.item_type_details")} />
           <Route path="/ai-engine/settings" component={withShell(AiEngineSettingsPage, "titles.ai_engine_settings")} />
-          <Route path="/leads-audit" component={withShell(LeadDiscoveryAuditPage, "titles.leads_audit")} />
         </>
       )}
       <Route component={NotFound} />
