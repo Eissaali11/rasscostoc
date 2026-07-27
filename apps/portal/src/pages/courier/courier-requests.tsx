@@ -1,4 +1,4 @@
-﻿import { useTranslation } from "@/lib/language";
+import { useTranslation } from "@/lib/language";
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -163,6 +163,30 @@ export default function CourierRequestsPage() {
     }
   };
 
+  const handleDeleteAllRequests = async () => {
+    const confirmFirst = confirm("⚠️ تحذير شديد: هل أنت متأكد من رغبتك في حذف جميع طلبات التركيب والبيانات بالكامل من النظام؟");
+    if (!confirmFirst) return;
+
+    const confirmSecond = confirm("تأكيد نهائي: سيتم مسح كافة البيانات بشكل كامل ولا يمكن استعادتها. هل ترغب بالاستمرار بالمسح؟");
+    if (!confirmSecond) return;
+
+    try {
+      const res = await apiRequest("DELETE", "/api/courier/requests/all");
+      const data = await res.json();
+      toast({
+        title: "تم مسح البيانات بنجاح",
+        description: data.message || "تم مسح جميع الطلبات كلياً من النظام.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
+    } catch (err: any) {
+      toast({
+        title: "فشل مسح البيانات",
+        description: err.message || "حدث خطأ أثناء محاولة مسح البيانات.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (status) params.set("status", status);
@@ -279,6 +303,13 @@ export default function CourierRequestsPage() {
           <button onClick={handleExportExcel} className="courier-btn-secondary">
             <Download className="w-3.5 h-3.5" />
             {t("courier.export_2")}
+          </button>
+          <button
+            onClick={handleDeleteAllRequests}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            مسح جميع البيانات
           </button>
           <button onClick={() => setIsAddModalOpen(true)} className="courier-btn-primary em-ripple">
             {t("courier.add_request_new_2")}

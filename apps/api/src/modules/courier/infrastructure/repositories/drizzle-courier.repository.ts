@@ -394,6 +394,14 @@ export class DrizzleCourierRepository implements
     return !!deleted;
   }
 
+  async deleteAllRequests(tx?: any): Promise<number> {
+    const client = this.getClient(tx);
+    const deletedRows = await client
+      .delete(courierRequests)
+      .returning({ id: courierRequests.id });
+    return deletedRows.length;
+  }
+
   async insertAuditLog(logData: any, tx?: any): Promise<void> {
     const client = this.getClient(tx);
     await client.insert(courierAuditLogs).values({

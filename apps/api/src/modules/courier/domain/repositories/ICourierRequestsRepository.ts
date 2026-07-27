@@ -16,6 +16,7 @@ export interface ICourierRequestsRepository {
   updateRequest(id: number, requestData: any, expectedVersion?: number, tx?: any): Promise<CourierRequest | null>;
   insertRequest(requestData: any, tx?: any): Promise<CourierRequest>;
   deleteRequest(id: number, tx?: any): Promise<boolean>;
+  deleteAllRequests(tx?: any): Promise<number>;
   existsRequestWithTid(tid: string, tx?: any): Promise<boolean>;
   insertRequestBulk(requests: any[], tx?: any): Promise<CourierRequest[]>;
 

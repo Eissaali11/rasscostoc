@@ -21,6 +21,7 @@ export interface ICourierRepository {
   insertRequest(requestData: any, tx?: any): Promise<CourierRequest>;
   insertExecution(executionData: any, tx?: any): Promise<CourierExecution>;
   deleteRequest(id: number, tx?: any): Promise<boolean>;
+  deleteAllRequests(tx?: any): Promise<number>;
   insertAuditLog(logData: any, tx?: any): Promise<void>;
   getLookups(tx?: any): Promise<any>;
   getDashboardStats(): Promise<{

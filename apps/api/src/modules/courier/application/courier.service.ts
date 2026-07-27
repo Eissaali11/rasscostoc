@@ -148,6 +148,22 @@ export class CourierService {
     return true;
   }
 
+  async deleteAllRequests(deletedBy: string): Promise<number> {
+    const count = await this.requestsRepo.deleteAllRequests();
+
+    await this.dashboardRepo.insertAuditLog({
+      tableName: "requests",
+      recordId: 0,
+      action: "delete_all",
+      fieldName: "all_requests",
+      oldValue: String(count),
+      newValue: "0",
+      changedBy: deletedBy
+    });
+
+    return count;
+  }
+
   async getRequestItems(requestId: number): Promise<CourierRequestItem[]> {
     return this.requestsRepo.findRequestItems(requestId);
   }

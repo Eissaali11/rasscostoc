@@ -34,6 +34,7 @@ export function registerCourierRoutes(app: Express): void {
   app.get("/api/courier/requests/:id", requireAuth, controller.getRequest);
   app.post("/api/courier/requests", requireAuth, controller.createRequest);
   app.put("/api/courier/requests/:id", requireAuth, controller.updateRequest);
+  app.delete("/api/courier/requests/all", requireAuth, controller.deleteAllRequests);
   app.delete("/api/courier/requests/:id", requireAuth, controller.deleteRequest);
 
   // Request Items & Two-Phase Custody Acceptance

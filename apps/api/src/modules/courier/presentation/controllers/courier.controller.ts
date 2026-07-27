@@ -69,6 +69,12 @@ export class CourierController {
     res.json({ success: true });
   });
 
+  deleteAllRequests = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const count = await this.service.deleteAllRequests(user.id);
+    res.json({ success: true, count, message: `تم حذف ${count} طلب بنجاح.` });
+  });
+
   saveExecution = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
     const requestId = Number(req.params.requestId);
