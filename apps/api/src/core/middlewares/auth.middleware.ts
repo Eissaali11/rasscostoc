@@ -313,6 +313,73 @@ export async function requireAdminOrInternal(
 }
 
 /**
+ * Telegram installation bot integration (courier/pdf) — an internal service
+ * (no human session) authenticates with INTERNAL_SERVICE_KEY, but unlike
+ * requireAdminOrInternal it must act AS the real field technician submitting
+ * the report (so uploadedBy/technicianCode/region resolve correctly), not as
+ * an admin or a single generic bot account. The technician is resolved via
+ * their linked telegram_user_id (see 0025_erp_users_telegram_user_id.sql).
+ * Falls back to normal requireAuth when no internal key is presented, so the
+ * human web upload/review UI is completely unaffected.
+ */
+export async function requireAuthOrInternal(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const expected = process.env.INTERNAL_SERVICE_KEY;
+    const provided = req.header("x-internal-service-key");
+
+    if (expected && provided && provided === expected) {
+      const telegramUserId = req.header("x-telegram-user-id");
+      if (!telegramUserId) {
+        throw new AuthenticationError(
+          "x-telegram-user-id header required alongside x-internal-service-key"
+        );
+      }
+
+      const db = getDatabase();
+      const [row] = await db
+        .select({
+          id: users.id,
+          role: users.role,
+          username: users.username,
+          regionId: users.regionId,
+          employeeCode: users.employeeCode,
+          technicianCode: users.technicianCode,
+          permissions: users.permissions,
+          isActive: users.isActive,
+        })
+        .from(users)
+        .where(eq(users.telegramUserId, telegramUserId))
+        .limit(1);
+
+      if (!row || !row.isActive) {
+        throw new AuthenticationError(
+          "No active technician linked to this Telegram account"
+        );
+      }
+
+      req.user = {
+        id: row.id,
+        role: row.role,
+        username: row.username,
+        regionId: row.regionId ?? null,
+        employeeCode: row.employeeCode ?? null,
+        technicianCode: row.technicianCode ?? null,
+        permissions: row.permissions ? JSON.parse(row.permissions) : [],
+      };
+      return next();
+    }
+
+    return requireAuth(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Middleware to require supervisor role or above
  */
 export function requireSupervisor(

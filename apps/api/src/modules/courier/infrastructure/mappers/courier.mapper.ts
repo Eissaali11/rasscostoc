@@ -192,6 +192,13 @@ export class CourierPdfReportMapper {
       extractedJson: row.extractedJson ?? null,
       overallConfidence: row.overallConfidence ?? null,
       status: row.status,
+      uploadedByName: row.uploadedByName ?? null,
+      uploadedByTechnicianCode: row.uploadedByTechnicianCode ?? null,
+      uploadedByRegionId: row.uploadedByRegionId ?? null,
+      uploadedByRegionName: row.uploadedByRegionName ?? null,
+      requestRetailerName: row.requestRetailerName ?? null,
+      requestMobile: row.requestMobile ?? null,
+      requestTid: row.requestTid ?? null,
     };
   }
 

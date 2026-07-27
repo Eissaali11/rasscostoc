@@ -152,6 +152,21 @@ export interface CourierPdfReport {
   extractedJson: string | null;
   overallConfidence: number | null;
   status: string;
+  // إثراء اختياري لعرض/فلترة صفحة courier/pdf الإدارية - يُملأ فقط عبر listPdfReports/
+  // findPdfReportById (ربط users/regions/courierRequests)، وليس جزءًا من الجدول نفسه
+  uploadedByName?: string | null;
+  uploadedByTechnicianCode?: string | null;
+  uploadedByRegionId?: string | null;
+  uploadedByRegionName?: string | null;
+  requestRetailerName?: string | null;
+  requestMobile?: string | null;
+  requestTid?: string | null;
+}
+
+export interface PdfReportFilters {
+  region?: string;
+  technician?: string;
+  q?: string;
 }
 
 export interface CourierExecutionAttempt {

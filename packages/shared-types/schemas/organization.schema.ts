@@ -21,6 +21,9 @@ export const users = pgTable("users", {
   permissions: text("permissions"), // JSON string representation of custom permissions
   isActive: boolean("is_active").notNull().default(true),
   fcmToken: text("fcm_token"),
+  // ربط حساب الفني برقم مستخدمه في تيليجرام (بوت توثيق التركيب) - يُستخدم لتحديد هوية
+  // الفني الفعلي عند رفع تقارير courier/pdf عبر البوت بدل حساب خدمة عام واحد.
+  telegramUserId: text("telegram_user_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

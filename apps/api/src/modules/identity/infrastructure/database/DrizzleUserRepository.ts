@@ -24,6 +24,8 @@ export class DrizzleUserRepository implements IUserRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        fcmToken: users.fcmToken,
+        telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -46,6 +48,8 @@ export class DrizzleUserRepository implements IUserRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        fcmToken: users.fcmToken,
+        telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -80,6 +84,8 @@ export class DrizzleUserRepository implements IUserRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        fcmToken: users.fcmToken,
+        telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -103,6 +109,8 @@ export class DrizzleUserRepository implements IUserRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        fcmToken: users.fcmToken,
+        telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -145,6 +153,8 @@ export class DrizzleUserRepository implements IUserRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        fcmToken: users.fcmToken,
+        telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       });
@@ -196,6 +206,8 @@ export class DrizzleUserRepository implements IUserRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        fcmToken: users.fcmToken,
+        telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       });

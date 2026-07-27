@@ -1149,8 +1149,8 @@ export class CourierService {
     return this.getRequestById(requestId);
   }
 
-  async getPdfReports(): Promise<any[]> {
-    return this.pdfRepo.listPdfReports();
+  async getPdfReports(filters?: { region?: string; technician?: string; q?: string }): Promise<any[]> {
+    return this.pdfRepo.listPdfReports(filters);
   }
 
   async getPdfReportById(id: number): Promise<any | null> {

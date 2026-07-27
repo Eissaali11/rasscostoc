@@ -2,7 +2,7 @@ import type { Express } from "express";
 import path from "path";
 import fs from "fs";
 import { bootstrapCourierModule } from "../../composition/courier.container";
-import { requireAuth } from "@core/middlewares/auth.middleware";
+import { requireAuth, requireAuthOrInternal } from "@core/middlewares/auth.middleware";
 import {
   createExcelUpload,
   createPdfImageUpload,
@@ -67,9 +67,11 @@ export function registerCourierRoutes(app: Express): void {
   app.get("/api/courier/pdf", requireAuth, controller.getPdfReports);
   app.get("/api/courier/pdf/:id", requireAuth, controller.getPdfReport);
 
+  // upload و complete فقط يقبلان مفتاح الخدمة الداخلي (بوت تيليجرام) - باقي مسارات
+  // courier/pdf (المراجعة، apply، reextract) تبقى للواجهة البشرية حصرًا عبر requireAuth
   app.post(
     "/api/courier/pdf/upload",
-    requireAuth,
+    requireAuthOrInternal,
     upload.single("file"),
     validatePdfImageUploadMiddleware(),
     uploadErrorHandler,
@@ -87,6 +89,6 @@ export function registerCourierRoutes(app: Express): void {
   );
 
   app.post("/api/courier/pdf/:id/apply", requireAuth, controller.applyPdf);
-  app.post("/api/courier/pdf/:id/complete", requireAuth, controller.completePdf);
+  app.post("/api/courier/pdf/:id/complete", requireAuthOrInternal, controller.completePdf);
   app.post("/api/courier/pdf/:id/reextract", requireAuth, controller.reextractPdf);
 }

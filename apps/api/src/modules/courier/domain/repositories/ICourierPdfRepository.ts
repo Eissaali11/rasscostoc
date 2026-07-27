@@ -1,8 +1,8 @@
-import type { CourierPdfReport } from "../courier.types";
+import type { CourierPdfReport, PdfReportFilters } from "../courier.types";
 
 export interface ICourierPdfRepository {
   findPdfReportById(id: number, tx?: any): Promise<CourierPdfReport | null>;
-  listPdfReports(tx?: any): Promise<CourierPdfReport[]>;
+  listPdfReports(filters?: PdfReportFilters, tx?: any): Promise<CourierPdfReport[]>;
   insertPdfReport(data: any, tx?: any): Promise<CourierPdfReport>;
   updatePdfReport(id: number, data: any, tx?: any): Promise<CourierPdfReport>;
 }

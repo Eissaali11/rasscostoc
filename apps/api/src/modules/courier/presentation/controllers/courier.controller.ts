@@ -149,7 +149,10 @@ export class CourierController {
   });
 
   getPdfReports = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.service.getPdfReports();
+    const region = typeof req.query.region === "string" ? req.query.region : undefined;
+    const technician = typeof req.query.technician === "string" ? req.query.technician : undefined;
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const result = await this.service.getPdfReports({ region, technician, q });
     res.json(result);
   });
 

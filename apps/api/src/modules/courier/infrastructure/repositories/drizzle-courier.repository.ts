@@ -15,6 +15,7 @@ import {
   items,
   inventoryTransactions,
   itemHistoryLogs,
+  regions,
 } from "@shared/schema";
 import { eq, and, or, sql, desc, count, inArray, ilike } from "drizzle-orm";
 import type { ICourierRepository } from "../../domain/repositories/courier.repository.interface";
@@ -29,6 +30,7 @@ import type {
   CourierRequestItem,
   CourierExecutionAttempt,
   CourierPdfReport,
+  PdfReportFilters,
   ListFilters,
   ItemUpdatePayload
 } from "../../domain/courier.types";
@@ -430,20 +432,29 @@ export class DrizzleCourierRepository implements
       .select({
         id: users.id,
         username: users.username,
-        name: users.fullName
+        name: users.fullName,
+        technicianCode: users.technicianCode,
+        regionId: users.regionId,
       })
       .from(users)
       .where(eq(users.role, "technician"));
+
+    // صفحة courier/pdf الإدارية تحتاج قائمة المناطق لفلترة تقارير البوت/الرفع اليدوي -
+    // تُضاف هنا بدل استدعاء /api/regions منفصل، اتساقًا مع نمط "lookups" الحالي
+    const regionsList = await client.select({ id: regions.id, name: regions.name }).from(regions);
 
     return {
       cities,
       simTypes,
       vendorTypes,
       failureReasons,
+      regions: regionsList,
       technicians: technicians.map((t: any) => ({
         id: t.id,
         code: t.username,
-        name: t.name
+        name: t.name,
+        technicianCode: t.technicianCode,
+        regionId: t.regionId,
       }))
     };
   }
@@ -605,45 +616,90 @@ export class DrizzleCourierRepository implements
   }
 
   // ── PDF Reports ────────────────────────────────────────────────────────────
+  // الأعمدة المُثراة (uploaderName/technicianCode/region/matched request) تُبنى بربط
+  // uploadedBy بجدول users ثم users.regionId بجدول regions، بالإضافة لربط اختياري
+  // بجدول courierRequests لعرض/البحث عن الطلب المطابق - تُستخدم في صفحة courier/pdf
+  // الإدارية (فلاتر منطقة/فني + بحث بالجهاز أو الطلب) بدون أي طلب إضافي من الواجهة.
+  private pdfReportListColumns() {
+    return {
+      id: courierPdfReports.id,
+      requestId: courierPdfReports.requestId,
+      fileName: courierPdfReports.fileName,
+      filePath: courierPdfReports.filePath,
+      uploadedBy: courierPdfReports.uploadedBy,
+      uploadedAt: courierPdfReports.uploadedAt,
+      status: courierPdfReports.status,
+      ocrText: courierPdfReports.ocrText,
+      extractedJson: courierPdfReports.extractedJson,
+      overallConfidence: courierPdfReports.overallConfidence,
+      uploadedByName: users.fullName,
+      uploadedByTechnicianCode: users.technicianCode,
+      uploadedByRegionId: users.regionId,
+      uploadedByRegionName: regions.name,
+      requestRetailerName: courierRequests.retailerName,
+      requestMobile: courierRequests.mobile,
+      requestTid: courierRequests.tid,
+    };
+  }
+
   async findPdfReportById(id: number, tx?: any): Promise<CourierPdfReport | null> {
     const client = this.getClient(tx);
     const [report] = await client
-      .select({
-        id: courierPdfReports.id,
-        requestId: courierPdfReports.requestId,
-        fileName: courierPdfReports.fileName,
-        filePath: courierPdfReports.filePath,
-        uploadedBy: courierPdfReports.uploadedBy,
-        uploadedAt: courierPdfReports.uploadedAt,
-        status: courierPdfReports.status,
-        ocrText: courierPdfReports.ocrText,
-        extractedJson: courierPdfReports.extractedJson,
-        overallConfidence: courierPdfReports.overallConfidence
-      })
+      .select(this.pdfReportListColumns())
       .from(courierPdfReports)
+      .leftJoin(users, eq(courierPdfReports.uploadedBy, users.id))
+      .leftJoin(regions, eq(users.regionId, regions.id))
+      .leftJoin(courierRequests, eq(courierPdfReports.requestId, courierRequests.id))
       .where(eq(courierPdfReports.id, id))
       .limit(1);
     return report ? CourierPdfReportMapper.toDomain(report) : null;
   }
 
-  async listPdfReports(tx?: any): Promise<CourierPdfReport[]> {
+  async listPdfReports(
+    filters?: PdfReportFilters,
+    tx?: any,
+  ): Promise<CourierPdfReport[]> {
     const client = this.getClient(tx);
-    const rows = await client
-      .select({
-        id: courierPdfReports.id,
-        requestId: courierPdfReports.requestId,
-        fileName: courierPdfReports.fileName,
-        filePath: courierPdfReports.filePath,
-        uploadedBy: courierPdfReports.uploadedBy,
-        uploadedAt: courierPdfReports.uploadedAt,
-        status: courierPdfReports.status,
-        ocrText: courierPdfReports.ocrText,
-        extractedJson: courierPdfReports.extractedJson,
-        overallConfidence: courierPdfReports.overallConfidence
-      })
+    const conditions = [];
+
+    if (filters?.region) {
+      conditions.push(eq(users.regionId, filters.region));
+    }
+    if (filters?.technician) {
+      conditions.push(
+        or(
+          eq(courierPdfReports.uploadedBy, filters.technician),
+          eq(users.technicianCode, filters.technician),
+        ),
+      );
+    }
+    if (filters?.q) {
+      const term = `%${filters.q}%`;
+      conditions.push(
+        or(
+          ilike(courierPdfReports.fileName, term),
+          ilike(courierPdfReports.extractedJson, term),
+          ilike(courierRequests.retailerName, term),
+          ilike(courierRequests.mobile, term),
+          ilike(courierRequests.tid, term),
+          sql`${courierPdfReports.requestId}::text = ${filters.q}`,
+        ),
+      );
+    }
+
+    let query = client
+      .select(this.pdfReportListColumns())
       .from(courierPdfReports)
-      .orderBy(desc(courierPdfReports.id))
-      .limit(100);
+      .leftJoin(users, eq(courierPdfReports.uploadedBy, users.id))
+      .leftJoin(regions, eq(users.regionId, regions.id))
+      .leftJoin(courierRequests, eq(courierPdfReports.requestId, courierRequests.id))
+      .$dynamic();
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const rows = await query.orderBy(desc(courierPdfReports.id)).limit(100);
     return rows.map((r: any) => CourierPdfReportMapper.toDomain(r));
   }
 

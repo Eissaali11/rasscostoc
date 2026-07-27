@@ -393,7 +393,7 @@ export class AssetTrackingService {
         actionLabel: latestEvent.title,
         occurredAt: latestEvent.occurredAt,
         actionNumber: latestEvent.referenceId || `ACT-${latestEvent.eventId.slice(0, 8).toUpperCase()}`,
-        notes: latestEvent.notes,
+        notes: latestEvent.notes ?? null,
       };
     }
 
