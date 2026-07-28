@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { AddCourierRequestModal } from "@/components/add-courier-request-modal";
 import { EditCourierExecutionModal } from "@/components/edit-courier-execution-modal";
+import { CourierRequestDetailModal } from "@/components/courier-request-detail-modal";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -24,6 +25,7 @@ import {
   Edit2,
   Trash2,
   FileInput,
+  Eye,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -145,6 +147,8 @@ export default function CourierRequestsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedDetailRequestId, setSelectedDetailRequestId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const handleDeleteRequest = async (id: number) => {
     if (!confirm(t("courier.delete_request"))) return;
@@ -511,10 +515,17 @@ export default function CourierRequestsPage() {
                 </tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr
+                    key={r.id}
+                    onClick={() => {
+                      setSelectedDetailRequestId(r.id);
+                      setIsDetailModalOpen(true);
+                    }}
+                    className="cursor-pointer hover:bg-[#18B2B0]/08 transition-colors group"
+                  >
                     <td className="text-[#6B7280] text-xs font-semibold">{r.id}</td>
                     <td className="text-[#4B5563]">{r.date || "—"}</td>
-                    <td className="font-mono font-semibold text-[#18B2B0]">{r.tid || "—"}</td>
+                    <td className="font-mono font-semibold text-[#18B2B0] group-hover:underline">{r.tid || "—"}</td>
                     <td className="font-mono text-[#4B5563]">{r.terminalId || "—"}</td>
                     <td className="font-semibold text-[#2D3135]">{r.customerName || "—"}</td>
                     <td className="text-[#4B5563]">{r.city || "—"}</td>
@@ -522,7 +533,7 @@ export default function CourierRequestsPage() {
                     <td>
                       <StatusBadge status={r.execution?.installationStatus} />
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -539,7 +550,19 @@ export default function CourierRequestsPage() {
                         >
                           <DropdownMenuItem
                             className="courier-actions-item"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDetailRequestId(r.id);
+                              setIsDetailModalOpen(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4 text-[#18B2B0]" />
+                            عرض التفاصيل الكاملة
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="courier-actions-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedRequestId(r.id);
                               setIsEditModalOpen(true);
                             }}
@@ -555,7 +578,10 @@ export default function CourierRequestsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="courier-actions-item courier-actions-item-danger"
-                            onClick={() => handleDeleteRequest(r.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRequest(r.id);
+                            }}
                           >
                             <Trash2 className="w-4 h-4" />
                             {t("courier.delete_3")}
@@ -602,6 +628,15 @@ export default function CourierRequestsPage() {
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         requestId={selectedRequestId}
+      />
+      <CourierRequestDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+        requestId={selectedDetailRequestId}
+        onEditClick={(id) => {
+          setSelectedRequestId(id);
+          setIsEditModalOpen(true);
+        }}
       />
     </div>
   );
