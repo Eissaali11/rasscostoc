@@ -91,6 +91,9 @@ export function registerCourierRoutes(app: Express): void {
 
   app.post("/api/courier/pdf/:id/apply", requireAuth, controller.applyPdf);
   app.post("/api/courier/pdf/:id/complete", requireAuthOrInternal, controller.completePdf);
+  app.post("/api/courier/pdf/:id/update-extracted", requireAuthOrInternal, controller.updatePdfExtractedJson);
   app.post("/api/courier/pdf/:id/reextract", requireAuth, controller.reextractPdf);
   app.post("/api/courier/pdf/:id/reject", requireAuth, controller.rejectPdf);
+  app.post("/api/courier/serial-lookup", requireAuthOrInternal, controller.serialLookup);
+  app.post("/api/courier/sim-link", requireAuthOrInternal, controller.linkSimToTechnician);
 }

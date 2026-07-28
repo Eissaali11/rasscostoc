@@ -75,26 +75,27 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   const { t } = useTranslation();
   if (!status)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] px-2.5 py-1 rounded-full border border-[#E2E8F0]">
-        <Clock className="w-3 h-3" />
-        {t("courier.verification_3")}
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#0284C7] bg-[#E0F2FE] px-2.5 py-1 rounded-full border border-[#BAE6FD] shadow-xs">
+        <Clock className="w-3.5 h-3.5 text-[#0284C7]" />
+        جديد (بانتظار التحقق)
       </span>
     );
 
   const lower = status.toLowerCase();
-  if (lower.includes("completed"))
+
+  if (lower.includes("not completed") || lower.startsWith("not"))
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/12 px-2.5 py-1 rounded-full border border-[#18B2B0]/25">
-        <CheckCircle2 className="w-3 h-3" />
-        {t("courier.completed_5")}
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#E05252] bg-[#E05252]/10 px-2.5 py-1 rounded-full border border-[#E05252]/25">
+        <XCircle className="w-3 h-3 text-[#E05252]" />
+        غير مكتمل
       </span>
     );
 
-  if (status === "Not Completed")
+  if (lower.includes("completed"))
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#E05252] bg-[#E05252]/10 px-2.5 py-1 rounded-full border border-[#E05252]/25">
-        <XCircle className="w-3 h-3" />
-        {t("courier.completed_6")}
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/12 px-2.5 py-1 rounded-full border border-[#18B2B0]/25">
+        <CheckCircle2 className="w-3 h-3 text-[#18B2B0]" />
+        مكتمل
       </span>
     );
 
@@ -123,6 +124,72 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 }
 
 const PAGE_SIZE = 25;
+
+const STATUS_OPTIONS = [
+  { label: "جميع الحالات (الكل)", value: "", icon: "◈", dotColor: "#6B7280" },
+  { label: "✓ مكتمل", value: "completed", icon: "✓", dotColor: "#18B2B0" },
+  { label: "✗ غير مكتمل", value: "not_completed", icon: "✗", dotColor: "#E05252" },
+  { label: "⏳ بانتظار التحقق", value: "pending", icon: "⏳", dotColor: "#0284C7" },
+] as const;
+
+function StatusFilterDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = STATUS_OPTIONS.find(o => o.value === value) ?? STATUS_OPTIONS[0];
+
+  const buttonStyle = value === ""
+    ? "bg-white text-gray-700 border-gray-300"
+    : value === "completed"
+      ? "bg-[#18B2B0] text-white border-[#18B2B0]"
+      : value === "not_completed"
+        ? "bg-[#E05252] text-white border-[#E05252]"
+        : "bg-[#0284C7] text-white border-[#0284C7]";
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border shadow-sm transition-all min-w-[180px] justify-between ${buttonStyle}`}
+      >
+        <span>{selected.label}</span>
+        <svg className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute top-full mt-1.5 right-0 z-50 w-56 bg-white rounded-xl border border-[#E2E8F0] shadow-xl overflow-hidden">
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`w-full text-right px-4 py-3 text-xs flex items-center gap-3 transition-colors ${
+                  value === opt.value
+                    ? "bg-[#F0FAFA] font-extrabold text-[#18B2B0]"
+                    : "hover:bg-gray-50 text-gray-700 font-semibold"
+                }`}
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: opt.dotColor }}
+                />
+                <span className="flex-1">{opt.label}</span>
+                {value === opt.value && (
+                  <svg className="w-3.5 h-3.5 text-[#18B2B0] shrink-0" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function CourierRequestsPage() {
   const { t, dir } = useTranslation();
@@ -385,32 +452,28 @@ export default function CourierRequestsPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.04 }}
-        className="courier-toolbar"
+        className="space-y-3"
       >
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
-          <input
-            value={q}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder={t("courier.search_name_number_serial_1")}
-            className="courier-input pr-10"
+        {/* Search bar */}
+        <div className="courier-toolbar">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+            <input
+              value={q}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder={t("courier.search_name_number_serial_1")}
+              className="courier-input pr-10 w-full"
+            />
+          </div>
+        </div>
+
+        {/* Status filter — dropdown */}
+        <div className="courier-toolbar">
+          <StatusFilterDropdown
+            value={status}
+            onChange={(v) => { setStatus(v); setReason(""); setPage(1); }}
           />
         </div>
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
-          className="courier-input max-w-[220px]"
-        >
-          <option value="">{t("courier.all")}</option>
-          <option value="pending">{t("courier.verification_3")}</option>
-          <option value="Installation Completed">{t("courier.completed_5")}</option>
-          <option value="Not Completed">{t("courier.completed_6")}</option>
-          <option value="Customer Not Answering">{t("courier.customer_no")}</option>
-          <option value="In Progress">{t("courier.item_15830")}</option>
-        </select>
       </motion.div>
 
       {(status || reason || q) && (

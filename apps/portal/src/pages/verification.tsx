@@ -51,10 +51,31 @@ import {
   Briefcase,
   Hash,
   Globe,
-  Monitor
+  Monitor,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useActiveItemTypes } from "@/hooks/use-item-types";
+import { useAuth } from "@/lib/auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface UnifiedAssetTrackingData {
   asset: {
@@ -177,6 +198,75 @@ export interface UnifiedAssetTrackingData {
 export default function VerificationPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdminOrSupervisor = !user || user.role === "admin" || user.role === "supervisor";
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editSerial, setEditSerial] = useState("");
+  const [editCarrier, setEditCarrier] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const openEditModal = () => {
+    if (!trackingData?.asset) return;
+    setEditSerial(trackingData.asset.serialNumber || "");
+    setEditCarrier(trackingData.asset.carrierName || "");
+    setEditStatus(trackingData.asset.status || "IN_WAREHOUSE");
+    setIsEditOpen(true);
+  };
+
+  const updateAssetMutation = useMutation({
+    mutationFn: async () => {
+      if (!trackingData?.asset?.id) throw new Error("معرّف الأصل غير موجود");
+      const res = await apiRequest("PATCH", `/api/serialized-items/${trackingData.asset.id}`, {
+        serialNumber: editSerial,
+        carrierName: editCarrier,
+        status: editStatus,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم تعديل الأصل بنجاح",
+        description: "تم حفظ التعديلات على الرقم التسلسلي والتفاصيل بنجاح",
+      });
+      setIsEditOpen(false);
+      if (editSerial && editSerial !== serialQuery) {
+        setSerialQuery(editSerial);
+      }
+      queryClient.invalidateQueries({ queryKey: [`/api/verification/assets/${serialQuery}`] });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "فشل التحديث",
+        description: err?.message || "حدث خطأ أثناء حفظ التعديلات",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteAssetMutation = useMutation({
+    mutationFn: async () => {
+      if (!trackingData?.asset?.id) throw new Error("معرّف الأصل غير موجود");
+      const res = await apiRequest("DELETE", `/api/serialized-items/${trackingData.asset.id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم حذف الأصل نهائياً",
+        description: `تم حذف الأصل (${trackingData?.asset?.serialNumber}) بالكامل من النظام والقوائم`,
+      });
+      setIsDeleteOpen(false);
+      handleClear();
+    },
+    onError: (err: any) => {
+      toast({
+        title: "فشل حذف الأصل",
+        description: err?.message || "حدث خطأ أثناء محاولة حذف الأصل",
+        variant: "destructive",
+      });
+    },
+  });
   const queryClient = useQueryClient();
   const [scanValue, setScanValue] = useState("");
   const [serialQuery, setSerialQuery] = useState("");
@@ -197,6 +287,20 @@ export default function VerificationPage() {
     enabled: !!serialQuery,
     retry: false,
   });
+
+  const { data: activeItemTypes = [] } = useActiveItemTypes();
+
+  const resolvedItemTypeId = trackingData?.asset?.itemTypeId || 
+    (activeItemTypes || []).find((it: any) => 
+      (it.nameAr && trackingData?.asset?.itemTypeName && it.nameAr.trim().toLowerCase() === trackingData.asset.itemTypeName.trim().toLowerCase()) ||
+      (it.nameEn && trackingData?.asset?.itemTypeName && it.nameEn.trim().toLowerCase() === trackingData.asset.itemTypeName.trim().toLowerCase())
+    )?.id;
+
+  const technicianProductUrl = trackingData?.currentCustodian
+    ? resolvedItemTypeId
+      ? `/technician-details/${trackingData.currentCustodian.id}/item/${resolvedItemTypeId}`
+      : `/technician-details/${trackingData.currentCustodian.id}`
+    : null;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ status }: { status: string }) => {
@@ -524,6 +628,43 @@ export default function VerificationPage() {
                         {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
+
+                    <div className="pt-2 flex items-center gap-2 flex-wrap">
+                      {technicianProductUrl && (
+                        <Link href={technicianProductUrl}>
+                          <Button
+                            variant="outline"
+                            className="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-100 border-cyan-400/40 backdrop-blur-md font-bold rounded-xl text-xs gap-2 transition-all shadow-sm"
+                          >
+                            <Boxes className="w-4 h-4 text-cyan-300" />
+                            <span>عرض تفاصيل المنتج في مخزون الفني</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+                      )}
+
+                      {isAdminOrSupervisor && trackingData?.asset?.id && (
+                        <>
+                          <Button
+                            onClick={openEditModal}
+                            variant="outline"
+                            className="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border-amber-400/40 backdrop-blur-md font-bold rounded-xl text-xs gap-1.5 transition-all shadow-sm"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-amber-300" />
+                            <span>تعديل الأصل</span>
+                          </Button>
+
+                          <Button
+                            onClick={() => setIsDeleteOpen(true)}
+                            variant="outline"
+                            className="bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border-rose-400/40 backdrop-blur-md font-bold rounded-xl text-xs gap-1.5 transition-all shadow-sm"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-300" />
+                            <span>حذف الأصل نهائياً</span>
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Summary Metric Badges */}
@@ -555,19 +696,34 @@ export default function VerificationPage() {
                         <UserCheck className="w-5 h-5 text-teal-600" />
                         <span>بيانات صاحب العهدة الحالي</span>
                       </h3>
-                      <button
-                        onClick={() => setSelectedUserModal({
-                          id: trackingData.currentCustodian!.id,
-                          name: trackingData.currentCustodian!.fullName,
-                          username: trackingData.currentCustodian!.username,
-                          avatar: trackingData.currentCustodian!.avatarUrl,
-                          role: "فني ميداني",
-                        })}
-                        className="text-xs font-bold text-teal-700 hover:underline flex items-center gap-1"
-                      >
-                        <span>عرض الملف الكامل</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {technicianProductUrl && (
+                          <Link href={technicianProductUrl}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-teal-500/30 text-teal-800 hover:bg-teal-50 font-bold rounded-xl text-xs gap-1.5 shadow-2xs"
+                            >
+                              <Boxes className="w-3.5 h-3.5 text-teal-600" />
+                              <span>تفاصيل المنتج في العهدة</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Button>
+                          </Link>
+                        )}
+                        <button
+                          onClick={() => setSelectedUserModal({
+                            id: trackingData.currentCustodian!.id,
+                            name: trackingData.currentCustodian!.fullName,
+                            username: trackingData.currentCustodian!.username,
+                            avatar: trackingData.currentCustodian!.avatarUrl,
+                            role: "فني ميداني",
+                          })}
+                          className="text-xs font-bold text-teal-700 hover:underline flex items-center gap-1"
+                        >
+                          <span>عرض الملف الكامل</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </CardHeader>
 
@@ -1029,6 +1185,14 @@ export default function VerificationPage() {
               </div>
 
               <DialogFooter className="flex-col gap-2 sm:flex-row">
+                {trackingData?.asset?.itemTypeId && selectedUserModal && (
+                  <Link href={`/technician-details/${selectedUserModal.id}/item/${trackingData.asset.itemTypeId}`} className="w-full">
+                    <Button variant="outline" className="w-full font-bold rounded-xl border-teal-600 text-teal-700 hover:bg-teal-50 flex items-center justify-center gap-2">
+                      <Boxes className="w-4 h-4 text-teal-600" />
+                      <span>تفاصيل المنتج المعروض لدى الفني</span>
+                    </Button>
+                  </Link>
+                )}
                 <Link href={`/technician-details/${selectedUserModal.id}`} className="w-full">
                   <Button className="w-full font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white">
                     الانتقال لصفحة الفني الكاملة
@@ -1039,6 +1203,105 @@ export default function VerificationPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Asset Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[480px] bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl font-['Cairo']" dir="rtl">
+          <DialogHeader className="text-right pb-2 border-b">
+            <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-amber-600" />
+              <span>تعديل بيانات الأصل ({trackingData?.asset?.serialNumber})</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 pt-1">
+              قم بتحديث الرقم التسلسلي أو مشغل الشريحة أو حالة الأصل بكتالوج العهدة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 text-right">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700">الرقم التسلسلي (S/N):</label>
+              <Input
+                value={editSerial}
+                onChange={(e) => setEditSerial(e.target.value)}
+                placeholder="الرقم التسلسلي"
+                className="font-mono rounded-xl border-slate-300 text-left dir-ltr"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700">المزود / مشغل الشريحة:</label>
+              <Input
+                value={editCarrier}
+                onChange={(e) => setEditCarrier(e.target.value)}
+                placeholder="مثال: STC, Mobily, Zain"
+                className="rounded-xl border-slate-300"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700">حالة الأصل الحالية:</label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger className="rounded-xl border-slate-300">
+                  <SelectValue placeholder="اختر الحالة" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="IN_WAREHOUSE">داخل المستودع (IN_WAREHOUSE)</SelectItem>
+                  <SelectItem value="RECEIVED_BY_TECHNICIAN">في عهدة الفني (RECEIVED_BY_TECHNICIAN)</SelectItem>
+                  <SelectItem value="IN_TRANSIT_CUSTODY">في طريق النقل الفني (IN_TRANSIT_CUSTODY)</SelectItem>
+                  <SelectItem value="INSTALLED">مكتمل ومثبت لدى العميل (INSTALLED)</SelectItem>
+                  <SelectItem value="DELIVERED">مستلم ومغلق (DELIVERED)</SelectItem>
+                  <SelectItem value="DAMAGED">تالف (DAMAGED)</SelectItem>
+                  <SelectItem value="LOST">مفقود (LOST)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditOpen(false)}
+              className="rounded-xl border-slate-200"
+            >
+              إلغاء
+            </Button>
+            <Button
+              onClick={() => updateAssetMutation.mutate()}
+              disabled={updateAssetMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl gap-2"
+            >
+              {updateAssetMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Asset Alert Dialog */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent className="bg-white rounded-3xl p-6 border border-rose-200 shadow-2xl font-['Cairo']" dir="rtl">
+          <AlertDialogHeader className="text-right">
+            <AlertDialogTitle className="text-xl font-bold text-rose-700 flex items-center gap-2">
+              <AlertCircle className="w-6 h-6 text-rose-600" />
+              <span>تأكيد حذف الأصل نهائياً</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-sm leading-relaxed pt-2">
+              هل أنت تأكد من رغبتك في حذف الأصل (<strong className="font-mono text-slate-900">{trackingData?.asset?.serialNumber}</strong> - {trackingData?.asset?.itemTypeName}) نهائياً من قاعدة البيانات والسجلات؟
+              <br />
+              <strong className="text-rose-600 font-bold block pt-2">تحذير: هذا الإجراء يحذف الأصل بالكامل من النظام ولن يمكن التراجع عنه.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-4 border-t">
+            <AlertDialogCancel className="rounded-xl border-slate-200">إلغاء الإجراء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteAssetMutation.mutate()}
+              disabled={deleteAssetMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl"
+            >
+              {deleteAssetMutation.isPending ? "جاري الحذف..." : "نعم، احذف الأصل نهائياً"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

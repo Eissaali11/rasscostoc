@@ -118,10 +118,31 @@ export function buildCourierListConditions(filters: ListFilters): {
   }
   if (filters.status) {
     if (filters.status === "pending") {
+      // بانتظار التحقق: لا يوجد سجل execution أو الحالة فارغة
       conditions.push(
         or(
+          sql`${courierExecutions.id} IS NULL`,
           sql`${courierExecutions.installationStatus} IS NULL`,
           sql`${courierExecutions.installationStatus} = ''`
+        )!
+      );
+    } else if (filters.status === "completed") {
+      // مكتمل: أي حالة تحمل "Completed"
+      conditions.push(
+        or(
+          eq(courierExecutions.installationStatus, "Installation Completed"),
+          eq(courierExecutions.installationStatus, "Installation Completed - NL"),
+          sql`${courierExecutions.installationStatus} LIKE ${"Installation Completed%"}`
+        )!
+      );
+    } else if (filters.status === "not_completed") {
+      // غير مكتمل: يوجد execution لكن الحالة ليست completed
+      conditions.push(
+        and(
+          sql`${courierExecutions.id} IS NOT NULL`,
+          sql`${courierExecutions.installationStatus} IS NOT NULL`,
+          sql`${courierExecutions.installationStatus} NOT LIKE ${"Installation Completed%"}`,
+          sql`${courierExecutions.installationStatus} <> ${"In Progress"}`
         )!
       );
     } else if (filters.status === "Installation Completed") {

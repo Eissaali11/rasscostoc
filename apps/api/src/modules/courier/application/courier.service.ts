@@ -1,5 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { db } from "@server/core/config/db";
+import { items, itemTypes, users, courierExecutions, courierRequests } from "@shared/schema";
+import { eq, or, ilike } from "drizzle-orm";
 import type { ListFilters, CourierRequestItem, CourierExecutionAttempt } from "../domain/courier.types";
 import { devicesContainer } from "@server/composition/devices.container";
 import { extractFromPdf } from "./ocr.helper";
@@ -724,6 +727,55 @@ export class CourierService {
     const item = await this.inventoryPort.findItemBySerial(rawSerial);
 
     if (!item) {
+      try {
+        const itemRows = await db
+          .select({
+            id: items.id,
+            serialNumber: items.serialNumber,
+            simSerial: items.simSerial,
+            carrierName: items.carrierName,
+            status: items.status,
+            currentOwnerId: items.currentOwnerId,
+            technicianName: users.fullName,
+            technicianCode: users.username,
+          })
+          .from(items)
+          .leftJoin(users, eq(users.id, items.currentOwnerId))
+          .where(
+            or(
+              eq(items.serialNumber, rawSerial),
+              eq(items.simSerial, rawSerial),
+              eq(items.barcode, rawSerial),
+              ilike(items.serialNumber, `%${rawSerial}%`),
+              ilike(items.simSerial, `%${rawSerial}%`)
+            )
+          )
+          .limit(1);
+
+        if (itemRows.length > 0) {
+          const dbItem = itemRows[0];
+          return {
+            found: true,
+            serial: rawSerial,
+            normalized: dbItem.serialNumber,
+            simSerial: dbItem.simSerial || dbItem.serialNumber,
+            carrierName: dbItem.carrierName,
+            technician: dbItem.currentOwnerId ? {
+              id: dbItem.currentOwnerId,
+              fullName: dbItem.technicianName,
+              username: dbItem.technicianCode,
+              technicianCode: dbItem.technicianCode,
+            } : null,
+            custodyStatus: dbItem.status,
+            message: dbItem.technicianName
+              ? `مسجلة ومخصصة للفني: ${dbItem.technicianName} (${dbItem.technicianCode || ""})`
+              : "موجودة في المخزون العام (غير مخصصة لفني معين)",
+          };
+        }
+      } catch (err: any) {
+        console.error("[SerialLookup] DB fallback search warning:", err.message);
+      }
+
       return {
         found: false,
         serial: rawSerial,
@@ -807,6 +859,9 @@ export class CourierService {
       inActiveCustody: isInActiveCustody,
       linkedRequest,
       ownershipValid: !!technician && isInActiveCustody,
+      message: technician
+        ? `مسجلة ومخصصة للفني: ${technician.fullName} (${technician.username || ""})`
+        : "موجودة في المخزون العام",
     };
   }
 
@@ -991,6 +1046,28 @@ export class CourierService {
       extraction_source: extractedPayload.extraction_source,
       visionError,
     };
+  }
+
+  async updatePdfReportExtractedJson(
+    pdfId: number,
+    extractedJson: any,
+    overallConfidence?: number,
+    requestId?: number
+  ): Promise<any> {
+    const report = await this.pdfRepo.findPdfReportById(pdfId);
+    if (!report) {
+      throw new NotFoundError("PDF Report not found");
+    }
+
+    const payload = ensureDevicesInExtractedJson(extractedJson);
+    const updated = await this.pdfRepo.updatePdfReport(pdfId, {
+      extractedJson: JSON.stringify(payload),
+      overallConfidence: overallConfidence ?? report.overallConfidence,
+      requestId: requestId ?? report.requestId,
+      status: payload.devices.length > 0 ? "pending" : report.status,
+    });
+
+    return updated;
   }
 
   async reextractPdfReport(pdfId: number): Promise<any> {
@@ -1342,7 +1419,38 @@ export class CourierService {
         updatedAt: new Date()
       });
 
-      importedList.push({ rowNumber: item.rowNumber, id: newRequest.id, tid: newRequest.tid });
+      // === Auto-create execution if Excel contains field/device completion data ===
+      const hasExecutionData = !!(data.sn || data.simSerial || data.installationStatus || data.salesTechnician || data.deliveryDate);
+      if (hasExecutionData) {
+        try {
+          const normalizeStatus = (s: string | null | undefined): string => {
+            if (!s) return "Installation Completed";
+            const lower = s.toLowerCase();
+            if (lower.includes("complet")) return "Installation Completed";
+            if (lower.includes("not") || lower.includes("غير")) return "Not Completed";
+            if (lower.includes("progress") || lower.includes("إجراء")) return "In Progress";
+            if (lower.includes("answer") || lower.includes("يرد")) return "Customer Not Answering";
+            return s; // keep original if unrecognized
+          };
+
+          await this.executionsRepo.insertExecution({
+            requestId: newRequest.id,
+            installationStatus: normalizeStatus(data.installationStatus),
+            sn: data.sn || null,
+            simSerial: data.simSerial || null,
+            salesTechnician: data.salesTechnician || data.tecName || null,
+            technicianCode: data.technicianCode || null,
+            deliveryDate: data.deliveryDate || data.date || null,
+            time: data.time || null,
+            enteredBy: createdBy,
+          });
+        } catch (execErr) {
+          // Non-fatal: log but don't fail the row import
+          console.warn(`[importRawRequests] Could not auto-create execution for request ${newRequest.id}:`, execErr);
+        }
+      }
+
+      importedList.push({ rowNumber: item.rowNumber, id: newRequest.id, tid: newRequest.tid, hasExecution: hasExecutionData });
     }
 
     return {
@@ -1616,4 +1724,94 @@ export class CourierService {
     });
   }
 
+  async linkSimToTechnician(data: {
+    simSerial: string;
+    simType?: string;
+    technicianId?: string;
+    technicianUsername?: string;
+    notes?: string;
+  }): Promise<any> {
+    const simSerial = (data.simSerial || "").trim();
+    if (!simSerial) throw new ValidationError("رقم الشريحة مطلوب");
+
+    let targetOwnerId = data.technicianId || null;
+
+    if (!targetOwnerId && data.technicianUsername) {
+      const uRows = await db
+        .select()
+        .from(users)
+        .where(
+          or(
+            eq(users.username, data.technicianUsername),
+            eq(users.telegramUserId, data.technicianUsername),
+            ilike(users.fullName, `%${data.technicianUsername}%`)
+          )
+        )
+        .limit(1);
+      if (uRows.length > 0) {
+        targetOwnerId = uRows[0].id;
+      }
+    }
+
+    // Get or create itemType for SIM
+    let simTypeId = "";
+    const simTypesList = await db
+      .select()
+      .from(itemTypes)
+      .where(or(eq(itemTypes.category, "sim"), ilike(itemTypes.nameAr, "%شريحة%")))
+      .limit(1);
+
+    if (simTypesList.length > 0) {
+      simTypeId = simTypesList[0].id;
+    } else {
+      const [newType] = await db.insert(itemTypes).values({
+        nameAr: "شريحة اتصال",
+        nameEn: "SIM Card",
+        category: "sim",
+        requiresSerial: true,
+      }).returning();
+      simTypeId = newType.id;
+    }
+
+    // Check if already exists in items
+    const existing = await db
+      .select()
+      .from(items)
+      .where(or(eq(items.serialNumber, simSerial), eq(items.barcode, simSerial)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(items)
+        .set({
+          currentOwnerId: targetOwnerId || existing[0].currentOwnerId,
+          carrierName: data.simType || existing[0].carrierName || "STC",
+          status: "RECEIVED_BY_TECHNICIAN",
+          updatedAt: new Date(),
+        })
+        .where(eq(items.id, existing[0].id))
+        .returning();
+
+      return {
+        success: true,
+        message: "تم تحديث بيانات الشريحة وربطها بالفني بنجاح",
+        item: updated,
+      };
+    }
+
+    const [newItem] = await db.insert(items).values({
+      itemTypeId: simTypeId,
+      serialNumber: simSerial,
+      barcode: simSerial,
+      carrierName: data.simType || "STC",
+      currentOwnerId: targetOwnerId,
+      status: targetOwnerId ? "RECEIVED_BY_TECHNICIAN" : "WAREHOUSE",
+    }).returning();
+
+    return {
+      success: true,
+      message: "تم إدراج الشريحة في المخزون وربطها بالفني بنجاح",
+      item: newItem,
+    };
+  }
 }

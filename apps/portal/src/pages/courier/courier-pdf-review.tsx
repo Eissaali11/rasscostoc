@@ -26,15 +26,27 @@ import {
   Building2,
   CreditCard,
   Barcode,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type MatchStatus = "matched" | "needs_review" | "unknown";
 
-type DeviceCard = {
+export type SimCardItem = {
+  sim_index: number;
+  sim_serial: string;
+  sim_type?: string;
+  status?: "matched" | "not_found" | "unknown";
+  lookupLoading?: boolean;
+  lookupMessage?: string | null;
+  technicianName?: string | null;
+};
+
+export type DeviceCard = {
   device_index: number;
   sn: string;
-  sim_serial: string;
+  sims: SimCardItem[];
   tid: string;
   merchant: string;
   confidence: number;
@@ -53,6 +65,7 @@ type ExtractedPayload = {
     device_index?: number;
     sn?: string | null;
     sim_serial?: string | null;
+    sims?: Array<SimCardItem | string>;
     tid?: string | null;
     merchant?: string | null;
     confidence?: number;
@@ -174,21 +187,53 @@ function toCards(payload: ExtractedPayload | undefined): DeviceCard[] {
   const devices = payload?.devices;
   if (Array.isArray(devices) && devices.length > 0) {
     return devices
-      .map((d, i) => ({
-        device_index: d.device_index ?? i + 1,
-        sn: d.sn ?? "",
-        sim_serial: d.sim_serial ?? "",
-        tid: d.tid ?? "",
-        merchant: d.merchant ?? "",
-        confidence: d.confidence ?? 0,
-        match: d.match ?? {
-          technician_name: null,
-          technician_code: null,
-          status: "unknown" as MatchStatus,
-          confidence: null,
-        },
-      }))
-      .filter((d) => d.sn || d.sim_serial || d.tid || d.merchant);
+      .map((d: any, i) => {
+        const rawSims = Array.isArray(d.sims) ? d.sims : null;
+        let simList: SimCardItem[] = [];
+        if (rawSims && rawSims.length > 0) {
+          simList = rawSims.map((s: any, idx: number) => ({
+            sim_index: idx + 1,
+            sim_serial: typeof s === "string" ? s : s.sim_serial || s.serial || "",
+            sim_type: s.sim_type || "STC",
+            status: s.status || "unknown",
+            technicianName: s.technicianName || null,
+          }));
+        } else if (d.sim_serial) {
+          simList = [
+            {
+              sim_index: 1,
+              sim_serial: d.sim_serial,
+              sim_type: "STC",
+              status: "unknown",
+            },
+          ];
+        } else {
+          simList = [
+            {
+              sim_index: 1,
+              sim_serial: "",
+              sim_type: "STC",
+              status: "unknown",
+            },
+          ];
+        }
+
+        return {
+          device_index: d.device_index ?? i + 1,
+          sn: d.sn ?? "",
+          sims: simList,
+          tid: d.tid ?? "",
+          merchant: d.merchant ?? "",
+          confidence: d.confidence ?? 0,
+          match: d.match ?? {
+            technician_name: null,
+            technician_code: null,
+            status: "unknown" as MatchStatus,
+            confidence: null,
+          },
+        };
+      })
+      .filter((d) => d.sn || d.sims.some(s => s.sim_serial) || d.tid || d.merchant);
   }
 
   const sn = payload?.sn?.value ?? "";
@@ -201,7 +246,7 @@ function toCards(payload: ExtractedPayload | undefined): DeviceCard[] {
     {
       device_index: 1,
       sn,
-      sim_serial: sim,
+      sims: [{ sim_index: 1, sim_serial: sim, sim_type: "STC", status: "unknown" }],
       tid,
       merchant,
       confidence: payload?.sn?.confidence ?? 0,
@@ -240,6 +285,16 @@ export default function CourierPdfReviewPage() {
   const [rejectNotes, setRejectNotes] = useState("");
   const [rejecting, setRejecting] = useState(false);
 
+  // Link SIM Modal State
+  const [linkSimModalOpen, setLinkSimModalOpen] = useState(false);
+  const [targetSimSerial, setTargetSimSerial] = useState("");
+  const [targetSimType, setTargetSimType] = useState("STC");
+  const [targetTechnicianCode, setTargetTechnicianCode] = useState("");
+  const [targetDeviceIdx, setTargetDeviceIdx] = useState<number | null>(null);
+  const [targetSimIdx, setTargetSimIdx] = useState<number | null>(null);
+  const [linkingSim, setLinkingSim] = useState(false);
+  const [linkSimNotes, setLinkSimNotes] = useState("");
+
   const { data: report, isLoading, error } = useQuery<PdfReportDetail>({
     queryKey: [`/api/courier/pdf/${id}`],
     queryFn: () =>
@@ -251,12 +306,17 @@ export default function CourierPdfReviewPage() {
     [cards],
   );
 
+  const isApplied = report?.status === "applied";
+
   useEffect(() => {
     if (!report) return;
     setLinkedRequestId(report.requestId);
     setCards(toCards(report.extractedJson));
     setDeliveryDate(report.extractedJson?.date?.value ?? "");
     setTime(report.extractedJson?.time?.value ?? "");
+    if (report.technicianCode) {
+      setTargetTechnicianCode(report.technicianCode);
+    }
   }, [report]);
 
   useEffect(() => {
@@ -324,6 +384,42 @@ export default function CourierPdfReviewPage() {
     );
   };
 
+  const updateSim = (deviceIndex: number, simIndex: number, patch: Partial<SimCardItem>) => {
+    setCards((prev) =>
+      prev.map((c, i) => {
+        if (i !== deviceIndex) return c;
+        const updatedSims = c.sims.map((s, si) => (si === simIndex ? { ...s, ...patch } : s));
+        return { ...c, sims: updatedSims };
+      })
+    );
+  };
+
+  const addSimToDevice = (deviceIndex: number) => {
+    setCards((prev) =>
+      prev.map((c, i) => {
+        if (i !== deviceIndex) return c;
+        const newSim: SimCardItem = {
+          sim_index: c.sims.length + 1,
+          sim_serial: "",
+          sim_type: "STC",
+          status: "unknown",
+        };
+        return { ...c, sims: [...c.sims, newSim] };
+      })
+    );
+  };
+
+  const removeSimFromDevice = (deviceIndex: number, simIndex: number) => {
+    setCards((prev) =>
+      prev.map((c, i) => {
+        if (i !== deviceIndex) return c;
+        if (c.sims.length <= 1) return c;
+        const filtered = c.sims.filter((_, si) => si !== simIndex).map((s, idx) => ({ ...s, sim_index: idx + 1 }));
+        return { ...c, sims: filtered };
+      })
+    );
+  };
+
   const lookupSerial = async (index: number) => {
     const card = cards[index];
     const sn = card?.sn?.trim();
@@ -363,13 +459,101 @@ export default function CourierPdfReviewPage() {
     }
   };
 
+  const lookupSim = async (deviceIdx: number, simIdx: number) => {
+    const card = cards[deviceIdx];
+    const sim = card?.sims[simIdx];
+    const simSerial = sim?.sim_serial?.trim();
+    if (!simSerial) return;
+
+    updateSim(deviceIdx, simIdx, { lookupLoading: true, lookupMessage: null });
+    try {
+      const res = await apiRequest("POST", "/api/courier/serial-lookup", { sn: simSerial });
+      const data: SerialLookupResult = await res.json();
+      if (data.found) {
+        updateSim(deviceIdx, simIdx, {
+          lookupLoading: false,
+          status: "matched",
+          lookupMessage: data.message || `الشريحة موجودة بالأنظمة: ${data.technician?.fullName || ""}`,
+          technicianName: data.technician?.fullName || null,
+        });
+      } else {
+        updateSim(deviceIdx, simIdx, {
+          lookupLoading: false,
+          status: "not_found",
+          lookupMessage: "الشريحة غير موجودة في النظام - اضغط زر إضافة وربط لتخصيصها للفني",
+          technicianName: null,
+        });
+      }
+    } catch (err: any) {
+      updateSim(deviceIdx, simIdx, {
+        lookupLoading: false,
+        status: "unknown",
+        lookupMessage: "تعذر التحقق من الشريحة حالياً",
+      });
+    }
+  };
+
+  const openLinkSimModal = (deviceIdx: number, simIdx: number) => {
+    const card = cards[deviceIdx];
+    const sim = card?.sims[simIdx];
+    setTargetDeviceIdx(deviceIdx);
+    setTargetSimIdx(simIdx);
+    setTargetSimSerial(sim?.sim_serial || "");
+    setTargetSimType(sim?.sim_type || "STC");
+    setTargetTechnicianCode(report?.technicianCode || "");
+    setLinkSimNotes(`تم الربط والتخصيص التلقائي من تقرير تركيب PDF #${id}`);
+    setLinkSimModalOpen(true);
+  };
+
+  const handleLinkSimSubmit = async () => {
+    if (!targetSimSerial.trim()) {
+      toast({ title: "تنبيه", description: "يرجى كتابة رقم الشريحة الصحيح", variant: "destructive" });
+      return;
+    }
+    setLinkingSim(true);
+    try {
+      const res = await apiRequest("POST", "/api/courier/sim-link", {
+        simSerial: targetSimSerial.trim(),
+        simType: targetSimType,
+        technicianUsername: targetTechnicianCode,
+        notes: linkSimNotes,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast({
+          title: "تم ربط الشريحة بنجاح! ✅",
+          description: `تم إدراج الشريحة ${targetSimSerial} وتخصيصها للفني ${report?.technicianName || targetTechnicianCode}`,
+        });
+
+        if (targetDeviceIdx !== null && targetSimIdx !== null) {
+          updateSim(targetDeviceIdx, targetSimIdx, {
+            sim_serial: targetSimSerial.trim(),
+            sim_type: targetSimType,
+            status: "matched",
+            lookupMessage: "تم إدراج الشريحة وربطها بمخزون الفني بنجاح ✅",
+            technicianName: report?.technicianName || targetTechnicianCode,
+          });
+        }
+
+        setLinkSimModalOpen(false);
+      } else {
+        toast({ title: "خطأ في الربط", description: data.message || "تعذر ربط الشريحة", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "خطأ في العملية", description: err.message || "حدث خطأ أثناء الاتصال بالخادم", variant: "destructive" });
+    } finally {
+      setLinkingSim(false);
+    }
+  };
+
   const addDeviceCard = () => {
     setCards((prev) => [
       ...prev,
       {
         device_index: prev.length + 1,
         sn: "",
-        sim_serial: "",
+        sims: [{ sim_index: 1, sim_serial: "", sim_type: "STC", status: "unknown" }],
         tid: "",
         merchant: "",
         confidence: 100,
@@ -396,36 +580,34 @@ export default function CourierPdfReviewPage() {
         devices: cards.map((c, i) => ({
           device_index: i + 1,
           sn: c.sn.trim(),
-          sim_serial: c.sim_serial.trim(),
+          sim_serial: c.sims.map(s => s.sim_serial.trim()).filter(Boolean).join(", "),
+          sims: c.sims.map(s => ({
+            sim_index: s.sim_index,
+            sim_serial: s.sim_serial.trim(),
+            sim_type: s.sim_type || "STC",
+            status: s.status || "unknown"
+          })),
           tid: c.tid.trim(),
           merchant: c.merchant.trim(),
+          confidence: c.confidence,
+          match: c.match,
         })),
         deliveryDate: deliveryDate || null,
         time: time || null,
+        paperRoll: "Yes",
       };
 
-      const res = await apiRequest(
-        "POST",
-        `/api/courier/pdf/${report.id}/complete`,
-        body,
-      );
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || "فشل إكمال التقرير");
-      }
-
+      await apiRequest("POST", `/api/courier/pdf/${report.id}/complete`, body);
       toast({
-        title: "تم الاعتماد وتطبيق البيانات بنجاح ✅",
-        description: "تم تحديث سجل السحب والمخزون وإرسال إشعار الاعتماد للفني عبر تيليجرام.",
+        title: "تم الاعتماد بنجاح! 🎉",
+        description: "تم تحديث حالة التقرير والطلب وتحديث عهدة الفني بنجاح.",
       });
-
-      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf"] });
-      navigate("/courier/pdf");
+      queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf-reports"] });
     } catch (err: any) {
       toast({
         title: "خطأ أثناء الاعتماد",
-        description: err.message,
+        description: err.message || "تعذر إكمال الاعتماد، يرجى المحاولة لاحقاً.",
         variant: "destructive",
       });
     } finally {
@@ -433,63 +615,20 @@ export default function CourierPdfReviewPage() {
     }
   };
 
-  const handleRejectSubmit = async () => {
-    if (!report) return;
-    setRejecting(true);
-    try {
-      const res = await apiRequest("POST", `/api/courier/pdf/${report.id}/reject`, {
-        reasonCategory: rejectReasonCategory,
-        notes: rejectNotes,
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || "فشل إرجاع التقرير");
-      }
-
-      toast({
-        title: "تم إرجاع التقرير للفني ⚠️",
-        description: "تم إرسال إشعار التنبيه والتفاصيل المحددة إلى دردشة التليجرام الخاصة بالفني.",
-      });
-
-      setRejectModalOpen(false);
-      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf"] });
-      navigate("/courier/pdf");
-    } catch (err: any) {
-      toast({
-        title: "خطأ أثناء عملية الإرجاع",
-        description: err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setRejecting(false);
-    }
-  };
-
   const handleReextract = async () => {
     if (!report) return;
     setReextracting(true);
     try {
-      const res = await apiRequest(
-        "POST",
-        `/api/courier/pdf/${report.id}/reextract`,
-      );
-      if (!res.ok) throw new Error("فشل إعادة الاستخراج");
-      const updated = await res.json();
-
+      await apiRequest("POST", `/api/courier/pdf/${report.id}/reextract`);
       toast({
-        title: "تمت إعادة الاستخراج بالذكاء الاصطناعي ✨",
-        description: `تم تحديد ${updated.devices?.length || 0} أجهزة بثقة ${Math.round(updated.overallConfidence || 0)}%.`,
+        title: "تمت إعادة الاستخراج",
+        description: "تم تحديث البيانات المستخرجة باستخدام الذكاء الاصطناعي.",
       });
-
-      setCards(toCards(updated.extractedJson));
-      setLinkedRequestId(updated.requestId || report.requestId);
-      await queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
     } catch (err: any) {
       toast({
-        title: "خطأ الاستخراج",
-        description: err.message,
+        title: "خطأ في الاستخراج",
+        description: err.message || "تعذر إعادة الاستخراج",
         variant: "destructive",
       });
     } finally {
@@ -497,24 +636,54 @@ export default function CourierPdfReviewPage() {
     }
   };
 
+  const handleRejectSubmit = async () => {
+    if (!report) return;
+    setRejecting(true);
+    try {
+      await apiRequest("POST", `/api/courier/pdf/${report.id}/reject`, {
+        reasonCategory: rejectReasonCategory,
+        notes: rejectNotes,
+      });
+
+      toast({
+        title: "تم إرجاع التقرير للفني 📩",
+        description: "تم تغيير حالة التقرير إلى مرتجع وإرسال التنبيه عبر التليجرام بنجاح.",
+      });
+
+      setRejectModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: [`/api/courier/pdf/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courier/pdf-reports"] });
+    } catch (err: any) {
+      toast({
+        title: "خطأ في عملية الإرجاع",
+        description: err.message || "تعذر إرسال الإرجاع للفني",
+        variant: "destructive",
+      });
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-[#18B2B0]" />
-        <p className="text-sm font-medium text-[#6B7280]">جارٍ تحميل تفاصيل التقرير والبيانات المستخرجة…</p>
+        <p className="text-xs text-[#6B7280]">جاري تحميل بيانات تقرير التركيب…</p>
       </div>
     );
   }
 
   if (error || !report) {
     return (
-      <div className="p-6 text-center max-w-lg mx-auto bg-white rounded-2xl border border-red-200 shadow-sm my-12">
-        <AlertCircle className="w-10 h-10 text-[#E05252] mx-auto mb-3" />
-        <h3 className="text-base font-bold text-[#2D3135]">تعذر تحميل التقرير</h3>
-        <p className="text-xs text-[#6B7280] mt-1">قد يكون الملف غير موجود أو تم حذفه من السيرفر.</p>
+      <div className="bg-white p-6 rounded-2xl border border-red-100 text-center space-y-3">
+        <AlertCircle className="w-10 h-10 text-[#E05252] mx-auto" />
+        <h2 className="text-sm font-bold text-[#2D3135]">تعذر تحميل التقرير</h2>
+        <p className="text-xs text-[#6B7280]">
+          قد يكون التقرير غير موجود أو تم حذفه من النظام.
+        </p>
         <button
           onClick={() => navigate("/courier/pdf")}
-          className="mt-4 px-4 py-2 text-xs font-bold text-white bg-[#18B2B0] rounded-xl hover:bg-[#159A98] transition-colors"
+          className="px-4 py-2 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 rounded-xl"
         >
           العودة لقائمة التقارير
         </button>
@@ -522,29 +691,27 @@ export default function CourierPdfReviewPage() {
     );
   }
 
-  const isApplied = report.status === "applied";
-
   return (
-    <div className="w-full px-4 sm:px-8 py-6 space-y-6 font-sans bg-[#F8FAFC]/50 min-h-screen" dir={dir}>
-      {/* Top Header & Navigation Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm">
+    <div className="space-y-6 font-sans text-right pb-12" dir={dir}>
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/courier/pdf")}
-            className="p-2 text-[#6B7280] hover:text-[#18B2B0] hover:bg-[#18B2B0]/10 rounded-xl transition-colors"
-            title="رجوع"
+            className="p-2 text-[#6B7280] hover:text-[#2D3135] hover:bg-[#F1F5F9] rounded-xl transition-colors"
+            title="العودة"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#2D3135] font-cairo">
+              <h1 className="text-lg font-bold text-[#2D3135]">
                 مراجعة وتدقيق تقرير التركيب #{report.id}
               </h1>
               <StatusTag status={report.status} />
             </div>
-            <p className="text-xs text-[#6B7280] mt-0.5 dir-ltr text-end sm:text-start font-mono">
-              {report.fileName}
+            <p className="text-xs text-[#6B7280] mt-0.5 font-mono">
+              {report.fileName} • {report.createdAt ? new Date(report.createdAt).toLocaleString("ar-SA") : ""}
             </p>
           </div>
         </div>
@@ -685,7 +852,7 @@ export default function CourierPdfReviewPage() {
                 بيانات الأجهزة والشرائح ({cards.length})
               </h2>
               <p className="text-[11px] text-[#6B7280]">
-                يمكنك التعديل مباشرة في الحقول أدناه قبل إكمال الاعتماد.
+                يمكنك التعديل والتحقق من الأجهزة والشرائح مباشرة في الحقول أدناه.
               </p>
             </div>
             {!isApplied && (
@@ -694,7 +861,7 @@ export default function CourierPdfReviewPage() {
                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 rounded-xl transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                إضافة جهاز
+                إضافة جهاز جديد
               </button>
             )}
           </div>
@@ -714,7 +881,7 @@ export default function CourierPdfReviewPage() {
                       #{card.device_index}
                     </span>
                     <h3 className="text-xs font-bold text-[#2D3135]">
-                      بيانات الجهاز / الشريحة
+                      بيانات الجهاز #{card.device_index}
                     </h3>
                     <ConfidenceBadge value={card.confidence} />
                   </div>
@@ -726,7 +893,7 @@ export default function CourierPdfReviewPage() {
                         className="text-[#E05252] hover:bg-red-50 p-1 rounded-lg transition-colors"
                         title="حذف الجهاز"
                       >
-                        <XCircle className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -745,7 +912,7 @@ export default function CourierPdfReviewPage() {
                         value={card.sn}
                         onChange={(e) => updateCard(idx, { sn: e.target.value })}
                         disabled={isApplied}
-                        placeholder="مثال: 95012345678"
+                        placeholder="مثال: SAS30810005318"
                         className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
                       />
                       <button
@@ -763,22 +930,6 @@ export default function CourierPdfReviewPage() {
                     </div>
                   </div>
 
-                  {/* SIM Serial Input */}
-                  <div>
-                    <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
-                      <CreditCard className="w-3.5 h-3.5 text-[#18B2B0]" />
-                      رقم الشريحة (SIM ICCID)
-                    </label>
-                    <input
-                      type="text"
-                      value={card.sim_serial}
-                      onChange={(e) => updateCard(idx, { sim_serial: e.target.value })}
-                      disabled={isApplied}
-                      placeholder="مثال: 899660123456789"
-                      className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
-                    />
-                  </div>
-
                   {/* TID Input */}
                   <div>
                     <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
@@ -790,13 +941,13 @@ export default function CourierPdfReviewPage() {
                       value={card.tid}
                       onChange={(e) => updateCard(idx, { tid: e.target.value })}
                       disabled={isApplied}
-                      placeholder="مثال: 15805012"
+                      placeholder="مثال: 15112352"
                       className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
                     />
                   </div>
 
                   {/* Merchant Name Input */}
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5 text-[#18B2B0]" />
                       اسم المتجر / العميل
@@ -806,7 +957,7 @@ export default function CourierPdfReviewPage() {
                       value={card.merchant}
                       onChange={(e) => updateCard(idx, { merchant: e.target.value })}
                       disabled={isApplied}
-                      placeholder="اسم المتجر"
+                      placeholder="شركة يمر القطع"
                       className="w-full text-xs px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
                     />
                   </div>
@@ -817,6 +968,103 @@ export default function CourierPdfReviewPage() {
                     {card.lookupMessage}
                   </p>
                 )}
+
+                {/* Multi-SIM Section per Device */}
+                <div className="border-t border-[#F1F5F9] pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#2D3135] flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-[#18B2B0]" />
+                      شرائح التوثيق لهذا الجهاز ({card.sims.length})
+                    </span>
+                    {!isApplied && (
+                      <button
+                        onClick={() => addSimToDevice(idx)}
+                        className="text-[11px] font-bold text-[#18B2B0] hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        إضافة شريحة أخرى للجهاز
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {card.sims.map((sim, sIdx) => (
+                      <div
+                        key={sIdx}
+                        className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[#4B5563]">
+                            شريحة #{sim.sim_index} {sim.sim_type ? `(${sim.sim_type})` : ""}
+                          </span>
+                          {!isApplied && card.sims.length > 1 && (
+                            <button
+                              onClick={() => removeSimFromDevice(idx, sIdx)}
+                              className="text-[#E05252] text-[10px] hover:underline"
+                            >
+                              حذف الشريحة
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                          <input
+                            type="text"
+                            value={sim.sim_serial}
+                            onChange={(e) => updateSim(idx, sIdx, { sim_serial: e.target.value })}
+                            disabled={isApplied}
+                            placeholder="رقم الشريحة (SIM ICCID / Serial)..."
+                            className="flex-1 text-xs font-mono px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                          />
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => lookupSim(idx, sIdx)}
+                              disabled={sim.lookupLoading || !sim.sim_serial.trim()}
+                              className="px-3 py-2 text-xs font-bold text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 rounded-xl transition-colors flex items-center gap-1 disabled:opacity-50 shrink-0"
+                            >
+                              {sim.lookupLoading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Search className="w-3.5 h-3.5" />
+                              )}
+                              التحقق في النظام
+                            </button>
+
+                            {sim.status === "not_found" && !isApplied && (
+                              <button
+                                onClick={() => openLinkSimModal(idx, sIdx)}
+                                className="px-3 py-2 text-xs font-bold text-white bg-[#18B2B0] hover:bg-[#159A98] rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0"
+                              >
+                                <Link2 className="w-3.5 h-3.5" />
+                                إضافة / ربط بالمخزون
+                              </button>
+                            )}
+
+                            {sim.status === "matched" && (
+                              <span className="text-[11px] font-bold text-[#18B2B0] bg-[#18B2B0]/12 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                                <Check className="w-3.5 h-3.5" />
+                                موجودة بالنظام
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {sim.lookupMessage && (
+                          <p className={`text-[11px] px-2.5 py-1 rounded-lg font-medium ${
+                            sim.status === "matched"
+                              ? "bg-[#18B2B0]/10 text-[#18B2B0]"
+                              : sim.status === "not_found"
+                              ? "bg-amber-50 text-amber-800 border border-amber-200"
+                              : "bg-gray-100 text-gray-700"
+                          }`}>
+                            {sim.lookupMessage}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -915,6 +1163,119 @@ export default function CourierPdfReviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Link SIM Modal */}
+      <AnimatePresence>
+        {linkSimModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-[rgba(24,178,176,0.18)] p-6 space-y-4 relative font-sans text-right"
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+                <div className="flex items-center gap-2 text-[#18B2B0]">
+                  <CreditCard className="w-5 h-5" />
+                  <h3 className="text-sm font-bold text-[#2D3135]">
+                    ربط وإضافة شريحة بمخزون الفني 📱
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setLinkSimModalOpen(false)}
+                  className="text-[#6B7280] hover:text-[#2D3135] p-1 rounded-lg"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                ستتم إضافة هذه الشريحة إلى قاعدة البيانات وتخصيصها فوراً لعهدة ومخزون الفني المسند للتقرير.
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-[#4B5563] block mb-1">
+                    رقم الشريحة (SIM ICCID / Serial):
+                  </label>
+                  <input
+                    type="text"
+                    value={targetSimSerial}
+                    onChange={(e) => setTargetSimSerial(e.target.value)}
+                    className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135]"
+                    placeholder="899660123456789"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#4B5563] block mb-1">
+                    نوع / مشغل الشريحة (Carrier):
+                  </label>
+                  <select
+                    value={targetSimType}
+                    onChange={(e) => setTargetSimType(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135]"
+                  >
+                    <option value="STC">📶 STC - الاتصالات السعودية</option>
+                    <option value="Mobily">📶 Mobily - موبايلي</option>
+                    <option value="Zain">📶 Zain - زين</option>
+                    <option value="STC 4G">🌐 STC 4G Data</option>
+                    <option value="Mobily 4G">🌐 Mobily 4G Data</option>
+                    <option value="M2M">📟 M2M / eSIM Enterprise</option>
+                    <option value="Other">❓ أخرى</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#4B5563] block mb-1">
+                    الفني المخصص (مخزون الفني):
+                  </label>
+                  <input
+                    type="text"
+                    value={report?.technicianName ? `${report.technicianName} (@${targetTechnicianCode})` : targetTechnicianCode}
+                    disabled
+                    className="w-full text-xs px-3 py-2 bg-[#F1F5F9] border border-[#E2E8F0] rounded-xl text-[#4B5563] font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#4B5563] block mb-1">
+                    ملاحظات الإدراج:
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={linkSimNotes}
+                    onChange={(e) => setLinkSimNotes(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                <button
+                  onClick={() => setLinkSimModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] hover:bg-[#E2E8F0] rounded-xl transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleLinkSimSubmit}
+                  disabled={linkingSim || !targetSimSerial.trim()}
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#18B2B0] hover:bg-[#159A98] rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {linkingSim ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Link2 className="w-4 h-4" />
+                  )}
+                  تأكيد إضافة وربط الشريحة
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Interactive Rejection Modal */}
       <AnimatePresence>

@@ -199,6 +199,27 @@ export class CourierController {
     res.json(result);
   });
 
+  updatePdfExtractedJson = asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) throw new ValidationError("Invalid PDF ID");
+    const { extracted_json, extractedJson, overall_confidence, overallConfidence, request_id, requestId } = req.body;
+
+    const jsonToUse = extracted_json || extractedJson;
+    if (!jsonToUse) throw new ValidationError("extracted_json is required");
+
+    const conf = overall_confidence ?? overallConfidence;
+    const reqId = request_id ?? requestId;
+
+    const result = await this.service.updatePdfReportExtractedJson(
+      id,
+      jsonToUse,
+      conf ? Number(conf) : undefined,
+      reqId ? Number(reqId) : undefined
+    );
+
+    res.json(result);
+  });
+
   reextractPdf = asyncHandler(async (req: Request, res: Response) => {
     const pdfId = Number(req.params.id);
     if (isNaN(pdfId)) throw new ValidationError("Invalid PDF ID");
@@ -278,19 +299,31 @@ export class CourierController {
     if (!result) throw new NotFoundError("PDF Report not found");
 
     if (req.query.raw === "1") {
-      const uploadDir = path.join(process.cwd(), "uploads", "pdf");
-      const filePath = path.join(uploadDir, result.filePath);
-      if (!fs.existsSync(filePath)) throw new NotFoundError("File not found on disk");
-      
-      const buffer = fs.readFileSync(filePath);
-      const ext = path.extname(result.fileName).toLowerCase();
+      const rawPath = result.filePath || "";
+      const basename = path.basename(rawPath);
+      const possiblePaths = [
+        rawPath,
+        path.join(process.cwd(), rawPath),
+        path.join(process.cwd(), "uploads", "pdf", basename),
+        path.join(process.cwd(), "uploads", "courier-pdf", basename),
+        path.join(process.cwd(), "uploads", basename),
+        path.join(process.cwd(), "uploads", "pdf", rawPath),
+      ];
+
+      const foundPath = possiblePaths.find(p => p && fs.existsSync(p));
+      if (!foundPath) {
+        throw new NotFoundError(`File not found on disk: ${result.fileName}`);
+      }
+
+      const buffer = fs.readFileSync(foundPath);
+      const ext = path.extname(result.fileName || rawPath).toLowerCase();
       let contentType = "application/pdf";
       if (ext === ".png") contentType = "image/png";
       else if (ext === ".jpg" || ext === ".jpeg") contentType = "image/jpeg";
       else if (ext === ".webp") contentType = "image/webp";
 
       res.setHeader("Content-Type", contentType);
-      res.setHeader("Content-Disposition", `inline; filename="${result.fileName}"`);
+      res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(result.fileName || basename)}"`);
       return res.send(buffer);
     }
 
@@ -398,9 +431,26 @@ export class CourierController {
   });
 
   serialLookup = asyncHandler(async (req: Request, res: Response) => {
-    const { sn } = req.body;
-    if (!sn || String(sn).trim() === "") throw new ValidationError("sn is required");
-    const result = await this.service.serialLookup(String(sn).trim());
+    const { sn, serial } = req.body;
+    const term = (sn || serial || "").toString().trim();
+    if (!term) throw new ValidationError("sn is required");
+    const result = await this.service.serialLookup(term);
+    res.json(result);
+  });
+
+  linkSimToTechnician = asyncHandler(async (req: Request, res: Response) => {
+    const { simSerial, sim_serial, simType, sim_type, technicianId, technician_id, technicianUsername, technician_code, notes } = req.body;
+    const serial = (simSerial || sim_serial || "").toString().trim();
+    if (!serial) throw new ValidationError("simSerial is required");
+
+    const result = await this.service.linkSimToTechnician({
+      simSerial: serial,
+      simType: simType || sim_type || "STC",
+      technicianId: technicianId || technician_id,
+      technicianUsername: technicianUsername || technician_code,
+      notes,
+    });
+
     res.json(result);
   });
 }

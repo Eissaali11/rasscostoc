@@ -40,29 +40,37 @@ function normalizeHeader(value: unknown): string {
 }
 
 // Mappings of database field names to the headers found in Excel
-export const RAW_IMPORT_COLUMNS = [
-  { header: "Date", field: "date" },
-  { header: "Installation type", field: "installationType" },
-  { header: "SIM", field: "sim" },
-  { header: "TID", field: "tid" },
-  { header: "OTP", field: "otp" },
-  { header: "TICKETING HOLOULY", field: "ticketingHolouly" },
-  { header: "INCIDENT NUMBER", field: "incidentNumber" },
-  { header: "Pin Code", field: "pinCode" },
-  { header: "TRSM", field: "trsm" },
-  { header: "TERMINAL ID", field: "terminalId" },
-  { header: "SIM S/N", field: "simSn" },
-  { header: "ID DATA", field: "idData" },
-  { header: "Vendor Type", field: "vendorType" },
-  { header: "CITY", field: "city" },
-  { header: "CITY Tec", field: "cityTec" },
-  { header: "إسم العميل", field: "customerName" },
-  { header: "RETAILER NAME", field: "retailerName" },
-  { header: "عنوان", field: "addressAr" },
-  { header: "ADDRESS", field: "addressEn" },
-  { header: "Mobile", field: "mobile" },
-  { header: "Mobile2", field: "mobile2" },
-  { header: "Tec Name", field: "tecName" }
+export const RAW_IMPORT_COLUMNS: Array<{ header: string; field: string; aliases: string[] }> = [
+  { header: "Date", field: "date", aliases: ["date", "تاريخ", "تاريخ الطلب", "التاريخ"] },
+  { header: "Installation type", field: "installationType", aliases: ["installation type", "installationtype", "نوع التركيب", "العملية", "نوع الطلب"] },
+  { header: "SIM", field: "sim", aliases: ["sim", "شريحة", "مزود الشريحة", "نوع الشريحة"] },
+  { header: "TID", field: "tid", aliases: ["tid", "رقم tid", "رقم المعاملة", "الرمز الذكي"] },
+  { header: "OTP", field: "otp", aliases: ["otp", "رمز otp", "رمز التحقق"] },
+  { header: "TICKETING HOLOULY", field: "ticketingHolouly", aliases: ["ticketing holouly", "ticketingholouly", "تذكرة حلولي", "بلاغ حلولي"] },
+  { header: "INCIDENT NUMBER", field: "incidentNumber", aliases: ["incident number", "incidentnumber", "incident", "رقم البلاغ", "رقم التذكرة"] },
+  { header: "Pin Code", field: "pinCode", aliases: ["pin code", "pincode", "رمز pin", "البين كود"] },
+  { header: "TRSM", field: "trsm", aliases: ["trsm", "رمز trsm"] },
+  { header: "TERMINAL ID", field: "terminalId", aliases: ["terminal id", "terminalid", "رقم الجهاز", "رقم النهاية", "ترمنال"] },
+  { header: "SIM S/N", field: "simSn", aliases: ["sim s/n", "sim sn", "simsn", "سيريال الشريحة", "رقم الشريحة التسلسلي", "iccid"] },
+  { header: "ID DATA", field: "idData", aliases: ["id data", "iddata", "بيانات الهوية"] },
+  { header: "Vendor Type", field: "vendorType", aliases: ["vendor type", "vendortype", "المورد", "نوع المورد", "الشركة المصنعة", "المصنع"] },
+  { header: "CITY", field: "city", aliases: ["city", "المدينة", "مدينة التوصيل", "المنطقة"] },
+  { header: "CITY Tec", field: "cityTec", aliases: ["city tec", "citytec", "مدينة الفني", "إقليم الفني"] },
+  { header: "إسم العميل", field: "customerName", aliases: ["إسم العميل", "اسم العميل", "العميل", "customer name", "customername", "customer", "اسم التاجر", "التاجر", "اسم المحل"] },
+  { header: "RETAILER NAME", field: "retailerName", aliases: ["retailer name", "retailername", "retailer", "اسم النشاط", "الاسم التجاري", "اسم المتجر"] },
+  { header: "عنوان", field: "addressAr", aliases: ["عنوان", "العنوان", "address", "addressar", "العنوان بالعربية", "عنوان التوصيل", "تفاصيل العنوان"] },
+  { header: "ADDRESS", field: "addressEn", aliases: ["address", "addressen", "العنوان بالإنجليزية"] },
+  { header: "Mobile", field: "mobile", aliases: ["mobile", "الجوال", "رقم الجوال", "phone", "mobile number", "رقم الهاتف", "هاتف"] },
+  { header: "Mobile2", field: "mobile2", aliases: ["mobile2", "جوال2", "الجوال2", "رقم جوال بديل", "mobile 2", "phone 2", "هاتف 2"] },
+  { header: "Tec Name", field: "tecName", aliases: ["tec name", "tecname", "اسم الفني", "الفني", "technician", "اسم المندوب", "اسم المندوب", "فني المبيعات"] },
+  // === Execution / Field completion columns (auto-create execution if present) ===
+  { header: "SN", field: "sn", aliases: ["sn", "s/n", "serial number", "serial", "رقم السيريال", "رقم التسلسل", "الرقم التسلسلي", "رقم الجهاز التسلسلي", "device sn", "pos sn", "device serial"] },
+  { header: "SIM Serial", field: "simSerial", aliases: ["sim serial", "simserial", "sim iccid", "iccid full", "رقم شريحة البيانات", "سيريال الشريحة الكاملة", "sim number"] },
+  { header: "Sales Technician", field: "salesTechnician", aliases: ["sales technician", "salestechnician", "sales tec", "فني المبيعات المنفذ", "اسم الفني المنفذ", "الفني المنفذ", "tec name sales"] },
+  { header: "Technician code", field: "technicianCode", aliases: ["technician code", "techniciancode", "tec code", "كود الفني", "رمز الفني"] },
+  { header: "Installation Status", field: "installationStatus", aliases: ["installation status", "installationstatus", "status", "الحالة", "حالة التركيب", "نتيجة التركيب"] },
+  { header: "Delivery Date", field: "deliveryDate", aliases: ["delivery date", "deliverydate", "تاريخ التسليم", "تاريخ التركيب", "تاريخ الزيارة"] },
+  { header: "Time", field: "time", aliases: ["time", "الوقت", "وقت التسليم", "وقت التركيب"] }
 ];
 
 /**
@@ -84,7 +92,7 @@ export function normalizeSpreadsheetCell(
   if (t === "boolean") throw new SpreadsheetError("UNSUPPORTED_CELL_TYPE");
 
   if (t === "object") {
-    const o = value as Record<string, unknown>;
+    const o = value as unknown as Record<string, unknown>;
     if ("formula" in o || "sharedFormula" in o) {
       throw new SpreadsheetError("SPREADSHEET_FORMULA_NOT_ALLOWED");
     }
@@ -119,7 +127,7 @@ function structuralCellValue(value: ExcelJS.CellValue): unknown {
   const t = typeof value;
   if (t === "string" || t === "number" || t === "boolean") return value;
   if (t === "object") {
-    const o = value as Record<string, unknown>;
+    const o = value as unknown as Record<string, unknown>;
     if ("result" in o) return o.result ?? null; // formula's cached result
     if ("richText" in o && Array.isArray(o.richText)) {
       return (o.richText as Array<{ text?: string }>).map((r) => r.text ?? "").join("");
@@ -175,7 +183,10 @@ export async function parseRawDataWorkbook(buffer: Buffer): Promise<ImportSummar
 
   const fieldToColumnIndex = new Map<string, number>();
   for (const col of RAW_IMPORT_COLUMNS) {
-    const idx = normalizedHeaders.findIndex((h) => h.toLowerCase() === col.header.toLowerCase());
+    const idx = normalizedHeaders.findIndex((h) => {
+      const lower = h.toLowerCase();
+      return lower === col.header.toLowerCase() || col.aliases.some((alias) => lower === alias.toLowerCase());
+    });
     if (idx !== -1) fieldToColumnIndex.set(col.field, idx);
   }
 

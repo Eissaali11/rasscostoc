@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
@@ -30,8 +30,11 @@ import {
   AlertCircle,
   FileCheck2,
   Layers,
+  UserCheck,
+  Save,
 } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import rasscoLogoHorizontal from "@/assets/rassco-logo-horizontal.png";
 
 interface RequestDetailModalProps {
@@ -44,9 +47,9 @@ interface RequestDetailModalProps {
 function StatusBadge({ status }: { status: string | null | undefined }) {
   if (!status)
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6B7280] bg-[#F1F5F9] px-3 py-1 rounded-full border border-[#E2E8F0] shadow-sm">
-        <Clock className="w-3.5 h-3.5" />
-        بانتظار التحقق
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0284C7] bg-[#E0F2FE] px-3 py-1 rounded-full border border-[#BAE6FD] shadow-sm">
+        <Clock className="w-3.5 h-3.5 text-[#0284C7]" />
+        طلب جديد — بانتظار تنفيذ وتسليم الفني
       </span>
     );
 
@@ -122,6 +125,13 @@ export function CourierRequestDetailModal({
   requestId,
   onEditClick,
 }: RequestDetailModalProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [assignTecName, setAssignTecName] = useState("");
+  const [showAssignForm, setShowAssignForm] = useState(false);
+  const [tecSearch, setTecSearch] = useState("");
+  const [selectedTec, setSelectedTec] = useState<{ name: string; code: string } | null>(null);
+
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/courier/requests", requestId],
     queryFn: async () => {
@@ -130,6 +140,49 @@ export function CourierRequestDetailModal({
       return res.json();
     },
     enabled: !!requestId && open,
+  });
+
+  // Fetch technician list for assign dropdown
+  const { data: lookups } = useQuery<any>({
+    queryKey: ["/api/courier/lookups"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/courier/lookups");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const allTechnicians: { id: string; name: string; code: string; regionId: string | null }[] = lookups?.technicians ?? [];
+  const filteredTechnicians = tecSearch.trim().length >= 1
+    ? allTechnicians.filter(t =>
+        t.name.toLowerCase().includes(tecSearch.toLowerCase()) ||
+        t.code.toLowerCase().includes(tecSearch.toLowerCase())
+      )
+    : allTechnicians;
+
+  const assignMutation = useMutation({
+    mutationFn: async (tecName: string) => {
+      const res = await apiRequest("POST", `/api/courier/executions/${requestId}`, {
+        salesTechnician: tecName,
+        installationStatus: data?.execution?.installationStatus || "In Progress",
+        sn: data?.execution?.sn,
+        simSerial: data?.execution?.simSerial,
+        deliveryDate: data?.execution?.deliveryDate,
+        time: data?.execution?.time,
+      });
+      return res.json();
+    },
+    onSuccess: (_, tecName) => {
+      toast({ title: "تم ربط الفني بنجاح", description: `تم تعيين الفني: ${tecName}` });
+      setShowAssignForm(false);
+      setAssignTecName("");
+      setTecSearch("");
+      setSelectedTec(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/courier/requests", requestId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
+    },
+    onError: () => {
+      toast({ title: "فشل الربط", variant: "destructive" });
+    },
   });
 
   const execution = data?.execution;
@@ -181,30 +234,137 @@ export function CourierRequestDetailModal({
         ) : (
           <div className="p-6 space-y-6">
             {/* Responsible Technician Banner */}
-            <div className="rounded-xl border border-[#18B2B0]/25 bg-gradient-to-r from-[#18B2B0]/08 to-transparent p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#18B2B0] text-white flex items-center justify-center font-bold text-lg shadow">
-                  <User className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs text-[#6B7280] font-semibold">الفني المسؤول عن تنفيذ العملية</div>
-                  <div className="text-base font-extrabold text-[#2D3135] flex items-center gap-2 mt-0.5">
-                    {execution?.salesTechnician || data.tecName || "غير محدد"}
-                    {(execution?.technicianCode || data.cityTec) && (
-                      <span className="text-xs font-mono font-bold bg-white text-[#18B2B0] border border-[#18B2B0]/30 px-2 py-0.5 rounded-full">
-                        {execution?.technicianCode || data.cityTec}
-                      </span>
-                    )}
+            <div className="rounded-xl border border-[#18B2B0]/25 bg-gradient-to-r from-[#18B2B0]/08 to-transparent p-4 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#18B2B0] text-white flex items-center justify-center font-bold text-lg shadow">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-[#6B7280] font-semibold">الفني المسؤول عن تنفيذ العملية</div>
+                    <div className="text-base font-extrabold text-[#2D3135] flex items-center gap-2 mt-0.5">
+                      {execution?.salesTechnician || data.tecName || (
+                        <span className="text-amber-600 text-sm font-bold">لم يتم ربط فني بعد</span>
+                      )}
+                      {(execution?.technicianCode || data.cityTec) && (
+                        <span className="text-xs font-mono font-bold bg-white text-[#18B2B0] border border-[#18B2B0]/30 px-2 py-0.5 rounded-full">
+                          {execution?.technicianCode || data.cityTec}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-gray-500 flex flex-col items-start sm:items-end">
+                    <span className="font-semibold text-gray-700">تاريخ التسليم والرد</span>
+                    <span className="font-mono text-[#18B2B0] font-bold">
+                      {execution?.deliveryDate || data.date || "—"} {execution?.time ? `| ${execution.time}` : ""}
+                    </span>
+                  </div>
+                  {/* Assign Technician Button */}
+                  <button
+                    onClick={() => setShowAssignForm(!showAssignForm)}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#18B2B0] text-white hover:bg-[#149D9B] transition-all shadow-sm"
+                    title="ربط أو تغيير الفني المسؤول"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    {execution?.salesTechnician ? "تغيير الفني" : "ربط بفني"}
+                  </button>
+                </div>
               </div>
-              <div className="text-xs text-gray-500 flex flex-col items-start sm:items-end">
-                <span className="font-semibold text-gray-700">تاريخ التسليم والرد</span>
-                <span className="font-mono text-[#18B2B0] font-bold">
-                  {execution?.deliveryDate || data.date || "—"} {execution?.time ? `| ${execution.time}` : ""}
-                </span>
-              </div>
+              {/* Assign Technician Searchable Dropdown */}
+              {showAssignForm && (
+                <div className="mt-2 pt-3 border-t border-[#18B2B0]/20 flex flex-col gap-2">
+                  {/* Search input */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={tecSearch}
+                      onChange={(e) => { setTecSearch(e.target.value); setSelectedTec(null); }}
+                      placeholder="ابحث عن الفني بالاسم أو الكود..."
+                      className="w-full text-sm border border-[#18B2B0]/50 rounded-lg px-3 py-2.5 outline-none focus:border-[#18B2B0] focus:ring-2 focus:ring-[#18B2B0]/20 bg-white pr-9"
+                      autoFocus
+                    />
+                    <svg className="absolute right-3 top-3 w-4 h-4 text-[#18B2B0]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  </div>
+                  {/* Technician list */}
+                  {selectedTec ? (
+                    <div className="rounded-lg border border-[#18B2B0]/40 bg-[#18B2B0]/05 p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-[#18B2B0] text-white flex items-center justify-center text-sm font-bold">
+                          {selectedTec.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-800">{selectedTec.name}</div>
+                          <div className="text-xs text-[#18B2B0] font-mono">{selectedTec.code}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { setSelectedTec(null); setTecSearch(""); }}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        ✕ تغيير
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="max-h-52 overflow-y-auto rounded-lg border border-[#E2E8F0] bg-white shadow-md divide-y divide-gray-50">
+                      {filteredTechnicians.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-sm text-gray-400">لا توجد نتائج مطابقة</div>
+                      ) : (
+                        filteredTechnicians.map((tec) => (
+                          <button
+                            key={tec.id}
+                            onClick={() => { setSelectedTec({ name: tec.name, code: tec.code }); setTecSearch(tec.name); }}
+                            className="w-full text-right px-4 py-2.5 flex items-center gap-3 hover:bg-[#18B2B0]/05 transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-full bg-[#18B2B0]/15 text-[#18B2B0] flex items-center justify-center text-xs font-bold shrink-0">
+                              {tec.name.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-gray-800 truncate">{tec.name}</div>
+                              <div className="text-xs text-gray-400 font-mono">{tec.code}</div>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => selectedTec && assignMutation.mutate(selectedTec.name)}
+                      disabled={!selectedTec || assignMutation.isPending}
+                      className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-[#18B2B0] text-white hover:bg-[#149D9B] disabled:opacity-50 transition-all"
+                    >
+                      {assignMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      تأكيد الربط
+                    </button>
+                    <button
+                      onClick={() => { setShowAssignForm(false); setTecSearch(""); setSelectedTec(null); }}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-all"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+
+
+            {/* Excel Data Completed Status Info Banner */}
+            {!execution?.installationStatus && (
+              <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50/50 p-4 flex items-start gap-3 text-blue-950 text-xs shadow-xs">
+                <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-extrabold block text-sm text-blue-900 mb-0.5">
+                    ✓ وثيقة الطلب ومستند البيانات مكتملة بالكامل من الإكسل
+                  </span>
+                  <p className="text-blue-800 leading-relaxed margin-0">
+                    تم استيراد كافة بيانات المعاملة (اسم العميل، النشاط التجاري، رقم TID، المدينة، رقم الجوال، والعنوان). يُنتظر الآن من الفني الميداني إتمام التسليم وربط الأجهزة والشرائح المسلمة (SN / SIM) عند المقابلة.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Response Failure Alert (if not completed) */}
             {execution?.responseReasonCode && (

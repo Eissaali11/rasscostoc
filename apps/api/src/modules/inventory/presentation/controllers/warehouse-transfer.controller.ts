@@ -167,6 +167,38 @@ export class WarehouseTransferController {
     const { assetTrackingService } = await import("../../infrastructure/services/asset-tracking.service");
     const result = await assetTrackingService.getUnifiedAssetTracking(identifier);
 
+    // Audit Log for search query
+    try {
+      const { db } = await import("@core/config/db");
+      const { systemLogs } = await import("@shared/schema");
+      const user = req.user;
+      await db.insert(systemLogs).values({
+        userId: user?.id || null,
+        userName: user?.fullName || user?.username || "زائر الميدان / نظام التحقق",
+        userRole: user?.role || "user",
+        action: "search",
+        entityType: "search_query",
+        entityId: identifier,
+        entityName: result?.asset?.itemTypeName || "استعلام تتبع أصل",
+        description: result 
+          ? `تم الاستعلام والبحث عن الرقم التسلسلي/الباركود (${identifier}) - النتيجة: معثور عليه (${result.asset.itemTypeName || 'أصل'})`
+          : `تم الاستعلام والبحث عن الرقم التسلسلي/الباركود (${identifier}) - النتيجة: غير موجود بالنظام`,
+        details: JSON.stringify({
+          query: identifier,
+          found: !!result,
+          assetId: result?.asset?.id || null,
+          currentCustodian: result?.currentCustodian?.fullName || null,
+          status: result?.asset?.status || null,
+          ip: req.ip || req.headers["x-forwarded-for"] || "127.0.0.1",
+          userAgent: req.headers["user-agent"] || "Browser",
+        }),
+        severity: result ? "info" : "warn",
+        success: !!result,
+      });
+    } catch (logErr) {
+      console.error("Failed to insert system log for search:", logErr);
+    }
+
     if (!result) {
       return res.status(404).json({ message: `لم يُعثر على أصل بالسيريال / الباركود: ${identifier}` });
     }
