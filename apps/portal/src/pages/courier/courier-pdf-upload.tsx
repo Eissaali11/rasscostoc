@@ -15,6 +15,7 @@ import {
   Search,
   ExternalLink,
   ThumbsUp,
+  Eye,
 } from "lucide-react";
 
 interface PdfReportRow {
@@ -365,15 +366,24 @@ export default function CourierPdfUploadPage() {
                       !!r.requestId &&
                       (r.overallConfidence ?? 0) >= 80;
                     return (
-                      <tr key={r.id}>
+                      <tr
+                        key={r.id}
+                        onClick={() => navigate(`/courier/pdf/${r.id}`)}
+                        className="cursor-pointer hover:bg-[#18B2B0]/06 transition-colors"
+                      >
                         <td className="font-semibold text-[#2D3135]">
                           <div className="flex items-center gap-1.5">
-                            <span className="truncate max-w-[160px]">{r.fileName}</span>
+                            <Link href={`/courier/pdf/${r.id}`} className="truncate max-w-[160px] text-[#2D3135] hover:text-[#18B2B0] hover:underline font-bold">
+                              {r.fileName}
+                            </Link>
                             <button
                               type="button"
-                              onClick={() => openReportFile(r.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openReportFile(r.id);
+                              }}
                               title="فتح الملف الأصلي"
-                              className="text-[#18B2B0] shrink-0"
+                              className="text-[#18B2B0] shrink-0 p-1 hover:bg-[#18B2B0]/10 rounded"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </button>
@@ -396,26 +406,32 @@ export default function CourierPdfUploadPage() {
                         <td>
                           <StatusPill status={r.status} />
                         </td>
-                        <td>
-                          {canQuickApprove ? (
-                            <button
-                              type="button"
-                              onClick={() => quickApprove(r)}
-                              disabled={approvingId === r.id}
-                              className="courier-action-chip inline-flex items-center gap-1 disabled:opacity-50"
-                            >
-                              {approvingId === r.id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <ThumbsUp className="w-3.5 h-3.5" />
-                              )}
-                              موافقة
-                            </button>
-                          ) : (
-                            <Link href={`/courier/pdf/${r.id}`} className="courier-action-chip">
-                              {t('courier.review_2')}
+                        <td className="text-end">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {canQuickApprove && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  quickApprove(r);
+                                }}
+                                disabled={approvingId === r.id}
+                                className="courier-action-chip inline-flex items-center gap-1 disabled:opacity-50 text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20"
+                                title="موافقة سريعة وتطبيق على الطلب"
+                              >
+                                {approvingId === r.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <ThumbsUp className="w-3.5 h-3.5" />
+                                )}
+                                موافقة
+                              </button>
+                            )}
+                            <Link href={`/courier/pdf/${r.id}`} className="courier-action-chip inline-flex items-center gap-1 font-bold">
+                              <Eye className="w-3.5 h-3.5 text-[#18B2B0]" />
+                              {t('courier.review_2') || "مراجعة التقرير"}
                             </Link>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     );
