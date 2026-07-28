@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Loader2,
@@ -159,6 +160,9 @@ export function CourierRequestDetailModal({
                   <Package className="w-5 h-5 text-[#18B2B0]" />
                   طلب التركيب المعاملة: {data?.tid || "—"}
                 </DialogTitle>
+                <DialogDescription className="text-xs text-gray-500 mt-0.5">
+                  عرض تفاصيل معاملة التركيب بالكامل، الأجهزة المسلمة، وتدقيق الفني المسؤول.
+                </DialogDescription>
               </div>
             </div>
             <div className="flex items-center gap-3">

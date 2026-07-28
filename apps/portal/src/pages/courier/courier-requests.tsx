@@ -514,83 +514,102 @@ export default function CourierRequestsPage() {
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => (
-                  <tr
-                    key={r.id}
-                    onClick={() => {
-                      setSelectedDetailRequestId(r.id);
-                      setIsDetailModalOpen(true);
-                    }}
-                    className="cursor-pointer hover:bg-[#18B2B0]/08 transition-colors group"
-                  >
-                    <td className="text-[#6B7280] text-xs font-semibold">{r.id}</td>
-                    <td className="text-[#4B5563]">{r.date || "—"}</td>
-                    <td className="font-mono font-semibold text-[#18B2B0] group-hover:underline">{r.tid || "—"}</td>
-                    <td className="font-mono text-[#4B5563]">{r.terminalId || "—"}</td>
-                    <td className="font-semibold text-[#2D3135]">{r.customerName || "—"}</td>
-                    <td className="text-[#4B5563]">{r.city || "—"}</td>
-                    <td className="text-[#4B5563]">{r.execution?.salesTechnician || r.tecName || "—"}</td>
-                    <td>
-                      <StatusBadge status={r.execution?.installationStatus} />
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                rows.map((r) => {
+                  const handleRowDetailClick = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    setSelectedDetailRequestId(r.id);
+                    setIsDetailModalOpen(true);
+                  };
+
+                  return (
+                    <tr
+                      key={r.id}
+                      onClick={handleRowDetailClick}
+                      className="cursor-pointer hover:bg-[#18B2B0]/08 transition-colors group"
+                    >
+                      <td className="text-[#6B7280] text-xs font-semibold" onClick={handleRowDetailClick}>{r.id}</td>
+                      <td className="text-[#4B5563]" onClick={handleRowDetailClick}>{r.date || "—"}</td>
+                      <td className="font-mono font-semibold" onClick={handleRowDetailClick}>
+                        <button
+                          type="button"
+                          onClick={handleRowDetailClick}
+                          className="text-[#18B2B0] hover:underline font-bold font-mono focus:outline-none"
+                        >
+                          {r.tid || "—"}
+                        </button>
+                      </td>
+                      <td className="font-mono text-[#4B5563]" onClick={handleRowDetailClick}>{r.terminalId || "—"}</td>
+                      <td className="font-semibold text-[#2D3135]" onClick={handleRowDetailClick}>{r.customerName || "—"}</td>
+                      <td className="text-[#4B5563]" onClick={handleRowDetailClick}>{r.city || "—"}</td>
+                      <td className="text-[#4B5563]" onClick={handleRowDetailClick}>{r.execution?.salesTechnician || r.tecName || "—"}</td>
+                      <td onClick={handleRowDetailClick}>
+                        <StatusBadge status={r.execution?.installationStatus} />
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 justify-end">
                           <button
                             type="button"
-                            className="courier-actions-trigger"
-                            aria-label={t("courier.item_7882")}
+                            title="عرض التفاصيل"
+                            onClick={handleRowDetailClick}
+                            className="p-1.5 rounded-lg text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 transition-all cursor-pointer flex items-center justify-center"
                           >
-                            <MoreVertical className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="courier-actions-menu"
-                        >
-                          <DropdownMenuItem
-                            className="courier-actions-item"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedDetailRequestId(r.id);
-                              setIsDetailModalOpen(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4 text-[#18B2B0]" />
-                            عرض التفاصيل الكاملة
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="courier-actions-item"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRequestId(r.id);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            {!r.execution || !r.execution.installationStatus ? (
-                              <FileInput className="w-4 h-4" />
-                            ) : (
-                              <Edit2 className="w-4 h-4" />
-                            )}
-                            {!r.execution || !r.execution.installationStatus
-                              ? t("courier.submit_data")
-                              : t("courier.edit_data_verification")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="courier-actions-item courier-actions-item-danger"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteRequest(r.id);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            {t("courier.delete_3")}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="courier-actions-trigger"
+                                aria-label={t("courier.item_7882")}
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="courier-actions-menu"
+                            >
+                              <DropdownMenuItem
+                                className="courier-actions-item"
+                                onClick={handleRowDetailClick}
+                              >
+                                <Eye className="w-4 h-4 text-[#18B2B0]" />
+                                عرض التفاصيل الكاملة
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="courier-actions-item"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRequestId(r.id);
+                                  setIsEditModalOpen(true);
+                                }}
+                              >
+                                {!r.execution || !r.execution.installationStatus ? (
+                                  <FileInput className="w-4 h-4" />
+                                ) : (
+                                  <Edit2 className="w-4 h-4" />
+                                )}
+                                {!r.execution || !r.execution.installationStatus
+                                  ? t("courier.submit_data")
+                                  : t("courier.edit_data_verification")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="courier-actions-item courier-actions-item-danger"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteRequest(r.id);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                {t("courier.delete_3")}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
