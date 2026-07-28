@@ -43,6 +43,7 @@ const editUserFormSchema = insertUserSchema.extend({
   technicianCode: z.string().optional(),
   department: z.string().optional(),
   permissions: z.string().optional(),
+  telegramUserId: z.string().optional(),
 });
 
 type EditUserFormData = z.infer<typeof editUserFormSchema>;
@@ -75,6 +76,7 @@ export function EditUserModal({
       technicianCode: "",
       department: "",
       permissions: "",
+      telegramUserId: "",
     },
   });
 
@@ -106,6 +108,7 @@ export function EditUserModal({
         technicianCode: user.technicianCode || "",
         department: user.department || "",
         permissions: initialPermissions,
+        telegramUserId: user.telegramUserId || "",
       });
       setProfileImage(user.profileImage || null);
     }
@@ -168,6 +171,7 @@ export function EditUserModal({
         employeeCode: data.employeeCode || null,
         technicianCode: data.technicianCode || null,
         department: data.department || null,
+        telegramUserId: data.telegramUserId || null,
         permissions: processedPermissions,
       };
       if (!updateData.password) {
@@ -451,6 +455,33 @@ export function EditUserModal({
                   )}
                 />
               )}
+
+              <FormField
+                control={form.control}
+                name="telegramUserId"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2 bg-sky-50/50 dark:bg-sky-950/20 p-4 rounded-xl border border-sky-200 dark:border-sky-800">
+                    <FormLabel className="font-bold flex items-center gap-2 text-sky-700 dark:text-sky-300">
+                      <svg className="w-5 h-5 fill-current text-sky-500" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.38-.49 1.05-.75 4.12-1.79 6.87-2.97 8.25-3.55 3.93-1.64 4.74-1.93 5.27-1.94.12 0 .38.03.55.17.14.12.18.28.2.46-.01.06.01.24 0 .36z" />
+                      </svg>
+                      معرّف التليجرام (Telegram ID / Username)
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="مثال: 1958652727 أو el7e0"
+                        className="h-11 border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900"
+                        data-testid="input-telegram-user-id"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">
+                      💡 أرسل <code className="bg-sky-100 dark:bg-sky-900 px-1 py-0.5 rounded font-mono text-sky-800 dark:text-sky-200">/myid</code> لبوت التكليف للحصول على هذا المعرّف الرقمي.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

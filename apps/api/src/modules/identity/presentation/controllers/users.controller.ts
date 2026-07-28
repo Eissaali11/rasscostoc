@@ -34,6 +34,7 @@ function toMinimalUserView(user: any) {
     isActive: user.isActive,
     city: user.city ?? null,
     email: user.email ?? null,
+    telegramUserId: user.telegramUserId ?? null,
     extraProfile,
     createdAt: user.createdAt ?? null,
     updatedAt: user.updatedAt ?? null,
