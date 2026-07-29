@@ -158,12 +158,30 @@ export class DrizzleCourierRepository implements
 
     const t0 = Date.now();
 
+    const statusPriorityOrder = sql`
+      CASE
+        WHEN ${courierExecutions.installationStatus} ILIKE '%progress%'
+          OR ${courierExecutions.installationStatus} ILIKE '%إجراء%'
+          OR ${courierExecutions.installationStatus} ILIKE '%اجراء%' THEN 1
+        WHEN ${courierExecutions.id} IS NULL
+          OR ${courierExecutions.installationStatus} IS NULL
+          OR ${courierExecutions.installationStatus} = ''
+          OR ${courierExecutions.installationStatus} ILIKE '%pending%'
+          OR ${courierExecutions.installationStatus} ILIKE '%تحقق%' THEN 2
+        ELSE 3
+      END ASC
+    `;
+
+    const orderByClause = (filters.status === "pending" || filters.status === "in_progress")
+      ? [statusPriorityOrder, desc(courierRequests.id)]
+      : [desc(courierRequests.id)];
+
     const rowsQuery = db
       .select(listSelect)
       .from(courierRequests)
       .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
       .where(whereClause)
-      .orderBy(desc(courierRequests.id))
+      .orderBy(...orderByClause)
       .limit(pageSize)
       .offset(offset);
 
@@ -250,6 +268,23 @@ export class DrizzleCourierRepository implements
 
   async listRequestsForExport(filters: ListFilters): Promise<any[]> {
     const { whereClause } = buildCourierListConditions(filters);
+    const statusPriorityOrder = sql`
+      CASE
+        WHEN ${courierExecutions.installationStatus} ILIKE '%progress%'
+          OR ${courierExecutions.installationStatus} ILIKE '%إجراء%'
+          OR ${courierExecutions.installationStatus} ILIKE '%اجراء%' THEN 1
+        WHEN ${courierExecutions.id} IS NULL
+          OR ${courierExecutions.installationStatus} IS NULL
+          OR ${courierExecutions.installationStatus} = ''
+          OR ${courierExecutions.installationStatus} ILIKE '%pending%'
+          OR ${courierExecutions.installationStatus} ILIKE '%تحقق%' THEN 2
+        ELSE 3
+      END ASC
+    `;
+    const orderByClause = (filters.status === "pending" || filters.status === "in_progress")
+      ? [statusPriorityOrder, desc(courierRequests.id)]
+      : [desc(courierRequests.id)];
+
     const rows = await db
       .select({
         request: courierRequests,
@@ -258,7 +293,7 @@ export class DrizzleCourierRepository implements
       .from(courierRequests)
       .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
       .where(whereClause)
-      .orderBy(desc(courierRequests.id));
+      .orderBy(...orderByClause);
 
     return rows.map((r) => ({
       ...CourierRequestMapper.toDomain(r.request),
@@ -268,6 +303,23 @@ export class DrizzleCourierRepository implements
 
   async listRequestsForExportPaged(filters: ListFilters, offset: number, limit: number): Promise<any[]> {
     const { whereClause } = buildCourierListConditions(filters);
+    const statusPriorityOrder = sql`
+      CASE
+        WHEN ${courierExecutions.installationStatus} ILIKE '%progress%'
+          OR ${courierExecutions.installationStatus} ILIKE '%إجراء%'
+          OR ${courierExecutions.installationStatus} ILIKE '%اجراء%' THEN 1
+        WHEN ${courierExecutions.id} IS NULL
+          OR ${courierExecutions.installationStatus} IS NULL
+          OR ${courierExecutions.installationStatus} = ''
+          OR ${courierExecutions.installationStatus} ILIKE '%pending%'
+          OR ${courierExecutions.installationStatus} ILIKE '%تحقق%' THEN 2
+        ELSE 3
+      END ASC
+    `;
+    const orderByClause = (filters.status === "pending" || filters.status === "in_progress")
+      ? [statusPriorityOrder, desc(courierRequests.id)]
+      : [desc(courierRequests.id)];
+
     const rows = await db
       .select({
         request: courierRequests,
@@ -276,7 +328,7 @@ export class DrizzleCourierRepository implements
       .from(courierRequests)
       .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
       .where(whereClause)
-      .orderBy(desc(courierRequests.id))
+      .orderBy(...orderByClause)
       .offset(offset)
       .limit(limit);
 
