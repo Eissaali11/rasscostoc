@@ -355,6 +355,20 @@ export default function CourierPdfReviewPage() {
     let objectUrl: string | null = null;
     let cancelled = false;
 
+    // تقارير مرفوعة عبر بوت تيليجرام مسجّلة برابط Google Drive مباشرة (filePath = رابط
+    // كامل، لا نسخة على قرص السيرفر) - نحوّل رابط .../view إلى .../preview (الصيغة التي
+    // تدعم التضمين داخل iframe فعليًا) ونعرضه مباشرة بدون أي fetch عبر الـ API.
+    const filePath = (report as any).filePath as string | undefined;
+    if (filePath && /^https?:\/\//i.test(filePath)) {
+      setPreviewError(null);
+      const driveIdMatch = filePath.match(/\/file\/d\/([^/]+)/);
+      const embedUrl = driveIdMatch
+        ? `https://drive.google.com/file/d/${driveIdMatch[1]}/preview`
+        : filePath;
+      setPreviewUrl(embedUrl);
+      return;
+    }
+
     (async () => {
       setPreviewError(null);
       try {
@@ -807,7 +821,11 @@ export default function CourierPdfReviewPage() {
                 المستند الأصلي المرفوع
               </span>
               <a
-                href={`/api/courier/pdf/${report.id}?raw=1`}
+                href={
+                  /^https?:\/\//i.test((report as any).filePath || "")
+                    ? (report as any).filePath
+                    : `/api/courier/pdf/${report.id}?raw=1`
+                }
                 target="_blank"
                 rel="noreferrer"
                 className="text-[11px] font-bold text-[#18B2B0] hover:underline flex items-center gap-1"
@@ -819,6 +837,7 @@ export default function CourierPdfReviewPage() {
 
             <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl overflow-hidden min-h-[500px] flex items-center justify-center relative">
               {previewUrl ? (
+                /^https?:\/\//i.test((report as any).filePath || "") ||
                 report.fileName.toLowerCase().endsWith(".pdf") ? (
                   <iframe
                     src={previewUrl}

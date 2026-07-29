@@ -1048,6 +1048,80 @@ export class CourierService {
     };
   }
 
+  /**
+   * تسجيل تقرير PDF مرجعيًا برابط Google Drive فقط - بدون رفع أي بايتات فعلية أو كتابة
+   * ملف على قرص السيرفر. يُستخدم حصرًا من بوت تيليجرام (installation_bot.py) الذي يرفع
+   * الملف الأصلي إلى Drive بنفسه أولًا؛ filePath هنا يحمل رابط Drive الكامل بدل مسار قرص
+   * محلي - راجع getPdfReportById/الطبقة الأمامية حيث يُكتشف ذلك عبر بادئة http(s) ويُفتح
+   * الرابط مباشرة بدل قراءة الملف من القرص. بما أنه لا توجد بايتات هنا، لا تشغيل OCR/AI محلي؛
+   * preExtractedJson (بيانات الفني المستخرجة مسبقًا عبر Gemini داخل البوت) إلزامي عمليًا،
+   * وإلا يُسجَّل التقرير فارغ الحقول بانتظار /update-extracted اللاحق من البوت.
+   */
+  async registerPdfReportFromDriveUrl(
+    fileName: string,
+    driveUrl: string,
+    uploadedBy: string,
+    requestId?: number,
+    preExtractedJson?: string | object,
+    preConfidence?: number
+  ): Promise<any> {
+    let extractedPayload: ReturnType<typeof buildExtractedPayloadFromOcr>;
+    let overallConfidence = preConfidence ?? 0;
+
+    if (preExtractedJson) {
+      let parsed: any;
+      try {
+        parsed = typeof preExtractedJson === "string" ? JSON.parse(preExtractedJson) : preExtractedJson;
+      } catch {
+        parsed = {};
+      }
+      extractedPayload = ensureDevicesInExtractedJson(parsed);
+      overallConfidence = preConfidence ?? 90;
+    } else {
+      extractedPayload = ensureDevicesInExtractedJson({ devices: [] } as any);
+    }
+
+    let finalRequestId = requestId || null;
+    if (!finalRequestId) {
+      const payloadAny = extractedPayload as any;
+      if (payloadAny.request_number?.value) {
+        const parsedId = parseInt(payloadAny.request_number.value, 10);
+        if (!isNaN(parsedId)) {
+          const req = await this.requestsRepo.findRequestById(parsedId);
+          if (req) finalRequestId = req.id;
+        }
+      }
+      if (!finalRequestId && payloadAny.tid?.value) {
+        const req = await this.requestsRepo.findRequestByTid(payloadAny.tid.value);
+        if (req) finalRequestId = req.id;
+      }
+    }
+
+    const hasDevices = Array.isArray((extractedPayload as any).devices) && (extractedPayload as any).devices.length > 0;
+    const status = finalRequestId && hasDevices ? "pending" : "manual_review";
+
+    const newReport = await this.pdfRepo.insertPdfReport({
+      requestId: finalRequestId,
+      fileName,
+      filePath: driveUrl,
+      uploadedBy,
+      ocrText: "[Google Drive - لا يوجد استخراج محلي، البيانات من البوت]",
+      extractedJson: JSON.stringify(extractedPayload),
+      overallConfidence,
+      status,
+    });
+
+    return {
+      id: newReport.id,
+      fields: extractedPayload,
+      devices: (extractedPayload as any).devices,
+      overallConfidence,
+      status,
+      extraction_source: (extractedPayload as any).extraction_source,
+      driveUrl,
+    };
+  }
+
   async updatePdfReportExtractedJson(
     pdfId: number,
     extractedJson: any,

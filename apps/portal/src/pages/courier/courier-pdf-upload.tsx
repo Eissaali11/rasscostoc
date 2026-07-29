@@ -21,6 +21,7 @@ import {
 interface PdfReportRow {
   id: number;
   fileName: string;
+  filePath: string | null;
   status: string;
   overallConfidence: number | null;
   uploadedAt: string | null;
@@ -177,13 +178,19 @@ export default function CourierPdfUploadPage() {
     }
   }
 
-  // معاينة الملف الأصلي في تبويب جديد - يمر عبر fetch بهيدر Authorization يدويًا (بدل
-  // رابط <a href> مباشر) لأن مصادقة المنصّة تعتمد Bearer token مخزّن في localStorage
-  // وليس كوكي جلسة، فرابط تصفّح مباشر لن يحمل التوكن.
-  async function openReportFile(id: number) {
+  // معاينة الملف الأصلي في تبويب جديد. التقارير المرفوعة عبر بوت تيليجرام مسجّلة برابط
+  // Google Drive مباشرة (filePath = رابط كامل، لا نسخة على قرص السيرفر) - نفتحه مباشرة
+  // بدون المرور بالـ API إطلاقًا. التقارير القديمة (مرفوعة يدويًا عبر الويب) لا تزال
+  // مسارًا محليًا على القرص، فتمر عبر fetch بهيدر Authorization (Bearer token من
+  // localStorage، لأن رابط <a href> مباشر لن يحمل التوكن).
+  async function openReportFile(row: PdfReportRow) {
+    if (row.filePath && /^https?:\/\//i.test(row.filePath)) {
+      window.open(row.filePath, "_blank");
+      return;
+    }
     try {
       const token = localStorage.getItem("auth-token");
-      const res = await fetch(`/api/courier/pdf/${id}?raw=1`, {
+      const res = await fetch(`/api/courier/pdf/${row.id}?raw=1`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error(`preview ${res.status}`);
@@ -380,7 +387,7 @@ export default function CourierPdfUploadPage() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openReportFile(r.id);
+                                openReportFile(r);
                               }}
                               title="فتح الملف الأصلي"
                               className="text-[#18B2B0] shrink-0 p-1 hover:bg-[#18B2B0]/10 rounded"

@@ -176,6 +176,31 @@ export class CourierController {
         ? Number(req.body.overall_confidence || req.body.overallConfidence)
         : undefined;
 
+    // \u0628\u0648\u062A \u062A\u064A\u0644\u064A\u062C\u0631\u0627\u0645 (installation_bot.py) \u064A\u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0623\u0635\u0644\u064A \u0625\u0644\u0649 Google Drive \u0628\u0646\u0641\u0633\u0647 \u0623\u0648\u0644\u064B\u0627\u060C
+    // \u062B\u0645 \u064A\u0645\u0631\u0631 \u0631\u0627\u0628\u0637\u0647 \u0647\u0646\u0627 \u0643\u0646\u0635 \u0639\u0627\u062F\u064A \u0628\u062F\u0644 \u062C\u0633\u0645 multipart - \u0644\u0627 \u0646\u062E\u0632\u0651\u0646 \u0623\u064A \u0646\u0633\u062E\u0629 \u062B\u0627\u0646\u064A\u0629 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641 \u0639\u0644\u0649
+    // \u0642\u0631\u0635 \u0627\u0644\u0633\u064A\u0631\u0641\u0631 \u0623\u0648 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A\u060C \u0641\u0642\u0637 \u0627\u0644\u0631\u0627\u0628\u0637. \u0647\u0630\u0627 \u0627\u0644\u0641\u0631\u0639 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0630\u064A \u0644\u0627 \u064A\u062A\u0637\u0644\u0628 req.file\u061B
+    // \u0645\u0633\u0627\u0631 \u0627\u0644\u0631\u0641\u0639 \u0627\u0644\u0628\u0634\u0631\u064A \u0639\u0628\u0631 \u0648\u0627\u062C\u0647\u0629 \u0627\u0644\u0648\u064A\u0628 (multipart) \u064A\u0628\u0642\u0649 \u0643\u0645\u0627 \u0647\u0648 \u062A\u0645\u0627\u0645\u064B\u0627 \u0641\u064A \u0627\u0644\u0641\u0631\u0639 \u0623\u062F\u0646\u0627\u0647.
+    const driveUrl = req.body.drive_url || req.body.driveUrl;
+    if (!file && driveUrl) {
+      let driveFileName = req.body.file_name || req.body.fileName || "report.pdf";
+      try {
+        if (/[\u0080-\u00FF]/.test(driveFileName)) {
+          driveFileName = Buffer.from(driveFileName, "latin1").toString("utf8");
+        }
+      } catch {}
+
+      const result = await this.service.registerPdfReportFromDriveUrl(
+        driveFileName,
+        String(driveUrl),
+        user.id,
+        requestId,
+        extractedJson,
+        overallConfidence
+      );
+
+      return res.json(result);
+    }
+
     if (!file) throw new ValidationError("No PDF file uploaded");
 
     // Fix UTF-8 latin1 filename encoding if necessary
@@ -300,6 +325,14 @@ export class CourierController {
 
     if (req.query.raw === "1") {
       const rawPath = result.filePath || "";
+
+      // ملفات مرفوعة عبر البوت مسجّلة برابط Google Drive مباشرة (بدون نسخة على قرص
+      // السيرفر) - filePath هنا هو الرابط نفسه لا مسار قرص، فنحوّل المتصفح إليه مباشرة
+      // بدل محاولة قراءته من القرص (سيفشل بـ 404 دومًا لأنه غير موجود أصلًا).
+      if (/^https?:\/\//i.test(rawPath)) {
+        return res.redirect(302, rawPath);
+      }
+
       const basename = path.basename(rawPath);
       const possiblePaths = [
         rawPath,

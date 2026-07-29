@@ -609,42 +609,7 @@ export default function CourierRequestsPage() {
                         <StatusBadge status={r.execution?.installationStatus} />
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <button
-                            type="button"
-                            title="عرض التفاصيل"
-                            onClick={handleRowDetailClick}
-                            className="p-1.5 rounded-lg text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 transition-all cursor-pointer flex items-center justify-center"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            title={!r.execution || !r.execution.installationStatus ? t("courier.submit_data") : t("courier.edit_data_verification")}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRequestId(r.id);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg text-[#B45309] bg-[#F4B740]/18 hover:bg-[#F4B740]/30 transition-all cursor-pointer flex items-center justify-center"
-                          >
-                            {!r.execution || !r.execution.installationStatus ? (
-                              <FileInput className="w-4 h-4" />
-                            ) : (
-                              <Edit2 className="w-4 h-4" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            title={t("courier.delete_3")}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteRequest(r.id);
-                            }}
-                            className="p-1.5 rounded-lg text-[#E05252] bg-[#E05252]/10 hover:bg-[#E05252]/25 hover:scale-105 transition-all cursor-pointer flex items-center justify-center"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <div className="flex items-center justify-end">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
@@ -675,9 +640,9 @@ export default function CourierRequestsPage() {
                                 }}
                               >
                                 {!r.execution || !r.execution.installationStatus ? (
-                                  <FileInput className="w-4 h-4" />
+                                  <FileInput className="w-4 h-4 text-[#B45309]" />
                                 ) : (
-                                  <Edit2 className="w-4 h-4" />
+                                  <Edit2 className="w-4 h-4 text-[#B45309]" />
                                 )}
                                 {!r.execution || !r.execution.installationStatus
                                   ? t("courier.submit_data")
@@ -690,7 +655,7 @@ export default function CourierRequestsPage() {
                                   handleDeleteRequest(r.id);
                                 }}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4 text-[#E05252]" />
                                 {t("courier.delete_3")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
