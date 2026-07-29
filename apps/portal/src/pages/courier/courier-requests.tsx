@@ -129,7 +129,7 @@ const STATUS_OPTIONS = [
   { label: "جميع الحالات (الكل)", value: "", icon: "◈", dotColor: "#6B7280" },
   { label: "✓ مكتمل", value: "completed", icon: "✓", dotColor: "#18B2B0" },
   { label: "✗ غير مكتمل", value: "not_completed", icon: "✗", dotColor: "#E05252" },
-  { label: "⏳ بانتظار التحقق", value: "pending", icon: "⏳", dotColor: "#0284C7" },
+  { label: "⏳ تحت الإجراء / جديد (بانتظار التحقق)", value: "pending", icon: "⏳", dotColor: "#0284C7" },
 ] as const;
 
 function StatusFilterDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -609,7 +609,7 @@ export default function CourierRequestsPage() {
                         <StatusBadge status={r.execution?.installationStatus} />
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1 justify-end">
+                        <div className="flex items-center gap-1.5 justify-end">
                           <button
                             type="button"
                             title="عرض التفاصيل"
@@ -617,6 +617,33 @@ export default function CourierRequestsPage() {
                             className="p-1.5 rounded-lg text-[#18B2B0] bg-[#18B2B0]/10 hover:bg-[#18B2B0]/20 transition-all cursor-pointer flex items-center justify-center"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            title={!r.execution || !r.execution.installationStatus ? t("courier.submit_data") : t("courier.edit_data_verification")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedRequestId(r.id);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-[#B45309] bg-[#F4B740]/18 hover:bg-[#F4B740]/30 transition-all cursor-pointer flex items-center justify-center"
+                          >
+                            {!r.execution || !r.execution.installationStatus ? (
+                              <FileInput className="w-4 h-4" />
+                            ) : (
+                              <Edit2 className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            title={t("courier.delete_3")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRequest(r.id);
+                            }}
+                            className="p-1.5 rounded-lg text-[#E05252] bg-[#E05252]/10 hover:bg-[#E05252]/25 hover:scale-105 transition-all cursor-pointer flex items-center justify-center"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

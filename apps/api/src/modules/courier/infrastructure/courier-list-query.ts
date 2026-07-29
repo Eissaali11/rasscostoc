@@ -117,13 +117,17 @@ export function buildCourierListConditions(filters: ListFilters): {
     conditions.push(eq(courierExecutions.salesTechnician, filters.technician));
   }
   if (filters.status) {
-    if (filters.status === "pending") {
-      // بانتظار التحقق: لا يوجد سجل execution أو الحالة فارغة
+    if (filters.status === "pending" || filters.status === "in_progress") {
+      // جديد (بانتظار التحقق) وتحت الإجراء: لا يوجد سجل execution أو الحالة فارغة أو In Progress أو pending
       conditions.push(
         or(
           sql`${courierExecutions.id} IS NULL`,
           sql`${courierExecutions.installationStatus} IS NULL`,
-          sql`${courierExecutions.installationStatus} = ''`
+          sql`${courierExecutions.installationStatus} = ''`,
+          sql`${courierExecutions.installationStatus} = 'In Progress'`,
+          sql`${courierExecutions.installationStatus} = 'in_progress'`,
+          sql`${courierExecutions.installationStatus} = 'pending'`,
+          sql`${courierExecutions.installationStatus} = 'Pending'`
         )!
       );
     } else if (filters.status === "completed") {
@@ -136,13 +140,17 @@ export function buildCourierListConditions(filters: ListFilters): {
         )!
       );
     } else if (filters.status === "not_completed") {
-      // غير مكتمل: يوجد execution لكن الحالة ليست completed
+      // غير مكتمل: يوجد execution لكن الحالة ليست completed وليست تحت الإجراء/جديد
       conditions.push(
         and(
           sql`${courierExecutions.id} IS NOT NULL`,
           sql`${courierExecutions.installationStatus} IS NOT NULL`,
+          sql`${courierExecutions.installationStatus} <> ''`,
           sql`${courierExecutions.installationStatus} NOT LIKE ${"Installation Completed%"}`,
-          sql`${courierExecutions.installationStatus} <> ${"In Progress"}`
+          sql`${courierExecutions.installationStatus} <> 'In Progress'`,
+          sql`${courierExecutions.installationStatus} <> 'in_progress'`,
+          sql`${courierExecutions.installationStatus} <> 'pending'`,
+          sql`${courierExecutions.installationStatus} <> 'Pending'`
         )!
       );
     } else if (filters.status === "Installation Completed") {
