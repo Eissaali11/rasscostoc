@@ -47,18 +47,33 @@ export class TransferExecutionRepository implements ITransferExecutionRepository
   }
 
   async acceptWarehouseTransfer(transferId: string, performedBy?: string): Promise<WarehouseTransfer> {
-    const [updatedTransfer] = await this.db
-      .update(warehouseTransfers)
-      .set({
-        status: 'accepted',
-        performedBy: performedBy,
-        respondedAt: new Date(),
-      })
+    const [existing] = await this.db
+      .select()
+      .from(warehouseTransfers)
       .where(eq(warehouseTransfers.id, transferId))
-      .returning();
+      .limit(1);
 
-    if (!updatedTransfer) {
+    if (!existing) {
       throw new Error('Transfer not found');
+    }
+
+    if (existing.status === 'accepted' || existing.status === 'approved') {
+      return existing;
+    }
+
+    const unitOfWork = new DrizzleInventoryUnitOfWork();
+    const approvedTransfers = await unitOfWork.execute(async (context) => {
+      return processWarehouseTransferBatch(context, [transferId]);
+    });
+
+    const updatedTransfer = approvedTransfers[0] || existing;
+    if (performedBy) {
+      const [finalUpdated] = await this.db
+        .update(warehouseTransfers)
+        .set({ performedBy })
+        .where(eq(warehouseTransfers.id, transferId))
+        .returning();
+      if (finalUpdated) return finalUpdated;
     }
     return updatedTransfer;
   }

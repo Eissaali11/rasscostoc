@@ -114,45 +114,60 @@ export class WarehouseTransferService {
       }
     }
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(warehouseTransfers)
-        .set({ status: "approved", respondedAt: new Date() })
-        .where(eq(warehouseTransfers.id, transferId));
+    const [transfer] = await db
+      .select()
+      .from(warehouseTransfers)
+      .where(eq(warehouseTransfers.id, transferId))
+      .limit(1);
 
-      const [existingEntry] = await tx
-        .select()
-        .from(technicianMovingInventoryEntries)
-        .where(
-          and(
-            eq(technicianMovingInventoryEntries.technicianId, userId),
-            eq(technicianMovingInventoryEntries.itemTypeId, itemType)
-          )
-        )
-        .limit(1);
-
-      const isBoxes = packagingType === "box" || packagingType === "boxes";
-      const addUnits = isBoxes ? 0 : quantity;
-      const addBoxes = isBoxes ? quantity : 0;
-
-      if (existingEntry) {
+    if (transfer && (transfer.status === 'pending' || transfer.status === 'in_transit')) {
+      const { DrizzleInventoryUnitOfWork } = await import("../database/DrizzleInventoryUnitOfWork");
+      const { processWarehouseTransferBatch } = await import("@modules/inventory/application/inventory/use-cases/warehouse-transfer-batch.processor");
+      const unitOfWork = new DrizzleInventoryUnitOfWork();
+      await unitOfWork.execute(async (context) => {
+        await processWarehouseTransferBatch(context, [transferId]);
+      });
+    } else {
+      await db.transaction(async (tx) => {
         await tx
-          .update(technicianMovingInventoryEntries)
-          .set({
-            units: sql`${technicianMovingInventoryEntries.units} + ${addUnits}`,
-            boxes: sql`${technicianMovingInventoryEntries.boxes} + ${addBoxes}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(technicianMovingInventoryEntries.id, existingEntry.id));
-      } else {
-        await tx.insert(technicianMovingInventoryEntries).values({
-          technicianId: userId,
-          itemTypeId: itemType,
-          units: addUnits,
-          boxes: addBoxes,
-        });
-      }
-    });
+          .update(warehouseTransfers)
+          .set({ status: "approved", respondedAt: new Date() })
+          .where(eq(warehouseTransfers.id, transferId));
+
+        const [existingEntry] = await tx
+          .select()
+          .from(technicianMovingInventoryEntries)
+          .where(
+            and(
+              eq(technicianMovingInventoryEntries.technicianId, userId),
+              eq(technicianMovingInventoryEntries.itemTypeId, itemType)
+            )
+          )
+          .limit(1);
+
+        const isBoxes = packagingType === "box" || packagingType === "boxes";
+        const addUnits = isBoxes ? 0 : quantity;
+        const addBoxes = isBoxes ? quantity : 0;
+
+        if (existingEntry) {
+          await tx
+            .update(technicianMovingInventoryEntries)
+            .set({
+              units: sql`${technicianMovingInventoryEntries.units} + ${addUnits}`,
+              boxes: sql`${technicianMovingInventoryEntries.boxes} + ${addBoxes}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(technicianMovingInventoryEntries.id, existingEntry.id));
+        } else {
+          await tx.insert(technicianMovingInventoryEntries).values({
+            technicianId: userId,
+            itemTypeId: itemType,
+            units: addUnits,
+            boxes: addBoxes,
+          });
+        }
+      });
+    }
 
     return {
       success: true,

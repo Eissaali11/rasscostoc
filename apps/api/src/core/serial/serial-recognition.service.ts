@@ -308,7 +308,10 @@ export class SerialRecognitionService {
     if (!matchedType) {
       for (const type of serializedTypes) {
         if (type.serialPrefix) {
-          const prefixes = type.serialPrefix.split(',').map((p: string) => p.trim().toUpperCase());
+          const prefixes = String(type.serialPrefix)
+            .split(',')
+            .map((p: string) => p.trim().toUpperCase())
+            .filter(Boolean);
           if (prefixes.some((p: string) => cleaned.startsWith(p))) {
             matchedType = type;
             break;

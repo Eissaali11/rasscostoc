@@ -10,10 +10,9 @@ const PORTS = [22, 2222, 65002, 22002];
 const COMMANDS = [
   'cd /home/nuzum/htdocs/nuzum.fun',
   'git status',
-  'git fetch origin',
+  'git fetch --all',
   'git stash',
-  'git pull origin erp-008/phase-2-financial-integrity',
-  'npm run db:migrate',
+  'git pull',
   'npm run build',
   'pm2 restart all',
   'pm2 status',
@@ -48,7 +47,7 @@ function testConnect(host, port, username, password) {
       port,
       username,
       password,
-      readyTimeout: 6000,
+      readyTimeout: 2000,
     });
   });
 }

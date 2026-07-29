@@ -129,7 +129,7 @@ const STATUS_OPTIONS = [
   { label: "جميع الحالات (الكل)", value: "", icon: "◈", dotColor: "#6B7280" },
   { label: "✓ مكتمل", value: "completed", icon: "✓", dotColor: "#18B2B0" },
   { label: "✗ غير مكتمل", value: "not_completed", icon: "✗", dotColor: "#E05252" },
-  { label: "⏳ تحت الإجراء / جديد (بانتظار التحقق)", value: "pending", icon: "⏳", dotColor: "#0284C7" },
+  { label: "⏳ بانتظار التحقق / تحت الإجراء", value: "pending", icon: "⏳", dotColor: "#0284C7" },
 ] as const;
 
 function StatusFilterDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
