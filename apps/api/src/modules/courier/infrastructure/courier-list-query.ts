@@ -49,10 +49,18 @@ export function buildSmartSearchCondition(rawQ: string): SQL | undefined {
       eq(courierRequests.terminalId, q),
       eq(courierRequests.incidentNumber, q),
       eq(courierRequests.mobile, q),
+      eq(courierRequests.ticketingHolouly, q),
+      eq(courierRequests.simSn, q),
+      eq(courierRequests.pinCode, q),
+      eq(courierRequests.trsm, q),
+      sql`${courierRequests.id}::text = ${q}`,
       sql`${courierRequests.tid} LIKE ${prefix}`,
       sql`${courierRequests.terminalId} LIKE ${prefix}`,
       sql`${courierRequests.incidentNumber} LIKE ${prefix}`,
       sql`${courierRequests.mobile} LIKE ${prefix}`,
+      sql`${courierRequests.ticketingHolouly} LIKE ${prefix}`,
+      sql`${courierRequests.simSn} LIKE ${prefix}`,
+      sql`${courierRequests.id}::text LIKE ${prefix}`,
       ...(digits.length >= 6 && digits !== q
         ? [
             eq(courierRequests.mobile, digits),
@@ -84,6 +92,8 @@ export function buildSmartSearchCondition(rawQ: string): SQL | undefined {
     sql`${courierRequests.terminalId} LIKE ${prefix}`,
     sql`${courierRequests.incidentNumber} LIKE ${prefix}`,
     sql`${courierRequests.mobile} LIKE ${prefix}`,
+    sql`${courierRequests.ticketingHolouly} LIKE ${prefix}`,
+    sql`${courierRequests.id}::text LIKE ${prefix}`,
     sql`${courierRequests.id} IN (
       SELECT ${courierExecutions.requestId} FROM ${courierExecutions}
       WHERE ${courierExecutions.sn} LIKE ${prefix}
@@ -118,16 +128,18 @@ export function buildCourierListConditions(filters: ListFilters): {
   }
   if (filters.status) {
     if (filters.status === "pending" || filters.status === "in_progress") {
-      // جديد (بانتظار التحقق) وتحت الإجراء: لا يوجد سجل execution أو الحالة فارغة أو In Progress أو pending
+      // جديد (بانتظار التحقق) وتحت الإجراء: لا يوجد سجل execution أو الحالة فارغة أو In Progress أو pending أو تحوي أيا من مرادفات تحت الإجراء/تحقق
       conditions.push(
         or(
           sql`${courierExecutions.id} IS NULL`,
           sql`${courierExecutions.installationStatus} IS NULL`,
           sql`${courierExecutions.installationStatus} = ''`,
-          sql`${courierExecutions.installationStatus} = 'In Progress'`,
-          sql`${courierExecutions.installationStatus} = 'in_progress'`,
-          sql`${courierExecutions.installationStatus} = 'pending'`,
-          sql`${courierExecutions.installationStatus} = 'Pending'`
+          sql`${courierExecutions.installationStatus} ILIKE ${"%progress%"}`,
+          sql`${courierExecutions.installationStatus} ILIKE ${"%pending%"}`,
+          sql`${courierExecutions.installationStatus} ILIKE ${"%processing%"}`,
+          sql`${courierExecutions.installationStatus} ILIKE ${"%تحقق%"}`,
+          sql`${courierExecutions.installationStatus} ILIKE ${"%إجراء%"}`,
+          sql`${courierExecutions.installationStatus} ILIKE ${"%اجراء%"}`
         )!
       );
     } else if (filters.status === "completed") {
@@ -147,10 +159,12 @@ export function buildCourierListConditions(filters: ListFilters): {
           sql`${courierExecutions.installationStatus} IS NOT NULL`,
           sql`${courierExecutions.installationStatus} <> ''`,
           sql`${courierExecutions.installationStatus} NOT LIKE ${"Installation Completed%"}`,
-          sql`${courierExecutions.installationStatus} <> 'In Progress'`,
-          sql`${courierExecutions.installationStatus} <> 'in_progress'`,
-          sql`${courierExecutions.installationStatus} <> 'pending'`,
-          sql`${courierExecutions.installationStatus} <> 'Pending'`
+          sql`${courierExecutions.installationStatus} NOT ILIKE ${"%progress%"}`,
+          sql`${courierExecutions.installationStatus} NOT ILIKE ${"%pending%"}`,
+          sql`${courierExecutions.installationStatus} NOT ILIKE ${"%processing%"}`,
+          sql`${courierExecutions.installationStatus} NOT ILIKE ${"%تحقق%"}`,
+          sql`${courierExecutions.installationStatus} NOT ILIKE ${"%إجراء%"}`,
+          sql`${courierExecutions.installationStatus} NOT ILIKE ${"%اجراء%"}`
         )!
       );
     } else if (filters.status === "Installation Completed") {
