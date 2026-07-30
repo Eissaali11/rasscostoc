@@ -48,3 +48,12 @@ app.json
 eas.json
 coverage/
 .env.ops
+
+# Zero Local Storage: runtime PDF directories must never be tracked in git.
+# The application creates these directories on demand (mkdirSync recursive)
+# when/if it writes to them, so no placeholder file is required to keep
+# them present.
+/uploads/pdf/**
+/uploads/courier-pdf/**
+/apps/api/uploads/pdf/**
+/uploads/test-files/*.pdf
