@@ -39,7 +39,7 @@ export function setupSession(app: Express): void {
       secure: isHttps, // Only secure on HTTPS
       httpOnly: true,
       sameSite: isHttps ? "none" : "lax", // Support cross-origin on HTTPS
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (increased from 24 hours)
+      maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days (permanent session)
     },
     name: "sessionId",
   };
