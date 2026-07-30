@@ -5,16 +5,12 @@ import { bootstrapCourierModule } from "../../composition/courier.container";
 import { requireAuth, requireAuthOrInternal } from "@core/middlewares/auth.middleware";
 import {
   createExcelUpload,
-  createPdfImageUpload,
   uploadErrorHandler,
   validateExcelUploadMiddleware,
-  validatePdfImageUploadMiddleware,
 } from "@core/uploads/upload-policy";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads", "pdf");
 const EXCEL_TEMP_DIR = path.join(process.cwd(), "uploads", "temp");
 
-const upload = createPdfImageUpload(UPLOAD_DIR);
 const excelUpload = createExcelUpload(EXCEL_TEMP_DIR);
 
 export function registerCourierRoutes(app: Express): void {
@@ -62,31 +58,48 @@ export function registerCourierRoutes(app: Express): void {
   app.get("/api/courier/ai-monitor/stats", requireAuth, controller.getAiMonitorStats);
 
   // Audit logs
+  app.get("/api/courier/requests/:id/audit-log", requireAuth, controller.getRequestAuditLogs);
   app.get("/api/courier/audit-log", requireAuth, controller.getAuditLogs);
 
   // PDF Upload & Application
   app.get("/api/courier/pdf", requireAuth, controller.getPdfReports);
   app.get("/api/courier/pdf/:id", requireAuth, controller.getPdfReport);
 
-  // upload و complete فقط يقبلان مفتاح الخدمة الداخلي (بوت تيليجرام) - باقي مسارات
-  // courier/pdf (المراجعة، apply، reextract) تبقى للواجهة البشرية حصرًا عبر requireAuth
+  // Dedicated Zero Local Storage Google Drive JSON-Only Registration Endpoint
   app.post(
-    "/api/courier/pdf/upload",
+    "/api/courier/pdf/register-drive",
     requireAuthOrInternal,
-    upload.single("file"),
-    validatePdfImageUploadMiddleware(),
-    uploadErrorHandler,
-    async (req: any, res: any, next: any) => {
-      if (req.file) {
-        try {
-          req.file.buffer = fs.readFileSync(req.file.path);
-        } catch (err) {
-          return next(err);
-        }
+    (req: any, res: any, next: any) => {
+      const contentType = String(req.headers["content-type"] || "").toLowerCase();
+      if (!contentType.includes("application/json")) {
+        return res.status(415).json({
+          success: false,
+          code: "UNSUPPORTED_MEDIA_TYPE",
+          message: "This endpoint accepts Google Drive metadata as JSON only (Content-Type: application/json). Direct file or binary uploads are strictly prohibited.",
+        });
+      }
+      if (req.file || req.files) {
+        return res.status(415).json({
+          success: false,
+          code: "UNSUPPORTED_MEDIA_TYPE",
+          message: "Multipart or binary file payloads are strictly prohibited.",
+        });
       }
       next();
     },
-    controller.uploadPdf,
+    controller.registerDrivePdf
+  );
+
+  // Decommissioned Legacy Upload Endpoint - Returns 410 Gone without any file parsing or Multer middleware
+  app.post(
+    "/api/courier/pdf/upload",
+    (req: any, res: any) => {
+      return res.status(410).json({
+        success: false,
+        code: "ENDPOINT_GONE",
+        message: "Direct file uploads to RASSCO server are permanently decommissioned. Upload files to Google Drive directly and register metadata via /api/courier/pdf/register-drive.",
+      });
+    }
   );
 
   app.post("/api/courier/pdf/:id/apply", requireAuth, controller.applyPdf);

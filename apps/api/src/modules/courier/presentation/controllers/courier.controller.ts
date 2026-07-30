@@ -5,9 +5,64 @@ import { ValidationError, NotFoundError } from "@core/errors/AppError";
 import { ensureDevicesInExtractedJson } from "../../application/ai-engine/courier-pdf-extraction.adapter";
 import fs from "fs";
 import path from "path";
+import { z } from "zod";
+
+const RegisterDrivePdfSchema = z.object({
+  drive_url: z.string().url().refine((url) => /^https:\/\/(drive|docs)\.google\.com\//i.test(url), {
+    message: "drive_url must be a valid Google Drive URL",
+  }),
+  drive_file_id: z.string().optional(),
+  file_name: z.string().min(1).max(255).refine((name) => !name.includes("..") && !name.includes("/") && !name.includes("\\"), {
+    message: "file_name must not contain path traversal characters",
+  }),
+  mime_type: z.string().optional().refine((mime) => !mime || ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp"].includes(mime.toLowerCase()), {
+    message: "mime_type is not allowed",
+  }),
+  file_size: z.number().positive().max(15 * 1024 * 1024).optional(),
+  request_id: z.union([z.string(), z.number()]).optional(),
+  telegram_user_id: z.string().optional(),
+  checksum_sha256: z.string().optional(),
+
+  // Reject binary/base64 payload on this JSON endpoint
+  file_bytes: z.undefined({ invalid_type_error: "Binary file bytes payload is prohibited on this endpoint" }),
+  base64: z.undefined({ invalid_type_error: "Base64 payload is prohibited on this endpoint" }),
+  content: z.undefined({ invalid_type_error: "Raw file content payload is prohibited on this endpoint" }),
+  buffer: z.undefined({ invalid_type_error: "Buffer payload is prohibited on this endpoint" }),
+});
 
 export class CourierController {
   constructor(private readonly service: CourierService) {}
+
+  registerDrivePdf = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const body = req.body || {};
+
+    const parsed = RegisterDrivePdfSchema.parse(body);
+
+    const requestId = parsed.request_id ? Number(parsed.request_id) : undefined;
+    const extractedJson = (body as any).extracted_json || (body as any).extractedJson;
+    const overallConfidence = (body as any).overall_confidence || (body as any).overallConfidence
+      ? Number((body as any).overall_confidence || (body as any).overallConfidence)
+      : undefined;
+
+    let driveFileName = parsed.file_name || "report.pdf";
+    try {
+      if (/[\u0080-\u00FF]/.test(driveFileName)) {
+        driveFileName = Buffer.from(driveFileName, "latin1").toString("utf8");
+      }
+    } catch {}
+
+    const result = await this.service.registerPdfReportFromDriveUrl(
+      driveFileName,
+      String(parsed.drive_url),
+      user.id,
+      requestId,
+      extractedJson,
+      overallConfidence
+    );
+
+    return res.json(result);
+  });
 
   getRequests = asyncHandler(async (req: Request, res: Response) => {
     const filters = {
@@ -150,7 +205,27 @@ export class CourierController {
   });
 
   getAuditLogs = asyncHandler(async (req: Request, res: Response) => {
+    const requestId = req.query.requestId || req.query.recordId;
+    if (requestId) {
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Number(req.query.limit) : 100;
+      const result = await this.service.getRequestAuditLogs(Number(requestId), { page, limit }, req.user);
+      res.json(result);
+      return;
+    }
     const result = await this.service.listAuditLogs();
+    res.json(result);
+  });
+
+  getRequestAuditLogs = asyncHandler(async (req: Request, res: Response) => {
+    const requestId = Number(req.params.id || req.query.requestId);
+    if (!requestId || isNaN(requestId)) {
+      res.status(400).json({ error: "رقم الطلب غير صحيح" });
+      return;
+    }
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const limit = req.query.limit ? Number(req.query.limit) : 10;
+    const result = await this.service.getRequestAuditLogs(requestId, { page, limit }, req.user);
     res.json(result);
   });
 
@@ -181,8 +256,15 @@ export class CourierController {
     // \u0642\u0631\u0635 \u0627\u0644\u0633\u064A\u0631\u0641\u0631 \u0623\u0648 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A\u060C \u0641\u0642\u0637 \u0627\u0644\u0631\u0627\u0628\u0637. \u0647\u0630\u0627 \u0627\u0644\u0641\u0631\u0639 \u0627\u0644\u0648\u062D\u064A\u062F \u0627\u0644\u0630\u064A \u0644\u0627 \u064A\u062A\u0637\u0644\u0628 req.file\u061B
     // \u0645\u0633\u0627\u0631 \u0627\u0644\u0631\u0641\u0639 \u0627\u0644\u0628\u0634\u0631\u064A \u0639\u0628\u0631 \u0648\u0627\u062C\u0647\u0629 \u0627\u0644\u0648\u064A\u0628 (multipart) \u064A\u0628\u0642\u0649 \u0643\u0645\u0627 \u0647\u0648 \u062A\u0645\u0627\u0645\u064B\u0627 \u0641\u064A \u0627\u0644\u0641\u0631\u0639 \u0623\u062F\u0646\u0627\u0647.
     const driveUrl = req.body.drive_url || req.body.driveUrl;
-    if (!file && driveUrl) {
-      let driveFileName = req.body.file_name || req.body.fileName || "report.pdf";
+    if (driveUrl) {
+      if (file && file.path && fs.existsSync(file.path)) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch {}
+      }
+
+      let driveFileName =
+        req.body.file_name || req.body.fileName || (file ? file.originalname : "report.pdf");
       try {
         if (/[\u0080-\u00FF]/.test(driveFileName)) {
           driveFileName = Buffer.from(driveFileName, "latin1").toString("utf8");

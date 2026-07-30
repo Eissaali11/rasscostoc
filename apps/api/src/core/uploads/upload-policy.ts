@@ -126,41 +126,6 @@ function rejectUpload(res: Response, message: string, status = 400) {
   });
 }
 
-export function createPdfImageUpload(destDir: string) {
-  if (!fs.existsSync(destDir)) {
-    fs.mkdirSync(destDir, { recursive: true });
-  }
-
-  const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, destDir),
-    filename: (_req, file, cb) => {
-      try {
-        const safe = sanitizeUploadFilename(file.originalname, PDF_IMAGE_EXT);
-        const ext = path.extname(safe).toLowerCase();
-        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-        assertNoPathTraversal(unique);
-        cb(null, unique);
-      } catch (err) {
-        cb(err as Error, "");
-      }
-    },
-  });
-
-  return multer({
-    storage,
-    limits: { fileSize: UPLOAD_LIMITS.pdfImageMaxBytes, files: 1 },
-    fileFilter: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      const mimeOk = PDF_IMAGE_MIME.has(file.mimetype) || file.mimetype.startsWith("image/");
-      const extOk = PDF_IMAGE_EXT.has(ext);
-      if (mimeOk && extOk) {
-        cb(null, true);
-      } else {
-        cb(new ValidationError("Only PDF and Image files (PNG, JPG, JPEG, WEBP) are allowed") as any);
-      }
-    },
-  });
-}
 
 export function createExcelUpload(destDir: string) {
   if (!fs.existsSync(destDir)) {
@@ -200,36 +165,6 @@ export function createExcelUpload(destDir: string) {
       cb(null, true);
     },
   });
-}
-
-export function validatePdfImageUploadMiddleware() {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const file = (req as any).file as Express.Multer.File | undefined;
-    if (!file) return next();
-
-    try {
-      assertNoPathTraversal(path.basename(file.filename || file.path));
-      const kind = detectPdfOrImageMagic(file.path);
-      if (!kind) {
-        unlinkQuiet(file.path);
-        return rejectUpload(
-          res,
-          "الملف المرفوع غير صالح. الأنواع المسموح بها هي PDF و PNG و JPG و WEBP فقط بناءً على محتوى الملف.",
-        );
-      }
-
-      const scan = await scanUploadForMalware(file.path);
-      if (!scan.clean) {
-        unlinkQuiet(file.path);
-        return rejectUpload(res, scan.reason || "Upload rejected by security scan", 400);
-      }
-
-      return next();
-    } catch (err) {
-      unlinkQuiet(file.path);
-      return next(err);
-    }
-  };
 }
 
 export function validateExcelUploadMiddleware() {

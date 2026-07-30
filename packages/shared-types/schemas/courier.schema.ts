@@ -158,9 +158,24 @@ export const courierAuditLogs = pgTable("courier_audit_logs", {
   oldValue: text("old_value"),
   newValue: text("new_value"),
   action: text("action").notNull(),
+  actorNameSnapshot: text("actor_name_snapshot"),
+  actorRoleSnapshot: text("actor_role_snapshot"),
+  actorAvatarUrl: text("actor_avatar_url"),
+  actionType: text("action_type"),
+  actionDescription: text("action_description"),
+  source: text("source").default("DASHBOARD"),
+  status: text("status").default("SUCCESS"),
+  metadata: jsonb("metadata"),
+  ipAddress: text("ip_address"),
+  deviceId: text("device_id"),
   changedBy: varchar("changed_by").references(() => users.id),
   changedAt: timestamp("changed_at").defaultNow(),
-});
+}, (table) => ({
+  courierAuditLogsRecordIdIdx: index("courier_audit_logs_record_id_idx").on(table.recordId),
+  courierAuditLogsChangedByIdx: index("courier_audit_logs_changed_by_idx").on(table.changedBy),
+  courierAuditLogsChangedAtIdx: index("courier_audit_logs_changed_at_idx").on(table.changedAt),
+  courierAuditLogsTableRecordChangedIdx: index("courier_audit_logs_table_record_changed_idx").on(table.tableName, table.recordId, table.changedAt),
+}));
 
 // Zod schemas for validation
 export const insertCourierCitySchema = createInsertSchema(courierCities);

@@ -158,24 +158,11 @@ export default function CourierPdfUploadPage() {
 
   async function handleUpload(file: File) {
     if (!file) return;
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const token = localStorage.getItem("auth-token");
-      const res = await fetch("/api/courier/pdf/upload", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: [listUrl] });
-        navigate(`/courier/pdf/${data.id}`);
-      }
-    } finally {
-      setUploading(false);
-    }
+    toast({
+      title: "رفع الملفات المباشر متوقف",
+      description: "تم إيقاف رفع المستندات مباشرة عبر الويب. يرجى إرسال ملف الـ PDF أو الصورة عبر بوت تيليجرام للرفع الآلي إلى Google Drive.",
+      variant: "destructive",
+    });
   }
 
   // معاينة الملف الأصلي في تبويب جديد. التقارير المرفوعة عبر بوت تيليجرام مسجّلة برابط
