@@ -106,6 +106,25 @@ if ! npm run build > /tmp/pre-deploy-build.log 2>&1; then
 fi
 ok "build"
 
+if ! npx vitest run > /tmp/pre-deploy-tests.log 2>&1; then
+  fail "test suite failed — see /tmp/pre-deploy-tests.log"
+fi
+ok "test suite"
+
+# 7b. Zero-Storage contract gate: refuse to deploy unless the exact behavior
+# this hotfix exists to guarantee is still present in THIS commit's own
+# tests. This does not hit a live server — it runs the actual Express app
+# in-process (supertest), so it catches a regression even if the change
+# that broke it never touched these two routes directly.
+ZERO_STORAGE_TEST="apps/api/src/modules/courier/presentation/routes/pdf-register-drive.hotfix.test.ts"
+if [ ! -f "$ZERO_STORAGE_TEST" ]; then
+  fail "$ZERO_STORAGE_TEST is missing — cannot verify /pdf/upload=410 and register-drive multipart=415 before deploy."
+fi
+if ! npx vitest run "$ZERO_STORAGE_TEST" > /tmp/pre-deploy-zerostorage.log 2>&1; then
+  fail "Zero-Storage contract test failed — /api/courier/pdf/upload may no longer return 410, or /api/courier/pdf/register-drive may no longer reject multipart with 415. See /tmp/pre-deploy-zerostorage.log. Refusing to deploy."
+fi
+ok "Zero-Storage contract (upload=410, register-drive multipart=415)"
+
 # 8. Secret scan must pass
 if [ -f scripts/secret-scan.cjs ]; then
   if ! node scripts/secret-scan.cjs > /tmp/pre-deploy-secretscan.log 2>&1; then
