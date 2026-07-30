@@ -48,6 +48,224 @@ export type CourierPdfExtractedPayload = {
   extraction_source: "ocr" | "ai_engine";
 };
 
+export function formatTimeTo12Hour(timeStr: string | null | undefined): string | null {
+  if (!timeStr) return null;
+  const trimmed = timeStr.trim();
+  if (!trimmed) return null;
+
+  const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)$/i);
+  if (ampmMatch) {
+    const hh = parseInt(ampmMatch[1], 10);
+    const mm = ampmMatch[2];
+    const ss = ampmMatch[3] || "00";
+    const period = ampmMatch[4].toUpperCase();
+    return `${String(hh).padStart(2, "0")}:${mm}:${ss} ${period}`;
+  }
+
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!match24) return trimmed;
+
+  let hour = parseInt(match24[1], 10);
+  const minute = match24[2];
+  const second = match24[3] || "00";
+  const period = hour >= 12 ? "PM" : "AM";
+
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+
+  return `${String(hour).padStart(2, "0")}:${minute}:${second} ${period}`;
+}
+
+export type ReceiptDateTimeFields = {
+  transaction_date: string | null;
+  transaction_time: string | null;
+  transaction_time_12h: string | null;
+  approval_time: string | null;
+  approval_time_12h: string | null;
+  transaction_datetime: string | null;
+  date_source: "receipt" | "form" | "unknown" | null;
+  date_confidence: number | null;
+  transaction_date_raw: string | null;
+  transaction_time_raw: string | null;
+  approval_time_raw: string | null;
+  transaction_date_confidence: number | null;
+  transaction_time_confidence: number | null;
+  approval_time_confidence: number | null;
+};
+
+/** Arabic-Indic digits (٠-٩) as they sometimes appear inside OCR'd receipt text. */
+const ARABIC_INDIC_DIGITS: Record<string, string> = {
+  "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+  "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+};
+
+function toAsciiDigits(input: string): string {
+  return input.replace(/[٠-٩]/g, (d) => ARABIC_INDIC_DIGITS[d] ?? d);
+}
+
+/**
+ * Parses a receipt date string into YYYY-MM-DD without ever reinterpreting
+ * DD/MM as US-style MM/DD — the day component is always the first numeric
+ * group in slash/dash formats, per Saudi receipt convention (29/07/2026 = 29 يوليو).
+ */
+function parseReceiptDate(rawInput: string): string | null {
+  const s = toAsciiDigits(rawInput.trim());
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  let m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (m) {
+    const day = m[1].padStart(2, "0");
+    const month = m[2].padStart(2, "0");
+    return `${m[3]}-${month}-${day}`;
+  }
+
+  // YYYY/MM/DD or YYYY-MM-DD
+  m = s.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (m) {
+    const month = m[2].padStart(2, "0");
+    const day = m[3].padStart(2, "0");
+    return `${m[1]}-${month}-${day}`;
+  }
+
+  // DD/MM/YY or DD-MM-YY (2-digit year) — receipts only ever carry 20xx dates.
+  m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2})$/);
+  if (m) {
+    const day = m[1].padStart(2, "0");
+    const month = m[2].padStart(2, "0");
+    return `20${m[3]}-${month}-${day}`;
+  }
+
+  return null;
+}
+
+/** Parses a receipt time string (24h, 24h with seconds, or 12h with AM/PM) into HH:mm:ss (24h). */
+function parseReceiptTime(rawInput: string): string | null {
+  const s = toAsciiDigits(rawInput.trim());
+
+  const ampm = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)$/);
+  if (ampm) {
+    let hour = parseInt(ampm[1], 10);
+    const minute = ampm[2];
+    const second = ampm[3] || "00";
+    const period = ampm[4].toUpperCase();
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, "0")}:${minute}:${second}`;
+  }
+
+  const h24 = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (h24) {
+    const hour = h24[1].padStart(2, "0");
+    const minute = h24[2];
+    const second = h24[3] || "00";
+    return `${hour}:${minute}:${second}`;
+  }
+
+  return null;
+}
+
+export function normalizeReceiptDateTime(raw: {
+  transaction_date_raw?: string | null;
+  transaction_time_raw?: string | null;
+  approval_time_raw?: string | null;
+  transaction_date?: string | null;
+  transaction_time?: string | null;
+  approval_time?: string | null;
+  date_source?: string | null;
+  date_confidence?: number | null;
+  transaction_date_confidence?: number | null;
+  transaction_time_confidence?: number | null;
+  approval_time_confidence?: number | null;
+}): ReceiptDateTimeFields {
+  const txDateRawStr = (raw.transaction_date_raw || raw.transaction_date || "").trim();
+  const txTimeRawStr = (raw.transaction_time_raw || raw.transaction_time || "").trim();
+  const appTimeRawStr = (raw.approval_time_raw || raw.approval_time || "").trim();
+
+  const transaction_date = txDateRawStr ? parseReceiptDate(txDateRawStr) : null;
+  const transaction_time = txTimeRawStr ? parseReceiptTime(txTimeRawStr) : null;
+  const approval_time = appTimeRawStr ? parseReceiptTime(appTimeRawStr) : null;
+
+  let transaction_datetime: string | null = null;
+  if (transaction_date && transaction_time) {
+    transaction_datetime = `${transaction_date}T${transaction_time}+03:00`;
+  }
+
+  const fallbackConfidence = raw.date_confidence ?? raw.transaction_date_confidence ?? 0.98;
+
+  return {
+    transaction_date,
+    transaction_time,
+    transaction_time_12h: formatTimeTo12Hour(transaction_time),
+    approval_time,
+    approval_time_12h: formatTimeTo12Hour(approval_time),
+    transaction_datetime,
+    date_source: (raw.date_source as any) || (transaction_date ? "receipt" : null),
+    date_confidence: transaction_date ? fallbackConfidence : null,
+    transaction_date_raw: txDateRawStr || null,
+    transaction_time_raw: txTimeRawStr || null,
+    approval_time_raw: appTimeRawStr || null,
+    transaction_date_confidence: transaction_date ? (raw.transaction_date_confidence ?? fallbackConfidence) : null,
+    transaction_time_confidence: transaction_time ? (raw.transaction_time_confidence ?? fallbackConfidence) : null,
+    approval_time_confidence: approval_time ? (raw.approval_time_confidence ?? fallbackConfidence) : null,
+  };
+}
+
+type ReceiptFieldLike = { value?: unknown; confidence?: unknown } | string | number | null | undefined;
+
+function pickRawString(v: ReceiptFieldLike): string | null {
+  if (v == null) return null;
+  if (typeof v === "string") return v.trim() || null;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "object" && "value" in v) {
+    const inner = (v as { value?: unknown }).value;
+    return typeof inner === "string" ? inner.trim() || null : inner != null ? String(inner) : null;
+  }
+  return null;
+}
+
+function pickRawConfidence(v: ReceiptFieldLike): number | undefined {
+  if (v != null && typeof v === "object" && "confidence" in v) {
+    const c = (v as { confidence?: unknown }).confidence;
+    return typeof c === "number" ? c : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Single chokepoint that pulls transaction_date / transaction_time / approval_time
+ * out of whatever shape an upstream producer (Telegram bot's Gemini JSON, this
+ * module's own Vision/OCR builders, or a previously-stored extractedJson) used,
+ * and normalizes them. approval_time is intentionally NEVER derived from the
+ * generic date/time fields — those represent the transaction, not the approval,
+ * and conflating them would violate the "don't swap one time for the other" rule.
+ */
+export function deriveReceiptDateTime(obj: Record<string, unknown>): ReceiptDateTimeFields {
+  const txDateRaw =
+    pickRawString(obj.transaction_date_raw as ReceiptFieldLike) ??
+    pickRawString(obj.transaction_date as ReceiptFieldLike) ??
+    pickRawString(obj.date as ReceiptFieldLike);
+  const txTimeRaw =
+    pickRawString(obj.transaction_time_raw as ReceiptFieldLike) ??
+    pickRawString(obj.transaction_time as ReceiptFieldLike) ??
+    pickRawString(obj.time as ReceiptFieldLike);
+  const appTimeRaw =
+    pickRawString(obj.approval_time_raw as ReceiptFieldLike) ??
+    pickRawString(obj.approval_time as ReceiptFieldLike) ??
+    pickRawString(obj.approvalTime as ReceiptFieldLike);
+
+  return normalizeReceiptDateTime({
+    transaction_date_raw: txDateRaw,
+    transaction_time_raw: txTimeRaw,
+    approval_time_raw: appTimeRaw,
+    date_source: typeof obj.date_source === "string" ? (obj.date_source as string) : undefined,
+    date_confidence: pickRawConfidence(obj.date_confidence as ReceiptFieldLike) ?? pickRawConfidence(obj.date as ReceiptFieldLike),
+    transaction_date_confidence: pickRawConfidence(obj.transaction_date_confidence as ReceiptFieldLike),
+    transaction_time_confidence:
+      pickRawConfidence(obj.transaction_time_confidence as ReceiptFieldLike) ?? pickRawConfidence(obj.time as ReceiptFieldLike),
+    approval_time_confidence: pickRawConfidence(obj.approval_time_confidence as ReceiptFieldLike),
+  });
+}
+
 type FlatExtractedField = {
   value: string | null;
   confidence: number;
@@ -116,6 +334,7 @@ export function buildExtractedPayloadFromOcr(
 ): CourierPdfExtractedPayload {
   return {
     ...fields,
+    ...deriveReceiptDateTime(fields as unknown as Record<string, unknown>),
     devices: normalizeOcrFieldsToDevices(fields),
     extraction_source: "ocr",
   };
@@ -123,6 +342,11 @@ export function buildExtractedPayloadFromOcr(
 
 /**
  * Ensure any stored/legacy extractedJson has a devices[] array for the review UI.
+ * Also the single re-derivation point for transaction_date/transaction_time/approval_time —
+ * every read (GET /api/courier/pdf/:id) and write (register-drive, update-extracted, reextract)
+ * path funnels through here, so a receipt date/time present anywhere in the stored raw JSON
+ * (under any of the field-name variants deriveReceiptDateTime understands) is picked up even
+ * for reports that were saved before this normalization existed — no migration/backfill needed.
  */
 export function ensureDevicesInExtractedJson(raw: unknown): CourierPdfExtractedPayload {
   const obj =
@@ -130,10 +354,13 @@ export function ensureDevicesInExtractedJson(raw: unknown): CourierPdfExtractedP
       ? (JSON.parse(raw || "{}") as Record<string, unknown>)
       : ((raw as Record<string, unknown>) ?? {});
 
+  const receiptDateTime = deriveReceiptDateTime(obj);
+
   const existingDevices = Array.isArray(obj.devices) ? (obj.devices as CourierPdfDeviceCard[]) : null;
   if (existingDevices && existingDevices.length > 0) {
     return {
       ...(obj as CourierPdfExtractedPayload),
+      ...receiptDateTime,
       devices: existingDevices.map((d, i) => ({
         device_index: d.device_index ?? i + 1,
         sn: d.sn ?? null,
@@ -163,7 +390,10 @@ export function ensureDevicesInExtractedJson(raw: unknown): CourierPdfExtractedP
     }
   }
 
-  return buildExtractedPayloadFromOcr(flat);
+  // `flat` only forwards a handful of legacy keys — re-derive from the full
+  // original `obj` too, since approval_time/*_raw fields (if present) live
+  // outside that narrow allowlist and would otherwise be dropped here.
+  return { ...buildExtractedPayloadFromOcr(flat), ...receiptDateTime };
 }
 
 export type CompleteDeviceInput = {
@@ -292,6 +522,7 @@ export function buildExtractedPayloadFromVision(
   const dateField = visionJson.date as VisionField;
   const timeField = visionJson.time as VisionField;
   const reqNumField = visionJson.request_number as VisionField;
+  const receiptDateTime = deriveReceiptDateTime(visionJson);
 
   return {
     tid: { value: first?.tid ?? null, confidence: first?.confidence ?? 0, source: "ai_engine" },
@@ -321,6 +552,7 @@ export function buildExtractedPayloadFromVision(
       confidence: first?.confidence ?? 0,
       source: "ai_engine",
     },
+    ...receiptDateTime,
     devices,
     extraction_source: "ai_engine",
   };
@@ -380,6 +612,13 @@ const MULTI_DEVICE_VISION_SCHEMA = {
       },
     },
     time: {
+      type: "OBJECT",
+      properties: {
+        value: { type: "STRING", nullable: true },
+        confidence: { type: "NUMBER" },
+      },
+    },
+    approval_time: {
       type: "OBJECT",
       properties: {
         value: { type: "STRING", nullable: true },
@@ -484,17 +723,19 @@ export async function runAiEngineExtraction(
       "The document is a multi-page PDF or a sequence of page images representing a device installation report.",
       "",
       "DOCUMENT LAYOUT & CONTENTS:",
-      "- Page 1: A structured installation form containing text fields like: 'رقم الطلب' (Request Number), 'التاريخ' (Date), 'الوقت' (Time), 'اسم العميل' (Retailer's/Customer Name), 'TID' (Terminal ID), and handwritten Serial Number ('الرقم التسلسلي'). It may also contain a payment receipt (e.g. Mada slip).",
+      "- Page 1: A structured installation form containing text fields like: 'رقم الطلب' (Request Number), 'التاريخ' (Date), 'الوقت' (Time), 'اسم العميل' (Retailer's/Customer Name), 'TID' (Terminal ID), and handwritten Serial Number ('الرقم التسلسلي'). It may also contain a payment receipt/slip (e.g. Mada slip) with its own date/time fields near the transaction number and an 'APPROVAL CODE' line.",
       "- Page 2, Page 3, etc.: Photographs of physical hardware installations. These include close-ups of the POS device back labels (showing Serial Number / SN) and SIM cards (showing a 19-20 digit ICCID number starting with 8996... printed on the blue/white SIM card body or sticker).",
       "",
       "YOUR TASK:",
       "1. Extract all devices installed. A document can show 1, 2, or more devices. Group data for each device.",
       "2. For each device, find its physical Serial Number (from the device sticker or form) and map it to its corresponding SIM ICCID (from the blue/white SIM card photo or form). Do NOT mix SIM serial numbers between different devices.",
       "3. For each device, extract the TID (8-digit number, e.g., 15806680) and the merchant/retailer name.",
-      "4. Extract the general form fields: 'request_number' (رقم الطلب, usually 7 digits, e.g., 2617112), 'date' (usually DD/MM/YYYY, e.g., 12/07/2026), and 'time' (usually HH:MM, e.g., 4:40 or 16:40).",
+      "4. Extract the general form fields: 'request_number' (رقم الطلب, usually 7 digits, e.g., 2617112), 'date' (usually DD/MM/YYYY, e.g., 12/07/2026), and 'time' (usually HH:MM or HH:MM:SS, e.g., 4:40, 16:40, or 17:55:42) — these describe when the transaction/installation itself happened.",
+      "5. If the receipt/slip also shows a separate 'APPROVAL CODE' section with its own timestamp (often a few seconds after the transaction time), extract that as 'approval_time'. This is a DIFFERENT moment than 'time' — do not copy 'time' into 'approval_time' or vice versa; if there is only one timestamp on the document, leave 'approval_time' null rather than guessing.",
       "",
       "STRICT RULES:",
-      "- Extract data exactly as written. Never invent serials, ICCIDs, dates, or TIDs. If a value is missing or unreadable, set value = null and confidence = 0.",
+      "- Extract data exactly as written. Never invent serials, ICCIDs, dates, times, or TIDs. If a value is missing or unreadable, set value = null and confidence = 0.",
+      "- Preserve the date exactly as printed (e.g. DD/MM/YYYY stays day-then-month) — do not reorder it into a US MM/DD/YYYY interpretation.",
       "- Read SIM serial numbers from the photos of the SIM card body/packaging very carefully. Ensure all digits are captured (typically starts with 8996...).",
       "- If there are multiple devices shown in photos, output one device object in the `devices` array for each distinct physical serial number.",
     ].join("\n");

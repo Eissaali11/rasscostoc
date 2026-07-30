@@ -30,6 +30,7 @@ import {
   Check,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { buildGoogleDrivePreviewUrl } from "./google-drive-preview";
 
 type MatchStatus = "matched" | "needs_review" | "unknown";
 
@@ -59,16 +60,6 @@ export type DeviceCard = {
   lookupLoading?: boolean;
   lookupMessage?: string | null;
 };
-
-export function buildGoogleDrivePreviewUrl(driveUrl: string | null | undefined): string | null {
-  if (!driveUrl) return null;
-  if (!/^https?:\/\/(drive|docs)\.google\.com\//i.test(driveUrl)) return null;
-  const match = driveUrl.match(/\/file\/d\/([^/]+)/);
-  if (match && match[1]) {
-    return `https://drive.google.com/file/d/${match[1]}/preview`;
-  }
-  return null;
-}
 
 export function formatTimeTo12Hour(timeStr: string | null | undefined): string | null {
   if (!timeStr) return null;
@@ -453,9 +444,20 @@ export default function CourierPdfReviewPage() {
     const filePath = (report as any).filePath as string | undefined;
     if (filePath && /^https?:\/\//i.test(filePath)) {
       setPreviewError(null);
-      setIframeError(false);
-      const embedUrl = buildGoogleDrivePreviewUrl(filePath) || filePath;
-      setPreviewUrl(embedUrl);
+      const embedUrl = buildGoogleDrivePreviewUrl(filePath);
+      if (embedUrl) {
+        // Safe /preview link built — try to embed it.
+        setIframeError(false);
+        setPreviewUrl(embedUrl);
+      } else {
+        // Never embed an unrecognized/raw URL (could be a /view link Google
+        // itself blocks via X-Frame-Options, or something unexpected). Go
+        // straight to the "open in Google Drive" fallback instead — previewUrl
+        // just needs to be truthy so that branch renders; the fallback link
+        // itself reads report.filePath directly, not this value.
+        setIframeError(true);
+        setPreviewUrl(filePath);
+      }
       return;
     }
 

@@ -129,6 +129,12 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
       // Image sources (allow self, data, blob, openstreetmap, cartocdn, google, and external https images)
       "img-src 'self' data: blob: https:",
       "connect-src 'self'",
+      // Zero Local Storage: courier PDF reports embed the original document straight from
+      // Google Drive's own /preview iframe endpoint (never proxied/downloaded through RASSCO).
+      // Without this, default-src 'self' silently blocks that iframe and Chrome shows
+      // "This content is blocked. Contact the site owner to fix the issue." regardless of
+      // whether the Drive URL itself is a valid /preview link.
+      "frame-src 'self' https://drive.google.com https://docs.google.com",
     ].join("; ")
   );
 
