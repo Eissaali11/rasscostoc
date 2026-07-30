@@ -81,27 +81,10 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Serve static assets with cache control:
-  // - index.html must NEVER be cached by browsers, ensuring immediate update on new deployments
-  // - Hashed assets (/assets/*) can be cached safely
-  app.use(
-    express.static(distPath, {
-      maxAge: "1y",
-      setHeaders: (res, filePath) => {
-        if (filePath.endsWith(".html")) {
-          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
-          res.setHeader("Pragma", "no-cache");
-          res.setHeader("Expires", "0");
-        }
-      },
-    })
-  );
+  app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

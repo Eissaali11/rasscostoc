@@ -99,7 +99,7 @@ export async function apiRequest(
       credentials: "include",
     });
 
-    if (res.status === 401 && !url.includes('/api/auth/refresh') && !url.includes('/api/auth/login') && !url.includes('/api/auth/me')) {
+    if (res.status === 401 && !url.includes('/api/auth/refresh') && !url.includes('/api/auth/login')) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         res = await fetch(url, {
@@ -139,7 +139,7 @@ export const getQueryFn: <T>(options: {
         credentials: "include",
       });
 
-      if (res.status === 401 && !path.includes('/api/auth/refresh') && !path.includes('/api/auth/login') && !path.includes('/api/auth/me')) {
+      if (res.status === 401 && !path.includes('/api/auth/refresh') && !path.includes('/api/auth/login')) {
         const refreshed = await refreshAccessToken();
         if (refreshed) {
           res = await fetch(path, {

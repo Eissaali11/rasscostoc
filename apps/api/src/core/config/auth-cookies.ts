@@ -24,7 +24,7 @@ const isProd = process.env.NODE_ENV === "production";
 
 // Mirrors JWT_ACCESS_EXPIRES_IN ("15m"). If the cookie ever outlives the JWT,
 // verification simply fails and the caller falls back / re-auths — not harmful.
-const ACCESS_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000; // 365 days (permanent session)
+const ACCESS_MAX_AGE_MS = 15 * 60 * 1000;
 const REFRESH_MAX_AGE_MS = JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
 
 function baseOptions() {

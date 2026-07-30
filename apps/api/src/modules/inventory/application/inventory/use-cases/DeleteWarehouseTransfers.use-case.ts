@@ -141,7 +141,10 @@ export class DeleteWarehouseTransfersUseCase {
           throw new Error(`Technician not found for ID: ${technicianId}`);
         }
 
-        const currentMovingInventory = (await repository.getTechnicianMovingInventoryByName(technicianName)) || emptyLegacyStock();
+        const currentMovingInventory = await repository.getTechnicianMovingInventoryByName(technicianName);
+        if (!currentMovingInventory) {
+          throw new Error(`Moving inventory not found for technician: ${technicianName}`);
+        }
 
         const nextMovingInventory = emptyLegacyStock();
         for (const field of legacyFields) {

@@ -10,7 +10,7 @@ interface RateLimitInfo {
 const ipStore = new Map<string, RateLimitInfo>();
 
 const LIMIT_WINDOW_MS = 60000; // 1 minute window
-const MAX_REQUESTS_PER_WINDOW = 600; // 600 requests per minute
+const MAX_REQUESTS_PER_WINDOW = 150; // 150 requests per minute
 
 /**
  * Custom Rate Limiting middleware to prevent brute-force attacks and abuse.
@@ -21,22 +21,16 @@ export function rateLimiter(req: Request, res: Response, next: NextFunction): vo
     return next();
   }
 
-  const path = req.path;
-
-  // Bypass rate limiting for non-API routes (static assets, frontend pages)
-  if (!path.startsWith("/api/")) {
-    return next();
-  }
-
   // Bypass rate limiting for health check endpoints
+  const path = req.path;
   if (
+    path === "/health" || path === "/health/live" || path === "/health/ready" ||
     path === "/api/health" || path === "/api/health/live" || path === "/api/health/ready"
   ) {
     return next();
   }
 
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip = typeof forwarded === "string" ? forwarded.split(",")[0].trim() : (req.ip || req.socket.remoteAddress || "unknown-ip");
+  const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
   const now = Date.now();
   
   let record = ipStore.get(ip);

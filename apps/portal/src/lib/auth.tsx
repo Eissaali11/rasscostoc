@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleSessionExpired = () => {
       queryClient.setQueryData(['/api/auth/me'], null);
+      queryClient.clear();
     };
 
     window.addEventListener('auth-session-expired', handleSessionExpired);
