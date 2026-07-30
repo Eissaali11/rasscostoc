@@ -21,6 +21,7 @@ import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
 import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
+import { AuditLogFormatter, type AuditLogDto } from "./audit-log-formatter";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
 import type { ICourierExecutionsRepository } from "../domain/repositories/ICourierExecutionsRepository";
@@ -165,6 +166,36 @@ export class CourierService {
     });
 
     return count;
+  }
+
+  async getRequestAuditLogs(
+    requestId: number,
+    options: { page?: number; limit?: number } = {},
+    requestingUser?: any
+  ): Promise<{
+    items: AuditLogDto[];
+    total: number;
+    page: number;
+    limit: number;
+    latestUpdate: AuditLogDto | null;
+  }> {
+    const allowSensitive =
+      requestingUser?.role === "admin" ||
+      requestingUser?.role === "supervisor" ||
+      (Array.isArray(requestingUser?.permissions) && requestingUser.permissions.includes("audit:sensitive"));
+
+    const { rows, total } = await (this.requestsRepo as any).getAuditLogsForRecord(requestId, options);
+
+    const items = rows.map((row: any) => AuditLogFormatter.format(row, { allowSensitive }));
+    const latestUpdate = items.length > 0 && (options.page || 1) === 1 ? items[0] : null;
+
+    return {
+      items,
+      total,
+      page: Math.max(1, options.page || 1),
+      limit: Math.min(100, Math.max(1, options.limit || 10)),
+      latestUpdate,
+    };
   }
 
   async getRequestItems(requestId: number): Promise<CourierRequestItem[]> {
@@ -1150,13 +1181,34 @@ export class CourierService {
       throw new NotFoundError("PDF Report not found");
     }
 
+    let buffer: Buffer | null = null;
+    const isExternalUrl = /^https?:\/\//i.test(report.filePath || "");
+
+    if (isExternalUrl) {
+      // Zero-storage mode: File is hosted on Google Drive / External URL.
+      // Parse and re-normalize extractedJson in memory.
+      const currentPayload = ensureDevicesInExtractedJson(report.extractedJson);
+      const updated = await this.pdfRepo.updatePdfReport(pdfId, {
+        extractedJson: JSON.stringify(currentPayload),
+        overallConfidence: report.overallConfidence ?? 90,
+      });
+      return {
+        id: updated.id,
+        fields: currentPayload,
+        devices: (currentPayload as any).devices,
+        overallConfidence: updated.overallConfidence,
+        status: updated.status,
+        extraction_source: (currentPayload as any).extraction_source || "ai_engine",
+      };
+    }
+
     const uploadDir = path.join(process.cwd(), "uploads", "pdf");
     const filePath = path.join(uploadDir, report.filePath);
     if (!fs.existsSync(filePath)) {
       throw new NotFoundError("File not found on disk");
     }
 
-    const buffer = fs.readFileSync(filePath);
+    buffer = fs.readFileSync(filePath);
     const { extraction, extractedPayload, status, visionError } = await this.extractPdfPayload(buffer, true, report.fileName);
 
     let finalRequestId = report.requestId;
@@ -1314,27 +1366,47 @@ export class CourierService {
         (notes ? `<b>📝 ملاحظة المشرف:</b> ${notes}\n\n` : "\n") +
         `🔄 يرجى إعادة تصوير التقرير ورفعه مجدداً عبر البوت.`;
       
-      this.notifyTelegramUser(report.uploadedBy, msg).catch(() => {});
+      // محاولة استخراج telegram_message_id من extractedJson للرد على نفس الرسالة
+      let telegramReplyToMessageId: number | null = null;
+      try {
+        if (report.extractedJson) {
+          const parsedJson = typeof report.extractedJson === "string"
+            ? JSON.parse(report.extractedJson)
+            : report.extractedJson;
+          if (parsedJson?.telegram_message_id) {
+            telegramReplyToMessageId = Number(parsedJson.telegram_message_id);
+          }
+        }
+      } catch {}
+
+      this.notifyTelegramUser(report.uploadedBy, msg, telegramReplyToMessageId ?? undefined).catch(() => {});
     }
 
     return { id: pdfId, status: "rejected", reasonCategory, notes };
   }
 
-  private async notifyTelegramUser(userId: string, htmlMessage: string): Promise<void> {
+  private async notifyTelegramUser(userId: string, htmlMessage: string, replyToMessageId?: number): Promise<void> {
     try {
       const botToken = process.env.TELEGRAM_BOT_TOKEN || "8829774810:AAG-bnlRiTZAoHfvijp7erQmRKDBPxBfOFw";
       const techUser = await this.inventoryPort.findUserById(userId);
       const chatId = (techUser as any)?.telegram_user_id || techUser?.username;
       if (!chatId || !botToken) return;
 
+      const payload: Record<string, any> = {
+        chat_id: chatId,
+        text: htmlMessage,
+        parse_mode: "HTML",
+      };
+
+      // إذا توفّر رقم رسالة التليجرام الأصلية، يتم الرد عليها مباشرةً
+      if (replyToMessageId && !isNaN(replyToMessageId) && replyToMessageId > 0) {
+        payload.reply_parameters = { message_id: replyToMessageId };
+      }
+
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: htmlMessage,
-          parse_mode: "HTML",
-        }),
+        body: JSON.stringify(payload),
       });
     } catch (err) {
       console.error("[TelegramNotify] Error sending notification:", err);

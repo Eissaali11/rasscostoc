@@ -204,7 +204,16 @@ export class CourierPdfReportMapper {
       uploadedByRegionName: row.uploadedByRegionName ?? null,
       requestRetailerName: row.requestRetailerName ?? null,
       requestMobile: row.requestMobile ?? null,
+      requestMobile2: row.requestMobile2 ?? null,
       requestTid: row.requestTid ?? null,
+      requestTerminalId: row.requestTerminalId ?? null,
+      requestCustomerName: row.requestCustomerName ?? null,
+      requestCity: row.requestCity ?? null,
+      requestAddressAr: row.requestAddressAr ?? null,
+      requestInstallationType: row.requestInstallationType ?? null,
+      requestVendorType: row.requestVendorType ?? null,
+      requestTecName: row.requestTecName ?? null,
+      requestDate: row.requestDate ?? null,
     };
   }
 

@@ -9,6 +9,7 @@ import {
   courierAuditLogs,
   courierPdfReports,
   users,
+  employeeProfiles,
   courierRequestItems,
   courierExecutionAttempts,
   itemTypes,
@@ -85,7 +86,8 @@ export class DrizzleCourierRepository implements
       .select({
         request: courierRequests,
         execution: courierExecutions,
-        createdByName: users.fullName
+        createdByName: users.fullName,
+        createdByAvatar: users.profileImage,
       })
       .from(courierRequests)
       .leftJoin(courierExecutions, eq(courierExecutions.requestId, courierRequests.id))
@@ -98,6 +100,7 @@ export class DrizzleCourierRepository implements
     return {
       ...CourierRequestMapper.toDomain(row.request),
       created_by_name: row.createdByName,
+      created_by_avatar: row.createdByAvatar,
       execution: row.execution ? CourierExecutionMapper.toDomain(row.execution) : null,
       items,
     };
@@ -469,9 +472,59 @@ export class DrizzleCourierRepository implements
 
   async insertAuditLog(logData: any, tx?: any): Promise<void> {
     const client = this.getClient(tx);
+    let actorNameSnapshot = logData.actorNameSnapshot;
+    let actorRoleSnapshot = logData.actorRoleSnapshot;
+    let actorAvatarUrl = logData.actorAvatarUrl;
+
+    if (logData.changedBy && (!actorNameSnapshot || !actorRoleSnapshot || !actorAvatarUrl)) {
+      try {
+        const userRow = await client
+          .select({
+            fullName: users.fullName,
+            role: users.role,
+            profileImage: users.profileImage,
+          })
+          .from(users)
+          .where(eq(users.id, logData.changedBy))
+          .limit(1);
+
+        if (userRow.length > 0) {
+          if (!actorNameSnapshot) actorNameSnapshot = userRow[0].fullName;
+          if (!actorAvatarUrl) actorAvatarUrl = userRow[0].profileImage;
+          if (!actorRoleSnapshot) {
+            const empProfile = await client
+              .select({ profileData: employeeProfiles.profileData })
+              .from(employeeProfiles)
+              .where(eq(employeeProfiles.userId, logData.changedBy))
+              .limit(1);
+
+            actorRoleSnapshot = empProfile[0]?.profileData?.jobTitle || userRow[0].role || "مشرف العمليات";
+          }
+        }
+      } catch (err) {
+        // Fallback silently if user lookup fails
+      }
+    }
+
     await client.insert(courierAuditLogs).values({
-      ...logData,
-      changedAt: new Date()
+      tableName: logData.tableName || "requests",
+      recordId: Number(logData.recordId || 0),
+      fieldName: logData.fieldName || null,
+      oldValue: logData.oldValue !== undefined && logData.oldValue !== null ? String(logData.oldValue) : null,
+      newValue: logData.newValue !== undefined && logData.newValue !== null ? String(logData.newValue) : null,
+      action: logData.action || "update",
+      actorNameSnapshot: actorNameSnapshot || null,
+      actorRoleSnapshot: actorRoleSnapshot || null,
+      actorAvatarUrl: actorAvatarUrl || null,
+      actionType: logData.actionType || (logData.action ? String(logData.action).toUpperCase() : "UPDATE"),
+      actionDescription: logData.actionDescription || null,
+      source: logData.source || "DASHBOARD",
+      status: logData.status || "SUCCESS",
+      metadata: logData.metadata || null,
+      ipAddress: logData.ipAddress || null,
+      deviceId: logData.deviceId || null,
+      changedBy: logData.changedBy || null,
+      changedAt: new Date(),
     });
   }
 
@@ -486,12 +539,75 @@ export class DrizzleCourierRepository implements
         oldValue: courierAuditLogs.oldValue,
         newValue: courierAuditLogs.newValue,
         changedBy: users.fullName,
-        changedAt: courierAuditLogs.changedAt
+        changedAt: courierAuditLogs.changedAt,
+        actorNameSnapshot: courierAuditLogs.actorNameSnapshot,
+        actorRoleSnapshot: courierAuditLogs.actorRoleSnapshot,
+        actorAvatarUrl: courierAuditLogs.actorAvatarUrl,
+        actionType: courierAuditLogs.actionType,
+        source: courierAuditLogs.source,
+        status: courierAuditLogs.status,
       })
       .from(courierAuditLogs)
       .leftJoin(users, eq(users.id, courierAuditLogs.changedBy))
-      .orderBy(desc(courierAuditLogs.changedAt))
+      .orderBy(desc(courierAuditLogs.changedAt), desc(courierAuditLogs.id))
       .limit(limit);
+  }
+
+  async getAuditLogsForRecord(
+    recordId: number,
+    options: { page?: number; limit?: number } = {},
+    tx?: any
+  ): Promise<{ rows: any[]; total: number }> {
+    const client = this.getClient(tx);
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(100, Math.max(1, options.limit || 10));
+    const offset = (page - 1) * limit;
+
+    const whereCond = eq(courierAuditLogs.recordId, recordId);
+
+    const [countResult] = await client
+      .select({ count: sql<number>`count(*)::int` })
+      .from(courierAuditLogs)
+      .where(whereCond);
+
+    const total = countResult?.count || 0;
+
+    const rows = await client
+      .select({
+        id: courierAuditLogs.id,
+        tableName: courierAuditLogs.tableName,
+        recordId: courierAuditLogs.recordId,
+        action: courierAuditLogs.action,
+        actionType: courierAuditLogs.actionType,
+        actionDescription: courierAuditLogs.actionDescription,
+        fieldName: courierAuditLogs.fieldName,
+        oldValue: courierAuditLogs.oldValue,
+        newValue: courierAuditLogs.newValue,
+        source: courierAuditLogs.source,
+        status: courierAuditLogs.status,
+        metadata: courierAuditLogs.metadata,
+        actorNameSnapshot: courierAuditLogs.actorNameSnapshot,
+        actorRoleSnapshot: courierAuditLogs.actorRoleSnapshot,
+        actorAvatarUrl: courierAuditLogs.actorAvatarUrl,
+        ipAddress: courierAuditLogs.ipAddress,
+        deviceId: courierAuditLogs.deviceId,
+        changedBy: courierAuditLogs.changedBy,
+        changedAt: courierAuditLogs.changedAt,
+        userFullName: users.fullName,
+        userRole: users.role,
+        userProfileImage: users.profileImage,
+        employeeCode: users.employeeCode,
+        empProfileData: employeeProfiles.profileData,
+      })
+      .from(courierAuditLogs)
+      .leftJoin(users, eq(users.id, courierAuditLogs.changedBy))
+      .leftJoin(employeeProfiles, eq(employeeProfiles.userId, courierAuditLogs.changedBy))
+      .where(whereCond)
+      .orderBy(desc(courierAuditLogs.changedAt), desc(courierAuditLogs.id))
+      .limit(limit)
+      .offset(offset);
+
+    return { rows, total };
   }
 
   async getLookups(tx?: any): Promise<any> {
@@ -709,9 +825,19 @@ export class DrizzleCourierRepository implements
       uploadedByTechnicianCode: users.technicianCode,
       uploadedByRegionId: users.regionId,
       uploadedByRegionName: regions.name,
+      // بيانات الطلب المرتبط - للصفحة الإدارية (بيانات العميل الكاملة)
       requestRetailerName: courierRequests.retailerName,
       requestMobile: courierRequests.mobile,
+      requestMobile2: courierRequests.mobile2,
       requestTid: courierRequests.tid,
+      requestTerminalId: courierRequests.terminalId,
+      requestCustomerName: courierRequests.customerName,
+      requestCity: courierRequests.city,
+      requestAddressAr: courierRequests.addressAr,
+      requestInstallationType: courierRequests.installationType,
+      requestVendorType: courierRequests.vendorType,
+      requestTecName: courierRequests.tecName,
+      requestDate: courierRequests.date,
     };
   }
 
@@ -777,6 +903,19 @@ export class DrizzleCourierRepository implements
   }
 
   async insertPdfReport(data: any, tx?: any): Promise<CourierPdfReport> {
+    const filePath = String(data.filePath || data.file_path || "");
+    const forbidden = [
+      "C:\\", "C:/", "/uploads/", "uploads\\", "uploads/", "/tmp/", "/var/tmp/",
+      "file://", "blob:", "base64", "data:application/pdf", "data:image/"
+    ];
+    for (const pattern of forbidden) {
+      if (filePath.toLowerCase().includes(pattern.toLowerCase())) {
+        throw new ValidationError(
+          `Zero Local Storage Violation: Forbidden local file path, blob, or binary payload detected in filePath: ${filePath}`
+        );
+      }
+    }
+
     const client = this.getClient(tx);
     const mapped = CourierPdfReportMapper.toPersistence(data);
     const [row] = await client

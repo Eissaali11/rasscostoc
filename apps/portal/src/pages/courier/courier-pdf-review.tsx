@@ -60,6 +60,44 @@ export type DeviceCard = {
   lookupMessage?: string | null;
 };
 
+export function buildGoogleDrivePreviewUrl(driveUrl: string | null | undefined): string | null {
+  if (!driveUrl) return null;
+  if (!/^https?:\/\/(drive|docs)\.google\.com\//i.test(driveUrl)) return null;
+  const match = driveUrl.match(/\/file\/d\/([^/]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  return null;
+}
+
+export function formatTimeTo12Hour(timeStr: string | null | undefined): string | null {
+  if (!timeStr) return null;
+  const trimmed = timeStr.trim();
+  if (!trimmed) return null;
+
+  const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)$/i);
+  if (ampmMatch) {
+    const hh = parseInt(ampmMatch[1], 10);
+    const mm = ampmMatch[2];
+    const ss = ampmMatch[3] || "00";
+    const period = ampmMatch[4].toUpperCase();
+    return `${String(hh).padStart(2, "0")}:${mm}:${ss} ${period}`;
+  }
+
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!match24) return trimmed;
+
+  let hour = parseInt(match24[1], 10);
+  const minute = match24[2];
+  const second = match24[3] || "00";
+  const period = hour >= 12 ? "PM" : "AM";
+
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+
+  return `${String(hour).padStart(2, "0")}:${minute}:${second} ${period}`;
+}
+
 type ExtractedPayload = {
   devices?: Array<{
     device_index?: number;
@@ -73,6 +111,18 @@ type ExtractedPayload = {
   }>;
   date?: { value?: string | null; confidence?: number };
   time?: { value?: string | null; confidence?: number };
+  transaction_date?: string | null;
+  transaction_time?: string | null;
+  approval_time?: string | null;
+  transaction_datetime?: string | null;
+  date_source?: "receipt" | "form" | "unknown" | null;
+  date_confidence?: number | null;
+  transaction_date_raw?: string | null;
+  transaction_time_raw?: string | null;
+  approval_time_raw?: string | null;
+  transaction_date_confidence?: number | null;
+  transaction_time_confidence?: number | null;
+  approval_time_confidence?: number | null;
   sn?: { value?: string | null; confidence?: number };
   sim_serial?: { value?: string | null; confidence?: number };
   tid?: { value?: string | null; confidence?: number };
@@ -92,6 +142,20 @@ interface PdfReportDetail {
   region?: string | null;
   createdAt?: string | null;
   extractedJson: ExtractedPayload;
+  // بيانات الطلب المرتبط
+  requestRetailerName?: string | null;
+  requestMobile?: string | null;
+  requestMobile2?: string | null;
+  requestTid?: string | null;
+  requestTerminalId?: string | null;
+  requestCustomerName?: string | null;
+  requestCity?: string | null;
+  requestAddressAr?: string | null;
+  requestInstallationType?: string | null;
+  requestVendorType?: string | null;
+  requestTecName?: string | null;
+  requestDate?: string | null;
+  filePath?: string | null;
 }
 
 interface SearchResult {
@@ -270,6 +334,21 @@ export default function CourierPdfReviewPage() {
   const [cards, setCards] = useState<DeviceCard[]>([]);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [time, setTime] = useState("");
+  
+  // Receipt Date & Time State
+  const [transactionDate, setTransactionDate] = useState("");
+  const [transactionTime, setTransactionTime] = useState("");
+  const [approvalTime, setApprovalTime] = useState("");
+  const [transactionDateRaw, setTransactionDateRaw] = useState<string | null>(null);
+  const [transactionTimeRaw, setTransactionTimeRaw] = useState<string | null>(null);
+  const [approvalTimeRaw, setApprovalTimeRaw] = useState<string | null>(null);
+  const [dateSource, setDateSource] = useState<string | null>(null);
+  const [dateConfidence, setDateConfidence] = useState<number | null>(null);
+
+  // Preview Iframe Controls
+  const [previewKey, setPreviewKey] = useState(0);
+  const [iframeError, setIframeError] = useState(false);
+
   const [linkQuery, setLinkQuery] = useState("");
   const [linkResults, setLinkResults] = useState<SearchResult[]>([]);
   const [linkedRequestId, setLinkedRequestId] = useState<number | null>(null);
@@ -312,8 +391,24 @@ export default function CourierPdfReviewPage() {
     if (!report) return;
     setLinkedRequestId(report.requestId);
     setCards(toCards(report.extractedJson));
-    setDeliveryDate(report.extractedJson?.date?.value ?? "");
-    setTime(report.extractedJson?.time?.value ?? "");
+
+    const ext = (report.extractedJson || {}) as any;
+    const txDate = ext.transaction_date || ext.date?.value || "";
+    const txTime = ext.transaction_time || ext.time?.value || "";
+    const appTime = ext.approval_time || "";
+
+    setDeliveryDate(txDate);
+    setTime(txTime);
+    setTransactionDate(txDate);
+    setTransactionTime(txTime);
+    setApprovalTime(appTime);
+
+    setTransactionDateRaw(ext.transaction_date_raw || null);
+    setTransactionTimeRaw(ext.transaction_time_raw || null);
+    setApprovalTimeRaw(ext.approval_time_raw || null);
+    setDateSource(ext.date_source || (txDate ? "receipt" : null));
+    setDateConfidence(typeof ext.date_confidence === "number" ? ext.date_confidence : (ext.date?.confidence ?? null));
+
     if (report.technicianCode) {
       setTargetTechnicianCode(report.technicianCode);
     }
@@ -355,16 +450,11 @@ export default function CourierPdfReviewPage() {
     let objectUrl: string | null = null;
     let cancelled = false;
 
-    // تقارير مرفوعة عبر بوت تيليجرام مسجّلة برابط Google Drive مباشرة (filePath = رابط
-    // كامل، لا نسخة على قرص السيرفر) - نحوّل رابط .../view إلى .../preview (الصيغة التي
-    // تدعم التضمين داخل iframe فعليًا) ونعرضه مباشرة بدون أي fetch عبر الـ API.
     const filePath = (report as any).filePath as string | undefined;
     if (filePath && /^https?:\/\//i.test(filePath)) {
       setPreviewError(null);
-      const driveIdMatch = filePath.match(/\/file\/d\/([^/]+)/);
-      const embedUrl = driveIdMatch
-        ? `https://drive.google.com/file/d/${driveIdMatch[1]}/preview`
-        : filePath;
+      setIframeError(false);
+      const embedUrl = buildGoogleDrivePreviewUrl(filePath) || filePath;
       setPreviewUrl(embedUrl);
       return;
     }
@@ -810,7 +900,109 @@ export default function CourierPdfReviewPage() {
         </div>
       </div>
 
-      {/* Main Grid: Left PDF Preview, Right Editable Device Cards */}
+      {/* Customer / Request Data Panel — shows when a request is linked */}
+      {report.requestId && (
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 bg-gradient-to-l from-[#18B2B0]/5 to-transparent px-5 py-3 border-b border-[#F1F5F9]">
+            <div className="p-2 bg-[#18B2B0]/10 text-[#18B2B0] rounded-xl">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold text-[#2D3135]">بيانات الطلب والعميل</h2>
+              <p className="text-[10px] text-[#6B7280]">طلب رقم #{report.requestId} — مستخرجة من قاعدة بيانات نيوليب</p>
+            </div>
+            <a
+              href={`/courier/${report.requestId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mr-auto text-[11px] font-bold text-[#18B2B0] hover:underline flex items-center gap-1 bg-[#18B2B0]/10 px-2.5 py-1 rounded-lg"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              فتح الطلب
+            </a>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-0 divide-x divide-x-reverse divide-[#F1F5F9]">
+            {/* العميل / المتجر */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">اسم المتجر / العميل</span>
+              <p className="text-xs font-bold text-[#2D3135] truncate" title={report.requestRetailerName || report.requestCustomerName || "-"}>
+                {report.requestRetailerName || report.requestCustomerName || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+              {report.requestRetailerName && report.requestCustomerName && (
+                <p className="text-[10px] text-[#6B7280] truncate">{report.requestCustomerName}</p>
+              )}
+            </div>
+
+            {/* المدينة */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">المدينة</span>
+              <p className="text-xs font-bold text-[#2D3135]">
+                {report.requestCity || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+              {report.requestAddressAr && (
+                <p className="text-[10px] text-[#6B7280] truncate" title={report.requestAddressAr}>{report.requestAddressAr}</p>
+              )}
+            </div>
+
+            {/* TID */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">TID</span>
+              <p className="text-xs font-bold font-mono text-[#18B2B0] truncate">
+                {report.requestTid || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+            </div>
+
+            {/* Terminal */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">Terminal ID</span>
+              <p className="text-xs font-bold font-mono text-[#2D3135] truncate">
+                {report.requestTerminalId || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+            </div>
+
+            {/* الجوال */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">رقم الجوال</span>
+              <p className="text-xs font-bold text-[#2D3135]">
+                {report.requestMobile || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+              {report.requestMobile2 && (
+                <p className="text-[10px] text-[#6B7280]">{report.requestMobile2}</p>
+              )}
+            </div>
+
+            {/* نوع التركيب */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">نوع التركيب</span>
+              <p className="text-xs font-bold text-[#2D3135]">
+                {report.requestInstallationType || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+              {report.requestVendorType && (
+                <p className="text-[10px] text-[#6B7280]">{report.requestVendorType}</p>
+              )}
+            </div>
+
+            {/* تعيين الطلب / الفني */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">تعيين الطلب (فني)</span>
+              <p className="text-xs font-bold text-[#2D3135]">
+                {report.requestTecName || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+            </div>
+
+            {/* تاريخ الطلب */}
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-medium text-[#6B7280] block">تاريخ الطلب</span>
+              <p className="text-xs font-bold text-[#2D3135] font-mono">
+                {report.requestDate || <span className="text-[#9CA3AF]">—</span>}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* PDF / Image Preview Column (5 cols) */}
         <div className="lg:col-span-5 space-y-3">
@@ -820,29 +1012,63 @@ export default function CourierPdfReviewPage() {
                 <FileText className="w-4 h-4 text-[#18B2B0]" />
                 المستند الأصلي المرفوع
               </span>
-              <a
-                href={
-                  /^https?:\/\//i.test((report as any).filePath || "")
-                    ? (report as any).filePath
-                    : `/api/courier/pdf/${report.id}?raw=1`
-                }
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-bold text-[#18B2B0] hover:underline flex items-center gap-1"
-              >
-                <Link2 className="w-3.5 h-3.5" />
-                فتح في نافذة كاملة
-              </a>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setIframeError(false);
+                    setPreviewKey((k) => k + 1);
+                  }}
+                  className="text-[11px] font-bold text-[#6B7280] hover:text-[#18B2B0] flex items-center gap-1 transition-colors bg-[#F1F5F9] px-2 py-1 rounded-lg"
+                  title="إعادة تحميل المعاينة"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  تحديث
+                </button>
+                <a
+                  href={
+                    /^https?:\/\//i.test((report as any).filePath || "")
+                      ? (report as any).filePath
+                      : `/api/courier/pdf/${report.id}?raw=1`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] font-bold text-[#18B2B0] hover:underline flex items-center gap-1 bg-[#18B2B0]/10 px-2.5 py-1 rounded-lg"
+                >
+                  <Link2 className="w-3.5 h-3.5" />
+                  فتح في نافذة كاملة
+                </a>
+              </div>
             </div>
 
             <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl overflow-hidden min-h-[500px] flex items-center justify-center relative">
               {previewUrl ? (
-                /^https?:\/\//i.test((report as any).filePath || "") ||
-                report.fileName.toLowerCase().endsWith(".pdf") ? (
+                iframeError ? (
+                  <div className="p-6 text-center space-y-3 bg-amber-50/50 border border-amber-200/60 rounded-xl m-4">
+                    <ShieldAlert className="w-10 h-10 text-amber-600 mx-auto" />
+                    <h4 className="text-xs font-bold text-amber-900">
+                      تعذر عرض المستند داخل الصفحة بسبب صلاحيات Google Drive
+                    </h4>
+                    <p className="text-[11px] text-amber-700">
+                      يمكنك مشاهدة المستند مباشرة في لسان جديد بالضغط على الزر أدناه
+                    </p>
+                    <a
+                      href={(report as any)?.filePath || previewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#18B2B0] text-white text-xs font-bold rounded-xl shadow hover:bg-[#159A98] transition-all"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      فتح المستند في Google Drive
+                    </a>
+                  </div>
+                ) : /^https?:\/\//i.test((report as any).filePath || "") ||
+                  report.fileName.toLowerCase().endsWith(".pdf") ? (
                   <iframe
+                    key={previewKey}
                     src={previewUrl}
                     className="w-full h-[580px] border-none"
                     title="PDF Preview"
+                    onError={() => setIframeError(true)}
                   />
                 ) : (
                   <img
@@ -865,6 +1091,120 @@ export default function CourierPdfReviewPage() {
 
         {/* Editable Cards Column (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
+          {/* Receipt Date & Time Section */}
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-[rgba(24,178,176,0.18)] shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-[#18B2B0]/10 text-[#18B2B0] rounded-xl">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-[#2D3135]">تاريخ ووقت العملية (مستخرج من الإيصال)</h3>
+                  <p className="text-[11px] text-[#6B7280]">
+                    بيانات توثيق وقت تنفيذ العملية وتاريخ الاعتماد المستخرجة من الإيصال
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {dateSource === "receipt" ? (
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    مستخرج من الإيصال
+                  </span>
+                ) : dateSource === "form" ? (
+                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                    نموذج الخدمة
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                    لم يتم استخراج تاريخ العملية
+                  </span>
+                )}
+                <ConfidenceBadge value={dateConfidence} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Transaction Date */}
+              <div>
+                <label className="text-[11px] font-bold text-[#4B5563] mb-1 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#18B2B0]" />
+                  تاريخ العملية (DD/MM/YYYY)
+                </label>
+                <input
+                  type="text"
+                  value={transactionDate}
+                  onChange={(e) => setTransactionDate(e.target.value)}
+                  disabled={isApplied}
+                  placeholder="YYYY-MM-DD"
+                  className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                />
+                {transactionDateRaw && (
+                  <span className="text-[10px] text-[#6B7280] mt-0.5 block">
+                    النص الخام: <code className="font-mono">{transactionDateRaw}</code>
+                  </span>
+                )}
+              </div>
+
+              {/* Transaction Time */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-[#4B5563] flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-[#18B2B0]" />
+                    وقت العملية
+                  </label>
+                  {transactionTime && (
+                    <span className="text-[10px] font-bold font-mono text-[#18B2B0] bg-[#18B2B0]/10 px-1.5 py-0.5 rounded">
+                      {formatTimeTo12Hour(transactionTime)}
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={transactionTime}
+                  onChange={(e) => setTransactionTime(e.target.value)}
+                  disabled={isApplied}
+                  placeholder="HH:mm:ss أو 05:55:42 PM"
+                  className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                />
+                {transactionTimeRaw && (
+                  <span className="text-[10px] text-[#6B7280] mt-0.5 block">
+                    النص الخام: <code className="font-mono">{transactionTimeRaw}</code>
+                  </span>
+                )}
+              </div>
+
+              {/* Approval Time */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-[#4B5563] flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-[#18B2B0]" />
+                    وقت الاعتماد / الموافقات
+                  </label>
+                  {approvalTime && (
+                    <span className="text-[10px] font-bold font-mono text-[#18B2B0] bg-[#18B2B0]/10 px-1.5 py-0.5 rounded">
+                      {formatTimeTo12Hour(approvalTime)}
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={approvalTime}
+                  onChange={(e) => setApprovalTime(e.target.value)}
+                  disabled={isApplied}
+                  placeholder="HH:mm:ss أو 05:55:43 PM"
+                  className="w-full text-xs font-mono px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#18B2B0] text-[#2D3135] disabled:opacity-60"
+                />
+                {approvalTimeRaw && (
+                  <span className="text-[10px] text-[#6B7280] mt-0.5 block">
+                    النص الخام: <code className="font-mono">{approvalTimeRaw}</code>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-[rgba(24,178,176,0.18)]">
             <div>
               <h2 className="text-sm font-bold text-[#2D3135]">
@@ -1322,7 +1662,7 @@ export default function CourierPdfReviewPage() {
               </div>
 
               <p className="text-xs text-[#6B7280] leading-relaxed">
-                سيؤدي هذا الإجراء إلى تحديث حالة التقرير إلى <strong className="text-[#E05252]">مرتجع</strong> وإرسال إشعار فوري للفني عبر دردشة التليجرام يتضمن سبب المشكلة وملاحظتك المباشرة.
+                سيؤدي هذا الإجراء إلى تحديث حالة التقرير إلى <strong className="text-[#E05252]">مرتجع</strong> وإرسال <strong>رد مباشر على رسالة تقرير التركيب الأصلي</strong> في تليجرام الفني، يتضمن سبب المشكلة وملاحظتك المباشرة.
               </p>
 
               <div className="space-y-3">

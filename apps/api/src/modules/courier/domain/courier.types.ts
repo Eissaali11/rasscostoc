@@ -161,9 +161,19 @@ export interface CourierPdfReport {
   uploadedByTechnicianCode?: string | null;
   uploadedByRegionId?: string | null;
   uploadedByRegionName?: string | null;
+  // بيانات الطلب المرتبط (بيانات العميل الكاملة)
   requestRetailerName?: string | null;
   requestMobile?: string | null;
+  requestMobile2?: string | null;
   requestTid?: string | null;
+  requestTerminalId?: string | null;
+  requestCustomerName?: string | null;
+  requestCity?: string | null;
+  requestAddressAr?: string | null;
+  requestInstallationType?: string | null;
+  requestVendorType?: string | null;
+  requestTecName?: string | null;
+  requestDate?: string | null;
 }
 
 export interface PdfReportFilters {
