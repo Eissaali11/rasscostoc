@@ -21,10 +21,15 @@ export function rateLimiter(req: Request, res: Response, next: NextFunction): vo
     return next();
   }
 
-  // Bypass rate limiting for health check endpoints
   const path = req.path;
+
+  // Bypass rate limiting for non-API routes (static assets, frontend pages)
+  if (!path.startsWith("/api/")) {
+    return next();
+  }
+
+  // Bypass rate limiting for health check endpoints
   if (
-    path === "/health" || path === "/health/live" || path === "/health/ready" ||
     path === "/api/health" || path === "/api/health/live" || path === "/api/health/ready"
   ) {
     return next();
