@@ -1,0 +1,49 @@
+{
+  "buildId": "5de8ba33-20260730T1937Z",
+  "commitSha": "5de8ba33e287e80ee75c8e42c3ec9435513a56c2",
+  "branch": "release/reconcile-production-2026-07-30",
+  "stableTag": "production-stable-2026-07-30",
+  "buildTimestampUtc": "2026-07-30T19:37:00Z",
+  "nodeVersion": "v24.18.0",
+  "npmVersion": "11.16.0",
+  "lockfileSha256": "e0ee3693848edbac318b5b3a18d39dcff7f63c39fc05b85e683da2e9f2c2f7ba",
+  "reproducible": {
+    "verified": true,
+    "method": "two independent clean clones, npm ci, npm run build (plus manual packages/ai-extraction tsc build - see known gap below)",
+    "fileCount": 303,
+    "hashDiffCount": 0,
+    "aggregateManifestSha256": "111cd4a9b5eee80c4e5ecfbfc4d1b6d52b5b94a37f783e615823779b76cc6f8a",
+    "serverJsSha256": "9dd255aabadd3425a6e9b1672f50d9a5fc09e962437f7e4639a97e03c4c130a2",
+    "knownGap": "the root `npm run build` script does not build workspace TypeScript packages (e.g. packages/ai-extraction). A fresh clone must additionally run `npx tsc -p packages/ai-extraction/tsconfig.json` (and check other @stockpro/* packages the server imports) before dist/server.js can actually start. This is a pre-existing project gap, not introduced by this session, and should be fixed by wiring it into the build script or turbo."
+  },
+  "migrationRequirements": {
+    "requiresNewMigrations": false,
+    "note": "this build adds no schema changes. Migration 0026 belongs to the separate, unmerged erp-008/phase-2-financial-integrity branch (commit 968d7cc) and is NOT part of this artifact."
+  },
+  "excludedFromArtifact": [
+    ".env",
+    "credentials",
+    "logs/",
+    "uploads/",
+    "node_modules/ (installed at deploy time from this same lockfile)"
+  ],
+  "stagingVerification": {
+    "performed": true,
+    "environment": "isolated local instance, 127.0.0.1:5099, local test database (stockpro_erp008_phase2_test), dummy secrets, not exposed via nginx/PM2, no real Google Drive or Telegram bot credentials used",
+    "results": {
+      "GET /api/health": 200,
+      "GET /login": 200,
+      "GET /": 200,
+      "GET /assets/index-*.js": 200,
+      "GET /assets/index-*.css": 200,
+      "Content-Security-Policy frame-src present": true,
+      "GET /api/courier/pdf (unauthenticated)": "401 (correct - not 500)",
+      "POST /api/auth/login (bad credentials)": "401 with Arabic error message (correct - not 500)"
+    },
+    "notPerformed": [
+      "Telegram bot end-to-end test (no isolated test bot token available in this environment)",
+      "Google Drive preview end-to-end test against a real test folder (no isolated test Drive folder available)",
+      "StockPro MCP functional test (separate PM2 process, not part of this build)"
+    ]
+  }
+}
