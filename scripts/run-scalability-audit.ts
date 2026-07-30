@@ -49,7 +49,7 @@ PORT=3001
 NODE_ENV=development
 SESSION_SECRET=change-this-secret-key-in-production-12345
 TRUST_PROXY=true
-SYSTEM_INTERNAL_TOKEN=8b8cd37c1543ea9fb896174a72d3f749db2ba85e27a69b7a4216839ea451d69d
+SYSTEM_INTERNAL_TOKEN=${process.env.SYSTEM_INTERNAL_TOKEN || 'dev-debug-internal-token'}
 JWT_SECRET=default-jwt-secret-key-for-development
 `;
   fs.writeFileSync(envPath, perfEnvContent);
