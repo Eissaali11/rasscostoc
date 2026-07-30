@@ -136,10 +136,12 @@ else
 fi
 
 # 9. Lockfile must not have changed without a corresponding reviewed commit
-# (heuristic: lockfile hash must match what's committed at HEAD)
-LOCKFILE_COMMITTED_HASH="$(git show HEAD:package-lock.json 2>/dev/null | sha256sum | cut -d' ' -f1)"
-LOCKFILE_DISK_HASH="$(sha256sum package-lock.json 2>/dev/null | cut -d' ' -f1)"
-if [ "$LOCKFILE_COMMITTED_HASH" != "$LOCKFILE_DISK_HASH" ]; then
+# Uses git's own diff (not a raw byte hash) so this is immune to line-ending
+# normalization (core.autocrlf) differences between dev and deploy
+# environments — a raw sha256sum comparison produced false failures on
+# Windows dev machines with autocrlf=true even though the file was
+# byte-for-byte what git itself considered unchanged.
+if ! git diff --quiet HEAD -- package-lock.json 2>/dev/null; then
   fail "package-lock.json on disk does not match the committed version at HEAD. Re-run npm ci or commit the lockfile change."
 fi
 ok "lockfile matches HEAD"
