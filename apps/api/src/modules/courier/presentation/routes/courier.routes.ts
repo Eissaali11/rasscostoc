@@ -1,21 +1,35 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import path from "path";
-import fs from "fs";
 import { bootstrapCourierModule } from "../../composition/courier.container";
 import { requireAuth, requireAuthOrInternal } from "@core/middlewares/auth.middleware";
 import {
   createExcelUpload,
-  createPdfImageUpload,
   uploadErrorHandler,
   validateExcelUploadMiddleware,
-  validatePdfImageUploadMiddleware,
 } from "@core/uploads/upload-policy";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads", "pdf");
 const EXCEL_TEMP_DIR = path.join(process.cwd(), "uploads", "temp");
 
-const upload = createPdfImageUpload(UPLOAD_DIR);
 const excelUpload = createExcelUpload(EXCEL_TEMP_DIR);
+
+/**
+ * Hotfix: JSON-only guard for the Zero-Storage register-drive endpoint.
+ * Rejects multipart (and any other non-JSON content-type) with 415 before
+ * the route handler — and therefore before any request-body parsing that
+ * could touch file bytes — ever runs.
+ */
+function requireJsonContentType(req: Request, res: Response, next: NextFunction): void {
+  const contentType = String(req.headers["content-type"] || "").toLowerCase();
+  if (!contentType.includes("application/json")) {
+    res.status(415).json({
+      success: false,
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      message: "This endpoint accepts Google Drive metadata as JSON only (Content-Type: application/json). Multipart and binary payloads are prohibited.",
+    });
+    return;
+  }
+  next();
+}
 
 export function registerCourierRoutes(app: Express): void {
   const controller = bootstrapCourierModule();
@@ -68,25 +82,27 @@ export function registerCourierRoutes(app: Express): void {
   app.get("/api/courier/pdf", requireAuth, controller.getPdfReports);
   app.get("/api/courier/pdf/:id", requireAuth, controller.getPdfReport);
 
-  // upload و complete فقط يقبلان مفتاح الخدمة الداخلي (بوت تيليجرام) - باقي مسارات
-  // courier/pdf (المراجعة، apply، reextract) تبقى للواجهة البشرية حصرًا عبر requireAuth
+  // register-drive و complete فقط يقبلان مفتاح الخدمة الداخلي (بوت تيليجرام) -
+  // باقي مسارات courier/pdf (المراجعة، apply، reextract) تبقى للواجهة البشرية
+  // حصرًا عبر requireAuth.
+  //
+  // Zero Local Storage hotfix: the old multipart /upload endpoint is
+  // decommissioned — it returns 410 Gone immediately, before Multer or any
+  // other body-parsing middleware runs, so no file bytes can reach this
+  // server via this route under any circumstance.
+  app.post("/api/courier/pdf/upload", (_req: Request, res: Response) => {
+    res.status(410).json({
+      success: false,
+      code: "ENDPOINT_GONE",
+      message: "Direct file uploads to RASSCO server are permanently decommissioned. Upload the file to Google Drive directly and register its metadata via POST /api/courier/pdf/register-drive.",
+    });
+  });
+
   app.post(
-    "/api/courier/pdf/upload",
+    "/api/courier/pdf/register-drive",
+    requireJsonContentType,
     requireAuthOrInternal,
-    upload.single("file"),
-    validatePdfImageUploadMiddleware(),
-    uploadErrorHandler,
-    async (req: any, res: any, next: any) => {
-      if (req.file) {
-        try {
-          req.file.buffer = fs.readFileSync(req.file.path);
-        } catch (err) {
-          return next(err);
-        }
-      }
-      next();
-    },
-    controller.uploadPdf,
+    controller.registerDrivePdf,
   );
 
   app.post("/api/courier/pdf/:id/apply", requireAuth, controller.applyPdf);

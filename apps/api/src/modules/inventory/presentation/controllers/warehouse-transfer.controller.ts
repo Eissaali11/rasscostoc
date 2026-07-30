@@ -174,7 +174,7 @@ export class WarehouseTransferController {
       const user = req.user;
       await db.insert(systemLogs).values({
         userId: user?.id || null,
-        userName: user?.fullName || user?.username || "زائر الميدان / نظام التحقق",
+        userName: user?.username || "زائر الميدان / نظام التحقق",
         userRole: user?.role || "user",
         action: "search",
         entityType: "search_query",

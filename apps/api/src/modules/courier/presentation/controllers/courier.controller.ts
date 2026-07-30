@@ -5,9 +5,65 @@ import { ValidationError, NotFoundError } from "@core/errors/AppError";
 import { ensureDevicesInExtractedJson } from "../../application/ai-engine/courier-pdf-extraction.adapter";
 import fs from "fs";
 import path from "path";
+import { z } from "zod";
+
+/**
+ * Hotfix scope: JSON-only registration of a Google Drive-hosted PDF. Zero
+ * Local Storage — RASSCO never receives file bytes on this endpoint. Rejects
+ * base64/blob/file:// payloads and local paths explicitly rather than just
+ * relying on "not a Drive URL" to fail some other way.
+ */
+const RegisterDrivePdfSchema = z.object({
+  drive_url: z
+    .string()
+    .url()
+    .refine((url) => /^https:\/\//i.test(url), {
+      message: "drive_url must be an https:// URL",
+    })
+    .refine((url) => /^https:\/\/(drive|docs)\.google\.com\//i.test(url), {
+      message: "drive_url must be a Google Drive URL",
+    }),
+  file_name: z
+    .string()
+    .min(1)
+    .max(255)
+    .refine((name) => !name.includes("..") && !name.includes("/") && !name.includes("\\"), {
+      message: "file_name must not contain path traversal characters",
+    }),
+  // Explicitly reject any binary/base64/local-content payload on this JSON-only endpoint.
+  file_bytes: z.undefined({ invalid_type_error: "Binary file bytes payload is prohibited on this endpoint" }).optional(),
+  base64: z.undefined({ invalid_type_error: "Base64 payload is prohibited on this endpoint" }).optional(),
+  content: z.undefined({ invalid_type_error: "Raw file content payload is prohibited on this endpoint" }).optional(),
+  buffer: z.undefined({ invalid_type_error: "Buffer payload is prohibited on this endpoint" }).optional(),
+});
 
 export class CourierController {
   constructor(private readonly service: CourierService) {}
+
+  /**
+   * Minimal Zero-Storage registration endpoint. JSON only (enforced at the
+   * route level before this handler runs). No Multer, no req.file, no
+   * Buffer — the file never touches this server, only its Drive URL does.
+   */
+  registerDrivePdf = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const parsed = RegisterDrivePdfSchema.parse(req.body);
+
+    let driveFileName = parsed.file_name;
+    try {
+      if (/[\x80-\xFF]/.test(driveFileName)) {
+        driveFileName = Buffer.from(driveFileName, "latin1").toString("utf8");
+      }
+    } catch {}
+
+    const result = await this.service.registerPdfReportFromDriveUrl(
+      driveFileName,
+      parsed.drive_url,
+      user.id,
+    );
+
+    res.status(201).json(result);
+  });
 
   getRequests = asyncHandler(async (req: Request, res: Response) => {
     const filters = {
@@ -184,7 +240,7 @@ export class CourierController {
     if (!file && driveUrl) {
       let driveFileName = req.body.file_name || req.body.fileName || "report.pdf";
       try {
-        if (/[\u0080-\u00FF]/.test(driveFileName)) {
+      if (/[-ÿ]/.test(driveFileName)) {
           driveFileName = Buffer.from(driveFileName, "latin1").toString("utf8");
         }
       } catch {}
