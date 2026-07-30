@@ -156,8 +156,11 @@ if [ -n "${DATABASE_URL:-}" ]; then
 fi
 ok "migration state"
 
-# 11. .env / dist / logs must never be part of what gets shipped as source
-FORBIDDEN_TRACKED="$(git ls-files | grep -E '^\.env$|^\.env\.|(^|/)dist/|(^|/)logs/|(^|/)uploads/' || true)"
+# 11. .env / dist / logs / runtime uploads must never be part of what gets
+# shipped as source. Excludes *.example templates (meant to be committed)
+# and anything under /src/ (source code that happens to live in a directory
+# named "uploads", e.g. an upload-policy module — not a runtime storage dir).
+FORBIDDEN_TRACKED="$(git ls-files | grep -E '^\.env$|^\.env\.[^/]*$|(^|/)dist/|(^|/)logs/|(^|/)uploads/' | grep -vE '\.example$' | grep -vE '(^|/)src/' || true)"
 if [ -n "$FORBIDDEN_TRACKED" ]; then
   fail "forbidden paths are tracked in git: $(echo "$FORBIDDEN_TRACKED" | tr '\n' ' ')"
 fi
