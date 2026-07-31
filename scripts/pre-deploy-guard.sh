@@ -157,14 +157,25 @@ fi
 ok "migration state"
 
 # 11. .env / dist / logs / runtime uploads must never be part of what gets
-# shipped as source. Excludes *.example templates (meant to be committed)
-# and anything under /src/ (source code that happens to live in a directory
-# named "uploads", e.g. an upload-policy module — not a runtime storage dir).
-FORBIDDEN_TRACKED="$(git ls-files | grep -E '^\.env$|^\.env\.[^/]*$|(^|/)dist/|(^|/)logs/|(^|/)uploads/' | grep -vE '\.example$' | grep -vE '(^|/)src/' || true)"
+# shipped as source. See scripts/lib/forbidden-tracked-paths.sh for the
+# exact rule (shared with its regression test so the two can't drift).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/forbidden-tracked-paths.sh"
+FORBIDDEN_TRACKED="$(forbidden_tracked_paths)"
 if [ -n "$FORBIDDEN_TRACKED" ]; then
   fail "forbidden paths are tracked in git: $(echo "$FORBIDDEN_TRACKED" | tr '\n' ' ')"
 fi
 ok "no forbidden paths tracked"
+
+# 11b. Repository-wide PDF ban: no .pdf may be tracked anywhere in the repo,
+# not just the known runtime uploads directories. See
+# scripts/lib/forbidden-tracked-pdfs.sh for the (ideally empty, always
+# written-justification-required) exception list.
+. "$(dirname "${BASH_SOURCE[0]}")/lib/forbidden-tracked-pdfs.sh"
+FORBIDDEN_PDFS="$(forbidden_tracked_pdfs)"
+if [ -n "$FORBIDDEN_PDFS" ]; then
+  fail "PDF file(s) tracked in git outside the documented exception list: $(echo "$FORBIDDEN_PDFS" | tr '\n' ' ')"
+fi
+ok "no undocumented PDF files tracked anywhere in the repository"
 
 # 12. Source and build must reference the same commit SHA
 if [ -f dist/RELEASE_SHA ]; then
