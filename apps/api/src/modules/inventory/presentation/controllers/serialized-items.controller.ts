@@ -1,7 +1,10 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "@core/errors/errorHandler";
+import { AppError, AuthorizationError, NotFoundError } from "@core/errors/AppError";
 import { z } from "zod";
 import type { SerializedItemsService } from "../../infrastructure/services/serialized-items.service";
+import { ROLES } from "@shared/roles";
+import { isTechnicianCustodyDeleteEnabled } from "../../config/technician-custody-delete.flag";
 
 const scanInSchema = z.object({
   serialNumber: z.string().trim().min(1, "الرقم التسلسلي مطلوب"),
@@ -28,6 +31,13 @@ const scanOutSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
+
+// TEMPORARY FEATURE — remove or disable after final customer handover.
+const deleteCustodySerialSchema = z.object({
+  confirmation: z.string().trim().min(1, "تأكيد الرقم التسلسلي مطلوب"),
+  reason: z.string().trim().optional(),
+});
+const CUSTODY_DELETE_ITEM_TYPES = ["DEVICE", "SIM"] as const;
 
 export class SerializedItemsController {
   constructor(
@@ -98,6 +108,56 @@ export class SerializedItemsController {
       success: true,
       message: "تم تسليم المادة بنجاح وتحديث حالتها",
       data: item,
+    });
+  });
+
+  /**
+   * TEMPORARY FEATURE — remove or disable after final customer handover.
+   * DELETE /api/serialized-items/my-custody/:itemType/:serialNumber
+   * itemType is exactly "DEVICE" or "SIM" — an explicit, unambiguous URL segment so a
+   * device serial and a SIM serial can never be confused with one another.
+   * Permanently deletes that single item from the authenticated technician's own
+   * active custody. Ownership is verified server-side only — never from the request body.
+   */
+  deleteFromMyCustody = asyncHandler(async (req: Request, res: Response) => {
+    if (!isTechnicianCustodyDeleteEnabled()) {
+      throw new NotFoundError("المسار غير متاح");
+    }
+
+    const user = req.user!;
+    if (user.role !== ROLES.TECHNICIAN) {
+      throw new AuthorizationError("هذه العملية متاحة للمندوب فقط");
+    }
+
+    const { itemType, serialNumber } = req.params;
+    if (!CUSTODY_DELETE_ITEM_TYPES.includes(itemType as any)) {
+      throw new AppError("نوع العنصر يجب أن يكون DEVICE أو SIM فقط", 400, true, "INVALID_ITEM_TYPE");
+    }
+    if (!serialNumber) {
+      throw new NotFoundError("الرقم التسلسلي مطلوب");
+    }
+
+    const body = deleteCustodySerialSchema.parse(req.body);
+
+    const result = await this.serializedItemsService.deleteFromTechnicianCustody(
+      user.id,
+      user.username,
+      user.role,
+      itemType,
+      serialNumber,
+      body.confirmation,
+      body.reason
+    );
+
+    res.status(200).json({
+      success: true,
+      itemType: result.itemType,
+      serialNumber: result.serialNumber,
+      deleted: result.deleted,
+      removedFromCustody: true,
+      productPreserved: true,
+      inventoryRecalculated: true,
+      alreadyDeleted: result.alreadyDeleted,
     });
   });
 

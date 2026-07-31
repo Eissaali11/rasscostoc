@@ -154,6 +154,18 @@ export function registerSerializedItemsRoutes(app: Express): void {
       }
     }
   );
+
+  // TEMPORARY FEATURE — remove or disable after final customer handover.
+  // Permanently delete a DEVICE or SIM from the authenticated technician's own active
+  // custody. itemType is an explicit URL segment ("DEVICE"|"SIM") so the two can never
+  // be confused. Gated by ENABLE_TECHNICIAN_CUSTODY_DELETE (see technician-custody-delete.flag.ts).
+  // NOTE: distinct from the unguarded admin-style PATCH/DELETE ":id" routes above —
+  // this one enforces custody ownership, a typed itemType, confirmation, and a feature flag.
+  app.delete(
+    "/api/serialized-items/my-custody/:itemType/:serialNumber",
+    requireAuth,
+    controller.deleteFromMyCustody
+  );
 }
 
 

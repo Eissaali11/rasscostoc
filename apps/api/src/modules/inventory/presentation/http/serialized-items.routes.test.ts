@@ -20,20 +20,29 @@ vi.mock("@modules/inventory/infrastructure/services/serialized-items.service", (
   const scanInMock = vi.fn();
   const scanOutMock = vi.fn();
   const lookupMock = vi.fn();
+  const deleteFromTechnicianCustodyMock = vi.fn();
 
   return {
     SerializedItemsService: class {
       scanIn = scanInMock;
       scanOut = scanOutMock;
       lookup = lookupMock;
+      deleteFromTechnicianCustody = deleteFromTechnicianCustodyMock;
     },
     serializedItemsService: {
       scanIn: scanInMock,
       scanOut: scanOutMock,
       lookup: lookupMock,
+      deleteFromTechnicianCustody: deleteFromTechnicianCustodyMock,
     }
   };
 });
+
+// TEMPORARY FEATURE — remove or disable after final customer handover.
+const isTechnicianCustodyDeleteEnabledMock = vi.fn(() => true);
+vi.mock("../../config/technician-custody-delete.flag", () => ({
+  isTechnicianCustodyDeleteEnabled: () => isTechnicianCustodyDeleteEnabledMock(),
+}));
 
 describe("Serialized Items HTTP Integration Tests", () => {
   let app: express.Express;
@@ -179,6 +188,163 @@ describe("Serialized Items HTTP Integration Tests", () => {
 
       expect(res.body.success).toBe(false);
       expect(res.body.message).toContain("المادة غير مسجلة");
+    });
+  });
+
+  // TEMPORARY FEATURE — remove or disable after final customer handover.
+  describe("DELETE /api/serialized-items/my-custody/:itemType/:serialNumber", () => {
+    beforeEach(() => {
+      isTechnicianCustodyDeleteEnabledMock.mockReturnValue(true);
+    });
+
+    it("deletes a DEVICE from the authenticated technician's own custody and returns 200", async () => {
+      vi.mocked(mockSerializedItemsService.deleteFromTechnicianCustody).mockResolvedValue({
+        itemType: "DEVICE",
+        serialNumber: "SN-DEVICE-777",
+        deleted: true,
+        alreadyDeleted: false,
+      } as any);
+
+      const res = await request(app)
+        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .send({ confirmation: "SN-DEVICE-777" })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        success: true,
+        itemType: "DEVICE",
+        serialNumber: "SN-DEVICE-777",
+        deleted: true,
+        removedFromCustody: true,
+        productPreserved: true,
+        inventoryRecalculated: true,
+      });
+
+      // Identity comes only from the mocked req.user set by requireAuth above —
+      // never from the request body.
+      expect(mockSerializedItemsService.deleteFromTechnicianCustody).toHaveBeenCalledWith(
+        "test-tech-id-123",
+        "testtech",
+        "technician",
+        "DEVICE",
+        "SN-DEVICE-777",
+        "SN-DEVICE-777",
+        undefined
+      );
+    });
+
+    it("deletes a SIM from the authenticated technician's own custody and returns 200", async () => {
+      vi.mocked(mockSerializedItemsService.deleteFromTechnicianCustody).mockResolvedValue({
+        itemType: "SIM",
+        serialNumber: "89966020000000123456",
+        deleted: true,
+        alreadyDeleted: false,
+      } as any);
+
+      const res = await request(app)
+        .delete("/api/serialized-items/my-custody/SIM/89966020000000123456")
+        .send({
+          confirmation: "89966020000000123456",
+          reason: "temporary_cleanup_before_customer_handover",
+        })
+        .expect(200);
+
+      expect(res.body).toMatchObject({ success: true, itemType: "SIM", deleted: true });
+      expect(mockSerializedItemsService.deleteFromTechnicianCustody).toHaveBeenCalledWith(
+        "test-tech-id-123",
+        "testtech",
+        "technician",
+        "SIM",
+        "89966020000000123456",
+        "89966020000000123456",
+        "temporary_cleanup_before_customer_handover"
+      );
+    });
+
+    it("ignores a technicianId/ownerId supplied in the request body", async () => {
+      vi.mocked(mockSerializedItemsService.deleteFromTechnicianCustody).mockResolvedValue({
+        itemType: "DEVICE",
+        serialNumber: "SN-DEVICE-777",
+        deleted: true,
+        alreadyDeleted: false,
+      } as any);
+
+      await request(app)
+        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .send({
+          confirmation: "SN-DEVICE-777",
+          technicianId: "attacker-controlled-id",
+          ownerId: "attacker-controlled-id",
+          userId: "attacker-controlled-id",
+        })
+        .expect(200);
+
+      expect(mockSerializedItemsService.deleteFromTechnicianCustody).toHaveBeenCalledWith(
+        "test-tech-id-123", // from req.user, not from the body
+        "testtech",
+        "technician",
+        "DEVICE",
+        "SN-DEVICE-777",
+        "SN-DEVICE-777",
+        undefined
+      );
+    });
+
+    it("returns 400 for an itemType other than DEVICE/SIM and never calls the service", async () => {
+      await request(app)
+        .delete("/api/serialized-items/my-custody/TABLET/SN-DEVICE-777")
+        .send({ confirmation: "SN-DEVICE-777" })
+        .expect(400);
+
+      expect(mockSerializedItemsService.deleteFromTechnicianCustody).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when confirmation is missing", async () => {
+      await request(app)
+        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .send({})
+        .expect(400);
+
+      expect(mockSerializedItemsService.deleteFromTechnicianCustody).not.toHaveBeenCalled();
+    });
+
+    it("propagates 403 ITEM_NOT_IN_YOUR_CUSTODY from the service", async () => {
+      const { AppError } = await import("@core/errors/AppError");
+      vi.mocked(mockSerializedItemsService.deleteFromTechnicianCustody).mockRejectedValue(
+        new AppError("لا يمكنك حذف عنصر غير موجود في عهدتك", 403, true, "ITEM_NOT_IN_YOUR_CUSTODY")
+      );
+
+      const res = await request(app)
+        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .send({ confirmation: "SN-DEVICE-777" })
+        .expect(403);
+
+      expect(res.body).toMatchObject({ success: false, code: "ITEM_NOT_IN_YOUR_CUSTODY" });
+    });
+
+    it("propagates 409 ITEM_HAS_ACTIVE_RELATIONS from the service", async () => {
+      const { AppError } = await import("@core/errors/AppError");
+      vi.mocked(mockSerializedItemsService.deleteFromTechnicianCustody).mockRejectedValue(
+        new AppError("لا يمكن حذف العنصر لارتباطه بعملية نشطة", 409, true, "ITEM_HAS_ACTIVE_RELATIONS")
+      );
+
+      const res = await request(app)
+        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .send({ confirmation: "SN-DEVICE-777" })
+        .expect(409);
+
+      expect(res.body).toMatchObject({ success: false, code: "ITEM_HAS_ACTIVE_RELATIONS" });
+    });
+
+    it("returns 404 and never calls the service when the feature flag is disabled", async () => {
+      isTechnicianCustodyDeleteEnabledMock.mockReturnValue(false);
+
+      await request(app)
+        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .send({ confirmation: "SN-DEVICE-777" })
+        .expect(404);
+
+      expect(mockSerializedItemsService.deleteFromTechnicianCustody).not.toHaveBeenCalled();
     });
   });
 });
