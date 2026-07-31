@@ -62,3 +62,10 @@ coverage/
 # transfer-record data, unreferenced by any functional code. Preserved in
 # git history at commit 0776825 and after. Exact path only, no wildcard.
 /attached_assets/transfer_2026-01-28_cab0b9c0_1769590127519.pdf
+
+# SDUI Keys and Operational Configs (Security Rules)
+/config/*.key
+/config/*.pem
+/config/mobile-sdui-filters.json
+!/config/mobile-sdui-filters.json.example
+

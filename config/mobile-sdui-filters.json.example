@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "configVersion": 1,
+  "issuedAt": "2026-07-31T00:00:00Z",
+  "expiresAt": "2030-01-01T00:00:00Z",
+  "keyId": "ed25519-prod-key-2",
+  "minAppVersion": "1.0.0",
+  "screenId": "custody_screen",
+  "defaultFilterId": "all",
+  "filters": [
+    {
+      "id": "all",
+      "label": "الكل",
+      "enabled": true,
+      "order": 1,
+      "icon": "inventory_2_outlined",
+      "colorHex": "#18B2B0",
+      "statuses": []
+    },
+    {
+      "id": "under_action",
+      "label": "تحت الإجراء",
+      "enabled": true,
+      "order": 2,
+      "icon": "pending_actions_rounded",
+      "colorHex": "#FFB300",
+      "statuses": [
+        "UNDER_ACTION"
+      ]
+    }
+  ]
+}
