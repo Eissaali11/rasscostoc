@@ -4,9 +4,20 @@
 #
 # Run this from the deploy target's project directory before ANY deploy
 # (manual or automated). Exits non-zero and refuses to proceed on the first
-# failed check. No check here can be skipped without EMERGENCY_OVERRIDE=1
-# plus EMERGENCY_REASON set, both of which are written to the deploy audit
-# log verbatim — this is a documented, traceable escape hatch, not a bypass.
+# failed check.
+#
+# EMERGENCY_OVERRIDE=1 can skip a small, fixed set of *process* checks:
+# deployment freeze (1), official branch (2), worktree clean (3), and
+# undocumented-rollback (6). It requires EMERGENCY_REASON, EMERGENCY_APPROVER,
+# and EMERGENCY_INCIDENT_ID all set, plus an explicit typed confirmation
+# (interactive prompt if a TTY is attached, EMERGENCY_CONFIRM=CONFIRM
+# otherwise) -- missing any one of these refuses the deploy outright. It can
+# NEVER skip typecheck/build/tests (7), the Zero-Storage contract (7b),
+# secret scan (8), lockfile match (9), migration state (10), forbidden
+# tracked paths (11/11b), the release SHA check (12), disk space (13), or
+# the pre-deploy health check (14) -- none of those checks reference
+# EMERGENCY_OVERRIDE at all, by design. Every use is written to both
+# deploy-audit.log and a permanent, append-only emergency-override log.
 #
 # Exit codes:
 #   0  - all checks passed, deploy may proceed
@@ -19,6 +30,8 @@ OFFICIAL_BRANCH="${OFFICIAL_BRANCH:-main}"
 MIN_FREE_DISK_MB="${MIN_FREE_DISK_MB:-1024}"
 CURRENT_RELEASE_COMMIT_FILE="${CURRENT_RELEASE_COMMIT_FILE:-/home/nuzum/htdocs/nuzum.fun/RELEASE_COMMIT}"
 FREEZE_FILE="${FREEZE_FILE:-.deployment-freeze}"
+EMERGENCY_OVERRIDE_LOG="${EMERGENCY_OVERRIDE_LOG:-/var/log/deploy-emergency-override.log}"
+EMERGENCY_CONFIRM_PHRASE="CONFIRM"
 
 fail() {
   echo "PRE_DEPLOY_GUARD: FAIL - $1" >&2
@@ -33,12 +46,36 @@ ok() {
 
 EMERGENCY_OVERRIDE="${EMERGENCY_OVERRIDE:-0}"
 EMERGENCY_REASON="${EMERGENCY_REASON:-}"
+EMERGENCY_APPROVER="${EMERGENCY_APPROVER:-}"
+EMERGENCY_INCIDENT_ID="${EMERGENCY_INCIDENT_ID:-}"
+EMERGENCY_CONFIRM="${EMERGENCY_CONFIRM:-}"
 if [ "$EMERGENCY_OVERRIDE" = "1" ]; then
-  if [ -z "$EMERGENCY_REASON" ]; then
-    fail "EMERGENCY_OVERRIDE=1 set without EMERGENCY_REASON — refusing. Overrides must be documented."
+  MISSING=""
+  [ -z "$EMERGENCY_REASON" ] && MISSING="$MISSING EMERGENCY_REASON"
+  [ -z "$EMERGENCY_APPROVER" ] && MISSING="$MISSING EMERGENCY_APPROVER"
+  [ -z "$EMERGENCY_INCIDENT_ID" ] && MISSING="$MISSING EMERGENCY_INCIDENT_ID"
+  if [ -n "$MISSING" ]; then
+    fail "EMERGENCY_OVERRIDE=1 set but missing required field(s):$MISSING — refusing. EMERGENCY_REASON, EMERGENCY_APPROVER, and EMERGENCY_INCIDENT_ID are all mandatory."
   fi
-  echo "PRE_DEPLOY_GUARD: EMERGENCY OVERRIDE ACTIVE — reason: $EMERGENCY_REASON" >&2
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) EMERGENCY_OVERRIDE reason=\"$EMERGENCY_REASON\" user=$(whoami)" >> deploy-audit.log 2>/dev/null || true
+
+  if [ -t 0 ]; then
+    echo "PRE_DEPLOY_GUARD: EMERGENCY OVERRIDE requested — approver=$EMERGENCY_APPROVER incident=$EMERGENCY_INCIDENT_ID reason=\"$EMERGENCY_REASON\"" >&2
+    printf 'Type exactly "%s" to confirm you understand this bypasses process checks (freeze/branch/worktree/rollback-prevention only): ' "$EMERGENCY_CONFIRM_PHRASE" >&2
+    read -r TYPED_CONFIRM
+    if [ "$TYPED_CONFIRM" != "$EMERGENCY_CONFIRM_PHRASE" ]; then
+      fail "EMERGENCY_OVERRIDE confirmation did not match — refusing."
+    fi
+  else
+    if [ "$EMERGENCY_CONFIRM" != "$EMERGENCY_CONFIRM_PHRASE" ]; then
+      fail "EMERGENCY_OVERRIDE=1 requires EMERGENCY_CONFIRM=$EMERGENCY_CONFIRM_PHRASE when running non-interactively (no TTY) — refusing."
+    fi
+  fi
+
+  echo "PRE_DEPLOY_GUARD: EMERGENCY OVERRIDE ACTIVE — approver=$EMERGENCY_APPROVER incident=$EMERGENCY_INCIDENT_ID reason=\"$EMERGENCY_REASON\"" >&2
+  AUDIT_LINE="$(date -u +%Y-%m-%dT%H:%M:%SZ) EMERGENCY_OVERRIDE approver=\"$EMERGENCY_APPROVER\" incident=\"$EMERGENCY_INCIDENT_ID\" reason=\"$EMERGENCY_REASON\" user=$(whoami)"
+  echo "$AUDIT_LINE" >> deploy-audit.log 2>/dev/null || true
+  mkdir -p "$(dirname "$EMERGENCY_OVERRIDE_LOG")" 2>/dev/null || true
+  echo "$AUDIT_LINE" >> "$EMERGENCY_OVERRIDE_LOG" 2>/dev/null || true
 fi
 
 # 1. Deployment freeze must not be active (unless overridden)
@@ -177,16 +214,18 @@ if [ -n "$FORBIDDEN_PDFS" ]; then
 fi
 ok "no undocumented PDF files tracked anywhere in the repository"
 
-# 12. Source and build must reference the same commit SHA
-if [ -f dist/RELEASE_SHA ]; then
-  BUILD_SHA="$(cat dist/RELEASE_SHA | tr -d '[:space:]')"
-  if [ "$BUILD_SHA" != "$LOCAL_SHA" ]; then
-    fail "dist/RELEASE_SHA ($BUILD_SHA) does not match source HEAD ($LOCAL_SHA) — stale or mixed build."
-  fi
-  ok "build SHA matches source SHA"
-else
-  warn "dist/RELEASE_SHA not found — build step should write it (see build-and-package.sh)"
+# 12. Source and build must reference the same commit SHA. Hard failure in
+# all three broken states -- absence, malformed content, and mismatch are
+# equally disqualifying, none of them get a silent WARN. See
+# scripts/lib/release-sha-check.sh (shared with its regression test) and
+# scripts/write-release-sha.cjs (the only writer, run by `npm run build`).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/release-sha-check.sh"
+RELEASE_SHA_REASON="$(check_release_sha dist "$LOCAL_SHA")"
+RELEASE_SHA_STATUS=$?
+if [ "$RELEASE_SHA_STATUS" -ne 0 ]; then
+  fail "release SHA check failed: $RELEASE_SHA_REASON"
 fi
+ok "release SHA check: $RELEASE_SHA_REASON"
 
 # 13. Disk space
 if command -v df >/dev/null 2>&1; then
