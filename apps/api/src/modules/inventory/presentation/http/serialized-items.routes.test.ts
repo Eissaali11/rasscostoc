@@ -192,7 +192,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
   });
 
   // TEMPORARY FEATURE — remove or disable after final customer handover.
-  describe("DELETE /api/serialized-items/my-custody/:itemType/:serialNumber", () => {
+  describe("DELETE /api/inventory/my-custody/items/:itemType/:serialNumber", () => {
     beforeEach(() => {
       isTechnicianCustodyDeleteEnabledMock.mockReturnValue(true);
     });
@@ -206,7 +206,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
       } as any);
 
       const res = await request(app)
-        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/DEVICE/SN-DEVICE-777")
         .send({ confirmation: "SN-DEVICE-777" })
         .expect(200);
 
@@ -242,7 +242,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
       } as any);
 
       const res = await request(app)
-        .delete("/api/serialized-items/my-custody/SIM/89966020000000123456")
+        .delete("/api/inventory/my-custody/items/SIM/89966020000000123456")
         .send({
           confirmation: "89966020000000123456",
           reason: "temporary_cleanup_before_customer_handover",
@@ -270,7 +270,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
       } as any);
 
       await request(app)
-        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/DEVICE/SN-DEVICE-777")
         .send({
           confirmation: "SN-DEVICE-777",
           technicianId: "attacker-controlled-id",
@@ -292,7 +292,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
 
     it("returns 400 for an itemType other than DEVICE/SIM and never calls the service", async () => {
       await request(app)
-        .delete("/api/serialized-items/my-custody/TABLET/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/TABLET/SN-DEVICE-777")
         .send({ confirmation: "SN-DEVICE-777" })
         .expect(400);
 
@@ -301,7 +301,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
 
     it("returns 400 when confirmation is missing", async () => {
       await request(app)
-        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/DEVICE/SN-DEVICE-777")
         .send({})
         .expect(400);
 
@@ -315,7 +315,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
       );
 
       const res = await request(app)
-        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/DEVICE/SN-DEVICE-777")
         .send({ confirmation: "SN-DEVICE-777" })
         .expect(403);
 
@@ -329,7 +329,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
       );
 
       const res = await request(app)
-        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/DEVICE/SN-DEVICE-777")
         .send({ confirmation: "SN-DEVICE-777" })
         .expect(409);
 
@@ -340,7 +340,7 @@ describe("Serialized Items HTTP Integration Tests", () => {
       isTechnicianCustodyDeleteEnabledMock.mockReturnValue(false);
 
       await request(app)
-        .delete("/api/serialized-items/my-custody/DEVICE/SN-DEVICE-777")
+        .delete("/api/inventory/my-custody/items/DEVICE/SN-DEVICE-777")
         .send({ confirmation: "SN-DEVICE-777" })
         .expect(404);
 

@@ -5,9 +5,6 @@ import {
   courierRequestItems,
   systemLogs,
   technicianMovingInventoryEntries,
-  inventoryTransactions,
-  itemHistoryLogs,
-  custodyMovements,
 } from "@shared/schema";
 
 const mockTransaction = vi.fn();
@@ -45,9 +42,6 @@ type MockTxOptions = {
   priorDeletionRows?: any[];
   deleteReturning?: any[];
   movingEntry?: any;
-  transactionsCount?: number;
-  historyCount?: number;
-  custodyMovementsCount?: number;
 };
 
 function createMockTx(opts: MockTxOptions) {
@@ -58,9 +52,6 @@ function createMockTx(opts: MockTxOptions) {
     priorDeletionRows = [],
     deleteReturning = itemRow ? [itemRow] : [],
     movingEntry = { id: "entry-1", technicianId: "tech-1", itemTypeId: "type-1", units: 3, boxes: 0 },
-    transactionsCount = 2,
-    historyCount = 3,
-    custodyMovementsCount = 1,
   } = opts;
 
   const insertValuesMock = vi.fn(() => Promise.resolve());
@@ -74,9 +65,6 @@ function createMockTx(opts: MockTxOptions) {
         if (table === itemTypes) return makeChain(itemTypeRow ? [itemTypeRow] : []);
         if (table === systemLogs) return makeChain(priorDeletionRows);
         if (table === technicianMovingInventoryEntries) return makeChain(movingEntry ? [movingEntry] : []);
-        if (table === inventoryTransactions) return makeChain([{ count: transactionsCount }]);
-        if (table === itemHistoryLogs) return makeChain([{ count: historyCount }]);
-        if (table === custodyMovements) return makeChain([{ count: custodyMovementsCount }]);
         return makeChain([]);
       }),
     })),
@@ -133,6 +121,50 @@ describe("SerializedItemsService.deleteFromTechnicianCustody (TEMPORARY FEATURE)
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
+  it("DEVICE_DELETE_USES_SERIAL_NUMBER: deletes a DEVICE identified by serial_number", async () => {
+    const tx = createMockTx({ itemRow: ACTIVE_DEVICE });
+    mockTransaction.mockImplementation((cb: any) => cb(tx));
+
+    const result = await service.deleteFromTechnicianCustody(
+      "tech-1",
+      "tech1user",
+      "technician",
+      "DEVICE",
+      "SN-DEVICE-777",
+      "SN-DEVICE-777"
+    );
+
+    expect(result).toEqual({
+      itemType: "DEVICE",
+      serialNumber: "SN-DEVICE-777",
+      deleted: true,
+      alreadyDeleted: false,
+    });
+    expect(tx.delete).toHaveBeenCalledWith(items);
+  });
+
+  it("SIM_DELETE_USES_SIM_SERIAL: deletes a SIM identified by sim_serial / ICCID serial_number", async () => {
+    const tx = createMockTx({ itemRow: ACTIVE_SIM, itemTypeRow: SIM_ITEM_TYPE_ROW });
+    mockTransaction.mockImplementation((cb: any) => cb(tx));
+
+    const result = await service.deleteFromTechnicianCustody(
+      "tech-1",
+      "tech1user",
+      "technician",
+      "SIM",
+      ACTIVE_SIM.serialNumber,
+      ACTIVE_SIM.serialNumber
+    );
+
+    expect(result).toEqual({
+      itemType: "SIM",
+      serialNumber: ACTIVE_SIM.serialNumber,
+      deleted: true,
+      alreadyDeleted: false,
+    });
+    expect(tx.delete).toHaveBeenCalledWith(items);
+  });
+
   it("deletes a DEVICE that is genuinely in the technician's own active custody", async () => {
     const tx = createMockTx({ itemRow: ACTIVE_DEVICE });
     mockTransaction.mockImplementation((cb: any) => cb(tx));
@@ -172,39 +204,6 @@ describe("SerializedItemsService.deleteFromTechnicianCustody (TEMPORARY FEATURE)
     expect(tx._updateSetMock).toHaveBeenCalledWith(
       expect.objectContaining({ units: 2 }) // 3 - 1
     );
-  });
-
-  it("captures relation counts and a correlationId in the audit snapshot before deleting", async () => {
-    const tx = createMockTx({
-      itemRow: ACTIVE_DEVICE,
-      transactionsCount: 5,
-      historyCount: 4,
-      custodyMovementsCount: 2,
-      courierRows: [{ status: "DELIVERED" }],
-    });
-    mockTransaction.mockImplementation((cb: any) => cb(tx));
-
-    await service.deleteFromTechnicianCustody(
-      "tech-1",
-      "tech1user",
-      "technician",
-      "DEVICE",
-      "SN-DEVICE-777",
-      "SN-DEVICE-777"
-    );
-
-    const insertedRow = tx._insertValuesMock.mock.calls[0][0];
-    const details = JSON.parse(insertedRow.details);
-
-    expect(details.deletedRelationCounts).toEqual({
-      inventoryTransactions: 5,
-      itemHistoryLogs: 4,
-      custodyMovements: 2,
-      courierRequestItems: 1,
-    });
-    expect(typeof details.correlationId).toBe("string");
-    expect(details.correlationId.length).toBeGreaterThan(10);
-    expect(details.performedById).toBe("tech-1");
   });
 
   it("deletes a SIM that is genuinely in the technician's own active custody", async () => {

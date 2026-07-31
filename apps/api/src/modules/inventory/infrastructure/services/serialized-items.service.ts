@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { db } from "@core/config/db";
 import { AppError, NotFoundError } from "@core/errors/AppError";
 import { items, inventoryTransactions, itemHistoryLogs, itemTypes, users, custodyMovements, technicianMovingInventoryEntries, courierRequestItems, systemLogs } from "@shared/schema";
@@ -472,28 +471,6 @@ export class SerializedItemsService {
         );
       }
 
-      // Count the historical/ledger rows this item owns before touching anything.
-      // These three tables are purely this-item-scoped lifecycle history (not shared
-      // financial records) and cascade-delete with the item — the counts below are
-      // captured into the permanent system_logs snapshot so nothing is silently lost.
-      const [[{ count: transactionsCount }], [{ count: historyCount }], [{ count: custodyCount }]] =
-        await Promise.all([
-          tx
-            .select({ count: sql<number>`count(*)::int` })
-            .from(inventoryTransactions)
-            .where(eq(inventoryTransactions.itemId, item.id)),
-          tx
-            .select({ count: sql<number>`count(*)::int` })
-            .from(itemHistoryLogs)
-            .where(eq(itemHistoryLogs.itemId, item.id)),
-          tx
-            .select({ count: sql<number>`count(*)::int` })
-            .from(custodyMovements)
-            .where(eq(custodyMovements.itemId, item.id)),
-        ]);
-
-      const correlationId = randomUUID();
-
       // Durable audit record FIRST. system_logs.entityId/entityName carry no foreign key
       // to items.id, so this row survives the cascade delete of the item's own
       // inventory_transactions / item_history_logs / custody_movements rows below.
@@ -506,7 +483,6 @@ export class SerializedItemsService {
         entityId: item.id,
         entityName: item.serialNumber,
         details: JSON.stringify({
-          correlationId,
           itemType,
           itemId: item.id,
           serialNumber: item.serialNumber,
@@ -517,14 +493,7 @@ export class SerializedItemsService {
           previousStatus: item.status,
           previousOwnerId: item.currentOwnerId,
           warehouseId: item.warehouseId,
-          performedById: technicianId,
           reason: auditReason,
-          deletedRelationCounts: {
-            inventoryTransactions: transactionsCount,
-            itemHistoryLogs: historyCount,
-            custodyMovements: custodyCount,
-            courierRequestItems: linkedCourierRows.length,
-          },
           affectedTables: [
             "items",
             "inventory_transactions",
@@ -533,7 +502,7 @@ export class SerializedItemsService {
             "technician_moving_inventory_entries",
           ],
         }),
-        description: `تم حذف ${itemType === "SIM" ? "الشريحة" : "الجهاز"} ${item.serialNumber} نهائيًا من عهدة الفني (ميزة مؤقتة قبل التسليم النهائي للعميل) — سجلات تاريخية مرتبطة: ${transactionsCount} حركة، ${historyCount} سجل حالة، ${custodyCount} حركة عهدة`,
+        description: `تم حذف ${itemType === "SIM" ? "الشريحة" : "الجهاز"} ${item.serialNumber} نهائيًا من عهدة الفني (ميزة مؤقتة قبل التسليم النهائي للعميل)`,
         severity: "warn",
         success: true,
       });
@@ -605,8 +574,8 @@ export class SerializedItemsService {
       })
       .from(itemHistoryLogs)
       .leftJoin(users, eq(itemHistoryLogs.changedById, users.id))
-        .where(eq(itemHistoryLogs.itemId, item.id))
-        .orderBy(itemHistoryLogs.changedAt);
+      .where(eq(itemHistoryLogs.itemId, item.id))
+      .orderBy(itemHistoryLogs.changedAt);
 
     return {
       ...item,
@@ -636,43 +605,136 @@ export class SerializedItemsService {
       );
   }
 
-  async updateSerial(id: string, updates: string | { serialNumber?: string; carrierName?: string; simCardType?: string; status?: string }) {
-    let patch: any = { updatedAt: new Date() };
-    if (typeof updates === "string") {
-      const cleanSerial = updates.trim();
-      patch.serialNumber = cleanSerial;
-      patch.barcode = cleanSerial;
-    } else {
-      if (updates.serialNumber !== undefined && updates.serialNumber !== null) {
-        const cleanSerial = String(updates.serialNumber).trim();
-        patch.serialNumber = cleanSerial;
-        patch.barcode = cleanSerial;
-      }
-      if (updates.carrierName !== undefined) {
-        patch.carrierName = updates.carrierName ? String(updates.carrierName).trim() : null;
-      }
-      if (updates.simCardType !== undefined) {
-        patch.simPackageType = updates.simCardType ? String(updates.simCardType).trim() : null;
-      }
-      if (updates.status !== undefined) {
-        patch.status = String(updates.status).trim();
-      }
-    }
-
-    const [updated] = await db
-      .update(items)
-      .set(patch)
-      .where(eq(items.id, id))
-      .returning();
-    return updated || null;
+  /** Optional external tx — joins courier Unit-of-Work when provided. */
+  private client(tx?: any) {
+    return tx || db;
   }
 
-  async deleteItem(id: string) {
-    const [deleted] = await db
-      .delete(items)
-      .where(eq(items.id, id))
+  /**
+   * Find serialized item by serial (prefixed or stored). Used by courier via composition adapter.
+   */
+  async findBySerial(serial: string, tx?: any): Promise<any | null> {
+    return SerialRecognitionService.findItemBySerial(serial, this.client(tx));
+  }
+
+  /**
+   * Transfer existing item into technician custody / in-transit (courier receiving & start-task).
+   * Must accept courier UoW `tx` to preserve atomicity with courier request writes.
+   */
+  async transferCustodyToTechnician(
+    params: {
+      itemId: string;
+      technicianId: string;
+      requestId: number;
+      oldStatus: string;
+      newStatus: "RECEIVED_BY_TECHNICIAN" | "IN_TRANSIT";
+    },
+    tx?: any
+  ): Promise<void> {
+    const client = this.client(tx);
+
+    await client
+      .update(items)
+      .set({
+        status: params.newStatus,
+        currentOwnerId: params.technicianId,
+        updatedAt: new Date(),
+      })
+      .where(eq(items.id, params.itemId));
+
+    await client.insert(inventoryTransactions).values({
+      itemId: params.itemId,
+      transactionType: "TRANSFER",
+      destinationOwnerId: params.technicianId,
+      orderNumber: params.requestId.toString(),
+      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
+        ? `استلام عهدة بالطلب رقم ${params.requestId}`
+        : `بدء مهمة التوصيل بالطلب رقم ${params.requestId}`,
+    });
+
+    await client.insert(itemHistoryLogs).values({
+      itemId: params.itemId,
+      fromStatus: params.oldStatus,
+      toStatus: params.newStatus,
+      changedById: params.technicianId,
+      notes: params.newStatus === "RECEIVED_BY_TECHNICIAN"
+        ? `تحويل عهدة للفني بالمسح الضوئي - طلب رقم ${params.requestId}`
+        : `مغادرة المستودع والبدء بالتوصيل - طلب رقم ${params.requestId}`,
+    });
+  }
+
+  /**
+   * Mint a new serialized item and assign to technician custody (courier scan mint path).
+   * Same-db atomic with courier UoW when `tx` is supplied.
+   */
+  async mintAndAssignToTechnician(
+    params: {
+      serial: string;
+      itemTypeId: string;
+      carrierName: string | null;
+      technicianId: string;
+      requestId: number;
+    },
+    tx?: any
+  ): Promise<{ id: string; serialNumber: string }> {
+    const client = this.client(tx);
+
+    const [newItem] = await client
+      .insert(items)
+      .values({
+        itemTypeId: params.itemTypeId,
+        serialNumber: params.serial,
+        barcode: params.serial,
+        status: "RECEIVED_BY_TECHNICIAN",
+        currentOwnerId: params.technicianId,
+        warehouseId: null,
+        carrierName: params.carrierName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
       .returning();
-    return !!deleted;
+
+    if (newItem) {
+      await client.insert(inventoryTransactions).values({
+        itemId: newItem.id,
+        transactionType: "INTAKE",
+        destinationOwnerId: params.technicianId,
+        orderNumber: params.requestId.toString(),
+        notes: `تسجيل أصل جديد بالمسح الضوئي - طلب رقم ${params.requestId}`,
+      });
+
+      await client.insert(itemHistoryLogs).values({
+        itemId: newItem.id,
+        fromStatus: "NONE",
+        toStatus: "RECEIVED_BY_TECHNICIAN",
+        changedById: params.technicianId,
+        notes: `إنشاء أصل جديد عهدة للفني لأول مرة - طلب رقم ${params.requestId}`,
+      });
+    }
+
+    return {
+      id: newItem.id,
+      serialNumber: newItem.serialNumber,
+    };
+  }
+
+  /**
+   * Scan-out that returns false when serial is not in active custody (courier InventoryEngine contract).
+   */
+  async tryScanOut(
+    technicianId: string,
+    serialNumber: string,
+    receiverName: string,
+    orderNumber: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<boolean> {
+    try {
+      await this.scanOut(technicianId, serialNumber, receiverName, orderNumber, latitude, longitude);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

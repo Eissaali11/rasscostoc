@@ -113,7 +113,7 @@ export class SerializedItemsController {
 
   /**
    * TEMPORARY FEATURE — remove or disable after final customer handover.
-   * DELETE /api/serialized-items/my-custody/:itemType/:serialNumber
+   * DELETE /api/inventory/my-custody/items/:itemType/:serialNumber
    * itemType is exactly "DEVICE" or "SIM" — an explicit, unambiguous URL segment so a
    * device serial and a SIM serial can never be confused with one another.
    * Permanently deletes that single item from the authenticated technician's own
@@ -129,11 +129,12 @@ export class SerializedItemsController {
       throw new AuthorizationError("هذه العملية متاحة للمندوب فقط");
     }
 
-    const { itemType, serialNumber } = req.params;
+    const { itemType, identifier, serialNumber } = req.params;
+    const targetIdentifier = identifier || serialNumber;
     if (!CUSTODY_DELETE_ITEM_TYPES.includes(itemType as any)) {
       throw new AppError("نوع العنصر يجب أن يكون DEVICE أو SIM فقط", 400, true, "INVALID_ITEM_TYPE");
     }
-    if (!serialNumber) {
+    if (!targetIdentifier) {
       throw new NotFoundError("الرقم التسلسلي مطلوب");
     }
 
@@ -144,7 +145,7 @@ export class SerializedItemsController {
       user.username,
       user.role,
       itemType,
-      serialNumber,
+      targetIdentifier,
       body.confirmation,
       body.reason
     );
