@@ -29,6 +29,7 @@ import { registerDevicesRoutes } from "./devices.routes";
 import { registerDashboardRoutes } from "./dashboard.routes";
 
 import { registerTechniciansProfileRoutes } from "./technicians-profile.routes";
+import { registerSduiFiltersRoutes } from "./sdui-filters.routes";
 import { representativeInventoryContainer } from "@server/composition/representative-inventory.container";
 
 export function registerInventoryRoutes(app: Express): void {
@@ -61,6 +62,7 @@ export function registerInventoryRoutes(app: Express): void {
   registerDevicesRoutes(app);
   registerDashboardRoutes(app);
   registerTechniciansProfileRoutes(app);
+  registerSduiFiltersRoutes(app);
 
   // Modern representative inventory (V2) routes
   representativeInventoryContainer.representativeRouter.register(app);
