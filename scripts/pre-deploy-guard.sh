@@ -166,6 +166,17 @@ if [ -n "$FORBIDDEN_TRACKED" ]; then
 fi
 ok "no forbidden paths tracked"
 
+# 11b. Repository-wide PDF ban: no .pdf may be tracked anywhere in the repo,
+# not just the known runtime uploads directories. See
+# scripts/lib/forbidden-tracked-pdfs.sh for the (ideally empty, always
+# written-justification-required) exception list.
+. "$(dirname "${BASH_SOURCE[0]}")/lib/forbidden-tracked-pdfs.sh"
+FORBIDDEN_PDFS="$(forbidden_tracked_pdfs)"
+if [ -n "$FORBIDDEN_PDFS" ]; then
+  fail "PDF file(s) tracked in git outside the documented exception list: $(echo "$FORBIDDEN_PDFS" | tr '\n' ' ')"
+fi
+ok "no undocumented PDF files tracked anywhere in the repository"
+
 # 12. Source and build must reference the same commit SHA
 if [ -f dist/RELEASE_SHA ]; then
   BUILD_SHA="$(cat dist/RELEASE_SHA | tr -d '[:space:]')"
