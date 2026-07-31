@@ -32,6 +32,10 @@ export default defineConfig({
         find: "@stockpro/ai-review-ui",
         replacement: path.resolve(import.meta.dirname, "packages/ai-review-ui/src/index.ts"),
       },
+      {
+        find: "@stockpro/ai-extraction",
+        replacement: path.resolve(import.meta.dirname, "packages/ai-extraction/src/index.ts"),
+      },
       { find: "@", replacement: path.resolve(import.meta.dirname, "apps/portal", "src") },
       { find: "@shared", replacement: path.resolve(import.meta.dirname, "packages/shared-types") },
       { find: "@assets", replacement: path.resolve(import.meta.dirname, "attached_assets") },
