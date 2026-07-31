@@ -11,7 +11,7 @@
     "dev": "cross-env NODE_ENV=development PORT=3001 tsx apps/api/src/server.ts",
     "dev:clean": "node scripts/kill-port.cjs 3001 && npm run dev",
     "build:packages": "tsc -p packages/ai-extraction/tsconfig.json",
-    "build": "npm run build:packages && vite build && esbuild apps/api/src/server.ts --platform=node --packages=external --bundle --format=esm --splitting --minify --sourcemap=external --metafile=dist/meta.json --outdir=dist",
+    "build": "npm run build:packages && vite build && esbuild apps/api/src/server.ts --platform=node --packages=external --bundle --format=esm --splitting --minify --sourcemap=external --metafile=dist/meta.json --outdir=dist && node scripts/write-release-sha.cjs",
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
