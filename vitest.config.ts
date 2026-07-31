@@ -20,6 +20,8 @@ export default defineConfig({
       "@server": path.resolve(import.meta.dirname, "./apps/api/src"),
       "@core": path.resolve(import.meta.dirname, "./apps/api/src/core"),
       "@modules": path.resolve(import.meta.dirname, "./apps/api/src/modules"),
+      "@stockpro/ai-extraction": path.resolve(import.meta.dirname, "./packages/ai-extraction/src/index.ts"),
+      "@stockpro/ai-review-ui": path.resolve(import.meta.dirname, "./packages/ai-review-ui/src/index.ts"),
     },
   },
 });
