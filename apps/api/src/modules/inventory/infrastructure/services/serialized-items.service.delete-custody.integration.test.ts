@@ -11,49 +11,52 @@ import { serializedItemsService } from "./serialized-items.service";
  * pre-existing row — it only touches rows it creates itself in beforeAll.
  */
 describe("SerializedItemsService.deleteFromTechnicianCustody — real database integration", () => {
+  let runId: string;
   let techAId: string;
   let techBId: string;
   let itemTypeId: string;
   let itemAId: string;
   let itemBId: string;
-
-  const SERIAL_A = "TESTCUSTODYDELA0001";
-  const SERIAL_B = "TESTCUSTODYDELB0002";
+  let serialA: string;
+  let serialB: string;
 
   beforeAll(async () => {
-    const itemTypeRes = await pool.query(
-      `SELECT id FROM item_types WHERE category = 'devices' LIMIT 1`
+    runId = Date.now().toString() + "_" + Math.floor(Math.random() * 10000).toString();
+    itemTypeId = `test_custody_type_${runId}`;
+    serialA = `TESTCUSTDELA_${runId}`;
+    serialB = `TESTCUSTDELB_${runId}`;
+
+    await pool.query(
+      `INSERT INTO item_types (id, name_ar, name_en, category, sort_order)
+       VALUES ($1, $2, $3, 'devices', 999)`,
+      [itemTypeId, "نوع اختبار عهدة", "Custody Delete Test Item Type"]
     );
-    if (itemTypeRes.rows.length === 0) {
-      throw new Error("Test setup requires at least one existing item_type with category='devices'");
-    }
-    itemTypeId = itemTypeRes.rows[0].id;
 
     const techA = await pool.query(
       `INSERT INTO users (username, email, password, full_name, role)
        VALUES ($1, $2, $3, $4, 'technician') RETURNING id`,
-      ["custody_delete_test_tech_a", "custody-delete-test-tech-a@example.invalid", "test-fixture-hash", "Custody Delete Test A"]
+      [`custody_tech_a_${runId}`, `custody-tech-a-${runId}@example.invalid`, "test-fixture-hash", "Custody Delete Test A"]
     );
     techAId = techA.rows[0].id;
 
     const techB = await pool.query(
       `INSERT INTO users (username, email, password, full_name, role)
        VALUES ($1, $2, $3, $4, 'technician') RETURNING id`,
-      ["custody_delete_test_tech_b", "custody-delete-test-tech-b@example.invalid", "test-fixture-hash", "Custody Delete Test B"]
+      [`custody_tech_b_${runId}`, `custody-tech-b-${runId}@example.invalid`, "test-fixture-hash", "Custody Delete Test B"]
     );
     techBId = techB.rows[0].id;
 
     const itemA = await pool.query(
       `INSERT INTO items (item_type_id, serial_number, barcode, status, current_owner_id)
        VALUES ($1, $2, $2, 'RECEIVED_BY_TECHNICIAN', $3) RETURNING id`,
-      [itemTypeId, SERIAL_A, techAId]
+      [itemTypeId, serialA, techAId]
     );
     itemAId = itemA.rows[0].id;
 
     const itemB = await pool.query(
       `INSERT INTO items (item_type_id, serial_number, barcode, status, current_owner_id)
        VALUES ($1, $2, $2, 'RECEIVED_BY_TECHNICIAN', $3) RETURNING id`,
-      [itemTypeId, SERIAL_B, techBId]
+      [itemTypeId, serialB, techBId]
     );
     itemBId = itemB.rows[0].id;
 
@@ -82,17 +85,20 @@ describe("SerializedItemsService.deleteFromTechnicianCustody — real database i
     await pool.query(`DELETE FROM inventory_transactions WHERE item_id IN ($1, $2)`, [itemAId, itemBId]);
     await pool.query(`DELETE FROM items WHERE id IN ($1, $2)`, [itemAId, itemBId]);
     await pool.query(`DELETE FROM users WHERE id IN ($1, $2)`, [techAId, techBId]);
+    if (itemTypeId) {
+      await pool.query(`DELETE FROM item_types WHERE id = $1`, [itemTypeId]);
+    }
   });
 
   it("blocks technician A from deleting technician B's real item — 403, item still exists afterward", async () => {
     await expect(
       serializedItemsService.deleteFromTechnicianCustody(
         techAId,
-        "custody_delete_test_tech_a",
+        `custody_tech_a_${runId}`,
         "technician",
         "DEVICE",
-        SERIAL_B,
-        SERIAL_B
+        serialB,
+        serialB
       )
     ).rejects.toMatchObject({ statusCode: 403, code: "ITEM_NOT_IN_YOUR_CUSTODY" });
 
@@ -103,11 +109,11 @@ describe("SerializedItemsService.deleteFromTechnicianCustody — real database i
   it("genuinely deletes technician A's own item, cascades real history, decrements the real balance, and writes a real audit row", async () => {
     const result = await serializedItemsService.deleteFromTechnicianCustody(
       techAId,
-      "custody_delete_test_tech_a",
+      `custody_tech_a_${runId}`,
       "technician",
       "DEVICE",
-      SERIAL_A,
-      SERIAL_A
+      serialA,
+      serialA
     );
     expect(result).toMatchObject({ itemType: "DEVICE", deleted: true, alreadyDeleted: false });
 
@@ -130,22 +136,22 @@ describe("SerializedItemsService.deleteFromTechnicianCustody — real database i
     expect(auditRow.rows.length).toBe(1);
     const details = typeof auditRow.rows[0].details === 'string' ? JSON.parse(auditRow.rows[0].details) : auditRow.rows[0].details;
     expect(details.itemType).toBe("DEVICE");
-    expect(details.serialNumber).toBe(SERIAL_A);
+    expect(details.serialNumber).toBe(serialA);
     expect(details.deletedRelationCounts?.itemHistoryLogs ?? 1).toBe(1);
   });
 
   it("is idempotent against the real database: retrying after success reports alreadyDeleted, no duplicate audit row", async () => {
     const result = await serializedItemsService.deleteFromTechnicianCustody(
       techAId,
-      "custody_delete_test_tech_a",
+      `custody_tech_a_${runId}`,
       "technician",
       "DEVICE",
-      SERIAL_A,
-      SERIAL_A
+      serialA,
+      serialA
     );
     expect(result).toEqual({
       itemType: "DEVICE",
-      serialNumber: SERIAL_A,
+      serialNumber: serialA,
       deleted: true,
       alreadyDeleted: true,
     });
