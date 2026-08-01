@@ -20,20 +20,14 @@ describe("SerializedItemsService.deleteFromTechnicianCustody — real database i
   const SERIAL_A = "TESTCUSTODYDELA0001";
   const SERIAL_B = "TESTCUSTODYDELB0002";
 
-  let createdSelfType = false;
-
   beforeAll(async () => {
-    let itemTypeRes = await pool.query(
-      `SELECT id FROM item_types WHERE category = 'devices' LIMIT 1`
+    const itemTypeRes = await pool.query(
+      `INSERT INTO item_types (id, name_ar, name_en, category, sort_order)
+       VALUES ($1, $2, $3, 'devices', 999)
+       ON CONFLICT (id) DO UPDATE SET name_en = EXCLUDED.name_en
+       RETURNING id`,
+      ["test_device_custody_type", "نوع اختبار عهدة", "Custody Delete Test Item Type"]
     );
-    if (itemTypeRes.rows.length === 0) {
-      itemTypeRes = await pool.query(
-        `INSERT INTO item_types (id, name_ar, name_en, category, sort_order)
-         VALUES ($1, $2, $3, 'devices', 999) RETURNING id`,
-        ["test_device_custody_type", "نوع اختبار عهدة", "Custody Delete Test Item Type"]
-      );
-      createdSelfType = true;
-    }
     itemTypeId = itemTypeRes.rows[0].id;
 
     const techA = await pool.query(
@@ -89,9 +83,7 @@ describe("SerializedItemsService.deleteFromTechnicianCustody — real database i
     await pool.query(`DELETE FROM inventory_transactions WHERE item_id IN ($1, $2)`, [itemAId, itemBId]);
     await pool.query(`DELETE FROM items WHERE id IN ($1, $2)`, [itemAId, itemBId]);
     await pool.query(`DELETE FROM users WHERE id IN ($1, $2)`, [techAId, techBId]);
-    if (createdSelfType) {
-      await pool.query(`DELETE FROM item_types WHERE id = 'test_device_custody_type'`);
-    }
+    await pool.query(`DELETE FROM item_types WHERE id = 'test_device_custody_type'`);
   });
 
   it("blocks technician A from deleting technician B's real item — 403, item still exists afterward", async () => {
