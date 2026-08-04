@@ -49,6 +49,10 @@ eas.json
 coverage/
 .env.ops
 
+# Phase B1.3: Playwright generated output — never commit run artifacts.
+playwright-report/
+test-results/
+
 # Zero Local Storage: runtime PDF directories must never be tracked in git.
 # The application creates these directories on demand (mkdirSync recursive)
 # when/if it writes to them, so no placeholder file is required to keep

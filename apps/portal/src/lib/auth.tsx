@@ -11,7 +11,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Exported (test-only concern, no behavior change) so Phase B1.3's
+// mockAuthProvider() can inject a fake AuthContextType value directly in
+// component tests without needing to exercise the real login/session flow.
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export type { AuthContextType };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => 
