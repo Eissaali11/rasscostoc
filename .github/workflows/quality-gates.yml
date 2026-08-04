@@ -23,6 +23,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -251,3 +252,163 @@ jobs:
             **/vitest-report/**
           retention-days: 7
           if-no-files-found: ignore
+
+  http-tests:
+    name: Backend HTTP tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:http
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: http-tests-report
+          path: |
+            **/vitest-report/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+  database-tests:
+    name: Backend database foundation tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # scripts/test-database.mjs manages its own disposable Postgres
+      # container via `docker run` (Docker is preinstalled on
+      # ubuntu-latest runners) — no services: block needed here, the
+      # script's own try/finally guarantees cleanup regardless of pass/fail.
+      - run: npm run test:database
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-tests-report
+          path: |
+            **/vitest-report/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+  security-tests:
+    name: Backend security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # scripts/test-security.mjs manages its own disposable Postgres
+      # container (same pattern as test-database.mjs above) and boots the
+      # real production app (registerRoutes against apps/api/src/app.ts)
+      # against it — never a shared or production database/secret.
+      - run: npm run test:security
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-tests-report
+          path: |
+            **/vitest-report/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+  portal-component:
+    name: Portal component tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:portal
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-component-report
+          path: |
+            **/vitest-report/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+  portal-playwright:
+    name: Portal Playwright smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # No backend secrets/API keys are read here or baked into the built
+      # bundle — build:packages + vite build produce a static SPA that
+      # reads its API base URL at runtime, never at build time.
+      - run: npm run build:packages
+      - run: npx vite build
+      - name: Install Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+      # playwright.config.ts's webServer boots `vite preview` against the
+      # just-built dist/public locally (127.0.0.1) — this job never points
+      # at any deployed/production URL, and the login-form smoke test it
+      # runs makes no real backend API call.
+      - run: npx playwright test
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/**
+            test-results/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+  quality-summary:
+    name: Final quality summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - secret-scan
+      - architecture
+      - architecture-strict
+      - typecheck
+      - typecheck-full
+      - backend-build
+      - unit-safe
+      - migration-validation
+      - isolated-tests
+      - http-tests
+      - database-tests
+      - security-tests
+      - portal-component
+      - portal-playwright
+    if: always()
+    steps:
+      - name: All gates passed
+        if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        run: echo "✅ All Quality Gates jobs passed."
+      - name: Some gates failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "❌ One or more Quality Gates jobs failed or were cancelled."
+          exit 1
