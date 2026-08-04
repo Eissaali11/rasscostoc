@@ -158,6 +158,19 @@ export const courierAuditLogs = pgTable("courier_audit_logs", {
   oldValue: text("old_value"),
   newValue: text("new_value"),
   action: text("action").notNull(),
+  // Actor identity snapshot — kept alongside changedBy so historical log
+  // entries still display the acting user's name/role/avatar even if the
+  // user account is later renamed or deleted.
+  actorNameSnapshot: text("actor_name_snapshot"),
+  actorRoleSnapshot: text("actor_role_snapshot"),
+  actorAvatarUrl: text("actor_avatar_url"),
+  actionType: text("action_type").notNull().default("UPDATE"),
+  actionDescription: text("action_description"),
+  source: text("source").notNull().default("DASHBOARD"),
+  status: text("status").notNull().default("SUCCESS"),
+  metadata: jsonb("metadata"),
+  ipAddress: text("ip_address"),
+  deviceId: text("device_id"),
   changedBy: varchar("changed_by").references(() => users.id),
   changedAt: timestamp("changed_at").defaultNow(),
 });

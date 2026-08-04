@@ -49,6 +49,7 @@ import {
 } from "../courier-list-query";
 import { metrics } from "@core/telemetry/metrics";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
+import { ValidationError } from "@core/errors/AppError";
 
 export class DrizzleCourierRepository implements
   ICourierRepository,
@@ -1012,19 +1013,20 @@ export class DrizzleCourierRepository implements
   async searchItemFallbackBySerial(rawSerial: string, tx?: any): Promise<{
     id: string;
     serialNumber: string;
-    simSerial: string | null;
     carrierName: string | null;
     status: string;
     currentOwnerId: string | null;
     technicianName: string | null;
     technicianCode: string | null;
   } | null> {
+    // Note: `items` (serialized_items.schema.ts) has no `simSerial` column — SIM
+    // ICCIDs are stored in `serialNumber` (see linkSimToTechnician). Matching on
+    // serialNumber alone covers both device serials and SIM ICCIDs correctly.
     const client = this.getClient(tx);
     const itemRows = await client
       .select({
         id: items.id,
         serialNumber: items.serialNumber,
-        simSerial: items.simSerial,
         carrierName: items.carrierName,
         status: items.status,
         currentOwnerId: items.currentOwnerId,
@@ -1036,10 +1038,8 @@ export class DrizzleCourierRepository implements
       .where(
         or(
           eq(items.serialNumber, rawSerial),
-          eq(items.simSerial, rawSerial),
           eq(items.barcode, rawSerial),
-          ilike(items.serialNumber, `%${rawSerial}%`),
-          ilike(items.simSerial, `%${rawSerial}%`)
+          ilike(items.serialNumber, `%${rawSerial}%`)
         )
       )
       .limit(1);

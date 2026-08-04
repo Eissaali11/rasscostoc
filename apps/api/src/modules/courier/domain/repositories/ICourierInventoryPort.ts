@@ -45,7 +45,6 @@ export interface ICourierInventoryPort {
   searchItemFallbackBySerial(rawSerial: string, tx?: any): Promise<{
     id: string;
     serialNumber: string;
-    simSerial: string | null;
     carrierName: string | null;
     status: string;
     currentOwnerId: string | null;

@@ -369,6 +369,8 @@ export class MemStorage implements IStorage {
       department: insertUser.department ?? null,
       permissions: insertUser.permissions ?? null,
       isActive: insertUser.isActive ?? true,
+      fcmToken: insertUser.fcmToken ?? null,
+      telegramUserId: insertUser.telegramUserId ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

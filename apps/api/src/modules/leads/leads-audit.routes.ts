@@ -202,7 +202,7 @@ export function registerLeadDiscoveryAuditRoutes(app: Express): void {
         );
         dbDeletedCount = dbRes.rowCount || 0;
       } catch (dbErr) {
-        logger.warn("DB deletion for user lead discovery logs failed:", dbErr);
+        logger.warn("DB deletion for user lead discovery logs failed:", { error: dbErr });
       }
 
       logger.info(`Lead discovery logs CLEARED for user: ${targetName || targetId}`);
@@ -270,7 +270,7 @@ export function registerLeadDiscoveryAuditRoutes(app: Express): void {
           );
         }
       } catch (dbErr) {
-        logger.warn("DB query for lead discovery logs failed, using in-memory fallback:", dbErr);
+        logger.warn("DB query for lead discovery logs failed, using in-memory fallback:", { error: dbErr });
       }
 
       // Aggregate statistics by user

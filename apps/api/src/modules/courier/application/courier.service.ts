@@ -17,7 +17,7 @@ import { metrics } from "@core/telemetry/metrics";
 import { CourierWorkflow } from "./workflow/courier.workflow";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
-import { AppError, OptimisticLockException, NotFoundError } from "@core/errors/AppError";
+import { AppError, OptimisticLockException, NotFoundError, ValidationError } from "@core/errors/AppError";
 import { AuditLogFormatter, type AuditLogDto } from "./audit-log-formatter";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
@@ -763,7 +763,7 @@ export class CourierService {
             found: true,
             serial: rawSerial,
             normalized: dbItem.serialNumber,
-            simSerial: dbItem.simSerial || dbItem.serialNumber,
+            simSerial: dbItem.serialNumber,
             carrierName: dbItem.carrierName,
             technician: dbItem.currentOwnerId ? {
               id: dbItem.currentOwnerId,
