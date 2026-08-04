@@ -14,6 +14,7 @@
  * Requires: Docker Desktop (or another docker-compatible engine) running.
  */
 import { spawnSync } from "child_process";
+import { randomBytes } from "crypto";
 
 const CONTAINER_NAME = `stockpro-isolated-test-${Date.now()}`;
 const DB_USER = "isolated_test";
@@ -81,6 +82,15 @@ PORT = portMatch[1];
 const TEST_DATABASE_URL = `postgresql://${DB_USER}:${DB_PASS}@localhost:${PORT}/${DB_NAME}`;
 console.log(`Docker assigned host port ${PORT}.`);
 
+// ERP-008: registerRoutes() bootstraps a default admin account on an empty
+// DB (this container always starts empty) and refuses to do so without a
+// real (12+ char) password — the security-foundation test suite (Phase
+// B1.5) is picked up by this script's unfiltered `vitest run` and exercises
+// that same code path. Generated fresh per run, never logged, discarded
+// with the container — not a fixed literal (avoids both a real secret and
+// a static value that would trip the repo's own secret-scan gate).
+const bootstrapAdminSecret = randomBytes(16).toString("hex");
+
 let exitCode = 1;
 try {
   if (!waitForPostgres()) {
@@ -102,7 +112,7 @@ try {
 
   console.log("Running backend test suite against isolated database...");
   const test = run(process.platform === "win32" ? "npx.cmd" : "npx", ["vitest", "run"], {
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL, BOOTSTRAP_ADMIN_PASSWORD: bootstrapAdminSecret },
     stdio: "inherit",
     shell: true,
   });
