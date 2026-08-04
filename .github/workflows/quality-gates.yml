@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   # Throwaway, ephemeral service-container credentials only — this database
   # exists for the lifetime of a single job and is discarded by the runner
   # afterward. Split from the connection string below (rather than one
