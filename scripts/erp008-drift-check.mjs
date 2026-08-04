@@ -2,18 +2,33 @@
  * ERP-008 Phase 5 — Schema Drift Check
  *
  * Proves the migration chain is the single source of truth for the schema:
- * creates a throwaway database, replays every migration into it, then diffs
- * its pg_dump --schema-only output against the live DATABASE_URL database.
- * Any structural difference = drift = FAIL (exit 1).
+ * creates a throwaway database (on the same server as the target URL),
+ * replays every migration into it, then diffs its pg_dump --schema-only
+ * output against the target database. Any structural difference = drift =
+ * FAIL (exit 1).
+ *
+ * SAFETY (Phase 3 hardening): this script no longer reads the real .env
+ * DATABASE_URL implicitly. It requires an explicit test-database target and
+ * an explicit opt-in flag, and refuses to run against anything that doesn't
+ * look like a test database. This prevents accidentally creating/dropping a
+ * throwaway database on a production or shared connection.
+ *
+ * Usage:
+ *   TEST_DATABASE_URL=postgresql://user:pass@host:port/some_test_db \
+ *     node scripts/erp008-drift-check.mjs --allow-test-db
+ *
+ * Resolution order for the target URL: TEST_DATABASE_URL env var, then
+ * DATABASE_URL env var passed on the command line (NOT read from .env).
+ * Either way, --allow-test-db is mandatory, and the target database name
+ * must contain "test" (case-insensitive) or the run is refused.
  *
  * Normalization applied before diffing (noise, not schema):
  *   - pg_dump's \restrict / \unrestrict lines carry a per-dump random token.
  *
- * Usage: node scripts/erp008-drift-check.mjs
  * Env:   PG_BIN — directory containing pg_dump/psql if not on PATH
  *        (falls back to the standard Windows PostgreSQL 18 location).
  */
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from "fs";
+import { readFileSync, mkdtempSync, rmSync } from "fs";
 import { createRequire } from "module";
 import { resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -25,15 +40,43 @@ const root = resolve(__dirname, "..");
 const require = createRequire(resolve(root, "package.json"));
 const pg = require("pg");
 
-function loadDatabaseUrl() {
-  const envPath = resolve(root, ".env");
-  if (!existsSync(envPath)) throw new Error("Missing .env");
-  const line = readFileSync(envPath, "utf8")
-    .split(/\r?\n/)
-    .map((l) => l.replace(/^﻿/, "").trim())
-    .find((l) => l.startsWith("DATABASE_URL="));
-  if (!line) throw new Error("DATABASE_URL not set");
-  return line.replace(/^DATABASE_URL=/, "").replace(/^["']|["']$/g, "");
+function maskedTarget(rawUrl) {
+  const u = new URL(rawUrl);
+  return `${u.hostname}:${u.port || "5432"}${u.pathname}`;
+}
+
+function resolveTargetUrl() {
+  const allowFlag = process.argv.includes("--allow-test-db");
+  if (!allowFlag) {
+    throw new Error(
+      "Refusing to run: pass --allow-test-db explicitly to confirm the target is a disposable test database."
+    );
+  }
+
+  const rawUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
+  if (!rawUrl) {
+    throw new Error(
+      "No target set. Provide TEST_DATABASE_URL (preferred) or DATABASE_URL as an environment variable " +
+      "for this command only — this script deliberately does NOT read .env."
+    );
+  }
+
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    throw new Error("Target URL is not a valid connection string.");
+  }
+
+  const dbName = u.pathname.replace(/^\//, "");
+  if (!/test/i.test(dbName)) {
+    throw new Error(
+      `Refusing to run: target database name "${dbName}" does not contain "test". ` +
+      `This guard exists to prevent accidentally running CREATE/DROP DATABASE against a non-test target.`
+    );
+  }
+
+  return rawUrl;
 }
 
 function findPgDump() {
@@ -68,9 +111,10 @@ function normalize(file) {
     .join("\n");
 }
 
-const liveUrl = loadDatabaseUrl();
+const liveUrl = resolveTargetUrl();
+console.log(`Target (masked): ${maskedTarget(liveUrl)}`);
 const pgDump = findPgDump();
-const driftDbName = `erp008_drift_${Date.now()}`;
+const driftDbName = `erp008_drift_test_${Date.now()}`;
 
 const admin = new pg.Client({ connectionString: liveUrl });
 await admin.connect();
@@ -110,18 +154,18 @@ try {
   const fresh = normalize(freshFile);
 
   if (live === fresh) {
-    console.log("DRIFT CHECK PASS — live schema is byte-identical to migration replay");
+    console.log("DRIFT CHECK PASS — target schema is byte-identical to migration replay");
     exitCode = 0;
   } else {
     const liveLines = live.split("\n");
     const freshLines = fresh.split("\n");
-    console.error("DRIFT DETECTED — live schema differs from migration replay:");
+    console.error("DRIFT DETECTED — target schema differs from migration replay:");
     // Simple line-set diff for the report (order-insensitive summary)
     const liveSet = new Set(liveLines);
     const freshSet = new Set(freshLines);
     const onlyLive = liveLines.filter((l) => l.trim() && !freshSet.has(l));
     const onlyFresh = freshLines.filter((l) => l.trim() && !liveSet.has(l));
-    console.error(`--- present only in LIVE (${onlyLive.length} lines) ---`);
+    console.error(`--- present only in TARGET (${onlyLive.length} lines) ---`);
     onlyLive.slice(0, 40).forEach((l) => console.error("  > " + l));
     console.error(`--- present only in FRESH replay (${onlyFresh.length} lines) ---`);
     onlyFresh.slice(0, 40).forEach((l) => console.error("  < " + l));

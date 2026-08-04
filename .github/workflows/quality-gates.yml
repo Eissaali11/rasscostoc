@@ -1,0 +1,117 @@
+name: Quality Gates
+
+# Phase 3 — Testing, Release Gates & Engineering Governance.
+# Every job here runs against an isolated database service container that
+# lives only for the duration of the workflow run — this pipeline never
+# reads a repository secret named DATABASE_URL and never connects to any
+# persistent/production database.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  architecture:
+    name: Architecture lint (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:architecture:strict
+
+  typecheck:
+    name: Typecheck (check + check:full)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run check:full
+
+  build:
+    name: Backend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  database:
+    name: Migration from zero + drift check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci_test
+          POSTGRES_PASSWORD: ci_test
+          POSTGRES_DB: ci_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Migrate from zero
+        env:
+          DATABASE_URL: postgresql://ci_test:ci_test@localhost:5432/ci_test_db
+        run: npx tsx scripts/migrate.ts
+      - name: Drift check (schema.ts vs migrated DB)
+        env:
+          TEST_DATABASE_URL: postgresql://ci_test:ci_test@localhost:5432/ci_test_db
+        run: node scripts/erp008-drift-check.mjs --allow-test-db
+
+  backend-tests:
+    name: Backend tests (isolated DB)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci_test
+          POSTGRES_PASSWORD: ci_test
+          POSTGRES_DB: ci_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Migrate test database
+        env:
+          DATABASE_URL: postgresql://ci_test:ci_test@localhost:5432/ci_test_db
+        run: npx tsx scripts/migrate.ts
+      - name: Run backend test suite
+        env:
+          DATABASE_URL: postgresql://ci_test:ci_test@localhost:5432/ci_test_db
+        run: npx vitest run
