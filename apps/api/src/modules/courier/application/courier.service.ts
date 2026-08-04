@@ -1,8 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { db } from "@server/core/config/db";
-import { items, itemTypes, users, courierExecutions, courierRequests } from "@shared/schema";
-import { eq, or, ilike } from "drizzle-orm";
 import type { ListFilters, CourierRequestItem, CourierExecutionAttempt } from "../domain/courier.types";
 import { devicesContainer } from "@server/composition/devices.container";
 import { extractFromPdf } from "./ocr.helper";
@@ -759,32 +756,9 @@ export class CourierService {
 
     if (!item) {
       try {
-        const itemRows = await db
-          .select({
-            id: items.id,
-            serialNumber: items.serialNumber,
-            simSerial: items.simSerial,
-            carrierName: items.carrierName,
-            status: items.status,
-            currentOwnerId: items.currentOwnerId,
-            technicianName: users.fullName,
-            technicianCode: users.username,
-          })
-          .from(items)
-          .leftJoin(users, eq(users.id, items.currentOwnerId))
-          .where(
-            or(
-              eq(items.serialNumber, rawSerial),
-              eq(items.simSerial, rawSerial),
-              eq(items.barcode, rawSerial),
-              ilike(items.serialNumber, `%${rawSerial}%`),
-              ilike(items.simSerial, `%${rawSerial}%`)
-            )
-          )
-          .limit(1);
+        const dbItem = await this.inventoryPort.searchItemFallbackBySerial(rawSerial);
 
-        if (itemRows.length > 0) {
-          const dbItem = itemRows[0];
+        if (dbItem) {
           return {
             found: true,
             serial: rawSerial,
@@ -1387,10 +1361,15 @@ export class CourierService {
 
   private async notifyTelegramUser(userId: string, htmlMessage: string, replyToMessageId?: number): Promise<void> {
     try {
-      const botToken = process.env.TELEGRAM_BOT_TOKEN || "8829774810:AAG-bnlRiTZAoHfvijp7erQmRKDBPxBfOFw";
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken || !botToken.trim()) {
+        console.warn("[TelegramNotify] TELEGRAM_BOT_TOKEN is not configured. Skipping notification safely.");
+        return;
+      }
+
       const techUser = await this.inventoryPort.findUserById(userId);
       const chatId = (techUser as any)?.telegram_user_id || techUser?.username;
-      if (!chatId || !botToken) return;
+      if (!chatId) return;
 
       const payload: Record<string, any> = {
         chat_id: chatId,
@@ -1409,7 +1388,7 @@ export class CourierService {
         body: JSON.stringify(payload),
       });
     } catch (err) {
-      console.error("[TelegramNotify] Error sending notification:", err);
+      console.error("[TelegramNotify] Error sending notification safely (token omitted from log)");
     }
   }
 
@@ -1880,84 +1859,6 @@ export class CourierService {
     const simSerial = (data.simSerial || "").trim();
     if (!simSerial) throw new ValidationError("رقم الشريحة مطلوب");
 
-    let targetOwnerId = data.technicianId || null;
-
-    if (!targetOwnerId && data.technicianUsername) {
-      const uRows = await db
-        .select()
-        .from(users)
-        .where(
-          or(
-            eq(users.username, data.technicianUsername),
-            eq(users.telegramUserId, data.technicianUsername),
-            ilike(users.fullName, `%${data.technicianUsername}%`)
-          )
-        )
-        .limit(1);
-      if (uRows.length > 0) {
-        targetOwnerId = uRows[0].id;
-      }
-    }
-
-    // Get or create itemType for SIM
-    let simTypeId = "";
-    const simTypesList = await db
-      .select()
-      .from(itemTypes)
-      .where(or(eq(itemTypes.category, "sim"), ilike(itemTypes.nameAr, "%شريحة%")))
-      .limit(1);
-
-    if (simTypesList.length > 0) {
-      simTypeId = simTypesList[0].id;
-    } else {
-      const [newType] = await db.insert(itemTypes).values({
-        nameAr: "شريحة اتصال",
-        nameEn: "SIM Card",
-        category: "sim",
-        requiresSerial: true,
-      }).returning();
-      simTypeId = newType.id;
-    }
-
-    // Check if already exists in items
-    const existing = await db
-      .select()
-      .from(items)
-      .where(or(eq(items.serialNumber, simSerial), eq(items.barcode, simSerial)))
-      .limit(1);
-
-    if (existing.length > 0) {
-      const [updated] = await db
-        .update(items)
-        .set({
-          currentOwnerId: targetOwnerId || existing[0].currentOwnerId,
-          carrierName: data.simType || existing[0].carrierName || "STC",
-          status: "RECEIVED_BY_TECHNICIAN",
-          updatedAt: new Date(),
-        })
-        .where(eq(items.id, existing[0].id))
-        .returning();
-
-      return {
-        success: true,
-        message: "تم تحديث بيانات الشريحة وربطها بالفني بنجاح",
-        item: updated,
-      };
-    }
-
-    const [newItem] = await db.insert(items).values({
-      itemTypeId: simTypeId,
-      serialNumber: simSerial,
-      barcode: simSerial,
-      carrierName: data.simType || "STC",
-      currentOwnerId: targetOwnerId,
-      status: targetOwnerId ? "RECEIVED_BY_TECHNICIAN" : "WAREHOUSE",
-    }).returning();
-
-    return {
-      success: true,
-      message: "تم إدراج الشريحة في المخزون وربطها بالفني بنجاح",
-      item: newItem,
-    };
+    return this.inventoryPort.linkSimToTechnician({ ...data, simSerial });
   }
 }

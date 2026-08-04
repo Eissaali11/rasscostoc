@@ -14,7 +14,7 @@ import {
 import {
   redactSecrets,
   resolveVisionLiveAccess,
-} from "../../../ai-engine-settings/vision-live-gate";
+} from "../../../ai-engine-settings/contracts";
 import { collectVisionImages } from "./pdf-page-renderer";
 import { shouldUseMockExtraction } from "./mock-extraction";
 

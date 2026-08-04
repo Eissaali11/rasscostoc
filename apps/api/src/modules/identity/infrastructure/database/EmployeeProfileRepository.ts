@@ -10,13 +10,14 @@ import {
   type EmployeeProfileData,
   type UserSafe,
 } from "@shared/schema";
+import type { IEmployeeProfileRepository } from "../../application/users/contracts/IEmployeeProfileRepository";
 
 function toUserSafe(row: typeof users.$inferSelect): UserSafe {
   const { password: _password, ...safe } = row;
   return safe;
 }
 
-export class EmployeeProfileRepository {
+export class EmployeeProfileRepository implements IEmployeeProfileRepository {
   async findUserById(userId: string) {
     const db = getDatabase();
     const [row] = await db.select().from(users).where(eq(users.id, userId)).limit(1);

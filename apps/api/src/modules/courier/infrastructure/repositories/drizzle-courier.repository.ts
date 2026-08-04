@@ -1009,6 +1009,135 @@ export class DrizzleCourierRepository implements
     return row || null;
   }
 
+  async searchItemFallbackBySerial(rawSerial: string, tx?: any): Promise<{
+    id: string;
+    serialNumber: string;
+    simSerial: string | null;
+    carrierName: string | null;
+    status: string;
+    currentOwnerId: string | null;
+    technicianName: string | null;
+    technicianCode: string | null;
+  } | null> {
+    const client = this.getClient(tx);
+    const itemRows = await client
+      .select({
+        id: items.id,
+        serialNumber: items.serialNumber,
+        simSerial: items.simSerial,
+        carrierName: items.carrierName,
+        status: items.status,
+        currentOwnerId: items.currentOwnerId,
+        technicianName: users.fullName,
+        technicianCode: users.username,
+      })
+      .from(items)
+      .leftJoin(users, eq(users.id, items.currentOwnerId))
+      .where(
+        or(
+          eq(items.serialNumber, rawSerial),
+          eq(items.simSerial, rawSerial),
+          eq(items.barcode, rawSerial),
+          ilike(items.serialNumber, `%${rawSerial}%`),
+          ilike(items.simSerial, `%${rawSerial}%`)
+        )
+      )
+      .limit(1);
+
+    return itemRows[0] || null;
+  }
+
+  async linkSimToTechnician(data: {
+    simSerial: string;
+    simType?: string;
+    technicianId?: string;
+    technicianUsername?: string;
+    notes?: string;
+  }, tx?: any): Promise<{ success: boolean; message: string; item: any }> {
+    const client = this.getClient(tx);
+    const simSerial = (data.simSerial || "").trim();
+
+    let targetOwnerId = data.technicianId || null;
+
+    if (!targetOwnerId && data.technicianUsername) {
+      const uRows = await client
+        .select()
+        .from(users)
+        .where(
+          or(
+            eq(users.username, data.technicianUsername),
+            eq(users.telegramUserId, data.technicianUsername),
+            ilike(users.fullName, `%${data.technicianUsername}%`)
+          )
+        )
+        .limit(1);
+      if (uRows.length > 0) {
+        targetOwnerId = uRows[0].id;
+      }
+    }
+
+    // Get or create itemType for SIM
+    let simTypeId = "";
+    const simTypesList = await client
+      .select()
+      .from(itemTypes)
+      .where(or(eq(itemTypes.category, "sim"), ilike(itemTypes.nameAr, "%شريحة%")))
+      .limit(1);
+
+    if (simTypesList.length > 0) {
+      simTypeId = simTypesList[0].id;
+    } else {
+      const [newType] = await client.insert(itemTypes).values({
+        nameAr: "شريحة اتصال",
+        nameEn: "SIM Card",
+        category: "sim",
+        requiresSerial: true,
+      }).returning();
+      simTypeId = newType.id;
+    }
+
+    // Check if already exists in items
+    const existing = await client
+      .select()
+      .from(items)
+      .where(or(eq(items.serialNumber, simSerial), eq(items.barcode, simSerial)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await client
+        .update(items)
+        .set({
+          currentOwnerId: targetOwnerId || existing[0].currentOwnerId,
+          carrierName: data.simType || existing[0].carrierName || "STC",
+          status: "RECEIVED_BY_TECHNICIAN",
+          updatedAt: new Date(),
+        })
+        .where(eq(items.id, existing[0].id))
+        .returning();
+
+      return {
+        success: true,
+        message: "تم تحديث بيانات الشريحة وربطها بالفني بنجاح",
+        item: updated,
+      };
+    }
+
+    const [newItem] = await client.insert(items).values({
+      itemTypeId: simTypeId,
+      serialNumber: simSerial,
+      barcode: simSerial,
+      carrierName: data.simType || "STC",
+      currentOwnerId: targetOwnerId,
+      status: targetOwnerId ? "RECEIVED_BY_TECHNICIAN" : "WAREHOUSE",
+    }).returning();
+
+    return {
+      success: true,
+      message: "تم إدراج الشريحة في المخزون وربطها بالفني بنجاح",
+      item: newItem,
+    };
+  }
+
   // ── ICourierInventoryPort ──────────────────────────────────────────────────
   async findItemBySerial(serial: string, tx?: any): Promise<any | null> {
     const client = tx || this.tx || db;

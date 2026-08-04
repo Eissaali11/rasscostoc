@@ -11,7 +11,9 @@ import {
   type EmployeeProfileData,
 } from "@shared/schema";
 import { isAdmin, isSupervisor, getRoleLabel } from "@shared/roles";
-import { employeeProfileRepository } from "../../infrastructure/database/EmployeeProfileRepository";
+import { employeeProfileContainer } from "@server/composition/employee-profile.container";
+
+const employeeProfileUseCase = employeeProfileContainer.employeeProfileUseCase;
 
 function canReadProfile(
   actor: Express.Request["user"],
@@ -84,14 +86,14 @@ export class EmployeeProfileController {
    */
   get = asyncHandler(async (req: Request, res: Response) => {
     const actor = req.user!;
-    const user = await employeeProfileRepository.findUserById(req.params.id);
+    const user = await employeeProfileUseCase.findUserById(req.params.id);
     if (!user) throw new NotFoundError("User not found");
 
     if (!canReadProfile(actor, user)) {
       throw new AuthorizationError("ليس لديك صلاحية لعرض ملف هذا الموظف");
     }
 
-    const profileData = await employeeProfileRepository.getProfileData(user.id);
+    const profileData = await employeeProfileUseCase.getProfileData(user.id);
     const { password: _pw, fcmToken: _fcm, ...userSafe } = user;
 
     res.json({
@@ -111,7 +113,7 @@ export class EmployeeProfileController {
    */
   upsert = asyncHandler(async (req: Request, res: Response) => {
     const actor = req.user!;
-    const user = await employeeProfileRepository.findUserById(req.params.id);
+    const user = await employeeProfileUseCase.findUserById(req.params.id);
     if (!user) throw new NotFoundError("User not found");
 
     if (!canWriteProfile(actor, user)) {
@@ -124,7 +126,7 @@ export class EmployeeProfileController {
     }
 
     const input = parsed.data;
-    const existing = await employeeProfileRepository.getProfileData(user.id);
+    const existing = await employeeProfileUseCase.getProfileData(user.id);
     const admin = isAdmin(actor.role);
 
     const otherFilesRaw = Array.isArray(input.otherFiles)
@@ -180,7 +182,7 @@ export class EmployeeProfileController {
         : existing.employeeNumber || defaultEmployeeNumber(user),
     };
 
-    const savedProfile = await employeeProfileRepository.upsertProfileData(user.id, nextProfile);
+    const savedProfile = await employeeProfileUseCase.upsertProfileData(user.id, nextProfile);
 
     const userPatch: {
       fullName?: string;
@@ -213,7 +215,7 @@ export class EmployeeProfileController {
     };
 
     if (Object.keys(userPatch).length > 0) {
-      const patched = await employeeProfileRepository.updateUserCore(user.id, userPatch);
+      const patched = await employeeProfileUseCase.updateUserCore(user.id, userPatch);
       if (patched) {
         updatedUserSafe = {
           id: patched.id,

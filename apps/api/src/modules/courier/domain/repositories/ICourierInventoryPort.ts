@@ -37,4 +37,27 @@ export interface ICourierInventoryPort {
   findUserByCodeOrUsername(code: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null } | null>;
   findUserByFuzzyName(name: string, tx?: any): Promise<{ id: string; fullName: string; username: string; technicianCode: string | null } | null>;
   findLinkedRequestItemBySerial(serial: string, tx?: any): Promise<{ requestId: number; id: number; itemType: string; status: string } | null>;
+
+  /**
+   * Broad fuzzy fallback search used by serialLookup when the exact-match
+   * lookup finds nothing (matches serial/simSerial/barcode, exact or partial).
+   */
+  searchItemFallbackBySerial(rawSerial: string, tx?: any): Promise<{
+    id: string;
+    serialNumber: string;
+    simSerial: string | null;
+    carrierName: string | null;
+    status: string;
+    currentOwnerId: string | null;
+    technicianName: string | null;
+    technicianCode: string | null;
+  } | null>;
+
+  linkSimToTechnician(data: {
+    simSerial: string;
+    simType?: string;
+    technicianId?: string;
+    technicianUsername?: string;
+    notes?: string;
+  }, tx?: any): Promise<{ success: boolean; message: string; item: any }>;
 }
