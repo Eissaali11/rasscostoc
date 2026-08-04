@@ -25,6 +25,7 @@ import { spawnSync } from "child_process";
 const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/core/idempotency/idempotency.test.ts",
   "apps/api/src/core/testing/foundation/database-foundation.smoke.test.ts",
+  "apps/api/src/core/tests/security/security-foundation.test.ts",
   "apps/api/src/core/jobs/jobs-drain.p3.test.ts",
   "apps/api/src/core/jobs/jobs.test.ts",
   "apps/api/src/core/middlewares/idempotency-race.p4.test.ts",

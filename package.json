@@ -19,6 +19,7 @@
     "test:isolated": "node scripts/test-isolated.mjs",
     "test:http": "node scripts/test-http-foundation.mjs",
     "test:database": "node scripts/test-database.mjs",
+    "test:security": "node scripts/test-security.mjs",
     "test:portal": "vitest run apps/portal",
     "test:e2e": "playwright test",
     "check": "tsc -p tsconfig.runtime-check.json",

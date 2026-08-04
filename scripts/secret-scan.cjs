@@ -80,32 +80,42 @@ function stagedContent(file) {
 }
 const fs = require("fs");
 
-const all = process.argv.includes("--all");
-const files = all ? allFiles() : stagedFiles();
+// PHASE B1.5 — minimal testability seam: RULES/ALLOW_ALL/ALLOW_FIXTURES were
+// previously only reachable by actually running this file as a CLI (which
+// calls process.exit()), making the regex rules themselves untestable in
+// isolation. Exporting them changes no CLI behavior — the block below only
+// runs when this file is executed directly (`node scripts/secret-scan.cjs`),
+// exactly as before.
+module.exports = { RULES, ALLOW_ALL, ALLOW_FIXTURES };
 
-const findings = [];
-for (const file of files) {
-  if (ALLOW_ALL.some((re) => re.test(file))) continue;
-  if (!/\.(m?[jt]s|cjs|json|ya?ml|env|sh|txt|conf|ini|sql)$/i.test(file)) continue;
-  const isFixture = ALLOW_FIXTURES.some((re) => re.test(file));
-  const content = all ? (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "") : stagedContent(file);
-  if (!content) continue;
-  for (const rule of RULES) {
-    if (isFixture && !rule.global) continue; // fixtures: only global rules apply
-    rule.re.lastIndex = 0;
-    if (rule.re.test(content)) findings.push({ file, rule: rule.id, message: rule.message });
+if (require.main === module) {
+  const all = process.argv.includes("--all");
+  const files = all ? allFiles() : stagedFiles();
+
+  const findings = [];
+  for (const file of files) {
+    if (ALLOW_ALL.some((re) => re.test(file))) continue;
+    if (!/\.(m?[jt]s|cjs|json|ya?ml|env|sh|txt|conf|ini|sql)$/i.test(file)) continue;
+    const isFixture = ALLOW_FIXTURES.some((re) => re.test(file));
+    const content = all ? (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "") : stagedContent(file);
+    if (!content) continue;
+    for (const rule of RULES) {
+      if (isFixture && !rule.global) continue; // fixtures: only global rules apply
+      rule.re.lastIndex = 0;
+      if (rule.re.test(content)) findings.push({ file, rule: rule.id, message: rule.message });
+    }
   }
-}
 
-if (findings.length) {
-  console.error("\n\x1b[31m[ADR-001] Secret-scan BLOCKED this commit:\x1b[0m");
-  for (const f of findings) console.error(`  ${f.file}\n    → ${f.message} (${f.rule})`);
-  console.error(
-    "\n  Secrets must never be committed. Move the value to an untracked .env / .env.ops file\n" +
-      "  and reference it via process.env. If this is a false positive, refine the allowlist in\n" +
-      "  scripts/secret-scan.cjs — do not bypass with --no-verify.\n"
-  );
-  process.exit(1);
+  if (findings.length) {
+    console.error("\n\x1b[31m[ADR-001] Secret-scan BLOCKED this commit:\x1b[0m");
+    for (const f of findings) console.error(`  ${f.file}\n    → ${f.message} (${f.rule})`);
+    console.error(
+      "\n  Secrets must never be committed. Move the value to an untracked .env / .env.ops file\n" +
+        "  and reference it via process.env. If this is a false positive, refine the allowlist in\n" +
+        "  scripts/secret-scan.cjs — do not bypass with --no-verify.\n"
+    );
+    process.exit(1);
+  }
+  console.log(`secret-scan: clean (${files.length} file(s) checked)`);
+  process.exit(0);
 }
-console.log(`secret-scan: clean (${files.length} file(s) checked)`);
-process.exit(0);
