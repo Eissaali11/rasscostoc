@@ -17,6 +17,7 @@
     "test:unit:watch": "vitest",
     "test:unit:safe": "node scripts/test-unit-safe.mjs",
     "test:isolated": "node scripts/test-isolated.mjs",
+    "test:http": "node scripts/test-http-foundation.mjs",
     "check": "tsc -p tsconfig.runtime-check.json",
     "check:full": "tsc -p tsconfig.json",
     "lint:architecture": "depcruise --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json apps/api/src",
