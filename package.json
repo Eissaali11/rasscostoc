@@ -15,6 +15,7 @@
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:unit:safe": "node scripts/test-unit-safe.mjs",
     "test:isolated": "node scripts/test-isolated.mjs",
     "check": "tsc -p tsconfig.runtime-check.json",
     "check:full": "tsc -p tsconfig.json",

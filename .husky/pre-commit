@@ -1,1 +1,1 @@
-node scripts/secret-scan.cjs && npm run lint:architecture && npm run test:unit
+node scripts/secret-scan.cjs && npx tsc -p tsconfig.runtime-check.json && npx depcruise --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json apps/api/src && node scripts/test-unit-safe.mjs
