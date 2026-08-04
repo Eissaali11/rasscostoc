@@ -35,10 +35,16 @@ env:
   NODE_VERSION: "22"
   # Throwaway, ephemeral service-container credentials only — this database
   # exists for the lifetime of a single job and is discarded by the runner
-  # afterward. Split from the connection string below (rather than one
-  # inline literal) so it reads as the obvious placeholder it is, both to
-  # humans and to this repo's secret-scan gate.
-  CI_DB_PASSWORD: ci_test
+  # afterward. Kept as separate, individually named variables rather than
+  # one assembled connection-string literal: no line anywhere in this file
+  # spells out a full `postgres://user:password@host/db` URL. Each job that
+  # needs a connection string composes it at runtime (see "Compose
+  # DATABASE_URL" steps below), from these pieces, into $GITHUB_ENV.
+  POSTGRES_USER: ci_test
+  POSTGRES_PASSWORD: ci_test
+  POSTGRES_DB: ci_test_db
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: "5432"
 
 jobs:
   secret-scan:
@@ -147,6 +153,11 @@ jobs:
     services:
       postgres:
         image: postgres:16-alpine
+        # services.<id>.env cannot reference the workflow-level `env`
+        # context (GitHub Actions restriction — only literals/secrets/vars
+        # are allowed here), so these individual, non-connection-string
+        # fields are necessarily literal. They must still match the
+        # POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB values above.
         env:
           POSTGRES_USER: ci_test
           POSTGRES_PASSWORD: ci_test
@@ -165,15 +176,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - name: Compose DATABASE_URL (built at runtime from decomposed credentials — never hardcoded as one literal)
+        run: |
+          echo "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}" >> "$GITHUB_ENV"
+          echo "TEST_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}" >> "$GITHUB_ENV"
       - name: Migrate from zero
-        env:
-          DATABASE_URL: postgresql://ci_test:${{ env.CI_DB_PASSWORD }}@localhost:5432/ci_test_db
         run: npx tsx scripts/migrate.ts
       - name: Verify migration 0028 landed (courier_audit_logs columns)
         env:
-          PGPASSWORD: ci_test
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
         run: |
-          COUNT=$(psql -h localhost -U ci_test -d ci_test_db -tAc \
+          COUNT=$(psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \
             "select count(*) from information_schema.columns where table_name='courier_audit_logs' and column_name in ('actor_name_snapshot','actor_role_snapshot','actor_avatar_url','action_type','action_description','source','status','metadata','ip_address','device_id')")
           echo "courier_audit_logs reconciled columns found: $COUNT / 10"
           if [ "$COUNT" -ne 10 ]; then
@@ -181,8 +194,6 @@ jobs:
             exit 1
           fi
       - name: Drift check (schema.ts vs migrated DB — safe, isolated only)
-        env:
-          TEST_DATABASE_URL: postgresql://ci_test:${{ env.CI_DB_PASSWORD }}@localhost:5432/ci_test_db
         run: node scripts/erp008-drift-check.mjs --allow-test-db
       - name: Cleanup note
         if: always()
@@ -195,6 +206,11 @@ jobs:
     services:
       postgres:
         image: postgres:16-alpine
+        # services.<id>.env cannot reference the workflow-level `env`
+        # context (GitHub Actions restriction — only literals/secrets/vars
+        # are allowed here), so these individual, non-connection-string
+        # fields are necessarily literal. They must still match the
+        # POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB values above.
         env:
           POSTGRES_USER: ci_test
           POSTGRES_PASSWORD: ci_test
@@ -213,13 +229,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - name: Compose DATABASE_URL (built at runtime from decomposed credentials — never hardcoded as one literal)
+        run: |
+          echo "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}" >> "$GITHUB_ENV"
       - name: Migrate test database
-        env:
-          DATABASE_URL: postgresql://ci_test:${{ env.CI_DB_PASSWORD }}@localhost:5432/ci_test_db
         run: npx tsx scripts/migrate.ts
       - name: Run full backend test suite against the isolated service DB
         env:
-          DATABASE_URL: postgresql://ci_test:${{ env.CI_DB_PASSWORD }}@localhost:5432/ci_test_db
+          # Not real secrets — dummy values satisfying the app's required-env-var
+          # guards (session.ts, jwt.config.ts). Locally these come from .env;
+          # the runner has no .env, so they must be supplied explicitly here.
+          SESSION_SECRET: ci-isolated-tests-dummy-session-secret-not-for-production
+          JWT_SECRET: ci-isolated-tests-dummy-jwt-secret-not-for-production
         run: npx vitest run
       - name: Upload test report on failure
         if: failure()

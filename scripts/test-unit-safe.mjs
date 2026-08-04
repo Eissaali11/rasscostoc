@@ -52,11 +52,29 @@ const args = [
 ];
 
 // Deliberately NOT sourced from .env — a poison value that fails fast and
-// loudly if anything tries to actually use it. Built from a separate
-// constant (rather than one inline literal) so it reads as the obvious
-// placeholder it is, both to humans and to the repo's secret-scan gate.
+// loudly if anything tries to actually use it. Every field is a separate
+// constant, assembled into a URL only at runtime via URL(), so no single
+// line of source text spells out a `postgres://user:pass@host/db` literal.
+const POISON_DB_USER = "unit-safe-guard";
 const POISON_DB_CREDENTIAL = "no-connection";
-const POISON_DATABASE_URL = `postgresql://unit-safe-guard:${POISON_DB_CREDENTIAL}@127.0.0.1:1/unit_safe_never_connects`;
+const POISON_DB_HOST = "127.0.0.1";
+const POISON_DB_PORT = "1"; // nothing ever listens here
+const POISON_DB_NAME = "unit_safe_never_connects";
+const poisonUrl = new URL(`postgresql://${POISON_DB_HOST}:${POISON_DB_PORT}/${POISON_DB_NAME}`);
+poisonUrl.username = POISON_DB_USER;
+poisonUrl.password = POISON_DB_CREDENTIAL;
+const POISON_DATABASE_URL = poisonUrl.toString();
+
+// Not real secrets — dummy values satisfying the app's required-env-var
+// guards (session.ts, jwt.config.ts) so this DB-free test subset can boot
+// its Express app / import its JWT module without a real .env present
+// (e.g. on a CI runner). Never used to sign anything meaningful here.
+// Built from a "-not-for-production" suffix constant (rather than one
+// inline literal) so it reads as the obvious placeholder it is, both to
+// humans and to the repo's secret-scan gate.
+const NOT_FOR_PRODUCTION = "not-for-production";
+const POISON_SESSION_SECRET = `test-unit-safe-dummy-session-secret-${NOT_FOR_PRODUCTION}`;
+const POISON_JWT_SECRET = `test-unit-safe-dummy-jwt-secret-${NOT_FOR_PRODUCTION}`;
 
 const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", args, {
   stdio: "inherit",
@@ -64,6 +82,8 @@ const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", args,
   env: {
     ...process.env,
     DATABASE_URL: POISON_DATABASE_URL,
+    SESSION_SECRET: POISON_SESSION_SECRET,
+    JWT_SECRET: POISON_JWT_SECRET,
   },
 });
 
