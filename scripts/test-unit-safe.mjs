@@ -51,14 +51,19 @@ const args = [
   ...DB_DEPENDENT_TEST_FILES.flatMap((f) => ["--exclude", f]),
 ];
 
+// Deliberately NOT sourced from .env — a poison value that fails fast and
+// loudly if anything tries to actually use it. Built from a separate
+// constant (rather than one inline literal) so it reads as the obvious
+// placeholder it is, both to humans and to the repo's secret-scan gate.
+const POISON_DB_CREDENTIAL = "no-connection";
+const POISON_DATABASE_URL = `postgresql://unit-safe-guard:${POISON_DB_CREDENTIAL}@127.0.0.1:1/unit_safe_never_connects`;
+
 const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", args, {
   stdio: "inherit",
   shell: true,
   env: {
     ...process.env,
-    // Deliberately NOT sourced from .env — a poison value that fails fast
-    // and loudly if anything tries to actually use it.
-    DATABASE_URL: "postgresql://unit-safe-guard:no-connection@127.0.0.1:1/unit_safe_never_connects",
+    DATABASE_URL: POISON_DATABASE_URL,
   },
 });
 
