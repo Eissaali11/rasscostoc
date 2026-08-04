@@ -57,6 +57,8 @@ export async function seedMinimalReferenceData(): Promise<{ regionId: string; ad
   await db.insert(users).values({
     id: adminUserId,
     username: `seed.admin.${Date.now()}`,
+    email: `seed.admin.${Date.now()}@test.invalid`,
+    fullName: "Seed Admin (Test Fixture)",
     password: seedPasswordHash,
     role: "admin",
     regionId,
