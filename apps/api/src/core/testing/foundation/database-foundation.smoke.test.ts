@@ -14,7 +14,6 @@
  * unreachable DATABASE_URL by design).
  */
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { sql } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   resetTestDatabase,
@@ -27,6 +26,19 @@ import { createWarehouseFixture } from "./fixtures";
 
 const TABLES_UNDER_TEST = ["warehouses", "regions", "users", "number_sequences"];
 
+// Docker-hosted PostgreSQL reset operations may exceed Vitest's default
+// 5-second timeout (measured TRUNCATE latency here: 1.7-3.6s, and the
+// "reset strategy" test below calls resetTestDatabase() twice). Beyond
+// "slow" this matters concretely: when Vitest's default timeout fires, it
+// abandons the test but does NOT cancel the in-flight query — the orphaned
+// query keeps running against the shared `db`/pool singleton and can land
+// its effects (e.g. a TRUNCATE or leftover row) while the *next* test is
+// already executing, producing exactly the intermittent rowCount mismatches
+// this suite showed under load. Scoped to this file only via describe()'s
+// own options (not vitest.config.ts's global testTimeout) — proven via
+// B1.6R diagnosis (pool/lock instrumentation showed zero blocking locks and
+// zero connection leaks; the only anomaly was cross-test query overlap
+// traceable to this abandonment).
 describe("PHASE B1.2 — database test foundation smoke", () => {
   beforeAll(async () => {
     if (!process.env.DATABASE_URL?.includes("test")) {
@@ -132,4 +144,4 @@ describe("PHASE B1.2 — database test foundation smoke", () => {
     await resetTestDatabase(["regions"]);
     expect(await rowCount("regions")).toBe(0);
   });
-});
+}, { timeout: 15000 });
