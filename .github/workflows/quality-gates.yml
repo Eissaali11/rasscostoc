@@ -242,6 +242,13 @@ jobs:
           # the runner has no .env, so they must be supplied explicitly here.
           SESSION_SECRET: ci-isolated-tests-dummy-session-secret-not-for-production
           JWT_SECRET: ci-isolated-tests-dummy-jwt-secret-not-for-production
+          # ERP-008: registerRoutes() bootstraps a default admin account on an
+          # empty DB (this service container always starts empty) and refuses
+          # to do so without a real 12+ char password — the security-foundation
+          # test suite (Phase B1.5) is picked up by this unfiltered `vitest run`
+          # and exercises that same code path. Not a real secret — same dummy
+          # pattern as scripts/test-isolated.mjs / scripts/test-security.mjs.
+          BOOTSTRAP_ADMIN_PASSWORD: ci-isolated-bootstrap-admin-password-not-for-production
         run: npx vitest run
       - name: Upload test report on failure
         if: failure()
