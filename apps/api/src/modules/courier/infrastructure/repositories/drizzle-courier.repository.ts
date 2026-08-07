@@ -49,7 +49,7 @@ import {
 } from "../courier-list-query";
 import { metrics } from "@core/telemetry/metrics";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
-import { ValidationError } from "@core/errors/AppError";
+import { ValidationError, ConflictError } from "@core/errors/AppError";
 
 export class DrizzleCourierRepository implements
   ICourierRepository,
@@ -1169,16 +1169,37 @@ export class DrizzleCourierRepository implements
     tx?: any
   ): Promise<void> {
     const client = tx || this.tx || db;
-    
-    // Update item status & current owner
-    await client
+
+    // DB-R9 fix: conditional update guarded by the caller's expected
+    // previous status. Previously this UPDATE had no WHERE condition on
+    // the item's prior state, so two concurrent callers transferring the
+    // same item (e.g. two technicians racing to receive it) could both
+    // have their UPDATE succeed and both go on to write a "success"
+    // inventory_transactions/item_history_logs row — a lost update with a
+    // contradictory audit trail. The caller always fetches and passes
+    // oldStatus immediately before calling this method, so requiring the
+    // row's current status to still match it turns this into an atomic
+    // compare-and-swap: only the request that observes the still-current
+    // state can win. A losing concurrent request's UPDATE matches zero
+    // rows and is rejected with a ConflictError before any transaction or
+    // history record is written for it.
+    const updateResult = await client
       .update(items)
       .set({
         status: params.newStatus,
         currentOwnerId: params.technicianId,
         updatedAt: new Date(),
       })
-      .where(eq(items.id, params.itemId));
+      .where(and(eq(items.id, params.itemId), eq(items.status, params.oldStatus)));
+
+    const updatedRows = (updateResult as any).rowCount ?? (updateResult as any).changes ?? 0;
+    if (updatedRows !== 1) {
+      throw new ConflictError(
+        "تعذر نقل عهدة الصنف: تم تغيير حالته بالفعل بواسطة عملية أخرى (رقم الصنف: " +
+          params.itemId +
+          ")"
+      );
+    }
 
     // Record inventory transaction
     await client.insert(inventoryTransactions).values({

@@ -40,6 +40,7 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/inventory/infrastructure/services/serialized-items.service.delete-custody.integration.test.ts",
   "apps/api/src/modules/inventory/serial-verification-suite.test.ts",
   "apps/api/src/modules/inventory/infrastructure/database/DrizzleWarehouseRepository.deleteWarehouse.atomicity.test.ts",
+  "apps/api/src/modules/courier/infrastructure/repositories/DrizzleCourierRepository.transferCustodyToTechnician.concurrency.test.ts",
 ];
 
 const args = [
