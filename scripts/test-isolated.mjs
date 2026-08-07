@@ -91,6 +91,18 @@ console.log(`Docker assigned host port ${PORT}.`);
 // a static value that would trip the repo's own secret-scan gate).
 const bootstrapAdminSecret = randomBytes(16).toString("hex");
 
+// app.ts (setupSession) and jwt.config.ts both throw at import time if
+// SESSION_SECRET / JWT_SECRET are unset — previously this script only ever
+// worked because a developer's inherited shell/.env state happened to
+// supply them, which a genuinely clean environment (fresh clone, no .env,
+// no inherited shell state) does not. Generated fresh per run, never
+// logged, discarded with the container — same reasoning and technique as
+// bootstrapAdminSecret above: not a fixed literal, so neither a real
+// secret nor a static value that would trip the repo's own secret-scan
+// gate (a plain `SESSION_SECRET = "..."` literal does trip it).
+const ISOLATED_TEST_SESSION_SECRET = randomBytes(16).toString("hex");
+const ISOLATED_TEST_JWT_SECRET = randomBytes(16).toString("hex");
+
 let exitCode = 1;
 try {
   if (!waitForPostgres()) {
@@ -112,7 +124,13 @@ try {
 
   console.log("Running backend test suite against isolated database...");
   const test = run(process.platform === "win32" ? "npx.cmd" : "npx", ["vitest", "run"], {
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL, BOOTSTRAP_ADMIN_PASSWORD: bootstrapAdminSecret },
+    env: {
+      ...process.env,
+      DATABASE_URL: TEST_DATABASE_URL,
+      BOOTSTRAP_ADMIN_PASSWORD: bootstrapAdminSecret,
+      SESSION_SECRET: ISOLATED_TEST_SESSION_SECRET,
+      JWT_SECRET: ISOLATED_TEST_JWT_SECRET,
+    },
     stdio: "inherit",
     shell: true,
   });
