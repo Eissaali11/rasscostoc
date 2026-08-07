@@ -253,23 +253,34 @@ export class DrizzleWarehouseRepository implements IWarehouseRepository {
     return warehouse;
   }
 
+  // DB-R8 fix: all four deletes must succeed or none of them do. Previously
+  // these ran as four separate, non-transactional statements — when the
+  // final `delete(warehouses)` was rejected by a real FK (e.g. an `items`
+  // row still referencing the warehouse via onDelete: "restrict"), the
+  // three prior deletes had already committed, silently wiping the
+  // warehouse's transfer/inventory/request history while the warehouse row
+  // itself survived the rejected delete (a partial write). Wrapping the
+  // whole sequence in one db.transaction() guarantees either all four
+  // writes commit together or none of them do.
   async deleteWarehouse(id: string): Promise<boolean> {
-    await this.db
-      .delete(warehouseTransfers)
-      .where(eq(warehouseTransfers.warehouseId, id));
-    
-    await this.db
-      .delete(warehouseInventory)
-      .where(eq(warehouseInventory.warehouseId, id));
-    
-    await this.db
-      .delete(inventoryRequests)
-      .where(eq(inventoryRequests.warehouseId, id));
-    
-    const result = await this.db
-      .delete(warehouses)
-      .where(eq(warehouses.id, id));
-    return ((result as any).rowCount || (result as any).changes || 0) > 0;
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .delete(warehouseTransfers)
+        .where(eq(warehouseTransfers.warehouseId, id));
+
+      await tx
+        .delete(warehouseInventory)
+        .where(eq(warehouseInventory.warehouseId, id));
+
+      await tx
+        .delete(inventoryRequests)
+        .where(eq(inventoryRequests.warehouseId, id));
+
+      const result = await tx
+        .delete(warehouses)
+        .where(eq(warehouses.id, id));
+      return ((result as any).rowCount || (result as any).changes || 0) > 0;
+    });
   }
 
   async getWarehouseInventory(warehouseId: string): Promise<WarehouseInventory | undefined> {
