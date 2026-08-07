@@ -39,6 +39,7 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/courier/infrastructure/optimistic-locking.test.ts",
   "apps/api/src/modules/inventory/infrastructure/services/serialized-items.service.delete-custody.integration.test.ts",
   "apps/api/src/modules/inventory/serial-verification-suite.test.ts",
+  "apps/api/src/modules/inventory/infrastructure/database/DrizzleWarehouseRepository.deleteWarehouse.atomicity.test.ts",
 ];
 
 const args = [
