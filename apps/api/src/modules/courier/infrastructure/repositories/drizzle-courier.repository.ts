@@ -1104,10 +1104,18 @@ export class DrizzleCourierRepository implements
       .limit(1);
 
     if (existing.length > 0) {
+      // DB-R7 fix: only when this call is actually assigning a new owner
+      // (targetOwnerId is set) do we also clear warehouse_id, in the same
+      // UPDATE — otherwise an item already sitting in a warehouse would
+      // end up with both current_owner_id and warehouse_id set
+      // simultaneously (confirmed live in Phase C4.4A). When targetOwnerId
+      // is falsy, ownership is left untouched, so warehouse_id must also
+      // be left untouched.
       const [updated] = await client
         .update(items)
         .set({
           currentOwnerId: targetOwnerId || existing[0].currentOwnerId,
+          warehouseId: targetOwnerId ? null : existing[0].warehouseId,
           carrierName: data.simType || existing[0].carrierName || "STC",
           status: "RECEIVED_BY_TECHNICIAN",
           updatedAt: new Date(),
@@ -1183,11 +1191,18 @@ export class DrizzleCourierRepository implements
     // state can win. A losing concurrent request's UPDATE matches zero
     // rows and is rejected with a ConflictError before any transaction or
     // history record is written for it.
+    // DB-R7 fix: assigning a technician as current owner must also clear
+    // warehouse_id in the same UPDATE. Without this, an item transferred
+    // out of a warehouse (or any item that still carried a warehouseId)
+    // would end up with both current_owner_id and warehouse_id set
+    // simultaneously — a dual-ownership state confirmed live in Phase
+    // C4.4A (no single source of truth for where the physical device is).
     const updateResult = await client
       .update(items)
       .set({
         status: params.newStatus,
         currentOwnerId: params.technicianId,
+        warehouseId: null,
         updatedAt: new Date(),
       })
       .where(and(eq(items.id, params.itemId), eq(items.status, params.oldStatus)));
