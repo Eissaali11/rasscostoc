@@ -246,6 +246,20 @@
       "when": 1785826865000,
       "tag": "0034_inventory_event_quantity_positive_check_validate",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1785826866000,
+      "tag": "0035_operational_inventory_quantity_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1785826867000,
+      "tag": "0036_operational_inventory_quantity_check_validate",
+      "breakpoints": true
     }
   ]
 }
