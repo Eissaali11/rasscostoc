@@ -96,7 +96,7 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
       itemTypeId,
       serialNumber: `DBR9-${itemId.slice(0, 8)}`,
       barcode: `DBR9-BAR-${itemId.slice(0, 8)}`,
-      status: "RECEIVED",
+      status: "WAREHOUSE",
     });
     createdItemIds.push(itemId);
     return itemId;
@@ -114,14 +114,14 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
       itemId,
       technicianId: technicianA,
       requestId: 1001,
-      oldStatus: "RECEIVED",
+      oldStatus: "WAREHOUSE",
       newStatus: "RECEIVED_BY_TECHNICIAN",
     });
     const attemptB = repoB.transferCustodyToTechnician({
       itemId,
       technicianId: technicianB,
       requestId: 1002,
-      oldStatus: "RECEIVED",
+      oldStatus: "WAREHOUSE",
       newStatus: "RECEIVED_BY_TECHNICIAN",
     });
 
@@ -166,7 +166,7 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
         itemId,
         technicianId: technician,
         requestId: 2001,
-        oldStatus: "RECEIVED",
+        oldStatus: "WAREHOUSE",
         newStatus: "RECEIVED_BY_TECHNICIAN",
       })
     ).resolves.not.toThrow();
@@ -191,11 +191,11 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
       itemId,
       technicianId: technician,
       requestId: 3001,
-      oldStatus: "RECEIVED",
+      oldStatus: "WAREHOUSE",
       newStatus: "RECEIVED_BY_TECHNICIAN",
     });
 
-    // A second call still claiming the item's old status was "RECEIVED"
+    // A second call still claiming the item's old status was "WAREHOUSE"
     // (the pre-transfer state) must be rejected -- the item has already
     // moved on, so re-applying it would be a stale write, not a
     // legitimate retry.
@@ -204,7 +204,7 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
         itemId,
         technicianId: technician,
         requestId: 3002,
-        oldStatus: "RECEIVED",
+        oldStatus: "WAREHOUSE",
         newStatus: "RECEIVED_BY_TECHNICIAN",
       })
     ).rejects.toThrow();

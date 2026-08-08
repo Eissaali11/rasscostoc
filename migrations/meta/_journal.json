@@ -204,6 +204,20 @@
       "when": 1785826859762,
       "tag": "0028_courier_audit_logs_reconcile",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1785826860000,
+      "tag": "0029_items_status_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1785826861000,
+      "tag": "0030_items_status_check_validate",
+      "breakpoints": true
     }
   ]
 }
