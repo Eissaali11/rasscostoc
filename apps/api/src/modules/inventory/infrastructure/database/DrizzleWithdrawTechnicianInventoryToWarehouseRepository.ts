@@ -1,18 +1,22 @@
 import type { IUserRepository } from "@stockpro/contracts";
 import type {
-  IWithdrawTechnicianInventoryToWarehouseRepository,
+  IWithdrawTechnicianInventoryToWarehouseLookupRepository,
+  IWithdrawSystemLogRepository,
 } from "@modules/inventory/application/inventory/use-cases/WithdrawTechnicianInventoryToWarehouse.use-case";
 import { repositories } from "@modules/inventory/infrastructure/database";
 import { WarehouseRepository } from "./WarehouseRepository";
-import { WarehouseInventoryRepository } from "./WarehouseInventoryRepository";
-import { TechnicianInventoryRepository } from "./TechnicianInventoryRepository";
 
+/**
+ * DB-R1 / Phase C4.6C.2 — read-only lookups (user/warehouse existence,
+ * region authorization) plus the post-commit system_logs write. The
+ * balance-affecting reads/writes that used to live here now go through
+ * DrizzleWithdrawTechnicianInventoryToWarehouseUnitOfWork instead, so
+ * they run inside one locked transaction.
+ */
 export class DrizzleWithdrawTechnicianInventoryToWarehouseRepository
-  implements IWithdrawTechnicianInventoryToWarehouseRepository
+  implements IWithdrawTechnicianInventoryToWarehouseLookupRepository, IWithdrawSystemLogRepository
 {
   private readonly warehouses = new WarehouseRepository();
-  private readonly warehouseInventory = new WarehouseInventoryRepository();
-  private readonly technicianInventory = new TechnicianInventoryRepository();
 
   constructor(
     private readonly userRepository: IUserRepository
@@ -31,38 +35,6 @@ export class DrizzleWithdrawTechnicianInventoryToWarehouseRepository
 
   getWarehouse(id: string) {
     return this.warehouses.getWarehouse(id);
-  }
-
-  getTechnicianMovingInventoryEntries(technicianId: string) {
-    return this.technicianInventory.getTechnicianMovingInventoryEntries(technicianId);
-  }
-
-  getWarehouseInventoryEntries(warehouseId: string) {
-    return this.warehouseInventory.getWarehouseInventoryEntries(warehouseId);
-  }
-
-  getTechnicianInventory(technicianId: string) {
-    return this.technicianInventory.getTechnicianInventory(technicianId) as Promise<Record<string, unknown> | undefined>;
-  }
-
-  getWarehouseInventory(warehouseId: string) {
-    return this.warehouses.getWarehouseInventory(warehouseId) as Promise<Record<string, unknown> | null | undefined>;
-  }
-
-  upsertTechnicianMovingInventoryEntry(technicianId: string, itemTypeId: string, boxes: number, units: number) {
-    return this.technicianInventory.upsertTechnicianMovingInventoryEntry(technicianId, itemTypeId, boxes, units);
-  }
-
-  upsertWarehouseInventoryEntry(warehouseId: string, itemTypeId: string, boxes: number, units: number) {
-    return this.warehouseInventory.upsertWarehouseInventoryEntry(warehouseId, itemTypeId, boxes, units);
-  }
-
-  updateTechnicianInventory(technicianId: string, updates: Record<string, number>) {
-    return this.technicianInventory.updateTechnicianInventory(technicianId, updates as any);
-  }
-
-  updateWarehouseInventory(warehouseId: string, updates: Record<string, number>) {
-    return this.warehouses.updateWarehouseInventory(warehouseId, updates as any);
   }
 
   logSystemActivity(payload: {
