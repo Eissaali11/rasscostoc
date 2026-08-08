@@ -288,6 +288,20 @@
       "when": 1785826871000,
       "tag": "0040_technician_sales_metrics_quantity_check_validate",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1785826872000,
+      "tag": "0041_moving_inventory_nonnegative_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1785826873000,
+      "tag": "0042_moving_inventory_nonnegative_check_validate",
+      "breakpoints": true
     }
   ]
 }

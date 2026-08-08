@@ -49,6 +49,7 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/inventory/infrastructure/database/salesPurchaseQuantityCheckConstraint.test.ts",
   "apps/api/src/modules/inventory/infrastructure/database/technicianSalesMetricsQuantityCheckConstraint.test.ts",
   "apps/api/src/modules/inventory/infrastructure/database/withdrawTechnicianInventoryToWarehouseConcurrency.test.ts",
+  "apps/api/src/modules/inventory/infrastructure/database/movingInventoryNonnegativeCheckConstraint.test.ts",
 ];
 
 const args = [
