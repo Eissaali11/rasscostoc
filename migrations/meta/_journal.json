@@ -260,6 +260,20 @@
       "when": 1785826867000,
       "tag": "0036_operational_inventory_quantity_check_validate",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1785826868000,
+      "tag": "0037_sales_purchase_quantity_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1785826869000,
+      "tag": "0038_sales_purchase_quantity_check_validate",
+      "breakpoints": true
     }
   ]
 }
