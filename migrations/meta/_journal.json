@@ -232,6 +232,20 @@
       "when": 1785826863000,
       "tag": "0032_core_inventory_nonnegative_check_validate",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1785826864000,
+      "tag": "0033_inventory_event_quantity_positive_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1785826865000,
+      "tag": "0034_inventory_event_quantity_positive_check_validate",
+      "breakpoints": true
     }
   ]
 }
