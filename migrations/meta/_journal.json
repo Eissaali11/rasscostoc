@@ -218,6 +218,20 @@
       "when": 1785826861000,
       "tag": "0030_items_status_check_validate",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1785826862000,
+      "tag": "0031_core_inventory_nonnegative_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1785826863000,
+      "tag": "0032_core_inventory_nonnegative_check_validate",
+      "breakpoints": true
     }
   ]
 }

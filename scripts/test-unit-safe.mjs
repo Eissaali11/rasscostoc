@@ -43,6 +43,7 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/courier/infrastructure/repositories/DrizzleCourierRepository.transferCustodyToTechnician.concurrency.test.ts",
   "apps/api/src/modules/courier/infrastructure/repositories/DrizzleCourierRepository.ownershipInvariant.test.ts",
   "apps/api/src/modules/inventory/infrastructure/database/items.statusCheckConstraint.test.ts",
+  "apps/api/src/modules/inventory/infrastructure/database/coreInventory.nonnegativeCheckConstraint.test.ts",
 ];
 
 const args = [
