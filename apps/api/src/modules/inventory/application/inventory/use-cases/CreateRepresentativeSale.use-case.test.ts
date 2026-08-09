@@ -5,7 +5,12 @@ import type { ISalesOrderRepository, CreateSalesOrderInput, CreateSalesOrderItem
 import type { ITechnicianProductStockRepository, RepresentativeStockBalance } from '../contracts/ITechnicianProductStockRepository';
 import type { Product, SalesOrder, TechnicianProductStock } from '../../../../../../../shared/schema';
 import { CreateRepresentativeSaleUseCase } from './CreateRepresentativeSale.use-case';
-import { IdempotencyCollisionError, InsufficientStockError, ProductNotFoundError } from '../../../../../core/errors/AppError';
+import {
+  FinancialMismatchError,
+  IdempotencyCollisionError,
+  InsufficientStockError,
+  ProductNotFoundError,
+} from '../../../../../core/errors/AppError';
 
 class FakeProductRepository implements IProductRepository {
   private products = new Map<string, Product>();
@@ -186,6 +191,15 @@ describe('CreateRepresentativeSaleUseCase', () => {
     const uow = new TransactionalFakeInventoryV2UnitOfWork(productRepo, salesRepo, stockRepo);
     const useCase = new CreateRepresentativeSaleUseCase(uow);
 
+    // DB-R10C.2: header/item financial fields below are consistent with
+    // prod1 (defaultPrice=100, defaultTaxRate=15.0 legacy -> 0.15) —
+    // qty 2 * 100 = 200 before tax, 200*0.15 = 30 tax, 230 total. Prior
+    // to DB-R10C.2 this test used an inconsistent lineTaxAmount (15.0
+    // for qty=2, i.e. the single-unit tax) and still passed, because the
+    // server persisted whatever the client sent without verification —
+    // that was exactly the vulnerability this slice closes. The fields
+    // are still submitted here only because the API contract requires
+    // their presence (DB-R10C.2 §10); they are compared, never trusted.
     const result = await useCase.execute({
       representativeId,
       orderNo: 'INV-1001',
@@ -198,7 +212,7 @@ describe('CreateRepresentativeSaleUseCase', () => {
           productId: prod1.id,
           quantity: 2,
           unitPrice: 100.0,
-          lineTaxAmount: 15.0,
+          lineTaxAmount: 30.0,
         },
       ],
     });
@@ -209,9 +223,67 @@ describe('CreateRepresentativeSaleUseCase', () => {
     expect(salesRepo.orderItems).toHaveLength(1);
     expect(salesRepo.orderItems[0].quantity).toBe(2);
 
+    // N. Proof the persisted values are server-derived (from
+    // prod1.defaultPrice/defaultTaxRate), not merely echoed client input.
+    expect(salesRepo.orderItems[0].unitPrice).toBe(100);
+    expect(salesRepo.orderItems[0].lineTaxAmount).toBe(30);
+    expect(result.order.amountBeforeTax).toBe(200);
+    expect(result.order.taxAmount).toBe(30);
+
     // Verify stock was reduced from 5 to 3
     const finalStock = await stockRepo.getBalance(representativeId, prod1.id);
     expect(finalStock).toBe(3);
+  });
+
+  it('B-E. rejects the sale outright when client-submitted financial values disagree with server-derived values (malicious/stale client)', async () => {
+    const productRepo = new FakeProductRepository([prod1]); // defaultPrice=100, defaultTaxRate=15.0(legacy)->0.15
+    const salesRepo = new FakeSalesOrderRepository();
+    const stockRepo = new FakeTechnicianProductStockRepository();
+    await stockRepo.setBalance(representativeId, prod1.id, 5);
+
+    const uow = new TransactionalFakeInventoryV2UnitOfWork(productRepo, salesRepo, stockRepo);
+    const useCase = new CreateRepresentativeSaleUseCase(uow);
+
+    // A client claiming a unit price of 1 (real price is 100) for
+    // quantity 2, with a self-consistent-looking but fraudulent total.
+    await expect(
+      useCase.execute({
+        representativeId,
+        orderNo: 'INV-FRAUD-1',
+        amountBeforeTax: 2,
+        taxAmount: 0,
+        totalAmount: 2,
+        idempotencyKey: 'idemp-key-fraud-1',
+        items: [{ productId: prod1.id, quantity: 2, unitPrice: 1, lineTaxAmount: 0 }],
+      })
+    ).rejects.toThrowError(FinancialMismatchError);
+
+    // Nothing was persisted and stock was not touched — reject-outright,
+    // not partial/silent-correction.
+    expect(salesRepo.orders.size).toBe(0);
+    const finalStock = await stockRepo.getBalance(representativeId, prod1.id);
+    expect(finalStock).toBe(5);
+  });
+
+  it('F. server derives correctly when the client omits the financial fields entirely (forward-compatible contract)', async () => {
+    const productRepo = new FakeProductRepository([prod1]);
+    const salesRepo = new FakeSalesOrderRepository();
+    const stockRepo = new FakeTechnicianProductStockRepository();
+    await stockRepo.setBalance(representativeId, prod1.id, 5);
+
+    const uow = new TransactionalFakeInventoryV2UnitOfWork(productRepo, salesRepo, stockRepo);
+    const useCase = new CreateRepresentativeSaleUseCase(uow);
+
+    const result = await useCase.execute({
+      representativeId,
+      orderNo: 'INV-NOFIN-1',
+      idempotencyKey: 'idemp-key-nofin-1',
+      items: [{ productId: prod1.id, quantity: 2 }],
+    });
+
+    expect(result.order.amountBeforeTax).toBe(200);
+    expect(result.order.taxAmount).toBe(30);
+    expect(result.order.totalAmount).toBe(230);
   });
 
   it('should resolve idempotently on second request with same key by returning original order', async () => {

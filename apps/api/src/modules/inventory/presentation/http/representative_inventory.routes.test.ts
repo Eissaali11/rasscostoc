@@ -213,20 +213,63 @@ describe('Representative Inventory HTTP Integration Tests', () => {
   });
 
   describe('POST /representative/inventory/sale', () => {
+    // DB-R10C.2: financial fields must be consistent with prod1
+    // (defaultPrice=100, defaultTaxRate=15.0 legacy -> canonical 0.15)
+    // for qty=2: amountBeforeTax=200, tax=30, total=230, unitPrice=100,
+    // lineTaxAmount=30. Prior to DB-R10C.2 this payload deliberately (if
+    // unintentionally) used an inconsistent unitPrice of 50.0 against a
+    // real price of 100 and the sale still succeeded — that mismatch
+    // being silently accepted was exactly the vulnerability this slice
+    // closes; the server now rejects such a payload outright (see the
+    // dedicated FinancialMismatchError test below).
     const validSalePayload = {
       orderNo: "ORD-999",
-      amountBeforeTax: "100.0",
-      taxAmount: "15.0",
-      totalAmount: "115.0",
+      amountBeforeTax: "200.0",
+      taxAmount: "30.0",
+      totalAmount: "230.0",
       items: [
         {
           productId: "prod-1",
           quantity: "2",
-          unitPrice: "50.0",
-          lineTaxAmount: "7.5",
+          unitPrice: "100.0",
+          lineTaxAmount: "30.0",
         }
       ]
     };
+
+    it('DB-R10C.2A §1: header financial fields (amountBeforeTax/taxAmount/totalAmount) are REQUIRED at the actual HTTP boundary — confirmed via the real endpoint, not just the use-case', async () => {
+      fakeProductRepo.products.set(prod1.id, prod1);
+      await fakeStockRepo.setBalance(technicianId, prod1.id, 5);
+
+      const { amountBeforeTax, ...withoutHeaderFinancials } = validSalePayload;
+      const res = await request(app)
+        .post('/representative/inventory/sale')
+        .set('x-idempotency-key', 'sale-idemp-header-required')
+        .send(withoutHeaderFinancials)
+        .expect(400);
+
+      expect(res.body.error).toContain('Missing required sales order fields');
+    });
+
+    it('DB-R10C.2A §1: item-level financial fields (unitPrice/lineTaxAmount) are OPTIONAL at the actual HTTP boundary — confirmed via the real endpoint, not just the use-case', async () => {
+      fakeProductRepo.products.set(prod1.id, prod1);
+      await fakeStockRepo.setBalance(technicianId, prod1.id, 5);
+
+      const payloadWithoutItemFinancials = {
+        ...validSalePayload,
+        items: [{ productId: 'prod-1', quantity: '2' }], // no unitPrice/lineTaxAmount
+      };
+
+      const res = await request(app)
+        .post('/representative/inventory/sale')
+        .set('x-idempotency-key', 'sale-idemp-item-optional')
+        .send(payloadWithoutItemFinancials)
+        .expect(200);
+
+      // Server still derives correctly from prod1.defaultPrice=100/defaultTaxRate=15(legacy->0.15)
+      expect(res.body.order.amountBeforeTax).toBe(200);
+      expect(res.body.order.taxAmount).toBe(30);
+    });
 
     it('should return 200 and process sale successfully', async () => {
       fakeProductRepo.products.set(prod1.id, prod1);
@@ -315,6 +358,45 @@ describe('Representative Inventory HTTP Integration Tests', () => {
         .expect(409);
 
       expect(res.body).toHaveProperty('error');
+    });
+
+    it('DB-R10C.2: should return 409 with FinancialMismatchError details when client unit price disagrees with the authoritative product price', async () => {
+      fakeProductRepo.products.set(prod1.id, prod1); // real defaultPrice=100
+      await fakeStockRepo.setBalance(technicianId, prod1.id, 5);
+
+      // Header fields are deliberately CORRECT (200/30/230, matching
+      // prod1's real price) so the mismatch is isolated to the item-level
+      // unitPrice — proving the server checks per-item fields, not only
+      // header totals.
+      const fraudulentPayload = {
+        orderNo: "ORD-FRAUD",
+        amountBeforeTax: "200.0",
+        taxAmount: "30.0",
+        totalAmount: "230.0",
+        items: [
+          {
+            productId: "prod-1",
+            quantity: "2",
+            unitPrice: "1.0", // real price is 100 — client is lying
+            lineTaxAmount: "30.0",
+          }
+        ]
+      };
+
+      const res = await request(app)
+        .post('/representative/inventory/sale')
+        .set('x-idempotency-key', 'sale-idemp-fraud')
+        .send(fraudulentPayload)
+        .expect(409);
+
+      expect(res.body).toHaveProperty('error');
+      expect(res.body.field).toBe('items[0].unitPrice');
+      expect(res.body.expected).toBe('100');
+      expect(res.body.received).toBe('1');
+
+      // Nothing persisted, stock untouched.
+      const balance = await fakeStockRepo.getBalance(technicianId, prod1.id);
+      expect(balance).toBe(5);
     });
   });
 });

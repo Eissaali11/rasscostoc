@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { FINANCIAL_SCALE, round2Compat, roundDecimalCompat, roundHalfAwayFromZero } from "./decimal";
+import {
+  FINANCIAL_SCALE,
+  addDecimal,
+  multiplyDecimal,
+  round2Compat,
+  roundDecimalCompat,
+  roundHalfAwayFromZero,
+  toPlainDecimalString,
+} from "./decimal";
 
 /**
  * DB-R10C.1 regression tests — written before wiring round2Compat into
@@ -127,5 +135,61 @@ describe("roundDecimalCompat / round2Compat — compatibility wrapper (number in
   it("rejects non-finite input", () => {
     expect(() => roundDecimalCompat(NaN, 2)).toThrow(RangeError);
     expect(() => roundDecimalCompat(Infinity, 2)).toThrow(RangeError);
+  });
+});
+
+describe("DB-R10C.2 — multiplyDecimal / addDecimal (exact BigInt decimal arithmetic)", () => {
+  it("multiplyDecimal computes the exact product, unrounded, at full precision", () => {
+    expect(multiplyDecimal("2", "100")).toBe("200");
+    expect(multiplyDecimal("3", "33.33")).toBe("99.99");
+    expect(multiplyDecimal("99.99", "0.15")).toBe("14.9985"); // exact, not pre-rounded
+    expect(multiplyDecimal("987", "12.345")).toBe("12184.515"); // exact — no float noise at all
+  });
+
+  it("multiplyDecimal handles signs correctly", () => {
+    expect(multiplyDecimal("-2", "100")).toBe("-200");
+    expect(multiplyDecimal("2", "-100")).toBe("-200");
+    expect(multiplyDecimal("-2", "-100")).toBe("200");
+  });
+
+  it("multiplyDecimal handles zero without producing negative zero", () => {
+    expect(multiplyDecimal("0", "-100")).toBe("0");
+    expect(multiplyDecimal("-0.00", "5")).toBe("0.00"); // scale = fracLen("-0.00")=2 + fracLen("5")=0 = 2
+  });
+
+  it("addDecimal sums exactly, aligning differing scales", () => {
+    expect(addDecimal("99.99", "14.9985")).toBe("114.9885");
+    expect(addDecimal("1", "0.5")).toBe("1.5");
+    expect(addDecimal("100.00", "0")).toBe("100.00");
+  });
+
+  it("addDecimal handles signed operands (net/cumulative sums)", () => {
+    expect(addDecimal("100", "-30")).toBe("70");
+    expect(addDecimal("-100", "30")).toBe("-70");
+    expect(addDecimal("-100", "100")).toBe("0");
+  });
+
+  it("multiplyDecimal + roundHalfAwayFromZero reproduces the exact DB-R10A boundary example with zero float noise at any step", () => {
+    const exactProduct = multiplyDecimal("987", "12.345");
+    expect(exactProduct).toBe("12184.515"); // exact, unlike 987*12.345 in JS (12184.515000000001)
+    expect(roundHalfAwayFromZero(exactProduct, 2)).toBe("12184.52");
+  });
+
+  it("rejects malformed input the same way as roundHalfAwayFromZero", () => {
+    expect(() => multiplyDecimal("1.5e10", "2")).toThrow(TypeError);
+    expect(() => addDecimal("abc", "1")).toThrow(TypeError);
+  });
+});
+
+describe("toPlainDecimalString — number-to-decimal-string entry point", () => {
+  it("recovers the intended decimal literal for standard financial float values", () => {
+    expect(toPlainDecimalString(100)).toBe("100.000000000000");
+    expect(toPlainDecimalString(0.15)).toBe("0.150000000000000");
+    expect(toPlainDecimalString(33.33)).toBe("33.3300000000000");
+  });
+
+  it("rejects non-finite input", () => {
+    expect(() => toPlainDecimalString(NaN)).toThrow(RangeError);
+    expect(() => toPlainDecimalString(Infinity)).toThrow(RangeError);
   });
 });
