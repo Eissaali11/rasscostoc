@@ -65,8 +65,15 @@ type JournalEntry = {
   status: string;
   posting_date: string;
   source_type: string;
-  total_debit?: number;
-  total_credit?: number;
+  // DB-R10C.4P-A: journal_entry_lines.debit/credit moved to exact
+  // NUMERIC(14,2) storage, so pg now decodes SUM(debit)/SUM(credit) as
+  // decimal strings rather than JS numbers — this widened union reflects
+  // the actual wire contract instead of the stale number-only type.
+  // Display already goes through Number(...) at the one read site below
+  // (formatMoney), which is a presentation-only conversion, not part of
+  // any accounting calculation/persistence path.
+  total_debit?: number | string;
+  total_credit?: number | string;
   created_at: string;
 };
 
