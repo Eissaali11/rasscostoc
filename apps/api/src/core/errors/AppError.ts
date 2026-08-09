@@ -78,6 +78,53 @@ export class ProductNotFoundError extends AppError {
   }
 }
 
+/**
+ * DB-R10C.2: thrown when a client-submitted financial value (unit price,
+ * amount before tax, tax amount, or total amount) does not match the
+ * value the server derived authoritatively from product data. The
+ * client-submitted value is never trusted as truth — this error signals
+ * that the client's view of the price/tax is stale or has been tampered
+ * with, not that anything was corrected silently.
+ */
+export class FinancialMismatchError extends ConflictError {
+  public readonly field: string;
+  public readonly expected: string;
+  public readonly received: string;
+
+  constructor(field: string, expected: string, received: string) {
+    super(
+      `Financial value mismatch on field "${field}": server-derived value is ${expected}, client submitted ${received}. ` +
+        `The server is the authoritative source of truth for this value and does not accept client-supplied overrides.`
+    );
+    this.field = field;
+    this.expected = expected;
+    this.received = received;
+    this.name = "FinancialMismatchError";
+  }
+}
+
+/**
+ * DB-R10C.2: thrown when a product's stored `defaultTaxRate` cannot be
+ * classified as either the canonical fractional representation (0.15 =
+ * 15%) or a recognized legacy percentage-points value (see
+ * `classifyLegacyTaxRate` in @core/finance/taxRate) — e.g. negative,
+ * over 100, or non-finite. This is a data-integrity problem with stored
+ * product configuration, not a client input error, so it is NOT a 4xx
+ * client error: it fails closed rather than silently guessing or
+ * defaulting to a rate that was never actually configured.
+ */
+export class InvalidProductTaxConfigurationError extends AppError {
+  constructor(productId: string, reason: string) {
+    super(
+      `Product ${productId} has an invalid or ambiguous stored tax rate (${reason}) and cannot be sold until its tax configuration is corrected.`,
+      500,
+      true,
+      "INVALID_PRODUCT_TAX_CONFIGURATION"
+    );
+    this.name = "InvalidProductTaxConfigurationError";
+  }
+}
+
 export class OptimisticLockException extends ConflictError {
   public readonly tableName: string;
   public readonly recordId: string | number;

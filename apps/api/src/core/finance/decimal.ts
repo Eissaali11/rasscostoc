@@ -159,6 +159,80 @@ function normalizeToPlainDecimal(s: string): string {
 }
 
 /**
+ * COMPATIBILITY-ONLY: converts a JS `number` (typically read from a
+ * `doublePrecision` column such as `product.defaultPrice`) to a plain
+ * decimal string, using the same 15-significant-digit recovery heuristic
+ * as `roundDecimalCompat` (see its doc comment for the caveat). This is
+ * the one authorized "entry point" for bringing a legacy `number`
+ * financial value into the decimal-safe arithmetic below — it performs
+ * no rounding itself, only re-renders the float without binary noise.
+ */
+export function toPlainDecimalString(value: number): string {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`toPlainDecimalString: value must be finite, got ${value}`);
+  }
+  return normalizeToPlainDecimal(value.toPrecision(15));
+}
+
+type DecimalParts = { negative: boolean; intPart: string; fracPart: string };
+
+function parseDecimalParts(decimal: string): DecimalParts {
+  const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(decimal.trim());
+  if (!match) {
+    throw new TypeError(`parseDecimalParts: "${decimal}" is not a plain decimal string`);
+  }
+  return { negative: match[1] === "-", intPart: match[2], fracPart: match[3] ?? "" };
+}
+
+function formatSignedScaledBigInt(magnitude: bigint, negative: boolean, scale: number): string {
+  const isZero = magnitude === 0n;
+  const digits = magnitude.toString().padStart(scale + 1, "0");
+  const intPart = digits.slice(0, digits.length - scale) || "0";
+  const fracPart = scale > 0 ? digits.slice(digits.length - scale) : "";
+  const sign = negative && !isZero ? "-" : "";
+  return scale > 0 ? `${sign}${intPart}.${fracPart}` : `${sign}${intPart}`;
+}
+
+/**
+ * Exact decimal multiplication via BigInt — no binary float is ever
+ * involved. Returns the FULL-PRECISION exact product (fracA.length +
+ * fracB.length decimal places), unrounded. Callers apply
+ * `roundHalfAwayFromZero` at whatever financial scale is appropriate for
+ * their calculation step (DB-R10C.2 introduced this specifically so
+ * `quantity × unit price` and `amount × tax rate` never touch JS number
+ * multiplication).
+ */
+export function multiplyDecimal(a: string, b: string): string {
+  const pa = parseDecimalParts(a);
+  const pb = parseDecimalParts(b);
+  const magA = BigInt(pa.intPart + pa.fracPart || "0");
+  const magB = BigInt(pb.intPart + pb.fracPart || "0");
+  const product = magA * magB;
+  const scale = pa.fracPart.length + pb.fracPart.length;
+  const negative = pa.negative !== pb.negative;
+  return formatSignedScaledBigInt(product, negative, scale);
+}
+
+/**
+ * Exact decimal addition via BigInt — no binary float involved. Operands
+ * may have different scales (fractional digit counts) and either sign;
+ * the result is exact (no rounding needed for addition once operands
+ * share a common scale). Used to sum server-derived per-line amounts
+ * into order-level totals without float drift.
+ */
+export function addDecimal(a: string, b: string): string {
+  const pa = parseDecimalParts(a);
+  const pb = parseDecimalParts(b);
+  const scale = Math.max(pa.fracPart.length, pb.fracPart.length);
+  const fracA = pa.fracPart.padEnd(scale, "0");
+  const fracB = pb.fracPart.padEnd(scale, "0");
+  const magA = BigInt(pa.intPart + fracA || "0") * (pa.negative ? -1n : 1n);
+  const magB = BigInt(pb.intPart + fracB || "0") * (pb.negative ? -1n : 1n);
+  const sum = magA + magB;
+  return formatSignedScaledBigInt(sum < 0n ? -sum : sum, sum < 0n, scale);
+}
+
+/**
  * Legacy-compatible drop-in replacement for the pre-existing
  * `round2(value: number): number` in accounting.service.ts.
  * Rounds to 2 decimal places (FINANCIAL_SCALE.MONEY_AMOUNT) using the
