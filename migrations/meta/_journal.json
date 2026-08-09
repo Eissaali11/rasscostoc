@@ -302,6 +302,27 @@
       "when": 1785826873000,
       "tag": "0042_moving_inventory_nonnegative_check_validate",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1785826874000,
+      "tag": "0043_inventory_v2_numeric_precision",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1785826875000,
+      "tag": "0044_inventory_v2_tax_rate_check_not_valid",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1785826876000,
+      "tag": "0045_inventory_v2_tax_rate_check_validate",
+      "breakpoints": true
     }
   ]
 }

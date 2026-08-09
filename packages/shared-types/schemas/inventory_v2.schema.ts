@@ -1,8 +1,23 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision, numeric, index, uniqueIndex, check } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users, warehouses } from "./organization.schema";
+
+// DB-R10C.3: the 7 financial columns below (products.defaultPrice/
+// defaultTaxRate, salesOrders.amountBeforeTax/taxAmount/totalAmount,
+// salesOrderItems.unitPrice/lineTaxAmount) moved from doublePrecision to
+// exact NUMERIC storage per the DB-R10B/C.3-approved precision matrix.
+// drizzle-orm@0.39.1's numeric() has no `mode` option (confirmed in
+// DB-R10C.1B) — every numeric() column is inferred as TypeScript
+// `string`, which is intentional here: it forces the authoritative
+// financial read/calculate/write path (RepresentativeSaleFinancials) to
+// operate on exact decimal strings end-to-end, never a binary float.
+// Canonical tax-rate semantic (0.15 = 15%) is now DATABASE-ENFORCED via
+// a CHECK constraint (see migration 0043/0044) — the temporary
+// classifyLegacyTaxRate() read-compatibility adapter introduced in
+// DB-R10C.2 is no longer needed for these 7 fields after this
+// migration and is removed from the calculation path in this slice.
 
 // 1. Products table
 export const products = pgTable("products", {
@@ -11,14 +26,18 @@ export const products = pgTable("products", {
   barcode: text("barcode").notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en").notNull(),
-  defaultPrice: doublePrecision("default_price").notNull().default(0),
-  defaultTaxRate: doublePrecision("default_tax_rate").notNull().default(15.0),
+  defaultPrice: numeric("default_price", { precision: 14, scale: 4 }).notNull().default("0"),
+  defaultTaxRate: numeric("default_tax_rate", { precision: 5, scale: 4 }).notNull().default("0.1500"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   productsBarcodeIdx: index("products_barcode_idx").on(table.barcode),
   productsCodeIdx: index("products_code_idx").on(table.productCode),
+  productsDefaultTaxRateCheck: check(
+    "products_default_tax_rate_canonical_fraction_check",
+    sql`${table.defaultTaxRate} >= 0 AND ${table.defaultTaxRate} <= 1`
+  ),
 }));
 
 // 2. Sales Orders (Representative moped/field sales invoices)
@@ -26,9 +45,9 @@ export const salesOrders = pgTable("sales_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   representativeId: varchar("representative_id").notNull().references(() => users.id),
   orderNo: text("order_no").notNull().unique(),
-  amountBeforeTax: doublePrecision("amount_before_tax").notNull().default(0),
-  taxAmount: doublePrecision("tax_amount").notNull().default(0),
-  totalAmount: doublePrecision("total_amount").notNull().default(0),
+  amountBeforeTax: numeric("amount_before_tax", { precision: 14, scale: 2 }).notNull().default("0"),
+  taxAmount: numeric("tax_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  totalAmount: numeric("total_amount", { precision: 14, scale: 2 }).notNull().default("0"),
   idempotencyKey: varchar("idempotency_key").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
@@ -42,8 +61,8 @@ export const salesOrderItems = pgTable("sales_order_items", {
   orderId: varchar("order_id").notNull().references(() => salesOrders.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id),
   quantity: integer("quantity").notNull().default(0),
-  unitPrice: doublePrecision("unit_price").notNull(),
-  lineTaxAmount: doublePrecision("line_tax_amount").notNull(),
+  unitPrice: numeric("unit_price", { precision: 14, scale: 4 }).notNull(),
+  lineTaxAmount: numeric("line_tax_amount", { precision: 14, scale: 2 }).notNull(),
 }, (table) => ({
   orderItemsOrderIdIdx: index("order_items_order_id_idx").on(table.orderId),
   orderItemsProductIdIdx: index("order_items_product_id_idx").on(table.productId),

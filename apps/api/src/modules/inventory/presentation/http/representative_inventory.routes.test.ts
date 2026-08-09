@@ -115,8 +115,8 @@ class FakeTechnicianProductStockRepository implements ITechnicianProductStockRep
         nameAr: `اسم-${productId}`,
         nameEn: `Name-${productId}`,
         quantity,
-        defaultPrice: 10,
-        defaultTaxRate: 15,
+        defaultPrice: '10.0000', // DB-R10C.3: RepresentativeStockBalance now carries exact decimal strings
+        defaultTaxRate: '0.1500',
       });
     }
     this.balances.set(technicianId, list);
@@ -154,8 +154,9 @@ describe('Representative Inventory HTTP Integration Tests', () => {
     barcode: 'BAR-1',
     nameAr: 'منتج 1',
     nameEn: 'Product 1',
-    defaultPrice: 100.0,
-    defaultTaxRate: 15.0,
+    // DB-R10C.3: exact decimal strings (NUMERIC columns), not numbers.
+    defaultPrice: '100.0000',
+    defaultTaxRate: '0.1500',
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -266,9 +267,10 @@ describe('Representative Inventory HTTP Integration Tests', () => {
         .send(payloadWithoutItemFinancials)
         .expect(200);
 
-      // Server still derives correctly from prod1.defaultPrice=100/defaultTaxRate=15(legacy->0.15)
-      expect(res.body.order.amountBeforeTax).toBe(200);
-      expect(res.body.order.taxAmount).toBe(30);
+      // Server still derives correctly from prod1.defaultPrice=100/defaultTaxRate=0.15.
+      // DB-R10C.3: response carries exact decimal STRINGS (JSON string), not numbers.
+      expect(res.body.order.amountBeforeTax).toBe('200.00');
+      expect(res.body.order.taxAmount).toBe('30.00');
     });
 
     it('should return 200 and process sale successfully', async () => {
@@ -391,7 +393,8 @@ describe('Representative Inventory HTTP Integration Tests', () => {
 
       expect(res.body).toHaveProperty('error');
       expect(res.body.field).toBe('items[0].unitPrice');
-      expect(res.body.expected).toBe('100');
+      // DB-R10C.3: "expected" is now the exact NUMERIC(14,4) decimal string.
+      expect(res.body.expected).toBe('100.0000');
       expect(res.body.received).toBe('1');
 
       // Nothing persisted, stock untouched.

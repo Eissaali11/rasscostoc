@@ -173,8 +173,15 @@ describe('CreateRepresentativeSaleUseCase', () => {
     barcode: 'BAR-1',
     nameAr: 'المنتج 1',
     nameEn: 'Product 1',
-    defaultPrice: 100.0,
-    defaultTaxRate: 15.0,
+    // DB-R10C.3: defaultPrice/defaultTaxRate are exact decimal STRINGS
+    // (NUMERIC(14,4)/NUMERIC(5,4) columns), not numbers. 15.0000 here is
+    // the legacy default_tax_rate the migration would normalize to
+    // 0.1500 on real data — this fixture intentionally keeps a
+    // canonical value since DB-R10C.3's migration owns the legacy
+    // conversion, not the application read path (see
+    // RepresentativeSaleFinancials.ts's DB-R10C.3 header comment).
+    defaultPrice: '100.0000',
+    defaultTaxRate: '0.1500',
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -218,17 +225,18 @@ describe('CreateRepresentativeSaleUseCase', () => {
     });
 
     expect(result.order.orderNo).toBe('INV-1001');
-    expect(result.order.totalAmount).toBe(230.0);
+    // DB-R10C.3: persisted financial fields are exact decimal STRINGS.
+    expect(result.order.totalAmount).toBe('230.00');
     expect(salesRepo.orders.size).toBe(1);
     expect(salesRepo.orderItems).toHaveLength(1);
     expect(salesRepo.orderItems[0].quantity).toBe(2);
 
     // N. Proof the persisted values are server-derived (from
     // prod1.defaultPrice/defaultTaxRate), not merely echoed client input.
-    expect(salesRepo.orderItems[0].unitPrice).toBe(100);
-    expect(salesRepo.orderItems[0].lineTaxAmount).toBe(30);
-    expect(result.order.amountBeforeTax).toBe(200);
-    expect(result.order.taxAmount).toBe(30);
+    expect(salesRepo.orderItems[0].unitPrice).toBe('100.0000');
+    expect(salesRepo.orderItems[0].lineTaxAmount).toBe('30.00');
+    expect(result.order.amountBeforeTax).toBe('200.00');
+    expect(result.order.taxAmount).toBe('30.00');
 
     // Verify stock was reduced from 5 to 3
     const finalStock = await stockRepo.getBalance(representativeId, prod1.id);
@@ -281,9 +289,9 @@ describe('CreateRepresentativeSaleUseCase', () => {
       items: [{ productId: prod1.id, quantity: 2 }],
     });
 
-    expect(result.order.amountBeforeTax).toBe(200);
-    expect(result.order.taxAmount).toBe(30);
-    expect(result.order.totalAmount).toBe(230);
+    expect(result.order.amountBeforeTax).toBe('200.00');
+    expect(result.order.taxAmount).toBe('30.00');
+    expect(result.order.totalAmount).toBe('230.00');
   });
 
   it('should resolve idempotently on second request with same key by returning original order', async () => {
