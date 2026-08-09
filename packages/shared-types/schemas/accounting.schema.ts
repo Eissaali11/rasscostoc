@@ -4,6 +4,7 @@ import {
   date,
   doublePrecision,
   integer,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -50,12 +51,21 @@ export const journalEntries = pgTable("journal_entries", {
   sourceIdx: index("journal_entries_source_idx").on(table.sourceType, table.sourceId),
 }));
 
+// DB-R10C.4P: debit/credit moved from doublePrecision to exact
+// NUMERIC(14,2) storage — a narrow prerequisite for the DB-R10C.4
+// database journal-balance invariant (SUM(debit) = SUM(credit) must be
+// exact, not float-tolerant, at the database level). Like the
+// DB-R10C.3-migrated inventory_v2 fields, numeric() has no `mode` option
+// in drizzle-orm@0.39.1 and is inferred as TypeScript `string` — this is
+// intentional so the journal read/write path can be made to operate on
+// exact decimal strings rather than binary floats. No other accounting
+// column (including exchangeRate) is part of this slice.
 export const journalEntryLines = pgTable("journal_entry_lines", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   entryId: varchar("entry_id").notNull().references(() => journalEntries.id, { onDelete: "cascade" }),
   accountId: varchar("account_id").notNull().references(() => chartOfAccounts.id),
-  debit: doublePrecision("debit").notNull().default(0),
-  credit: doublePrecision("credit").notNull().default(0),
+  debit: numeric("debit", { precision: 14, scale: 2 }).notNull().default("0"),
+  credit: numeric("credit", { precision: 14, scale: 2 }).notNull().default("0"),
   description: text("description"),
   costCenter: text("cost_center"),
   regionId: varchar("region_id").references(() => regions.id),
