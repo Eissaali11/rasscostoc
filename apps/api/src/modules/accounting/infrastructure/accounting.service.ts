@@ -2,6 +2,7 @@ import { randomUUID, createHash } from "crypto";
 import type { PoolClient, QueryResult } from "pg";
 import { pool } from "@core/config/db";
 import { ConflictError, NotFoundError, ValidationError } from "@core/errors/AppError";
+import { round2Compat } from "@core/finance/decimal";
 
 type CoaInput = {
   code: string;
@@ -106,8 +107,17 @@ const DEFAULT_TAX_CODES = [
   { code: "VAT0", name: "VAT 0%", rate: 0, category: "vat", isActive: true },
 ];
 
+// DB-R10C.1: round2() now delegates to the canonical ROUND HALF AWAY FROM
+// ZERO decimal-safe primitive (apps/api/src/core/finance/decimal.ts),
+// fixing the negative-tie asymmetry documented in DB-R10B.1 §5
+// (round2(-1.005) used to return -1.00 instead of -1.01). Signature is
+// unchanged (number in, number out) so all 33 existing call sites in
+// this file are unaffected — see the DB-R10C.1 report's round2()
+// call-site inventory. This is a compatibility-preserving fix, not a
+// call-site refactor; DB-R10C.3+ will move the underlying columns (and
+// eventually these calculations) to precise decimal/numeric types.
 function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return round2Compat(value);
 }
 
 function assertNonNegative(value: number, field: string): void {
