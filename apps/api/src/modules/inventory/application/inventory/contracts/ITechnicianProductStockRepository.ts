@@ -7,8 +7,10 @@ export type RepresentativeStockBalance = {
   nameAr: string;
   nameEn: string;
   quantity: number;
-  defaultPrice: number;
-  defaultTaxRate: number;
+  /** DB-R10C.3: exact decimal string (NUMERIC(14,4)) — display/sync only, not used in sale calculation. */
+  defaultPrice: string;
+  /** DB-R10C.3: exact decimal string (NUMERIC(5,4), canonical fraction) — display/sync only. */
+  defaultTaxRate: string;
 };
 
 export interface ITechnicianProductStockRepository {

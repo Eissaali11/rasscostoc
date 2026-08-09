@@ -1,27 +1,60 @@
 /**
- * DB-R10C.2 — Server-authoritative financial derivation for
+ * DB-R10C.2 / DB-R10C.3 — Server-authoritative financial derivation for
  * representative (field/moped) sales.
  *
- * BEFORE this slice: CreateRepresentativeSaleUseCase persisted
+ * BEFORE DB-R10C.2: CreateRepresentativeSaleUseCase persisted
  * `unitPrice`, `amountBeforeTax`, `taxAmount`, and `totalAmount` exactly
  * as submitted by the client, with no relationship enforced to the
- * product's actual price/tax rate or to the requested quantity. A client
- * (or a compromised/buggy client) could submit any total it wanted and
- * the server would store it verbatim — a CLIENT-SIDE FINANCIAL AUTHORITY
- * / TRUST-BOUNDARY VIOLATION, not a remote-code-execution or
- * SQL-injection class of bug: the attack surface is "the server accepts
- * unverified monetary claims from the caller", not arbitrary code
- * execution or database escape.
+ * product's actual price/tax rate or to the requested quantity — a
+ * CLIENT-SIDE FINANCIAL AUTHORITY / TRUST-BOUNDARY VIOLATION.
  *
- * AFTER this slice: this module is the ONLY place representative-sale
- * money values are computed. It reads price/tax rate from the
- * authoritative `Product` record (never from client input) and performs
- * every calculation via the decimal-safe primitives from
- * `@core/finance/decimal` — no JS `number` multiplication, `Math.round`,
- * or EPSILON tricks touch the core arithmetic. `CreateRepresentativeSale.use-case.ts`
- * persists exactly what this module returns and nothing else.
+ * DB-R10C.2 fixed the trust boundary: this module became the only place
+ * representative-sale money values are computed, reading price/tax from
+ * the authoritative `Product` record and using decimal-safe primitives
+ * for the arithmetic. At that point the 7 underlying database columns
+ * were still `doublePrecision`, so this module accepted `number` inputs
+ * (converted via `toPlainDecimalString`) and produced `number` outputs
+ * (via a final, one-time, already-rounded `Number(...)` boundary
+ * conversion) — a necessary compatibility shape for a float8 database.
+ *
+ * DB-R10C.3 migrated all 7 fields (products.defaultPrice/defaultTaxRate,
+ * salesOrders.amountBeforeTax/taxAmount/totalAmount,
+ * salesOrderItems.unitPrice/lineTaxAmount) to exact NUMERIC storage.
+ * drizzle-orm@0.39.1's `numeric()` has no `mode` option and is always
+ * inferred as TypeScript `string` (confirmed in DB-R10C.1B) — so this
+ * module now takes `Product.defaultPrice`/`defaultTaxRate` as exact
+ * decimal STRINGS straight from the database and returns exact decimal
+ * STRINGS for direct persistence. `Number()`/`parseFloat()`/
+ * `Math.round()`/binary float multiplication or addition do NOT appear
+ * anywhere in this authoritative calculation path anymore — the full
+ * chain is:
+ *
+ *   PostgreSQL NUMERIC -> exact decimal string -> decimal-safe
+ *   arithmetic (multiplyDecimal/addDecimal/roundHalfAwayFromZero) ->
+ *   exact decimal string -> PostgreSQL NUMERIC
+ *
+ * The DB-R10C.2 legacy tax-rate read-compatibility adapter
+ * (classifyLegacyTaxRate-based normalization) is REMOVED from this
+ * calculation path: after DB-R10C.3, `products.defaultTaxRate` is
+ * database-enforced (CHECK constraint) to already be the canonical
+ * fractional representation, so no per-read normalization is needed or
+ * performed here anymore.
+ *
+ * The only remaining `number` in this module is on the CLIENT-SUBMITTED
+ * comparison side (`ClientSubmittedSaleFinancials`) — those values still
+ * arrive as JSON numbers over HTTP (DB-R10C.3 does not change the public
+ * API's JSON representation) and were never authoritative to begin with
+ * (DB-R10C.2). DB-R10C.3R CORRECTION: an earlier version of this comment
+ * called that conversion "API compatibility only" — that was an
+ * inaccurate classification. The client value participates directly in
+ * FINANCIAL VALIDATION (it decides accept vs. `FinancialMismatchError`),
+ * not mere presentation. See `clientDecimalMatchesServerDecimal`'s doc
+ * comment below for the precise, corrected two-step classification:
+ * unavoidable CLIENT_INPUT_NORMALIZATION of an already-JSON-parsed float
+ * (step 1), followed by exact decimal-string FINANCIAL_VALIDATION
+ * comparison — never a binary-float comparison (step 2).
  */
-import { FinancialMismatchError, InvalidProductTaxConfigurationError, ValidationError } from "../../../../../core/errors/AppError";
+import { FinancialMismatchError, ValidationError } from "../../../../../core/errors/AppError";
 import {
   FINANCIAL_SCALE,
   addDecimal,
@@ -29,13 +62,17 @@ import {
   roundHalfAwayFromZero,
   toPlainDecimalString,
 } from "../../../../../core/finance/decimal";
-import { classifyLegacyTaxRate } from "../../../../../core/finance/taxRate";
 
-/** The authoritative price/tax fields read from the `products` table — never from client input. */
+/**
+ * The authoritative price/tax fields read from the `products` table —
+ * exact decimal strings from NUMERIC(14,4)/NUMERIC(5,4) columns,
+ * post-DB-R10C.3. `defaultTaxRate` is database-enforced canonical
+ * fractional (0.1500 = 15%); never from client input.
+ */
 export type ProductFinancialSource = {
   id: string;
-  defaultPrice: number;
-  defaultTaxRate: number;
+  defaultPrice: string;
+  defaultTaxRate: string;
 };
 
 export type RepresentativeSaleLineInput = {
@@ -47,51 +84,21 @@ export type RepresentativeSaleLineInput = {
 export type ServerDerivedLineFinancials = {
   productId: string;
   quantity: number;
-  /** Persisted as `sales_order_items.unit_price` — always the product's authoritative price, never the client's. */
-  unitPrice: number;
-  /** Persisted as `sales_order_items.line_tax_amount`. */
-  lineTaxAmount: number;
-  /** Exact decimal string, MONEY_AMOUNT-rounded — used internally to sum order-level totals without float drift. */
-  amountBeforeTaxDecimal: string;
-  /** Exact decimal string, MONEY_AMOUNT-rounded. */
-  taxAmountDecimal: string;
+  /** Persisted as `sales_order_items.unit_price` (NUMERIC(14,4)) — exact decimal string. */
+  unitPrice: string;
+  /** Persisted as `sales_order_items.line_tax_amount` (NUMERIC(14,2)) — exact decimal string. */
+  lineTaxAmount: string;
 };
 
 export type ServerDerivedSaleFinancials = {
   lines: ServerDerivedLineFinancials[];
-  /** Persisted as `sales_orders.amount_before_tax`. */
-  amountBeforeTax: number;
-  /** Persisted as `sales_orders.tax_amount`. */
-  taxAmount: number;
-  /** Persisted as `sales_orders.total_amount`. */
-  totalAmount: number;
+  /** Persisted as `sales_orders.amount_before_tax` (NUMERIC(14,2)) — exact decimal string. */
+  amountBeforeTax: string;
+  /** Persisted as `sales_orders.tax_amount` (NUMERIC(14,2)) — exact decimal string. */
+  taxAmount: string;
+  /** Persisted as `sales_orders.total_amount` (NUMERIC(14,2)) — exact decimal string. */
+  totalAmount: string;
 };
-
-/**
- * DB-R10C.1 established the canonical fractional tax-rate semantic
- * (0.15 = 15%) but explicitly did NOT migrate `products.defaultTaxRate`,
- * which still carries its legacy default of `15.0` (percentage-points)
- * for existing/unmigrated rows. This function is a TEMPORARY
- * read-compatibility adapter — it exists only so C.2 can calculate
- * correctly against both old (15.0) and new (0.15) stored rows without
- * the client ever being allowed to submit a value in the legacy format.
- * It must be removed once DB-R10C.3 migrates all stored tax-rate values
- * to the canonical fractional representation.
- */
-function resolveCanonicalTaxRateForCalculation(product: ProductFinancialSource): number {
-  const classification = classifyLegacyTaxRate(product.defaultTaxRate);
-  switch (classification.kind) {
-    case "CANONICAL_FRACTIONAL":
-      return classification.value;
-    case "LEGACY_PERCENTAGE_POINTS":
-      return classification.impliedFractional;
-    case "INVALID_OR_AMBIGUOUS":
-      throw new InvalidProductTaxConfigurationError(
-        product.id,
-        `stored defaultTaxRate=${String(product.defaultTaxRate)} is neither a valid canonical fraction [0,1] nor a legacy percentage-points value (0,100]`
-      );
-  }
-}
 
 function assertValidQuantity(quantity: number, productId: string): void {
   if (!Number.isInteger(quantity) || quantity <= 0) {
@@ -104,7 +111,9 @@ function assertValidQuantity(quantity: number, productId: string): void {
 /**
  * Derives the authoritative financial values for one representative
  * sale (one or more line items) purely from product data and validated
- * quantities. Never reads a client-submitted money value.
+ * quantities. Never reads a client-submitted money value. Operates
+ * entirely on exact decimal strings — no binary float touches this
+ * calculation at any step.
  */
 export function deriveRepresentativeSaleFinancials(
   items: RepresentativeSaleLineInput[]
@@ -120,11 +129,14 @@ export function deriveRepresentativeSaleFinancials(
   for (const item of items) {
     assertValidQuantity(item.quantity, item.productId);
 
-    const taxRate = resolveCanonicalTaxRateForCalculation(item.product);
-
     const quantityDecimal = String(item.quantity);
-    const unitPriceDecimal = toPlainDecimalString(item.product.defaultPrice);
-    const taxRateDecimal = toPlainDecimalString(taxRate);
+    // DB-R10C.3: defaultPrice/defaultTaxRate arrive already as exact
+    // decimal strings from NUMERIC columns — no toPlainDecimalString()
+    // conversion and no legacy tax-rate classification needed anymore;
+    // the database CHECK constraint already guarantees defaultTaxRate
+    // is canonical fractional [0,1].
+    const unitPriceDecimal = item.product.defaultPrice;
+    const taxRateDecimal = item.product.defaultTaxRate;
 
     // quantity × unit price -> amount before tax (rounded at the money-amount boundary)
     const exactAmountBeforeTax = multiplyDecimal(quantityDecimal, unitPriceDecimal);
@@ -139,10 +151,8 @@ export function deriveRepresentativeSaleFinancials(
     lines.push({
       productId: item.productId,
       quantity: item.quantity,
-      unitPrice: Number(roundedUnitPriceDecimal),
-      lineTaxAmount: Number(taxAmountDecimal),
-      amountBeforeTaxDecimal,
-      taxAmountDecimal,
+      unitPrice: roundedUnitPriceDecimal,
+      lineTaxAmount: taxAmountDecimal,
     });
 
     amountBeforeTaxTotal = addDecimal(amountBeforeTaxTotal, amountBeforeTaxDecimal);
@@ -153,16 +163,9 @@ export function deriveRepresentativeSaleFinancials(
 
   return {
     lines,
-    // Number(...) here is the one unavoidable compatibility boundary
-    // (DB-R10C.1B §11): these values are already exact, scale-2 decimal
-    // strings, so the conversion to `number` for persistence into the
-    // current doublePrecision columns cannot reintroduce the class of
-    // drift DB-R10A documented — it is the same boundary round2Compat
-    // uses, applied here to an already-exact value instead of an
-    // already-imprecise one.
-    amountBeforeTax: Number(amountBeforeTaxTotal),
-    taxAmount: Number(taxAmountTotal),
-    totalAmount: Number(totalAmountDecimal),
+    amountBeforeTax: amountBeforeTaxTotal,
+    taxAmount: taxAmountTotal,
+    totalAmount: totalAmountDecimal,
   };
 }
 
@@ -173,31 +176,74 @@ export type ClientSubmittedSaleFinancials = {
   items: Array<{ productId: string; unitPrice?: number; lineTaxAmount?: number }>;
 };
 
-/** Compares a value at a given financial scale using decimal-string equality — never float `===`. */
-function scaledDecimalsMatch(a: number, b: number, scale: number): boolean {
-  return roundHalfAwayFromZero(toPlainDecimalString(a), scale) === roundHalfAwayFromZero(toPlainDecimalString(b), scale);
+/**
+ * DB-R10C.3R — corrected classification (the prior comment here mislabeled
+ * this as "API compatibility only"; a reviewer correctly rejected that:
+ * this function's result directly decides accept-vs-409, which is
+ * FINANCIAL VALIDATION AUTHORITY, not mere presentation formatting).
+ *
+ * This function performs exactly two logically distinct steps, and it is
+ * important they are not conflated:
+ *
+ *  1. CLIENT_INPUT_NORMALIZATION (unavoidable, classification B): the
+ *     public HTTP contract is still JSON, and JSON has no decimal type —
+ *     `JSON.parse` has ALREADY produced a binary float64 `number` by the
+ *     time this code runs, before this module ever sees the value. This
+ *     step does not "convert to Number()" as a choice; it canonicalizes
+ *     the already-parsed float64 semantic value into an exact decimal
+ *     string (`toPlainDecimalString` + `roundHalfAwayFromZero`) — the
+ *     earliest point at which the value can be treated as decimal-exact
+ *     at all. Nothing here would change even if this function were
+ *     rewritten a hundred times; it is a boundary condition of accepting
+ *     JSON, not of this module's design.
+ *
+ *  2. FINANCIAL_VALIDATION (classification C, the actual comparison
+ *     decision): once BOTH sides are exact decimal strings, the
+ *     comparison itself is plain string equality (`===` on two decimal
+ *     strings) — never `Number(a) === Number(b)`, never
+ *     `Math.abs(a - b) < epsilon`, never a binary-float comparison of any
+ *     kind. This is the part that decides accept vs. `FinancialMismatchError`,
+ *     and it is decimal-exact.
+ *
+ * The server side (`serverExactDecimal`) is NEVER round-tripped through
+ * `number` — it arrives here as the exact decimal string
+ * `deriveRepresentativeSaleFinancials` produced directly from the
+ * database's NUMERIC columns.
+ */
+function clientDecimalMatchesServerDecimal(clientValue: number, serverExactDecimal: string, scale: number): boolean {
+  // Step 1 — CLIENT_INPUT_NORMALIZATION: canonicalize the already-parsed
+  // JSON number into the one true decimal representation this module
+  // uses everywhere else.
+  const clientCanonicalDecimal = roundHalfAwayFromZero(toPlainDecimalString(clientValue), scale);
+  // serverExactDecimal is already rounded to `scale` by
+  // deriveRepresentativeSaleFinancials; re-rounding here is defensive
+  // and produces an identical string for a value already at that scale.
+  const serverCanonicalDecimal = roundHalfAwayFromZero(serverExactDecimal, scale);
+  // Step 2 — FINANCIAL_VALIDATION: exact decimal-string equality, not a
+  // binary-float comparison.
+  return clientCanonicalDecimal === serverCanonicalDecimal;
 }
 
 /**
- * DB-R10C.2 §9: client-submitted financial fields (where the current API
- * contract still requires their presence) are compared against the
- * server-derived truth and used ONLY to detect a stale/tampered client —
- * never persisted. Any mismatch fails the whole request with
- * `FinancialMismatchError`; nothing is silently corrected or partially
- * accepted.
+ * DB-R10C.2 §9 (unchanged by DB-R10C.3): client-submitted financial
+ * fields (where the current API contract still requires their
+ * presence) are compared against the server-derived truth and used
+ * ONLY to detect a stale/tampered client — never persisted. Any
+ * mismatch fails the whole request with `FinancialMismatchError`;
+ * nothing is silently corrected or partially accepted.
  */
 export function assertClientFinancialsMatchServerDerived(
   client: ClientSubmittedSaleFinancials,
   server: ServerDerivedSaleFinancials
 ): void {
-  if (client.amountBeforeTax !== undefined && !scaledDecimalsMatch(client.amountBeforeTax, server.amountBeforeTax, FINANCIAL_SCALE.MONEY_AMOUNT)) {
-    throw new FinancialMismatchError("amountBeforeTax", String(server.amountBeforeTax), String(client.amountBeforeTax));
+  if (client.amountBeforeTax !== undefined && !clientDecimalMatchesServerDecimal(client.amountBeforeTax, server.amountBeforeTax, FINANCIAL_SCALE.MONEY_AMOUNT)) {
+    throw new FinancialMismatchError("amountBeforeTax", server.amountBeforeTax, String(client.amountBeforeTax));
   }
-  if (client.taxAmount !== undefined && !scaledDecimalsMatch(client.taxAmount, server.taxAmount, FINANCIAL_SCALE.MONEY_AMOUNT)) {
-    throw new FinancialMismatchError("taxAmount", String(server.taxAmount), String(client.taxAmount));
+  if (client.taxAmount !== undefined && !clientDecimalMatchesServerDecimal(client.taxAmount, server.taxAmount, FINANCIAL_SCALE.MONEY_AMOUNT)) {
+    throw new FinancialMismatchError("taxAmount", server.taxAmount, String(client.taxAmount));
   }
-  if (client.totalAmount !== undefined && !scaledDecimalsMatch(client.totalAmount, server.totalAmount, FINANCIAL_SCALE.MONEY_AMOUNT)) {
-    throw new FinancialMismatchError("totalAmount", String(server.totalAmount), String(client.totalAmount));
+  if (client.totalAmount !== undefined && !clientDecimalMatchesServerDecimal(client.totalAmount, server.totalAmount, FINANCIAL_SCALE.MONEY_AMOUNT)) {
+    throw new FinancialMismatchError("totalAmount", server.totalAmount, String(client.totalAmount));
   }
 
   for (let i = 0; i < client.items.length; i++) {
@@ -209,11 +255,11 @@ export function assertClientFinancialsMatchServerDerived(
       // closed rather than compare mismatched items if it ever occurs.
       throw new FinancialMismatchError(`items[${i}].productId`, serverLine?.productId ?? "(none)", clientItem.productId);
     }
-    if (clientItem.unitPrice !== undefined && !scaledDecimalsMatch(clientItem.unitPrice, serverLine.unitPrice, FINANCIAL_SCALE.UNIT_PRICE)) {
-      throw new FinancialMismatchError(`items[${i}].unitPrice`, String(serverLine.unitPrice), String(clientItem.unitPrice));
+    if (clientItem.unitPrice !== undefined && !clientDecimalMatchesServerDecimal(clientItem.unitPrice, serverLine.unitPrice, FINANCIAL_SCALE.UNIT_PRICE)) {
+      throw new FinancialMismatchError(`items[${i}].unitPrice`, serverLine.unitPrice, String(clientItem.unitPrice));
     }
-    if (clientItem.lineTaxAmount !== undefined && !scaledDecimalsMatch(clientItem.lineTaxAmount, serverLine.lineTaxAmount, FINANCIAL_SCALE.MONEY_AMOUNT)) {
-      throw new FinancialMismatchError(`items[${i}].lineTaxAmount`, String(serverLine.lineTaxAmount), String(clientItem.lineTaxAmount));
+    if (clientItem.lineTaxAmount !== undefined && !clientDecimalMatchesServerDecimal(clientItem.lineTaxAmount, serverLine.lineTaxAmount, FINANCIAL_SCALE.MONEY_AMOUNT)) {
+      throw new FinancialMismatchError(`items[${i}].lineTaxAmount`, serverLine.lineTaxAmount, String(clientItem.lineTaxAmount));
     }
   }
 }

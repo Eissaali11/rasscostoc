@@ -36,8 +36,8 @@ class InMemoryTechnicianProductStockRepository implements ITechnicianProductStoc
         nameAr: 'اسم المنتج',
         nameEn: 'Product Name',
         quantity,
-        defaultPrice: 100,
-        defaultTaxRate: 15,
+        defaultPrice: '100.0000',
+        defaultTaxRate: '0.1500',
       });
     }
     this.balances.set(technicianId, list);
@@ -72,8 +72,8 @@ describe('SyncRepresentativeInventoryUseCase', () => {
         nameAr: 'منتج 1',
         nameEn: 'Product 1',
         quantity: 10,
-        defaultPrice: 50.0,
-        defaultTaxRate: 15.0,
+        defaultPrice: '50.0000',
+        defaultTaxRate: '0.1500',
       },
       {
         productId: 'prod-2',
@@ -82,8 +82,8 @@ describe('SyncRepresentativeInventoryUseCase', () => {
         nameAr: 'منتج 2',
         nameEn: 'Product 2',
         quantity: 5,
-        defaultPrice: 100.0,
-        defaultTaxRate: 15.0,
+        defaultPrice: '100.0000',
+        defaultTaxRate: '0.1500',
       },
     ];
 
