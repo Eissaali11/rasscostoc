@@ -2,7 +2,18 @@ import { randomUUID, createHash } from "crypto";
 import type { PoolClient, QueryResult } from "pg";
 import { pool } from "@core/config/db";
 import { ConflictError, NotFoundError, ValidationError } from "@core/errors/AppError";
-import { round2Compat } from "@core/finance/decimal";
+import {
+  round2Compat,
+  toPlainDecimalString,
+  roundHalfAwayFromZero,
+  multiplyDecimal,
+  addDecimal,
+  subtractDecimal,
+  negateDecimal,
+  absDecimal,
+  compareDecimal,
+  maxDecimalWithZero,
+} from "@core/finance/decimal";
 
 type CoaInput = {
   code: string;
@@ -209,6 +220,23 @@ export class AccountingService {
       [taxCodeId]
     );
     return Number(result.rows[0]?.rate ?? 0.15);
+  }
+
+  // DB-R10C.5b: taxCodes.rate itself remains doublePrecision (out of this
+  // slice's scope), so pg still decodes it as a JS number — this method
+  // is the one authorized "entry point" that converts that legacy number
+  // into a decimal string via toPlainDecimalString() immediately upon
+  // read, before it is allowed to touch any sales-invoice authoritative
+  // calculation. No binary-float arithmetic is performed on the rate
+  // itself here or afterward.
+  private async getTaxRateByCodeDecimal(client: PoolClient, taxCodeId?: string): Promise<string> {
+    if (!taxCodeId) return "0.15";
+    const result = await client.query<{ rate: number }>(
+      "SELECT rate FROM tax_codes WHERE id = $1 AND is_active = TRUE LIMIT 1",
+      [taxCodeId]
+    );
+    const raw = result.rows[0]?.rate;
+    return raw === undefined || raw === null ? "0.15" : toPlainDecimalString(Number(raw));
   }
 
   private async getAccountIdByCode(client: PoolClient, code: string): Promise<string> {
@@ -506,38 +534,65 @@ export class AccountingService {
         throw new ValidationError("تاريخ الإصدار غير صالح");
       }
 
-      let subtotal = 0;
-      let discountTotal = 0;
-      let taxableAmount = 0;
-      let vatTotal = 0;
+      // DB-R10C.5b: exact decimal calculation, end to end. qty/unitPrice
+      // arrive as JS numbers (client input / doublePrecision qty column,
+      // both out of this slice's schema scope) — toPlainDecimalString()
+      // is the one authorized boundary that converts them to decimal
+      // strings before any arithmetic runs; taxCodes.rate (also out of
+      // scope, still doublePrecision) enters the same way via
+      // getTaxRateByCodeDecimal(). From that point on, every operation
+      // (multiplyDecimal/subtractDecimal/addDecimal/roundHalfAwayFromZero)
+      // is exact BigInt-based decimal arithmetic — no binary float is
+      // ever involved in computing a persisted financial value.
+      let subtotal = "0.00";
+      let discountTotal = "0.00";
+      let taxableAmount = "0.00";
+      let vatTotal = "0.00";
 
-      const normalizedLines: Array<SalesLineInput & { lineTotal: number }> = [];
+      const normalizedLines: Array<Omit<SalesLineInput, "discount"> & { discount: string; unitPrice4: string; lineTotal: string }> = [];
 
       for (const line of input.lines) {
         assertNonNegative(line.qty, "qty");
         assertNonNegative(line.unitPrice, "unitPrice");
         assertNonNegative(line.discount ?? 0, "discount");
 
-        const gross = round2(line.qty * line.unitPrice);
-        const discount = round2(line.discount ?? 0);
-        const taxable = round2(Math.max(0, gross - discount));
-        const taxRate = await this.getTaxRateByCode(client, line.taxCodeId);
-        const tax = round2(taxable * taxRate);
-        const total = round2(taxable + tax);
+        // unitPrice: preserve up to 4 decimal places exactly; reject
+        // (never silently round) anything with more meaningful decimals
+        // than the target NUMERIC(14,4) column can hold.
+        const unitPriceRaw = toPlainDecimalString(line.unitPrice);
+        const unitPrice4 = roundHalfAwayFromZero(unitPriceRaw, 4);
+        if (compareDecimal(unitPriceRaw, unitPrice4) !== 0) {
+          throw new ValidationError("سعر الوحدة لا يمكن أن يحتوي على أكثر من 4 أرقام عشرية");
+        }
 
-        subtotal += gross;
-        discountTotal += discount;
-        taxableAmount += taxable;
-        vatTotal += tax;
+        const qtyStr = toPlainDecimalString(line.qty);
+        const grossFull = multiplyDecimal(qtyStr, unitPrice4);
+        const gross = roundHalfAwayFromZero(grossFull, 2);
 
-        normalizedLines.push({ ...line, discount, lineTotal: total });
+        const discountStr = toPlainDecimalString(line.discount ?? 0);
+        const discount = roundHalfAwayFromZero(discountStr, 2);
+
+        const taxable = maxDecimalWithZero(roundHalfAwayFromZero(subtractDecimal(gross, discount), 2), 2);
+
+        const taxRateStr = await this.getTaxRateByCodeDecimal(client, line.taxCodeId);
+        const taxFull = multiplyDecimal(taxable, taxRateStr);
+        const tax = roundHalfAwayFromZero(taxFull, 2);
+
+        const total = roundHalfAwayFromZero(addDecimal(taxable, tax), 2);
+
+        subtotal = addDecimal(subtotal, gross);
+        discountTotal = addDecimal(discountTotal, discount);
+        taxableAmount = addDecimal(taxableAmount, taxable);
+        vatTotal = addDecimal(vatTotal, tax);
+
+        normalizedLines.push({ ...line, discount, unitPrice4, lineTotal: total });
       }
 
-      subtotal = round2(subtotal);
-      discountTotal = round2(discountTotal);
-      taxableAmount = round2(taxableAmount);
-      vatTotal = round2(vatTotal);
-      const grandTotal = round2(taxableAmount + vatTotal);
+      subtotal = roundHalfAwayFromZero(subtotal, 2);
+      discountTotal = roundHalfAwayFromZero(discountTotal, 2);
+      taxableAmount = roundHalfAwayFromZero(taxableAmount, 2);
+      vatTotal = roundHalfAwayFromZero(vatTotal, 2);
+      const grandTotal = roundHalfAwayFromZero(addDecimal(taxableAmount, vatTotal), 2);
 
       const invoiceResult = await client.query(
         `INSERT INTO sales_invoices
@@ -580,8 +635,8 @@ export class AccountingService {
             line.itemTypeId ?? null,
             line.description ?? null,
             line.qty,
-            line.unitPrice,
-            line.discount ?? 0,
+            line.unitPrice4,
+            line.discount,
             line.taxCodeId ?? null,
             line.lineTotal,
             line.warehouseId ?? null,
@@ -629,20 +684,33 @@ export class AccountingService {
 
     const entryId = entryResult.rows[0].id as string;
 
+    // DB-R10C.5b-A: sales_invoices.{grand_total,taxable_amount,vat_total}
+    // are already exact NUMERIC(14,2) decimal strings by the time they
+    // reach this point (computed exactly in createSalesInvoice(), or
+    // already-exact-negated in createSalesCreditNote()) — passed straight
+    // through to journal_entry_lines (itself already exact NUMERIC(14,2)
+    // per DB-R10C.4P/.4) with zero Number()/round2() binary-float
+    // round-trip. round2(Number(x)) was correct legacy handling when
+    // these columns were still float8; reusing it here after C.5b would
+    // reintroduce binary-float arithmetic into an already-certified-exact
+    // journal storage path, which this migration must not do.
+    const grandTotalDecimal = String(invoice.grand_total ?? "0.00");
+    const taxableAmountDecimal = String(invoice.taxable_amount ?? "0.00");
+    const vatValue = String(invoice.vat_total ?? "0.00");
+
     await client.query(
       `INSERT INTO journal_entry_lines (entry_id, account_id, debit, credit, description)
        VALUES ($1, $2, $3, 0, $4)`,
-      [entryId, arId, round2(Number(invoice.grand_total ?? 0)), `فاتورة مبيعات ${invoice.invoice_no}`]
+      [entryId, arId, grandTotalDecimal, `فاتورة مبيعات ${invoice.invoice_no}`]
     );
 
     await client.query(
       `INSERT INTO journal_entry_lines (entry_id, account_id, debit, credit, description)
        VALUES ($1, $2, 0, $3, $4)`,
-      [entryId, revenueId, round2(Number(invoice.taxable_amount ?? 0)), `إيراد مبيعات ${invoice.invoice_no}`]
+      [entryId, revenueId, taxableAmountDecimal, `إيراد مبيعات ${invoice.invoice_no}`]
     );
 
-    const vatValue = round2(Number(invoice.vat_total ?? 0));
-    if (vatValue > 0) {
+    if (compareDecimal(vatValue, "0.00") > 0) {
       await client.query(
         `INSERT INTO journal_entry_lines (entry_id, account_id, debit, credit, description)
          VALUES ($1, $2, 0, $3, $4)`,
@@ -793,11 +861,11 @@ export class AccountingService {
         [
           creditInvoiceNo,
           source.customer_id,
-          -Math.abs(Number(source.subtotal ?? 0)),
-          -Math.abs(Number(source.discount_total ?? 0)),
-          -Math.abs(Number(source.taxable_amount ?? 0)),
-          -Math.abs(Number(source.vat_total ?? 0)),
-          -Math.abs(Number(source.grand_total ?? 0)),
+          negateDecimal(absDecimal(String(source.subtotal ?? "0"))),
+          negateDecimal(absDecimal(String(source.discount_total ?? "0"))),
+          negateDecimal(absDecimal(String(source.taxable_amount ?? "0"))),
+          negateDecimal(absDecimal(String(source.vat_total ?? "0"))),
+          negateDecimal(absDecimal(String(source.grand_total ?? "0"))),
           source.currency ?? "SAR",
           `إشعار دائن للفاتورة ${source.invoice_no}`,
           userId ?? null,
@@ -818,10 +886,10 @@ export class AccountingService {
             line.item_type_id,
             line.description,
             -Math.abs(Number(line.qty ?? 0)),
-            Number(line.unit_price ?? 0),
-            Number(line.discount ?? 0),
+            String(line.unit_price ?? "0"),
+            String(line.discount ?? "0"),
             line.tax_code_id,
-            -Math.abs(Number(line.line_total ?? 0)),
+            negateDecimal(absDecimal(String(line.line_total ?? "0"))),
             line.warehouse_id,
             line.technician_id,
             line.source_inventory_type,
@@ -846,9 +914,9 @@ export class AccountingService {
       );
 
       const entryId = entryResult.rows[0].id as string;
-      const taxable = Math.abs(Number(source.taxable_amount ?? 0));
-      const vat = Math.abs(Number(source.vat_total ?? 0));
-      const total = Math.abs(Number(source.grand_total ?? 0));
+      const taxable = absDecimal(String(source.taxable_amount ?? "0"));
+      const vat = absDecimal(String(source.vat_total ?? "0"));
+      const total = absDecimal(String(source.grand_total ?? "0"));
 
       await client.query(
         `INSERT INTO journal_entry_lines (entry_id, account_id, debit, credit, description)
@@ -856,7 +924,7 @@ export class AccountingService {
         [entryId, revenueId, taxable, `عكس إيراد ${source.invoice_no}`]
       );
 
-      if (vat > 0) {
+      if (compareDecimal(vat, "0.00") > 0) {
         await client.query(
           `INSERT INTO journal_entry_lines (entry_id, account_id, debit, credit, description)
            VALUES ($1, $2, $3, 0, $4)`,
@@ -870,10 +938,13 @@ export class AccountingService {
         [entryId, arId, total, `عكس ذمم العملاء ${source.invoice_no}`]
       );
 
+      // tax_transactions.{taxableAmount,taxAmount} remain doublePrecision
+      // (out of DB-R10C.5b scope, deferred to C.5e) — Number() is the
+      // deliberate, documented scope boundary here, not a regression.
       await client.query(
         `INSERT INTO tax_transactions (source_type, source_id, tax_code_id, taxable_amount, tax_amount, direction)
          VALUES ('sales_credit_note', $1, NULL, $2, $3, 'output')`,
-        [creditInvoice.id, -taxable, -vat]
+        [creditInvoice.id, -Number(taxable), -Number(vat)]
       );
 
       await client.query("COMMIT");

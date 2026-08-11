@@ -7,6 +7,11 @@ import {
   roundDecimalCompat,
   roundHalfAwayFromZero,
   toPlainDecimalString,
+  negateDecimal,
+  subtractDecimal,
+  compareDecimal,
+  maxDecimalWithZero,
+  absDecimal,
 } from "./decimal";
 
 /**
@@ -192,4 +197,67 @@ describe("toPlainDecimalString — number-to-decimal-string entry point", () => 
     expect(() => toPlainDecimalString(NaN)).toThrow(RangeError);
     expect(() => toPlainDecimalString(Infinity)).toThrow(RangeError);
   });
+});
+
+// ============================================================
+// DB-R10C.5b-A — direct unit coverage for the 5 new primitives added
+// in DB-R10C.5b (negateDecimal, subtractDecimal, compareDecimal,
+// maxDecimalWithZero, absDecimal). Integration tests exercising
+// createSalesInvoice()/createSalesCreditNote() are not sufficient by
+// themselves — this isolates each primitive's edge behavior.
+// ============================================================
+
+describe("DB-R10C.5b-A — negateDecimal", () => {
+  it("flips a positive to negative", () => expect(negateDecimal("5.00")).toBe("-5.00"));
+  it("flips a negative to positive", () => expect(negateDecimal("-5.00")).toBe("5.00"));
+  it("zero is never signed", () => expect(negateDecimal("0.00")).toBe("0.00"));
+  it("negative zero input is never signed", () => expect(negateDecimal("-0.00")).toBe("0.00"));
+  it("double negation returns the original", () => expect(negateDecimal(negateDecimal("12184.5150"))).toBe("12184.5150"));
+  it("preserves scale for large values", () => expect(negateDecimal("999999999999.99")).toBe("-999999999999.99"));
+  it("preserves scale for small fractional values", () => expect(negateDecimal("0.0001")).toBe("-0.0001"));
+});
+
+describe("DB-R10C.5b-A — absDecimal", () => {
+  it("positive stays positive", () => expect(absDecimal("5.00")).toBe("5.00"));
+  it("negative becomes positive", () => expect(absDecimal("-5.00")).toBe("5.00"));
+  it("zero stays zero, unsigned", () => expect(absDecimal("0.00")).toBe("0.00"));
+  it("negative zero becomes unsigned zero", () => expect(absDecimal("-0.00")).toBe("0.00"));
+  it("idempotent on an already-positive value", () => expect(absDecimal(absDecimal("-99.99"))).toBe("99.99"));
+});
+
+describe("DB-R10C.5b-A — compareDecimal", () => {
+  it("equal values return 0", () => expect(compareDecimal("5.00", "5.00")).toBe(0));
+  it("equal values with different scale representations return 0", () => expect(compareDecimal("5", "5.00")).toBe(0));
+  it("a < b returns -1", () => expect(compareDecimal("4.99", "5.00")).toBe(-1));
+  it("a > b returns 1", () => expect(compareDecimal("5.01", "5.00")).toBe(1));
+  it("negative vs positive", () => expect(compareDecimal("-1.00", "1.00")).toBe(-1));
+  it("negative vs negative, more-negative is smaller", () => expect(compareDecimal("-5.00", "-1.00")).toBe(-1));
+  it("zero vs negative zero is equal", () => expect(compareDecimal("0.00", "-0.00")).toBe(0));
+  it("different scales compare correctly (0.001 vs 0.0009)", () => expect(compareDecimal("0.001", "0.0009")).toBe(1));
+  it("large value comparison", () => expect(compareDecimal("999999999999.99", "1000000000000.00")).toBe(-1));
+});
+
+describe("DB-R10C.5b-A — maxDecimalWithZero", () => {
+  it("positive value stays unchanged", () => expect(maxDecimalWithZero("5.00", 2)).toBe("5.00"));
+  it("negative value clamps to zero", () => expect(maxDecimalWithZero("-5.00", 2)).toBe("0.00"));
+  it("exact zero stays zero", () => expect(maxDecimalWithZero("0.00", 2)).toBe("0.00"));
+  // Regression case for a real bug found and fixed during DB-R10C.5b-A:
+  // the original `< 0` comparison let a negative-zero *string* input
+  // pass through unchanged instead of normalizing to the canonical
+  // unsigned zero.
+  it("negative zero clamps to the canonical unsigned zero (regression case)", () => expect(maxDecimalWithZero("-0.00", 2)).toBe("0.00"));
+  it("respects the requested scale for the zero comparator (scale 4)", () => expect(maxDecimalWithZero("-1.2345", 4)).toBe("0.0000"));
+  it("tiny negative fraction still clamps to zero", () => expect(maxDecimalWithZero("-0.01", 2)).toBe("0.00"));
+});
+
+describe("DB-R10C.5b-A — subtractDecimal", () => {
+  it("positive minus smaller positive", () => expect(subtractDecimal("10.00", "3.00")).toBe("7.00"));
+  it("positive minus larger positive crosses zero into negative", () => expect(subtractDecimal("3.00", "10.00")).toBe("-7.00"));
+  it("subtracting zero returns the original", () => expect(subtractDecimal("5.00", "0.00")).toBe("5.00"));
+  it("subtracting from zero negates", () => expect(subtractDecimal("0.00", "5.00")).toBe("-5.00"));
+  it("negative minus negative", () => expect(subtractDecimal("-5.00", "-3.00")).toBe("-2.00"));
+  it("result exactly zero is unsigned", () => expect(subtractDecimal("5.00", "5.00")).toBe("0.00"));
+  it("different scales (gross - discount, the actual C.5b call pattern)", () => expect(subtractDecimal("100.00", "5.00")).toBe("95.00"));
+  it("exact boundary case: 12184.52 line total minus 0 discount", () => expect(subtractDecimal("12184.52", "0.00")).toBe("12184.52"));
+  it("large-magnitude subtraction stays exact", () => expect(subtractDecimal("999999999999.99", "0.01")).toBe("999999999999.98"));
 });

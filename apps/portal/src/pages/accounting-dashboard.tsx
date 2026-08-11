@@ -77,13 +77,19 @@ type JournalEntry = {
   created_at: string;
 };
 
+// DB-R10C.5b: sales_invoices.{taxable_amount,vat_total,grand_total}
+// (plus subtotal/discount_total, not read by this Portal type) moved to
+// exact NUMERIC storage, so pg now decodes them as decimal strings
+// rather than JS numbers. Widened to reflect the actual wire contract;
+// the one read site (grandTotal reduce at L1234) already wraps values
+// in Number(...) defensively, a presentation-only conversion.
 type SalesInvoice = {
   id: string;
   invoice_no: string;
   status: string;
-  taxable_amount: number;
-  vat_total: number;
-  grand_total: number;
+  taxable_amount: number | string;
+  vat_total: number | string;
+  grand_total: number | string;
   issue_datetime: string;
   items_summary?: string;
 };
@@ -671,7 +677,7 @@ export default function AccountingDashboardPage() {
   const monthTrend = useMemo(() => {
     const monthMap = new Map<string, { month: string; sales: number; purchases: number }>();
 
-    const addMonth = (dateLike: string, kind: "sales" | "purchases", amount: number) => {
+    const addMonth = (dateLike: string, kind: "sales" | "purchases", amount: number | string) => {
       const d = new Date(dateLike);
       if (Number.isNaN(d.getTime())) return;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -1995,9 +2001,9 @@ export default function AccountingDashboardPage() {
                       <TableCell>{invoice.invoice_no}</TableCell>
                       <TableCell>{new Date(invoice.issue_datetime).toLocaleDateString("ar-SA")}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-xs text-[#6B7280]">{invoice.items_summary || "-"}</TableCell>
-                      <TableCell>{formatMoney(invoice.taxable_amount)}</TableCell>
-                      <TableCell>{formatMoney(invoice.vat_total)}</TableCell>
-                      <TableCell>{formatMoney(invoice.grand_total)}</TableCell>
+                      <TableCell>{formatMoney(Number(invoice.taxable_amount))}</TableCell>
+                      <TableCell>{formatMoney(Number(invoice.vat_total))}</TableCell>
+                      <TableCell>{formatMoney(Number(invoice.grand_total))}</TableCell>
                       <TableCell><Badge className={statusClass(invoice.status)}>{statusLabel(invoice.status)}</Badge></TableCell>
                       <TableCell className="space-x-2 space-x-reverse">
                         {invoice.status !== "posted" && (

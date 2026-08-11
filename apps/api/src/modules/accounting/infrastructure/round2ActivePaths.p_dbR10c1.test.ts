@@ -34,10 +34,12 @@ describe("DB-R10C.1A — round2() active financial paths (post round2Compat dele
       lines: [{ qty: 3, unitPrice: 33.33 }], // 33.33*3 = 99.99, VAT15 = 14.9985 -> 15.00 (round2), total 114.99
     });
 
-    expect(invoice.subtotal).toBe(99.99);
-    expect(invoice.taxable_amount).toBe(99.99);
-    expect(invoice.vat_total).toBe(15); // round2(99.99*0.15)=round2(14.9985)=15.00
-    expect(invoice.grand_total).toBe(114.99);
+    // DB-R10C.5b: these 4 fields are now exact NUMERIC(14,2), decoded by
+    // pg as decimal strings rather than JS numbers — see the C.5b report.
+    expect(invoice.subtotal).toBe("99.99");
+    expect(invoice.taxable_amount).toBe("99.99");
+    expect(invoice.vat_total).toBe("15.00"); // exact(99.99*0.15)=14.9985 -> round to 15.00
+    expect(invoice.grand_total).toBe("114.99");
   });
 
   it("computes correct VAT for a boundary decimal line (987 x 12.345 class case from DB-R10A)", async () => {
@@ -45,9 +47,10 @@ describe("DB-R10C.1A — round2() active financial paths (post round2Compat dele
       lines: [{ qty: 1, unitPrice: 12184.515 }], // exercises the exact DB-R10A float-noise example
     });
 
-    expect(invoice.subtotal).toBe(12184.52); // round2(12184.515) -> 12184.52 (half away from zero, matches PG)
-    expect(invoice.vat_total).toBe(1827.68); // round2(12184.52*0.15) = round2(1827.678) = 1827.68
-    expect(invoice.grand_total).toBe(14012.2);
+    // DB-R10C.5b: exact decimal strings now, not binary-float round2() results.
+    expect(invoice.subtotal).toBe("12184.52"); // exact(12184.515) -> 12184.52 (half away from zero, matches PG)
+    expect(invoice.vat_total).toBe("1827.68"); // exact(12184.52*0.15) = 1827.678 -> 1827.68
+    expect(invoice.grand_total).toBe("14012.20");
   });
 
   it("sales credit note negates already-rounded source values WITHOUT calling round2 (control test)", async () => {
@@ -58,16 +61,16 @@ describe("DB-R10C.1A — round2() active financial paths (post round2Compat dele
 
     const credit = await accountingService.createSalesCreditNote(source.id);
 
-    // Exact negation, bit-for-bit, of the already-rounded source totals —
-    // NOT a fresh round2() computation. This is what proves the credit-note
-    // path is unaffected by the round2() symmetry fix: there is nothing for
-    // the fix to change here.
-    expect(credit.subtotal).toBe(-source.subtotal);
-    expect(credit.taxable_amount).toBe(-source.taxable_amount);
-    expect(credit.vat_total).toBe(-source.vat_total);
-    expect(credit.grand_total).toBe(-source.grand_total);
-    expect(credit.subtotal).toBe(-99.99);
-    expect(credit.vat_total).toBe(-15);
+    // DB-R10C.5b: exact decimal sign inversion (negateDecimal(absDecimal(x))),
+    // not a fresh round2()/Math.abs() computation — this is what proves the
+    // credit-note path is unaffected by any binary-float rounding concern:
+    // there is nothing for a float rounding bug to touch here.
+    expect(credit.subtotal).toBe("-" + source.subtotal);
+    expect(credit.taxable_amount).toBe("-" + source.taxable_amount);
+    expect(credit.vat_total).toBe("-" + source.vat_total);
+    expect(credit.grand_total).toBe("-" + source.grand_total);
+    expect(credit.subtotal).toBe("-99.99");
+    expect(credit.vat_total).toBe("-15.00");
   });
 
   it("purchase debit note negates already-rounded source values WITHOUT calling round2 (control test)", async () => {
