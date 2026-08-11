@@ -12,6 +12,14 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
+// DB-R10C.5b: sales_invoices.{subtotal,discountTotal,taxableAmount,
+// vatTotal,grandTotal} and sales_invoice_lines.{unitPrice,discount,
+// lineTotal} moved from doublePrecision to exact NUMERIC storage —
+// unitPrice is NUMERIC(14,4) (proven business behavior: the current
+// write path already accepts up to 4 meaningful decimal digits), the
+// other 7 fields are NUMERIC(14,2). numeric() has no `mode` option in
+// drizzle-orm@0.39.1 and is inferred as TypeScript `string`, matching
+// the DB-R10C.3/.4P precedent.
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./organization.schema";
@@ -108,11 +116,11 @@ export const salesInvoices = pgTable("sales_invoices", {
   issueDatetime: timestamp("issue_datetime").notNull().defaultNow(),
   dueDate: date("due_date"),
   status: text("status").notNull().default("draft"),
-  subtotal: doublePrecision("subtotal").notNull().default(0),
-  discountTotal: doublePrecision("discount_total").notNull().default(0),
-  taxableAmount: doublePrecision("taxable_amount").notNull().default(0),
-  vatTotal: doublePrecision("vat_total").notNull().default(0),
-  grandTotal: doublePrecision("grand_total").notNull().default(0),
+  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  discountTotal: numeric("discount_total", { precision: 14, scale: 2 }).notNull().default("0"),
+  taxableAmount: numeric("taxable_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  vatTotal: numeric("vat_total", { precision: 14, scale: 2 }).notNull().default("0"),
+  grandTotal: numeric("grand_total", { precision: 14, scale: 2 }).notNull().default("0"),
   currency: text("currency").notNull().default("SAR"),
   notes: text("notes"),
   postedAt: timestamp("posted_at"),
@@ -132,10 +140,10 @@ export const salesInvoiceLines = pgTable("sales_invoice_lines", {
   itemTypeId: varchar("item_type_id").references(() => itemTypes.id),
   description: text("description"),
   qty: doublePrecision("qty").notNull().default(0),
-  unitPrice: doublePrecision("unit_price").notNull().default(0),
-  discount: doublePrecision("discount").notNull().default(0),
+  unitPrice: numeric("unit_price", { precision: 14, scale: 4 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxCodeId: varchar("tax_code_id"),
-  lineTotal: doublePrecision("line_total").notNull().default(0),
+  lineTotal: numeric("line_total", { precision: 14, scale: 2 }).notNull().default("0"),
   warehouseId: varchar("warehouse_id"),
   technicianId: varchar("technician_id").references(() => users.id),
   sourceInventoryType: text("source_inventory_type"),

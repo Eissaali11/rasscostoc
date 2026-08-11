@@ -233,6 +233,67 @@ export function addDecimal(a: string, b: string): string {
 }
 
 /**
+ * Exact decimal negation via string sign flip — no binary float involved.
+ * `negateDecimal("5.00")` -> `"-5.00"`, `negateDecimal("-5.00")` -> `"5.00"`,
+ * `negateDecimal("0.00")` -> `"0.00"` (zero is never signed).
+ */
+export function negateDecimal(a: string): string {
+  const pa = parseDecimalParts(a);
+  const magnitude = BigInt(pa.intPart + pa.fracPart || "0");
+  return formatSignedScaledBigInt(magnitude, !pa.negative, pa.fracPart.length);
+}
+
+/**
+ * Exact decimal absolute value via BigInt — `absDecimal("-5.00")` ->
+ * `"5.00"`, `absDecimal("5.00")` -> `"5.00"`.
+ */
+export function absDecimal(a: string): string {
+  const pa = parseDecimalParts(a);
+  const magnitude = BigInt(pa.intPart + pa.fracPart || "0");
+  return formatSignedScaledBigInt(magnitude, false, pa.fracPart.length);
+}
+
+/**
+ * Exact decimal subtraction via BigInt (a - b) — implemented as
+ * `addDecimal(a, negateDecimal(b))`, no binary float involved.
+ */
+export function subtractDecimal(a: string, b: string): string {
+  return addDecimal(a, negateDecimal(b));
+}
+
+/**
+ * Exact decimal comparison via BigInt. Returns -1 if a < b, 0 if equal,
+ * 1 if a > b. Operands may have different scales.
+ */
+export function compareDecimal(a: string, b: string): -1 | 0 | 1 {
+  const pa = parseDecimalParts(a);
+  const pb = parseDecimalParts(b);
+  const scale = Math.max(pa.fracPart.length, pb.fracPart.length);
+  const fracA = pa.fracPart.padEnd(scale, "0");
+  const fracB = pb.fracPart.padEnd(scale, "0");
+  const magA = BigInt(pa.intPart + fracA || "0") * (pa.negative ? -1n : 1n);
+  const magB = BigInt(pb.intPart + fracB || "0") * (pb.negative ? -1n : 1n);
+  if (magA < magB) return -1;
+  if (magA > magB) return 1;
+  return 0;
+}
+
+/**
+ * Exact `max(0, a)` via BigInt comparison — used for the "taxable amount
+ * cannot go negative after discount" business rule without ever routing
+ * the comparison through a binary float.
+ */
+export function maxDecimalWithZero(a: string, scale: number): string {
+  const zero = roundHalfAwayFromZero("0", scale);
+  // <= 0, not < 0: when a is exactly zero (including a negative-zero
+  // string like "-0.00"), we must still return the canonical unsigned
+  // zero rather than passing the original (possibly negatively-signed)
+  // input straight through — compareDecimal correctly treats -0.00 as
+  // equal to 0.00, but "equal" alone doesn't imply "already canonical".
+  return compareDecimal(a, zero) <= 0 ? zero : a;
+}
+
+/**
  * Legacy-compatible drop-in replacement for the pre-existing
  * `round2(value: number): number` in accounting.service.ts.
  * Rounds to 2 decimal places (FINANCIAL_SCALE.MONEY_AMOUNT) using the

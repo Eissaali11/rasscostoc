@@ -38,6 +38,7 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/accounting/infrastructure/technician-sales-metrics.p22.test.ts",
   "apps/api/src/modules/accounting/infrastructure/round2ActivePaths.p_dbR10c1.test.ts",
   "apps/api/src/modules/accounting/infrastructure/journalBalanceInvariant.test.ts",
+  "apps/api/src/modules/accounting/infrastructure/salesInvoiceNumericPrecision.test.ts",
   "apps/api/src/modules/courier/infrastructure/optimistic-locking.test.ts",
   "apps/api/src/modules/inventory/infrastructure/services/serialized-items.service.delete-custody.integration.test.ts",
   "apps/api/src/modules/inventory/serial-verification-suite.test.ts",
