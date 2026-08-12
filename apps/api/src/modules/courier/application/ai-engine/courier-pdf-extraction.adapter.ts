@@ -421,11 +421,27 @@ export function buildCompleteExecutionPayload(input: {
 
   const firstTech = input.devices.find((d) => d.technician_code || d.sales_technician);
 
+  // OPS-REMED-E3: preserve the ORIGINAL per-device sn/sim_serial pairing
+  // from the authoritative report-approval input, before it is destroyed by
+  // the deviceSerials/simSerials flattening above (which only the first of
+  // each survives into the persisted courier_executions scalar columns).
+  // This `pairs` array is the source InventoryEngine validates against the
+  // approved pairing rule — a complete pair (both fields non-empty) or a
+  // fully-empty entry (dropped) are the only accepted shapes; any
+  // single-sided entry fails closed with DEDUCT_PAIR_INCOMPLETE.
+  const pairs = input.devices
+    .map((d) => ({
+      sn: (d.sn ?? "").trim() || null,
+      simSerial: (d.sim_serial ?? "").trim() || null,
+    }))
+    .filter((p) => p.sn !== null || p.simSerial !== null);
+
   return {
     sn: deviceSerials[0] ?? null,
     simSerial: simSerials[0] ?? null,
     deviceSerials,
     simSerials,
+    pairs,
     deliveryDate: input.deliveryDate ?? null,
     time: input.time ?? null,
     paperRoll: input.paperRoll ?? "Yes",

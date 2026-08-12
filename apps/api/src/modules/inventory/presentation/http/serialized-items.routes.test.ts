@@ -143,6 +143,39 @@ describe("Serialized Items HTTP Integration Tests", () => {
 
       expect(mockSerializedItemsService.scanOut).not.toHaveBeenCalled();
     });
+
+    // OPS-REMED-E3-I.R2: the standalone HTTP endpoint must keep operating
+    // exactly as before — it never has (and must never be given) an E3
+    // transaction context. serialized-items.service.ts's scanOut() opens
+    // its own independent db.transaction() whenever externalTx is absent
+    // (see runBody / externalTx branch), which is exactly what happens
+    // when the controller calls it with no 7th argument, as asserted here.
+    it("OPS-REMED-E3: calls scanOut with NO external transaction context — the endpoint opens its own transaction, unaffected by the E3 courier deduction path", async () => {
+      const mockResult = {
+        id: "item-uuid-111",
+        serialNumber: "SN-DEVICE-777",
+        status: "DELIVERED",
+        currentOwnerId: null,
+      };
+      vi.mocked(mockSerializedItemsService.scanOut).mockResolvedValue(mockResult as any);
+
+      await request(app)
+        .post("/api/serialized-items/scan-out")
+        .send({
+          serialNumber: "SN-DEVICE-777",
+          receiverName: "Ahmed Ali",
+          orderNumber: "ORD-9988",
+        })
+        .expect(200);
+
+      const call = vi.mocked(mockSerializedItemsService.scanOut).mock.calls[0]!;
+      // Exactly 5 positional arguments (technicianId, serialNumber,
+      // receiverName, orderNumber, latitude=undefined — no
+      // longitude/externalTx supplied) — no 7th "external context" arg is
+      // ever passed by this standalone caller.
+      expect(call.length).toBeLessThanOrEqual(6);
+      expect(call[6]).toBeUndefined();
+    });
   });
 
   describe("GET /api/serialized-items/lookup/:serialNumber", () => {

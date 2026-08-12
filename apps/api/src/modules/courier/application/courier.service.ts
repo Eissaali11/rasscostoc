@@ -631,6 +631,11 @@ export class CourierService {
     const version = data?.version;
     const sanitized = CourierService.sanitizeExecutionPayload(data);
     const isCompleted = isCompletedStatus(sanitized.installationStatus);
+    // OPS-REMED-E3: `pairs` is not a courier_executions DB column (no
+    // migration authorized in this gate) — it is read from the RAW,
+    // unsanitized payload and carried only in-memory through to the
+    // workflow/event context for InventoryEngine's pairing validation.
+    const pairs = Array.isArray(data?.pairs) ? data.pairs : undefined;
 
     // Multi-serial close: arrays from portal; fall back to scalar sn / simSerial.
     // Incomplete statuses never require serials and never deduct — omit serial fields from write.
@@ -721,10 +726,15 @@ export class CourierService {
     // Called AFTER guards pass and execution is written to DB.
     // The engine decides the action and delegates side effects.
     if (isCompleted) {
+      // OPS-REMED-E3: attach `pairs` onto the execution snapshot object
+      // (ExecutionSnapshot has an index signature, and ExecutionCompletedEvent's
+      // `execution` field is typed `any`) — no change to workflow.types.ts or
+      // events.ts required; pairs flows through to InventorySubscriber
+      // unmodified.
       const workflowResult = await CourierWorkflow.execute({
         requestId,
         actorId: enteredBy,
-        execution: result,
+        execution: pairs ? { ...result, pairs } : result,
         request,
       });
 

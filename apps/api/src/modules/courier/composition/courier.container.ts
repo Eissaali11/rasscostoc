@@ -116,12 +116,14 @@ export function bootstrapCourierModule(): CourierController {
 import { InventoryEngine } from "../application/inventory/inventory.engine";
 import { DevicesServiceAdapter } from "../infrastructure/adapters/DevicesServiceAdapter";
 import { SerializedItemsAdapter } from "../infrastructure/adapters/SerializedItemsAdapter";
+import { DrizzleInventoryTransactionRunner } from "../infrastructure/database/DrizzleInventoryTransactionRunner";
 
 export function createInventoryEngine(): InventoryEngine {
   const repository = new DrizzleCourierRepository();
   return new InventoryEngine(
     new DevicesServiceAdapter(),
     new SerializedItemsAdapter(),
-    repository
+    repository,
+    new DrizzleInventoryTransactionRunner()
   );
 }

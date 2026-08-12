@@ -39,10 +39,17 @@ export interface IDevicesRepository {
   approveDevicesBatch(deviceIds: string[], approvedBy: string, type: 'withdrawn' | 'received'): Promise<any>;
   rejectDevicesBatch(deviceIds: string[], approvedBy: string, adminNotes: string, type: 'withdrawn' | 'received'): Promise<any>;
   deliverDeviceByBarcode(technicianId: string, barcode: string): Promise<ReceivedDevice>;
+  /**
+   * OPS-REMED-E3: optional externally-supplied Drizzle transaction so this
+   * batch write can join an existing request-wide transaction owned by the
+   * courier deduction path. When omitted, opens its own transaction
+   * (unchanged legacy behavior for the standalone
+   * /api/technicians/deduct-inventory HTTP endpoint).
+   */
   deductTechnicianInventory(data: {
     technicianCode: string;
     devices: { serialNumber: string; model?: string }[];
     notes?: string;
     actor: { id: string; username: string; role: string; regionId: string | null };
-  }): Promise<any[]>;
+  }, externalTx?: any): Promise<any[]>;
 }

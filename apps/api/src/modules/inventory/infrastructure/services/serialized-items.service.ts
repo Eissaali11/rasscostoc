@@ -247,15 +247,31 @@ export class SerializedItemsService {
     receiverName: string,
     orderNumber: string,
     latitude?: number,
-    longitude?: number
+    longitude?: number,
+    externalTx?: any
   ) {
-    return await db.transaction(async (tx: any) => {
+    // OPS-REMED-E3: when an external transaction is supplied (by the courier
+    // multi-asset deduction path via InventoryEngine), join it instead of
+    // opening an independent transaction, so this write rolls back together
+    // with every other asset in the same request. When omitted (the
+    // standalone /api/serialized-items/scan-out HTTP endpoint), behavior is
+    // unchanged — this method opens its own transaction as before.
+    const runBody = async (tx: any) => {
       const candidates = await SerialRecognitionService.buildStoredSerialCandidates(serialNumber, undefined, tx);
       if (candidates.length === 0) {
         throw new Error("الرقم التسلسلي فارغ بعد التنظيف");
       }
 
-      // Find the item in technician's custody (prefixed or stored form)
+      // Find the item in technician's custody (prefixed or stored form).
+      // OPS-REMED-E3: locked with FOR UPDATE — two concurrent scanOut calls
+      // for the same physical asset (same request submitted twice, or a
+      // genuine race) must never both succeed. Without the lock, both
+      // transactions see the same pre-commit snapshot under READ COMMITTED
+      // and both pass this check, producing a silent double deduction. The
+      // second transaction now blocks here until the first commits, then
+      // this SELECT re-runs against the post-commit state and correctly
+      // finds nothing (status already DELIVERED) — same pattern already
+      // used by deleteFromTechnicianCustody below.
       const [item] = await tx
         .select()
         .from(items)
@@ -266,7 +282,8 @@ export class SerializedItemsService {
             inArray(items.status, ["IN_TRANSIT_CUSTODY", "RECEIVED_BY_TECHNICIAN"])
           )
         )
-        .limit(1);
+        .limit(1)
+        .for("update");
 
       if (!item) {
         throw new Error("المادة غير موجودة في عهرتك النشطة أو الرقم التسلسلي غير مطابق");
@@ -325,7 +342,12 @@ export class SerializedItemsService {
       await this.syncMovingInventory(tx, technicianId, item.itemTypeId, -1);
 
       return updatedItem;
-    });
+    };
+
+    if (externalTx) {
+      return runBody(externalTx);
+    }
+    return await db.transaction(runBody);
   }
 
   /**

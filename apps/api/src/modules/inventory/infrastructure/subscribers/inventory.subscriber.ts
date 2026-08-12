@@ -18,6 +18,19 @@ import { SerialRecognitionService } from "@core/serial/serial-recognition.servic
 export class InventorySubscriber {
   /**
    * Initialize and register the subscriber to listen to ExecutionCompletedEvent.
+   *
+   * NOTE (OPS-REMED-E3-F.R1): EventBus.subscribe() does not deduplicate —
+   * calling register() more than once against the SAME EventBus instance
+   * attaches multiple handlers and causes every event to be processed more
+   * than once concurrently (confirmed via a real duplicate-registration
+   * race in a test). A static "already registered" guard was tried and
+   * reverted: several existing tests (e.g.
+   * courier.workflow.test.ts) intentionally clear the EventBus's listeners
+   * between cases and re-call register() to get a fresh subscription each
+   * time — a static guard broke that pattern by silently skipping the
+   * re-registration after the first call, in a way that isn't visible to
+   * the caller. Correct fix belongs at each CALL SITE: call register()
+   * exactly once per EventBus lifetime, not per test case.
    */
   public static register(): void {
     const eventBus = EventBus.getInstance();
@@ -92,12 +105,20 @@ export class InventorySubscriber {
 
             try {
               const engine = createInventoryEngine();
+              // OPS-REMED-E3: pass through the explicit device/SIM pairs
+              // preserved from the authoritative approval-time submission,
+              // if present. InventoryEngine.deduct() validates them before
+              // any write per the approved pairing rule.
+              const pairs = Array.isArray((execution as any)?.pairs)
+                ? (execution as any).pairs
+                : undefined;
               const deductionResult = await engine.deduct({
                 requestId,
                 actorId,
                 technicianCode,
                 devices,
                 serialsForCustody,
+                pairs,
                 paperRollQty: execution.paperRollQty ?? (execution.paperRoll === "Yes" ? 1 : 0),
                 stickersQty: execution.stickersQty ?? 0,
                 nulipCardsQty: execution.nulipCardsQty ?? 0,
@@ -107,13 +128,20 @@ export class InventorySubscriber {
                 notes: `خصم تلقائي — مطابقة تقرير التسليم — طلب رقم: ${requestId}`,
               });
 
-              // If there were any errors, publish deduction failed event
+              // OPS-REMED-E3: a non-empty errors array from a successfully
+              // *returned* DeductionResult should not occur anymore — the
+              // engine now throws a structured DeductionError on any
+              // failure (see below). This branch is retained defensively
+              // in case a future engine change reintroduces a soft-error
+              // shape; it now THROWS rather than returning, so the
+              // idempotency layer correctly marks FAILED, never COMPLETED,
+              // for this case too.
               if (deductionResult.errors.length > 0) {
                 console.error(
                   `[InventorySubscriber] Deduction completed with errors:`,
                   deductionResult.errors
                 );
-                
+
                 await eventBus.publish(
                   new InventoryDeductionFailedEvent({
                     requestId,
@@ -122,13 +150,15 @@ export class InventorySubscriber {
                     errors: deductionResult.errors,
                   })
                 );
-                return { success: false, errors: deductionResult.errors };
-              } else {
-                console.log(
-                  `[InventorySubscriber] Inventory successfully deducted for request ${requestId}.`
+                throw new Error(
+                  `[InventorySubscriber] Deduction reported errors without throwing: ${deductionResult.errors.join("; ")}`
                 );
-                return { success: true };
               }
+
+              console.log(
+                `[InventorySubscriber] Inventory successfully deducted for request ${requestId}.`
+              );
+              return { success: true };
             } catch (err: any) {
               console.error(
                 `[InventorySubscriber] Critical error during inventory deduction:`,
@@ -143,6 +173,13 @@ export class InventorySubscriber {
                   errors: [err.message || "Critical deduction engine error"],
                 })
               );
+              // OPS-REMED-E3: always throw — this is the single load-bearing
+              // fix that routes every deduction failure (structured
+              // DeductionError or unexpected infra exception) through
+              // idempotencyService.execute's FAILED path, engaging the
+              // existing outbox retry/backoff/DEAD-letter machinery, and
+              // guaranteeing a failed/partial deduction can never be
+              // recorded as idempotency COMPLETED.
               throw err;
             } finally {
               span.end();

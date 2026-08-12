@@ -223,7 +223,7 @@ export class DevicesService {
     devices: { serialNumber: string; model?: string }[];
     notes?: string;
     actor: { id: string; username: string; role: string; regionId: string | null };
-  }): Promise<any[]> {
-    return this.devicesRepository.deductTechnicianInventory(data);
+  }, externalTx?: any): Promise<any[]> {
+    return this.devicesRepository.deductTechnicianInventory(data, externalTx);
   }
 }
