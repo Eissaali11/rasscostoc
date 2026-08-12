@@ -15,9 +15,11 @@ import { CompletionGuard, isCompletedStatus } from "./guards/CompletionGuard";
 import { normalizeSerialList } from "./guards/guard.types";
 import { metrics } from "@core/telemetry/metrics";
 import { CourierWorkflow } from "./workflow/courier.workflow";
+import { WorkflowDecision } from "./workflow/workflow.types";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
-import { AppError, OptimisticLockException, NotFoundError, ValidationError } from "@core/errors/AppError";
+import { outboxRepository } from "@core/outbox/outbox.repository";
+import { AppError, OptimisticLockException, NotFoundError, ValidationError, PdfReportAlreadyProcessedError, DuplicateRequestApprovalError } from "@core/errors/AppError";
 import { AuditLogFormatter, type AuditLogDto } from "./audit-log-formatter";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
@@ -1265,7 +1267,7 @@ export class CourierService {
       throw new NotFoundError("PDF Report not found");
     }
     if (report.status === "applied") {
-      throw new AppError("هذا التقرير مُطبَّق بالفعل", 400);
+      throw new PdfReportAlreadyProcessedError(pdfId); // OPS-REMED-E12: fast pre-check; the atomic claim below is authoritative
     }
 
     const devices = Array.isArray(body.devices) ? body.devices : [];
@@ -1286,21 +1288,163 @@ export class CourierService {
       version: body.version,
     });
 
-    const saved = await this.saveExecution(requestId, executionPayload, enteredBy);
+    // ─── Pre-transaction reads/validation (advisory — same pattern as E3:
+    // these can only lead to a safe rejection at write time, never a
+    // silent incorrect success, because the atomic claim below is the
+    // authoritative decision point). ─────────────────────────────────────
+    const existing = await this.executionsRepo.findExecutionByRequestId(requestId);
+    const request = await this.requestsRepo.findRequestById(requestId);
+    if (!request) {
+      throw new Error("الطلب غير موجود");
+    }
 
-    await this.pdfRepo.updatePdfReport(pdfId, {
-      status: "applied",
+    const version = (executionPayload as any)?.version;
+    const sanitized = CourierService.sanitizeExecutionPayload(executionPayload);
+    const isCompleted = isCompletedStatus(sanitized.installationStatus);
+    const pairs = Array.isArray((executionPayload as any)?.pairs) ? (executionPayload as any).pairs : undefined;
+
+    let deviceSerials = normalizeSerialList((executionPayload as any)?.deviceSerials, (executionPayload as any)?.sn, sanitized.sn);
+    let simSerials = normalizeSerialList((executionPayload as any)?.simSerials, (executionPayload as any)?.simSerial, sanitized.simSerial);
+
+    if (!isCompleted) {
+      delete sanitized.sn;
+      delete sanitized.simSerial;
+      deviceSerials = [];
+      simSerials = [];
+    } else {
+      sanitized.sn = deviceSerials[0] ?? null;
+      sanitized.simSerial = simSerials[0] ?? null;
+    }
+
+    const techUser = await CompletionGuard.run({
       requestId,
+      enteredBy,
+      executionData: { ...sanitized, deviceSerials, simSerials },
+      request,
+      existingExecution: existing ?? null,
+      requestsRepo: this.requestsRepo,
+      dashboardRepo: this.dashboardRepo,
+      inventoryPort: this.inventoryPort,
     });
 
-    await this.dashboardRepo.insertAuditLog({
-      tableName: "pdf_reports",
-      recordId: pdfId,
-      action: "complete",
-      changedBy: enteredBy,
+    if (techUser && isCompleted) {
+      sanitized.technicianCode = techUser.username;
+      sanitized.salesTechnician = techUser.fullName;
+    }
+
+    // ─── Single atomic transaction: claim + execution save + both event
+    // enqueues. Any failure at any step rolls back everything, including
+    // the report claim. ───────────────────────────────────────────────
+    let result: any;
+    await this.uow.execute(async (ctx) => {
+      // 1) Atomic claim (E2) — the ONLY authoritative accept/reject
+      // decision for this report. A losing concurrent request affects
+      // zero rows here and never reaches any further write. Expected
+      // status is hardcoded to "pending" (the only valid pre-transition
+      // state per the frozen state model) — NOT the freshly-read
+      // `report.status`, which would let a retry after a terminal state
+      // ("applied"/"rejected") incorrectly re-match itself as its own
+      // expected value and silently re-succeed.
+      const claimed = await ctx.pdfRepository.claimPdfReportForTransition(pdfId, "pending", "applied");
+      if (!claimed) {
+        throw new PdfReportAlreadyProcessedError(pdfId);
+      }
+
+      // 2) Execution save. unique-violation on courier_executions.request_id
+      // is translated to DuplicateRequestApprovalError inside insertExecution
+      // itself — the defense-in-depth layer for two DIFFERENT reports
+      // racing CONCURRENTLY on the SAME requestId (both see existing=null).
+      //
+      // OPS-REMED-E12 (E2 correction, found via real test execution): a
+      // SECOND, sequential completePdfReport call for the SAME requestId
+      // (a different report, called AFTER the first already committed)
+      // finds `existing` non-null. Calling updateExecution WITHOUT an
+      // explicit version would previously perform an UNCONDITIONAL update
+      // — silently overwriting the first report's already-approved
+      // execution and enqueueing a SECOND ExecutionCompletedEvent for the
+      // same request, which is exactly the double-deduction outcome E2
+      // exists to prevent. A caller-supplied `version` is still honored
+      // as a legitimate optimistic-locked re-save (e.g. a prior
+      // applyPdfReport draft being finalized by the SAME report); its
+      // absence with a pre-existing execution means some other approval
+      // already produced it, and this attempt must fail closed as the
+      // same structured conflict as the concurrent-insert case.
+      if (existing) {
+        if (version === undefined) {
+          throw new DuplicateRequestApprovalError(requestId);
+        }
+        result = await ctx.executionsRepository.updateExecution(
+          requestId,
+          { ...sanitized, enteredBy },
+          version
+        );
+        if (!result) {
+          throw new OptimisticLockException(
+            "courier_executions",
+            existing.id,
+            version,
+            existing.version
+          );
+        }
+      } else {
+        result = await ctx.executionsRepository.insertExecution({
+          ...sanitized,
+          requestId,
+          enteredBy,
+        });
+      }
+
+      // 3) Execution audit log
+      await ctx.dashboardRepository.insertAuditLog({
+        tableName: "executions",
+        recordId: requestId,
+        action: existing ? "update" : "create",
+        changedBy: enteredBy,
+      });
+
+      // 4) pdf_reports requestId association + audit log (status already
+      // set to "applied" by the atomic claim above — no second status write)
+      await ctx.pdfRepository.updatePdfReport(pdfId, { requestId });
+      await ctx.dashboardRepository.insertAuditLog({
+        tableName: "pdf_reports",
+        recordId: pdfId,
+        action: "complete",
+        changedBy: enteredBy,
+      });
+
+      // 5) Pure workflow decision — no I/O — then direct outbox enqueue.
+      // Deliberately NOT calling CourierWorkflow.execute()/EventBus.publish()
+      // here: under NODE_ENV=test or BYPASS_OUTBOX=true, EventBus.publish
+      // dispatches to local subscribers SYNCHRONOUSLY (including
+      // InventorySubscriber, which opens its own nested transaction) —
+      // running that while this transaction's row locks are held risks
+      // the same class of self-deadlock already found and fixed in E3.
+      // outboxRepository.enqueue() has no such branch — it only ever
+      // performs a plain INSERT bound to ctx.tx.
+      const executionForEvent = pairs ? { ...result, pairs } : result;
+      await outboxRepository.enqueue(
+        new ExecutionSavedEvent({ requestId, actorId: enteredBy, execution: executionForEvent, request }),
+        ctx.tx
+      );
+
+      if (isCompleted) {
+        const decision = CourierWorkflow.decide(sanitized.installationStatus ?? "");
+        if (decision === WorkflowDecision.TRIGGER_INVENTORY_DEDUCTION) {
+          await outboxRepository.enqueue(
+            new ExecutionCompletedEvent({ requestId, actorId: enteredBy, execution: executionForEvent, request }),
+            ctx.tx
+          );
+        }
+      }
     });
 
-    if (report && report.uploadedBy) {
+    if (!result) {
+      throw new Error("Failed to save execution: database returned no rows.");
+    }
+
+    // ─── Strictly post-commit: never blocks the response, never runs
+    // under any lock. ────────────────────────────────────────────────
+    if (report.uploadedBy) {
       const approveMsg = `<b>✅ تم اعتماد تقرير التركيب بنجاح</b>\n\n` +
         `<b>رقم التقرير:</b> #${pdfId}\n` +
         (requestId ? `<b>رقم الطلب:</b> #${requestId}\n` : "") +
@@ -1308,6 +1452,7 @@ export class CourierService {
       this.notifyTelegramUser(report.uploadedBy, approveMsg).catch(() => {});
     }
 
+    const saved = await this.getRequestById(requestId);
     return {
       ...saved,
       pdf: { id: pdfId, status: "applied", requestId },
@@ -1325,15 +1470,24 @@ export class CourierService {
       throw new NotFoundError("PDF Report not found");
     }
 
-    const updated = await this.pdfRepo.updatePdfReport(pdfId, {
-      status: "rejected",
-    });
+    // OPS-REMED-E12 (E2): same atomic claim used by completePdfReport —
+    // an approval and a rejection racing on the same report can now never
+    // both succeed; exactly one of the two `UPDATE ... WHERE status =
+    // $expected` statements affects a row.
+    await this.uow.execute(async (ctx) => {
+      // Same fix as completePdfReport: expected status is hardcoded to
+      // "pending", never the freshly-read `report.status`.
+      const claimed = await ctx.pdfRepository.claimPdfReportForTransition(pdfId, "pending", "rejected");
+      if (!claimed) {
+        throw new PdfReportAlreadyProcessedError(pdfId);
+      }
 
-    await this.dashboardRepo.insertAuditLog({
-      tableName: "pdf_reports",
-      recordId: pdfId,
-      action: "reject",
-      changedBy: actorId,
+      await ctx.dashboardRepository.insertAuditLog({
+        tableName: "pdf_reports",
+        recordId: pdfId,
+        action: "reject",
+        changedBy: actorId,
+      });
     });
 
     if (report.uploadedBy) {
