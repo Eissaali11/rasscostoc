@@ -57,6 +57,8 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/inventory/infrastructure/database/DrizzleDevicesRepository.test.ts",
   "apps/api/src/modules/inventory/infrastructure/subscribers/inventory.subscriber.test.ts",
   "apps/api/src/modules/courier/infrastructure/inventory.engine.concurrency.test.ts",
+  "apps/api/src/modules/courier/infrastructure/pdf-report-approval-transaction.test.ts",
+  "apps/api/src/modules/courier/presentation/routes/courier-pdf-approval.routes.test.ts",
 ];
 
 const args = [

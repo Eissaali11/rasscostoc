@@ -49,7 +49,7 @@ import {
 } from "../courier-list-query";
 import { metrics } from "@core/telemetry/metrics";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
-import { ValidationError, ConflictError } from "@core/errors/AppError";
+import { ValidationError, ConflictError, PdfReportAlreadyProcessedError, DuplicateRequestApprovalError } from "@core/errors/AppError";
 
 export class DrizzleCourierRepository implements
   ICourierRepository,
@@ -430,15 +430,28 @@ export class DrizzleCourierRepository implements
   async insertExecution(executionData: any, tx?: any): Promise<CourierExecution> {
     const client = this.getClient(tx);
     const mappedData = CourierExecutionMapper.toPersistence(executionData);
-    const [row] = await client
-      .insert(courierExecutions)
-      .values({
-        ...mappedData,
-        enteredAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returning();
-    return CourierExecutionMapper.toDomain(row);
+    try {
+      const [row] = await client
+        .insert(courierExecutions)
+        .values({
+          ...mappedData,
+          enteredAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      return CourierExecutionMapper.toDomain(row);
+    } catch (err: any) {
+      // OPS-REMED-E12: translate ONLY the specific unique-constraint
+      // violation on courier_executions.request_id — a different pdf
+      // report, approved concurrently for the SAME requestId, already
+      // created the execution row first. Any other constraint or error
+      // code is NOT this business conflict and must remain a raw
+      // technical failure (never misclassified).
+      if (err?.code === "23505" && err?.constraint === "courier_executions_request_id_unique") {
+        throw new DuplicateRequestApprovalError(mappedData.requestId);
+      }
+      throw err;
+    }
   }
 
   async deleteRequest(id: number, tx?: any): Promise<boolean> {
@@ -935,6 +948,30 @@ export class DrizzleCourierRepository implements
       .where(eq(courierPdfReports.id, id))
       .returning();
     return CourierPdfReportMapper.toDomain(row);
+  }
+
+  /**
+   * OPS-REMED-E12 (E1+E2): atomic compare-and-swap transition on
+   * pdf_reports.status. No explicit `tx` parameter — relies on `this.tx`
+   * bound at construction time by DrizzleCourierUnitOfWork.execute(). The
+   * `WHERE ... AND status = $expected` clause makes this a single,
+   * indivisible statement at the Postgres row level: of two concurrent
+   * callers targeting the same row, exactly one UPDATE affects a row (and
+   * returns it) and the other affects zero rows (and gets null) — there is
+   * no window in which both can observe the row as eligible.
+   */
+  async claimPdfReportForTransition(
+    pdfId: number,
+    expectedStatus: string,
+    newStatus: string
+  ): Promise<CourierPdfReport | null> {
+    const client = this.getClient();
+    const [row] = await client
+      .update(courierPdfReports)
+      .set({ status: newStatus })
+      .where(and(eq(courierPdfReports.id, pdfId), eq(courierPdfReports.status, expectedStatus)))
+      .returning();
+    return row ? CourierPdfReportMapper.toDomain(row) : null;
   }
 
   // ── Serial Lookup Support ──────────────────────────────────────────────────

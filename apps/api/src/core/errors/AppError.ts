@@ -125,6 +125,52 @@ export class InvalidProductTaxConfigurationError extends AppError {
   }
 }
 
+/**
+ * OPS-REMED-E12: thrown when `claimPdfReportForTransition` finds a
+ * `pdf_reports` row whose status is no longer the expected one (i.e. the
+ * atomic `UPDATE ... WHERE status = $expected` affected zero rows) —
+ * another concurrent approval, rejection, or a prior successful completion
+ * already transitioned this exact report. The losing request must receive
+ * this structured 409 instead of a generic 400 or a raw database error.
+ */
+export class PdfReportAlreadyProcessedError extends AppError {
+  public readonly pdfId: number;
+
+  constructor(pdfId: number) {
+    super(
+      `تعارض اعتماد: تقرير رقم ${pdfId} تمت معالجته بالفعل (اعتماد أو رفض) بواسطة طلب آخر متزامن.`,
+      409,
+      true,
+      "PDF_REPORT_ALREADY_PROCESSED"
+    );
+    this.pdfId = pdfId;
+    this.name = "PdfReportAlreadyProcessedError";
+  }
+}
+
+/**
+ * OPS-REMED-E12: thrown when `insertExecution` fails with a PostgreSQL
+ * unique-violation (23505) on constraint `courier_executions_request_id_unique`
+ * specifically — meaning a DIFFERENT pdf_reports row, approved concurrently,
+ * already created (or is creating) the execution row for the same
+ * requestId. Never thrown for any other constraint or error code; those
+ * remain raw technical failures.
+ */
+export class DuplicateRequestApprovalError extends AppError {
+  public readonly requestId: number;
+
+  constructor(requestId: number) {
+    super(
+      `تعارض اعتماد: يوجد تنفيذ آخر بالفعل للطلب رقم ${requestId} — تم إنشاؤه بواسطة تقرير آخر تمت معالجته بالتزامن.`,
+      409,
+      true,
+      "DUPLICATE_REQUEST_APPROVAL"
+    );
+    this.requestId = requestId;
+    this.name = "DuplicateRequestApprovalError";
+  }
+}
+
 export class OptimisticLockException extends ConflictError {
   public readonly tableName: string;
   public readonly recordId: string | number;
