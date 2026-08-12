@@ -1053,7 +1053,7 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
     devices: { serialNumber: string; model?: string }[];
     notes?: string;
     actor: { id: string; username: string; role: string; regionId: string | null };
-  }): Promise<any[]> {
+  }, externalTx?: any): Promise<any[]> {
     const { technicianCode, devices, notes, actor } = data;
 
     // Helper to resolve device model to standard itemTypeId
@@ -1066,7 +1066,8 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
     };
 
     // Find the technician user in StockPro
-    const [tech] = await this.db
+    const lookupClient = externalTx || this.db;
+    const [tech] = await lookupClient
       .select()
       .from(users)
       .where(
@@ -1081,10 +1082,18 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
       throw new Error(`لم يتم العثور على المندوب بالرمز أو الاسم: ${technicianCode}`);
     }
 
-    return await this.db.transaction(async (tx) => {
-      const results = [];
+    const runBody = async (tx: any) => {
+      // OPS-REMED-E3-I.R2 (deadlock-safety correction): resolve every
+      // device's target itemTypeId via a plain (unlocked) read FIRST, then
+      // sort the whole batch by that stable itemTypeId before taking any
+      // FOR UPDATE lock below. Two overlapping multi-asset requests naming
+      // the same technician/itemType stock rows in reversed order would
+      // otherwise each hold one lock while waiting on the other — a
+      // classic deadlock. Locking in one global deterministic order
+      // (itemTypeId, then serialNumber as a tiebreaker for same-type
+      // batches) eliminates that cycle regardless of caller-supplied order.
+      const resolvedDevices = [];
       for (const device of devices) {
-        // Look up device in received_devices (custody)
         const [deviceRow] = await tx
           .select()
           .from(receivedDevices)
@@ -1101,17 +1110,75 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
           .limit(1);
 
         const itemTypeId = deviceRow?.itemTypeId || resolveItemTypeId(device.model);
-        const isFixed = deviceRow ? (deviceRow.inventoryType !== "moving") : false;
+        resolvedDevices.push({ device, deviceRow, itemTypeId });
+      }
 
+      resolvedDevices.sort((a, b) => {
+        if (a.itemTypeId !== b.itemTypeId) return a.itemTypeId < b.itemTypeId ? -1 : 1;
+        return a.device.serialNumber < b.device.serialNumber
+          ? -1
+          : a.device.serialNumber > b.device.serialNumber
+            ? 1
+            : 0;
+      });
+
+      const results = [];
+      for (const { device, deviceRow, itemTypeId: advisoryItemTypeId } of resolvedDevices) {
+        // OPS-REMED-E3-F.R1 (P2 closure): the itemTypeId used above to
+        // decide the GLOBAL LOCK ORDER came from an unlocked, pre-sort
+        // read (advisory only — it exists purely to make lock acquisition
+        // order deterministic across overlapping requests). It must never
+        // be the value actually used to select/mutate the locked stock
+        // row. Here, inside the write phase, re-read the SAME
+        // received_devices row WITH FOR UPDATE (locking the authoritative
+        // source-of-truth row itself) and re-derive itemTypeId from THAT
+        // locked read. If it disagrees with the advisory value — meaning
+        // the row's itemTypeId changed concurrently between the advisory
+        // phase and this lock — fail closed with a structured error
+        // instead of silently locking/decrementing whatever stock row the
+        // now-stale advisory value points to.
+        let deviceRowLocked = deviceRow;
         if (deviceRow) {
-          // Update status to delivered
+          [deviceRowLocked] = await tx
+            .select()
+            .from(receivedDevices)
+            .where(eq(receivedDevices.id, deviceRow.id))
+            .for("update");
+
+          if (!deviceRowLocked) {
+            const err: any = new Error(
+              `[DrizzleDevicesRepository] received_devices row ${deviceRow.id} vanished between the advisory read and the locked write phase.`
+            );
+            err.code = "DEDUCT_INTEGRITY_CONFLICT";
+            throw err;
+          }
+        }
+
+        const itemTypeId = deviceRowLocked?.itemTypeId || resolveItemTypeId(device.model);
+        if (deviceRow && itemTypeId !== advisoryItemTypeId) {
+          // The advisory (pre-lock) itemTypeId no longer matches the
+          // locked, authoritative value — the deterministic lock order
+          // computed above may now be wrong for this row. Never proceed
+          // with a stock row selected under a stale assumption.
+          const err: any = new Error(
+            `[DrizzleDevicesRepository] itemTypeId for received_devices row ${deviceRow.id} changed between the advisory read ("${advisoryItemTypeId}") and the locked write phase ("${itemTypeId}") — refusing to lock/decrement a potentially wrong stock row.`
+          );
+          err.code = "DEDUCT_INTEGRITY_CONFLICT";
+          throw err;
+        }
+
+        const isFixed = deviceRowLocked ? (deviceRowLocked.inventoryType !== "moving") : false;
+
+        if (deviceRowLocked) {
+          // Update status to delivered — same locked row, no separate
+          // unlocked re-fetch.
           await tx
             .update(receivedDevices)
             .set({
               status: "delivered",
               updatedAt: new Date()
             })
-            .where(eq(receivedDevices.id, deviceRow.id));
+            .where(eq(receivedDevices.id, deviceRowLocked.id));
         } else {
           // Auto-create delivered received_device entry for logging/audit purposes
           await tx
@@ -1128,7 +1195,17 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
             });
         }
 
-        // Decrement units in technician inventory
+        // Decrement units in technician inventory.
+        // OPS-REMED-E3: a deduction attempt against zero (or missing) stock
+        // must NOT be silently clamped to zero and reported as success — it
+        // must throw DEDUCT_INSUFFICIENT_STOCK, rolling back the whole
+        // request (this loop already runs inside one transaction).
+        // OPS-REMED-E3 (concurrency finding, same class as scanOut): locked
+        // with FOR UPDATE — two concurrent deductions against the same
+        // technician/itemType stock row must never both pass the
+        // zero-balance check against the same pre-commit snapshot. The
+        // losing transaction now blocks here until the winner commits, then
+        // re-reads the post-commit balance.
         if (isFixed) {
           const [existingStock] = await tx
             .select()
@@ -1138,17 +1215,24 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
                 eq(technicianFixedInventoryEntries.technicianId, tech.id),
                 eq(technicianFixedInventoryEntries.itemTypeId, itemTypeId)
               )
-            );
+            )
+            .for("update");
 
-          if (existingStock) {
-            await tx
-              .update(technicianFixedInventoryEntries)
-              .set({
-                units: Math.max(0, existingStock.units - 1),
-                updatedAt: new Date()
-              })
-              .where(eq(technicianFixedInventoryEntries.id, existingStock.id));
+          if (!existingStock || existingStock.units <= 0) {
+            const err: any = new Error(
+              `[DrizzleDevicesRepository] Insufficient fixed stock for technician ${tech.id}, itemType ${itemTypeId} — refusing to deduct at zero.`
+            );
+            err.code = "DEDUCT_INSUFFICIENT_STOCK";
+            throw err;
           }
+
+          await tx
+            .update(technicianFixedInventoryEntries)
+            .set({
+              units: existingStock.units - 1,
+              updatedAt: new Date()
+            })
+            .where(eq(technicianFixedInventoryEntries.id, existingStock.id));
         } else {
           const [existingStock] = await tx
             .select()
@@ -1158,17 +1242,24 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
                 eq(technicianMovingInventoryEntries.technicianId, tech.id),
                 eq(technicianMovingInventoryEntries.itemTypeId, itemTypeId)
               )
-            );
+            )
+            .for("update");
 
-          if (existingStock) {
-            await tx
-              .update(technicianMovingInventoryEntries)
-              .set({
-                units: Math.max(0, existingStock.units - 1),
-                updatedAt: new Date()
-              })
-              .where(eq(technicianMovingInventoryEntries.id, existingStock.id));
+          if (!existingStock || existingStock.units <= 0) {
+            const err: any = new Error(
+              `[DrizzleDevicesRepository] Insufficient moving stock for technician ${tech.id}, itemType ${itemTypeId} — refusing to deduct at zero.`
+            );
+            err.code = "DEDUCT_INSUFFICIENT_STOCK";
+            throw err;
           }
+
+          await tx
+            .update(technicianMovingInventoryEntries)
+            .set({
+              units: existingStock.units - 1,
+              updatedAt: new Date()
+            })
+            .where(eq(technicianMovingInventoryEntries.id, existingStock.id));
         }
 
         // Write stock movement log
@@ -1192,6 +1283,11 @@ export class DrizzleDevicesRepository implements IDevicesRepository {
         });
       }
       return results;
-    });
+    };
+
+    if (externalTx) {
+      return runBody(externalTx);
+    }
+    return await this.db.transaction(runBody);
   }
 }

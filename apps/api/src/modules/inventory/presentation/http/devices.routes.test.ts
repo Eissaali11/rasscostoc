@@ -102,5 +102,28 @@ describe("Devices Routes HTTP Integration Tests", () => {
 
       expect(mockDeduct).not.toHaveBeenCalled();
     });
+
+    // OPS-REMED-E3-I.R2: this standalone endpoint must keep operating
+    // exactly as before — it never has (and must never be given) an E3
+    // transaction context. DrizzleDevicesRepository.deductTechnicianInventory
+    // opens its own independent db.transaction() whenever externalTx is
+    // absent, which is exactly what happens when this HTTP-driven call
+    // path invokes it with no 2nd argument, as asserted here.
+    it("OPS-REMED-E3: calls deductTechnicianInventory with NO external transaction context — the endpoint opens its own transaction, unaffected by the E3 courier deduction path", async () => {
+      const mockResult = [{ serialNumber: "SN12345", itemTypeId: "n950", status: "delivered" }];
+      mockDeduct.mockResolvedValue(mockResult);
+
+      await request(app)
+        .post("/api/technicians/deduct-inventory")
+        .send({
+          technicianCode: "tech123",
+          devices: [{ serialNumber: "SN12345", model: "Newland N950" }],
+        })
+        .expect(200);
+
+      const call = mockDeduct.mock.calls[0]!;
+      // Only the command payload is passed — no 2nd "external context" arg.
+      expect(call.length).toBe(1);
+    });
   });
 });

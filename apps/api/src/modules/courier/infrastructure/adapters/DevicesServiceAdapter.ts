@@ -7,14 +7,22 @@
 
 import { devicesContainer } from "@server/composition/devices.container";
 import type { IGeneralInventoryRepository, DeductInventoryCommand } from "../../application/inventory/IGeneralInventoryRepository";
+import type { InventoryTransactionContext } from "../../application/inventory/inventory.engine.types";
+import { unwrapInventoryTransactionContext } from "../database/DrizzleInventoryTransactionRunner";
 
 export class DevicesServiceAdapter implements IGeneralInventoryRepository {
-  async deductTechnicianInventory(command: DeductInventoryCommand): Promise<void> {
-    await devicesContainer.devicesService.deductTechnicianInventory({
-      technicianCode: command.technicianCode,
-      devices: command.devices,
-      notes: command.notes,
-      actor: command.actor,
-    });
+  async deductTechnicianInventory(
+    command: DeductInventoryCommand,
+    ctx?: InventoryTransactionContext
+  ): Promise<void> {
+    await devicesContainer.devicesService.deductTechnicianInventory(
+      {
+        technicianCode: command.technicianCode,
+        devices: command.devices,
+        notes: command.notes,
+        actor: command.actor,
+      },
+      ctx ? unwrapInventoryTransactionContext(ctx) : undefined
+    );
   }
 }

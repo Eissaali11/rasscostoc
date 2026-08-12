@@ -6,8 +6,32 @@
  * Rules:
  * - Knows NOTHING about courier requests, workflow decisions, or installation statuses.
  * - Depends on IGeneralInventoryRepository and ISerializedInventoryRepository (interfaces).
- * - Never throws on partial failures — records errors in DeductionResult.
  * - Is the ONLY place where inventory deduction orchestration lives.
+ *
+ * OPS-REMED-E3 (implemented):
+ * - deduct() opens ONE request-wide transaction via the injected
+ *   IInventoryTransactionRunner, spanning every serialized-custody and
+ *   general-inventory write. Any failure rolls back everything.
+ * - Deduction failures THROW a structured DeductionError instead of being
+ *   silently swallowed into a `{success:false}`-shaped result — this is
+ *   required so the idempotency layer correctly marks FAILED (not
+ *   COMPLETED) and the existing outbox retry/dead-letter machinery engages.
+ * - serialsForCustody is canonicalized to distinct resolved item.id values
+ *   BEFORE the write loop, so one physical asset is never scanned out twice
+ *   under different string representations, and an ambiguous candidate set
+ *   (matching more than one distinct item) is rejected before any write.
+ * - Explicit device/SIM pairs (ctx.pairs) are validated before any write:
+ *   a complete pair proceeds; a single-sided entry fails closed with
+ *   DEDUCT_PAIR_INCOMPLETE (standalone processing is excluded from E3 —
+ *   every single-sided entry requires manual review, since it cannot
+ *   currently be distinguished from an accidentally incomplete pair).
+ * - OPS-REMED-E3-I.R2: technician-mismatch is now explicitly compared and
+ *   rejected (DEDUCT_WRONG_TECHNICIAN) rather than silently resolved by
+ *   preferring either side. Explicit pairs are reconciled against
+ *   courier_request_items transaction-consistently (via the existing
+ *   ICourierInventoryPort.findLinkedRequestItemBySerial(serial, tx) method,
+ *   called INSIDE the write transaction) — a disagreement rolls back the
+ *   whole request as DEDUCT_INTEGRITY_CONFLICT.
  *
  * Dependencies are injected via static factory — concrete adapters live in /infrastructure/adapters/.
  */
@@ -15,6 +39,11 @@
 import type { IGeneralInventoryRepository } from "./IGeneralInventoryRepository";
 import type { ISerializedInventoryRepository } from "./ISerializedInventoryRepository";
 import type { DeductionContext, DeductionResult } from "./inventory.engine.types";
+import {
+  DeductionError,
+  type IInventoryTransactionRunner,
+  type InventoryTransactionContext,
+} from "./inventory.engine.types";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierInventoryPort } from "../../domain/repositories/ICourierInventoryPort";
 
@@ -22,53 +51,146 @@ export class InventoryEngine {
   constructor(
     private readonly generalInventory: IGeneralInventoryRepository,
     private readonly serializedInventory: ISerializedInventoryRepository,
-    private readonly inventoryPort: ICourierInventoryPort
+    private readonly inventoryPort: ICourierInventoryPort,
+    private readonly txRunner: IInventoryTransactionRunner
   ) {}
 
   /**
    * Execute a full inventory deduction for a completed courier execution.
+   * The entire write phase runs inside one transaction; any error
+   * (structured DeductionError or an unexpected infra exception)
+   * propagates out of this method and rolls back every write made so far.
    */
   async deduct(ctx: DeductionContext): Promise<DeductionResult> {
-    const result: DeductionResult = {
-      requestId: ctx.requestId,
-      generalInventoryDeducted: false,
-      custodyItemsDeducted: [],
-      errors: [],
-    };
+    // Pure-read technician/serial resolution runs BEFORE the transaction
+    // opens (outer pool) — running it inside the transaction on a small
+    // connection pool self-deadlocks (the transaction holds one connection
+    // while these reads wait for another from the same exhausted pool).
+    // These reads only determine WHAT to attempt; every actual accept/
+    // reject WRITE decision (ownership re-check in scanOut, stock-level
+    // re-check in deductTechnicianInventory, and the reconciliation check
+    // below) is re-validated transaction-consistently, inside the
+    // transaction, at write time — so staleness here can only ever lead to
+    // a safe rejection, never a silent incorrect success.
 
-    // Prefer serial owner as technician identity (assignment names are unreliable)
-    const resolved = await this.resolveTechnician(ctx);
-    if (resolved) {
-      ctx.technicianCode = resolved.username;
-      (ctx as any).technicianId = resolved.id;
+    // OPS-REMED-E3: validate explicit pairing BEFORE any write. If pairs
+    // were supplied, every entry must be a complete pair (both sn and
+    // simSerial present) — a single-sided entry is not distinguishable
+    // from an accidentally incomplete pair and must fail the whole request
+    // closed for manual review.
+    if (ctx.pairs && ctx.pairs.length > 0) {
+      for (const pair of ctx.pairs) {
+        const hasDevice = !!pair.sn?.trim();
+        const hasSim = !!pair.simSerial?.trim();
+        if (hasDevice !== hasSim) {
+          throw new DeductionError(
+            "DEDUCT_PAIR_INCOMPLETE",
+            ctx.requestId,
+            `[InventoryEngine] Single-sided device/SIM entry (sn=${pair.sn ?? "null"}, sim_serial=${pair.simSerial ?? "null"}) cannot be distinguished from an incomplete pair — request rejected, manual review required.`
+          );
+        }
+      }
     }
 
-    // v3 custody (items + moving sync via scanOut) is authoritative.
-    // Run it first so serials leave active custody and counters drop once.
-    await this.deductSerializedCustody(ctx, result);
+    // OPS-REMED-E3-I.R2: resolve and validate the technician identity
+    // explicitly — compare the approved-request identity against the
+    // asset's actual custodian; a mismatch is rejected, never silently
+    // resolved by preferring either side.
+    const resolvedTech = await this.resolveAndValidateTechnician(ctx);
+    ctx.technicianCode = resolvedTech.username;
+    (ctx as any).technicianId = resolvedTech.id;
 
-    // Legacy general pool only for device SNs that were NOT deducted via custody scan-out
-    // (avoids double-decrement of technician_moving_inventory_entries).
-    const deducted = new Set(
-      result.custodyItemsDeducted.map((s) => s.trim().toLowerCase())
-    );
-    const remainingDevices = ctx.devices.filter(
-      (d) => !deducted.has(d.serialNumber.trim().toLowerCase())
-    );
-    if (remainingDevices.length > 0) {
-      await this.deductGeneralInventory(
-        { ...ctx, devices: remainingDevices },
-        result
+    // OPS-REMED-E3: canonicalize serialsForCustody to distinct resolved
+    // item.id values BEFORE any write. A candidate that resolves
+    // ambiguously (>1 distinct item) throws DEDUCT_SERIAL_CONFLICT here,
+    // before touching the database — never picked via an arbitrary
+    // LIMIT 1 at write time. Pure read, outer pool.
+    const canonicalSerials = await this.canonicalizeSerials(ctx, undefined);
+
+    return this.txRunner.run(async (transactionCtx) => {
+      const result: DeductionResult = {
+        requestId: ctx.requestId,
+        generalInventoryDeducted: false,
+        custodyItemsDeducted: [],
+        errors: [],
+      };
+
+      // OPS-REMED-E3-I.R2: reconcile explicit pairs against
+      // courier_request_items transaction-consistently — reads happen
+      // INSIDE this transaction via the transaction-bound
+      // findLinkedRequestItemBySerial(serial, transactionCtx) call, not
+      // via a pre-transaction outer-pool read. Any disagreement rolls back
+      // the whole request before any write occurs.
+      await this.reconcilePairsWithRequestItems(ctx, transactionCtx);
+
+      // v3 custody (items + moving sync via scanOut) is authoritative.
+      // Run it first so serials leave active custody and counters drop once.
+      await this.deductSerializedCustody(
+        { ...ctx, serialsForCustody: canonicalSerials },
+        result,
+        transactionCtx
       );
-    }
 
-    return result;
+      // Legacy general pool only for device SNs that were NOT deducted via custody scan-out
+      // (avoids double-decrement of technician_moving_inventory_entries).
+      const deducted = new Set(
+        result.custodyItemsDeducted.map((s) => s.trim().toLowerCase())
+      );
+      const remainingDevices = ctx.devices.filter(
+        (d) => !deducted.has(d.serialNumber.trim().toLowerCase())
+      );
+      if (remainingDevices.length > 0) {
+        await this.deductGeneralInventory(
+          { ...ctx, devices: remainingDevices },
+          result,
+          transactionCtx
+        );
+      }
+
+      return result;
+    });
   }
 
   /**
-   * Resolve technician: 1) owner of first serial in custody list, 2) username/fullName/code match.
+   * OPS-REMED-E3-I.R2: resolve the APPROVED-REQUEST technician identity
+   * (submitted technicianCode) and the asset's ACTUAL custodian (item
+   * ownership) SEPARATELY, then compare. A mismatch throws
+   * DEDUCT_WRONG_TECHNICIAN — neither side is silently trusted over the
+   * other. If only one side resolves, that identity is used (no conflict
+   * to detect). If neither resolves, fails closed with the same code.
    */
-  async resolveTechnician(
+  private async resolveAndValidateTechnician(
+    ctx: DeductionContext
+  ): Promise<{ id: string; username: string; fullName: string }> {
+    const submittedCode = ctx.technicianCode?.trim();
+    let submittedTech: { id: string; username: string; fullName: string } | null = null;
+    if (submittedCode) {
+      submittedTech = await this.inventoryPort.findUserByCodeOrUsername(submittedCode);
+    }
+
+    const custodianTech = await this.resolveCustodianFromSerials(ctx);
+
+    if (submittedTech && custodianTech && submittedTech.id !== custodianTech.id) {
+      throw new DeductionError(
+        "DEDUCT_WRONG_TECHNICIAN",
+        ctx.requestId,
+        `[InventoryEngine] Approved-request technician "${submittedTech.username}" does not match the asset's actual custodian "${custodianTech.username}" — mismatch is an integrity conflict, neither identity is silently substituted.`
+      );
+    }
+
+    const resolved = custodianTech ?? submittedTech;
+    if (!resolved) {
+      throw new DeductionError(
+        "DEDUCT_WRONG_TECHNICIAN",
+        ctx.requestId,
+        `[InventoryEngine] Technician "${ctx.technicianCode}" could not be resolved from the approved request or from any asset custodian.`
+      );
+    }
+    return resolved;
+  }
+
+  /** Resolve the actual custodian from the first serial with a matching owned item. */
+  private async resolveCustodianFromSerials(
     ctx: DeductionContext
   ): Promise<{ id: string; username: string; fullName: string } | null> {
     for (const serial of ctx.serialsForCustody) {
@@ -90,6 +212,134 @@ export class InventoryEngine {
         if (tech) return tech;
       }
     }
+    return null;
+  }
+
+  /**
+   * OPS-REMED-E3-I.R2: reconcile explicit device/SIM pairs against the
+   * canonical courier_request_items state, transaction-consistently. Uses
+   * the existing ICourierInventoryPort.findLinkedRequestItemBySerial
+   * method, passing the real transaction context so the read is
+   * consistent with the writes made in the same transaction — no
+   * pre-transaction outer-pool read is relied upon for this decision.
+   *
+   * Rule: if courier_request_items has a row linking a submitted serial to
+   * a DIFFERENT request than the one being approved, that is a genuine
+   * disagreement between the approval data and the database's own
+   * request-item ledger — DEDUCT_INTEGRITY_CONFLICT, whole request rolled
+   * back, zero partial writes. Absence of a request-item row is not itself
+   * an error (courier_request_items is validation/reconciliation-only, not
+   * the authoritative source — confirmed OPS-REMED-E-A.4C §4) — only a
+   * disagreeing PRESENT row is rejected.
+   */
+  private async reconcilePairsWithRequestItems(
+    ctx: DeductionContext,
+    transactionCtx: InventoryTransactionContext
+  ): Promise<void> {
+    if (!ctx.pairs || ctx.pairs.length === 0) return;
+
+    for (const pair of ctx.pairs) {
+      if (pair.sn?.trim()) {
+        const link = await this.inventoryPort.findLinkedRequestItemBySerial(
+          pair.sn.trim(),
+          transactionCtx
+        );
+        if (link && link.requestId !== ctx.requestId) {
+          throw new DeductionError(
+            "DEDUCT_INTEGRITY_CONFLICT",
+            ctx.requestId,
+            `[InventoryEngine] Device serial "${pair.sn}" is linked to request ${link.requestId} in courier_request_items, not the approved request ${ctx.requestId} — disagreement between approval data and request-item ledger.`
+          );
+        }
+      }
+      if (pair.simSerial?.trim()) {
+        const link = await this.inventoryPort.findLinkedRequestItemBySerial(
+          pair.simSerial.trim(),
+          transactionCtx
+        );
+        if (link && link.requestId !== ctx.requestId) {
+          throw new DeductionError(
+            "DEDUCT_INTEGRITY_CONFLICT",
+            ctx.requestId,
+            `[InventoryEngine] SIM serial "${pair.simSerial}" is linked to request ${link.requestId} in courier_request_items, not the approved request ${ctx.requestId} — disagreement between approval data and request-item ledger.`
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * OPS-REMED-E3: resolve every entry in serialsForCustody to its physical
+   * item.id, collapse representation-variant duplicates of the SAME item to
+   * one entry, and reject (throw DEDUCT_SERIAL_CONFLICT) any candidate that
+   * resolves ambiguously to more than one distinct item.
+   *
+   * OPS-REMED-E3-I.R2 (deadlock-safety correction): the returned order is
+   * NOT the caller's submission order. Resolved entries are sorted by their
+   * stable physical item.id before being returned, so the FOR UPDATE row
+   * locks taken later in deductSerializedCustody are always acquired in the
+   * same global order regardless of how the caller listed the serials.
+   * Without this, two overlapping multi-asset requests naming the same two
+   * assets in reversed order could each hold one lock while waiting on the
+   * other — a classic deadlock. Unresolved serials (itemId === null) carry
+   * no lock-ordering risk (nothing to lock yet) and are appended after all
+   * resolved ones, in their original relative order.
+   */
+  private async canonicalizeSerials(
+    ctx: DeductionContext,
+    transactionCtx: InventoryTransactionContext | undefined
+  ): Promise<string[]> {
+    const seenItemIds = new Set<string>();
+    const resolved: { itemId: string; serial: string }[] = [];
+    const unresolved: string[] = [];
+
+    for (const serial of ctx.serialsForCustody) {
+      let itemId: string | null;
+      try {
+        itemId = await this.serializedInventory.resolveItemId(serial, transactionCtx);
+      } catch (err: any) {
+        throw new DeductionError(
+          "DEDUCT_SERIAL_CONFLICT",
+          ctx.requestId,
+          err?.message || `[InventoryEngine] Serial "${serial}" resolved ambiguously.`
+        );
+      }
+
+      if (itemId === null) {
+        // Not found at all — keep the raw serial so the downstream scanOut
+        // call produces the normal "not in active custody" outcome, which
+        // is classified DEDUCT_INTEGRITY_CONFLICT there.
+        unresolved.push(serial);
+        continue;
+      }
+
+      if (seenItemIds.has(itemId)) {
+        // Representation-variant duplicate of an already-included physical
+        // asset — skip silently, this is the resolved §2 fix.
+        continue;
+      }
+
+      seenItemIds.add(itemId);
+      resolved.push({ itemId, serial });
+    }
+
+    resolved.sort((a, b) => (a.itemId < b.itemId ? -1 : a.itemId > b.itemId ? 1 : 0));
+
+    return [...resolved.map((r) => r.serial), ...unresolved];
+  }
+
+  /**
+   * Resolve technician: 1) owner of first serial in custody list, 2) username/fullName/code match.
+   * Retained for any external/legacy caller relying on the original
+   * preference-based resolution; deduct() itself now uses
+   * resolveAndValidateTechnician() instead, which does not silently prefer
+   * either side.
+   */
+  async resolveTechnician(
+    ctx: DeductionContext
+  ): Promise<{ id: string; username: string; fullName: string } | null> {
+    const custodian = await this.resolveCustodianFromSerials(ctx);
+    if (custodian) return custodian;
 
     const code = ctx.technicianCode?.trim();
     if (!code) return null;
@@ -100,71 +350,86 @@ export class InventoryEngine {
 
   private async deductGeneralInventory(
     ctx: DeductionContext,
-    result: DeductionResult
+    result: DeductionResult,
+    transactionCtx: InventoryTransactionContext
   ): Promise<void> {
     if (ctx.devices.length === 0) return;
 
-    try {
-      const actor = await this.inventoryPort.findUserById(ctx.actorId);
+    const actor = await this.inventoryPort.findUserById(ctx.actorId);
 
-      await this.generalInventory.deductTechnicianInventory({
-        technicianCode: ctx.technicianCode,
-        devices: ctx.devices,
-        notes: ctx.notes ?? `خصم تلقائي — طلب رقم: ${ctx.requestId}`,
-        actor: {
-          id: ctx.actorId,
-          username: actor?.username ?? "system",
-          role: actor?.role ?? "admin",
-          regionId: actor?.regionId ? String(actor.regionId) : null,
+    try {
+      await this.generalInventory.deductTechnicianInventory(
+        {
+          technicianCode: ctx.technicianCode,
+          devices: ctx.devices,
+          notes: ctx.notes ?? `خصم تلقائي — طلب رقم: ${ctx.requestId}`,
+          actor: {
+            id: ctx.actorId,
+            username: actor?.username ?? "system",
+            role: actor?.role ?? "admin",
+            regionId: actor?.regionId ? String(actor.regionId) : null,
+          },
         },
-      });
+        transactionCtx
+      );
 
       result.generalInventoryDeducted = true;
     } catch (err: any) {
-      result.errors.push(`[InventoryEngine] General deduction failed: ${err.message}`);
+      // A general-inventory deduction failure must roll back the whole
+      // request (per the atomic-transaction invariant) — throw rather than
+      // swallow into result.errors.
+      const code = err?.code === "DEDUCT_INSUFFICIENT_STOCK" ? "DEDUCT_INSUFFICIENT_STOCK" : "DEDUCT_INFRA_TRANSIENT";
+      throw new DeductionError(code, ctx.requestId, `[InventoryEngine] General deduction failed: ${err.message}`);
     }
   }
 
   private async deductSerializedCustody(
     ctx: DeductionContext,
-    result: DeductionResult
+    result: DeductionResult,
+    transactionCtx: InventoryTransactionContext
   ): Promise<void> {
     if (ctx.serialsForCustody.length === 0) return;
 
-    const techId = (ctx as any).technicianId as string | undefined;
-    let techUserId = techId;
+    const techUserId = (ctx as any).technicianId as string | undefined;
 
     if (!techUserId) {
-      const resolved = await this.resolveTechnician(ctx);
-      techUserId = resolved?.id;
-      if (resolved) ctx.technicianCode = resolved.username;
-    }
-
-    if (!techUserId) {
-      result.errors.push(
+      throw new DeductionError(
+        "DEDUCT_WRONG_TECHNICIAN",
+        ctx.requestId,
         `[InventoryEngine] Technician "${ctx.technicianCode}" not found for custody ScanOut.`
       );
-      return;
     }
 
     for (const serial of ctx.serialsForCustody) {
+      let deducted: boolean;
       try {
-        const deducted = await this.serializedInventory.scanOut(
+        deducted = await this.serializedInventory.scanOut(
           techUserId,
           serial,
           ctx.customerName,
-          ctx.referenceNumber
+          ctx.referenceNumber,
+          transactionCtx
         );
-
-        if (deducted) {
-          result.custodyItemsDeducted.push(serial);
-        } else {
-          result.errors.push(
-            `[InventoryEngine] ScanOut skipped for "${serial}" — not found in technician active custody.`
-          );
-        }
       } catch (err: any) {
-        result.errors.push(`[InventoryEngine] ScanOut failed for "${serial}": ${err.message}`);
+        throw new DeductionError(
+          "DEDUCT_INFRA_TRANSIENT",
+          ctx.requestId,
+          `[InventoryEngine] ScanOut failed for "${serial}": ${err.message}`
+        );
+      }
+
+      if (deducted) {
+        result.custodyItemsDeducted.push(serial);
+      } else {
+        // An item not found in active custody under this technician —
+        // permanent business rejection, rolls back the whole request.
+        // Same-request provenance is not provable (confirmed
+        // OPS-REMED-E-A.4 §3), so this is never treated as a safe no-op.
+        throw new DeductionError(
+          "DEDUCT_INTEGRITY_CONFLICT",
+          ctx.requestId,
+          `[InventoryEngine] ScanOut skipped for "${serial}" — not found in technician active custody, and same-request provenance is not provable.`
+        );
       }
     }
   }

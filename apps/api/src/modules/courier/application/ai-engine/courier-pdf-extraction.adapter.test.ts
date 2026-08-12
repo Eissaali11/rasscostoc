@@ -239,4 +239,99 @@ describe("PR-006A-9 Courier PDF extraction adapter", () => {
     expect(buildGoogleDrivePreviewUrl("file:///C:/temp/file.pdf")).toBeNull();
     expect(buildGoogleDrivePreviewUrl("javascript:alert(1)")).toBeNull();
   });
+
+  describe("OPS-REMED-E3-I.R2 — pairs[] preservation for atomic custody deduction", () => {
+    it("preserves a single complete device/SIM pair", () => {
+      const payload = buildCompleteExecutionPayload({
+        devices: [{ sn: "SN-A", sim_serial: "SIM-A" }],
+        deliveryDate: "2026-07-12",
+        time: "17:53",
+      });
+
+      expect((payload as any).pairs).toEqual([{ sn: "SN-A", simSerial: "SIM-A" }]);
+    });
+
+    it("preserves multiple pairs' exact device/SIM relationships — never re-associated by list position", () => {
+      // Deliberately not in "natural" order and with an extra card in
+      // between, so a position-based (rather than per-card) pairing bug
+      // would scramble the relationships.
+      const payload = buildCompleteExecutionPayload({
+        devices: [
+          { sn: "SN-1", sim_serial: "SIM-1" },
+          { sn: "SN-2", sim_serial: "SIM-2" },
+          { sn: "SN-3", sim_serial: "SIM-3" },
+        ],
+        deliveryDate: "2026-07-12",
+        time: "17:53",
+      });
+
+      const pairs = (payload as any).pairs;
+      expect(pairs).toHaveLength(3);
+      // Each pair must keep its OWN sn matched to its OWN simSerial —
+      // never SN-1 paired with SIM-2, etc.
+      expect(pairs).toContainEqual({ sn: "SN-1", simSerial: "SIM-1" });
+      expect(pairs).toContainEqual({ sn: "SN-2", simSerial: "SIM-2" });
+      expect(pairs).toContainEqual({ sn: "SN-3", simSerial: "SIM-3" });
+      // No pair beyond the first is discarded.
+      expect(pairs.map((p: any) => p.sn).sort()).toEqual(["SN-1", "SN-2", "SN-3"]);
+      expect(pairs.map((p: any) => p.simSerial).sort()).toEqual(["SIM-1", "SIM-2", "SIM-3"]);
+    });
+
+    it("keeps device-only and SIM-only entries identifiable as single-sided (not silently completed or dropped) — later rejected as incomplete by InventoryEngine", () => {
+      const payload = buildCompleteExecutionPayload({
+        devices: [
+          { sn: "SN-DEVICE-ONLY" }, // no sim_serial
+          { sim_serial: "SIM-ONLY" } as any, // no sn
+          { sn: "SN-COMPLETE", sim_serial: "SIM-COMPLETE" },
+        ],
+        deliveryDate: "2026-07-12",
+        time: "17:53",
+      });
+
+      const pairs = (payload as any).pairs;
+      // All 3 cards are visible to validation — none silently normalized
+      // away just because they're single-sided.
+      expect(pairs).toHaveLength(3);
+      expect(pairs).toContainEqual({ sn: "SN-DEVICE-ONLY", simSerial: null });
+      expect(pairs).toContainEqual({ sn: null, simSerial: "SIM-ONLY" });
+      expect(pairs).toContainEqual({ sn: "SN-COMPLETE", simSerial: "SIM-COMPLETE" });
+    });
+
+    it("keeps conflicting/duplicate-sn pairs visible to validation rather than silently deduplicating or normalizing them away", () => {
+      // Two cards submit the SAME sn with DIFFERENT sim_serial — a genuine
+      // data conflict that must remain visible for InventoryEngine's
+      // reconciliation/ambiguity checks to catch, not be collapsed here.
+      const payload = buildCompleteExecutionPayload({
+        devices: [
+          { sn: "SN-DUP", sim_serial: "SIM-FIRST" },
+          { sn: "SN-DUP", sim_serial: "SIM-SECOND" },
+        ],
+        deliveryDate: "2026-07-12",
+        time: "17:53",
+      });
+
+      const pairs = (payload as any).pairs;
+      expect(pairs).toHaveLength(2);
+      expect(pairs).toContainEqual({ sn: "SN-DUP", simSerial: "SIM-FIRST" });
+      expect(pairs).toContainEqual({ sn: "SN-DUP", simSerial: "SIM-SECOND" });
+    });
+
+    it("the emitted payload preserves deviceSerials/simSerials AND pairs together — pairs is additive, not a replacement for the existing arrays saveExecution/courier.service.ts already rely on", () => {
+      const payload = buildCompleteExecutionPayload({
+        devices: [
+          { sn: "SN-A", sim_serial: "SIM-A" },
+          { sn: "SN-B", sim_serial: "SIM-B" },
+        ],
+        deliveryDate: "2026-07-12",
+        time: "17:53",
+      });
+
+      expect(payload.deviceSerials).toEqual(["SN-A", "SN-B"]);
+      expect(payload.simSerials).toEqual(["SIM-A", "SIM-B"]);
+      expect((payload as any).pairs).toEqual([
+        { sn: "SN-A", simSerial: "SIM-A" },
+        { sn: "SN-B", simSerial: "SIM-B" },
+      ]);
+    });
+  });
 });

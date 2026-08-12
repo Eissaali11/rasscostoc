@@ -5,6 +5,8 @@
  * InventoryEngine depends on this interface — not on a concrete service.
  */
 
+import type { InventoryTransactionContext } from "./inventory.engine.types";
+
 export interface DeductInventoryCommand {
   technicianCode: string;
   devices: { serialNumber: string; model?: string }[];
@@ -18,5 +20,14 @@ export interface DeductInventoryCommand {
 }
 
 export interface IGeneralInventoryRepository {
-  deductTechnicianInventory(command: DeductInventoryCommand): Promise<void>;
+  /**
+   * OPS-REMED-E3: optional transaction context so this batch join an existing
+   * request-wide transaction. When omitted, opens its own transaction
+   * (unchanged legacy behavior, used by the standalone
+   * /api/technicians/deduct-inventory HTTP endpoint).
+   */
+  deductTechnicianInventory(
+    command: DeductInventoryCommand,
+    ctx?: InventoryTransactionContext
+  ): Promise<void>;
 }
