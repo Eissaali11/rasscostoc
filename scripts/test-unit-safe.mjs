@@ -59,6 +59,7 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/courier/infrastructure/inventory.engine.concurrency.test.ts",
   "apps/api/src/modules/courier/infrastructure/pdf-report-approval-transaction.test.ts",
   "apps/api/src/modules/courier/presentation/routes/courier-pdf-approval.routes.test.ts",
+  "apps/api/src/modules/courier/infrastructure/migration-p1-expand.smoke.test.ts",
 ];
 
 const args = [

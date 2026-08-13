@@ -1,0 +1,16 @@
+-- OPS-REMED-E4-P1 — expand-phase only. Adds one nullable projection
+-- column to courier_executions. No default, no NOT NULL, no CHECK
+-- constraint, no index, no backfill, no update to existing rows. This is
+-- purely additive storage; no runtime code writes to this column yet.
+--
+-- Later phases (not part of this migration):
+--   P2 — application writers, durable success/failure evidence, backfill
+--        script, audit-dedup table.
+--   P3 — execution of the backfill script.
+--   P4 — SET NOT NULL and the allowed-value CHECK constraint, once P3
+--        proves zero NULL rows remain.
+--
+-- Rollback (safe only if no deployed application code reads or writes
+-- this column, i.e. only before any P2 code is live):
+--   ALTER TABLE "courier_executions" DROP COLUMN "custody_closure_status";
+ALTER TABLE "courier_executions" ADD COLUMN IF NOT EXISTS "custody_closure_status" text;
