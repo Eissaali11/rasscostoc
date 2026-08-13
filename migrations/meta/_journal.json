@@ -344,6 +344,13 @@
       "when": 1785826879000,
       "tag": "0048_sales_invoice_numeric_precision",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1785826880000,
+      "tag": "0049_courier_execution_custody_closure_status_add",
+      "breakpoints": true
     }
   ]
 }
