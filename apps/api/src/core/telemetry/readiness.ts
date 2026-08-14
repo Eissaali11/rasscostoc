@@ -11,6 +11,11 @@ class ReadinessManager {
     outboxWorker: false,
     jobsWorker: false,
     featureFlags: false,
+    // OPS-REMED-E4-P2: matches the existing binary started/not-started
+    // precedent exactly (same as outboxWorker/jobsWorker above) —
+    // deliberately no poll-level (last-success/last-failure/backlog)
+    // tracking, per A.10 §2.
+    courierProjectionWorker: false,
   };
   private shuttingDown = false;
 
@@ -30,6 +35,10 @@ class ReadinessManager {
     this.status.jobsWorker = val;
   }
 
+  setCourierProjectionWorkerStarted(val: boolean): void {
+    this.status.courierProjectionWorker = val;
+  }
+
   setFeatureFlagsLoaded(val: boolean): void {
     this.status.featureFlags = val;
   }
@@ -41,6 +50,13 @@ class ReadinessManager {
 
   isReady(): boolean {
     return (
+      // OPS-REMED-E4-P2: courierProjectionWorker is tracked (see
+      // getDetails()/setCourierProjectionWorkerStarted below) but
+      // deliberately NOT added to this gate — doing so would change
+      // isReady()'s existing contract asserted by readiness.p3.test.ts
+      // (a pre-existing file outside E4-P2's authorized manifest). The
+      // worker's own started-state remains observable without widening
+      // what /health/ready requires.
       !this.shuttingDown &&
       this.status.database &&
       this.status.subscribers &&

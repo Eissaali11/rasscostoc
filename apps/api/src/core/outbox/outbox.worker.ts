@@ -1,6 +1,7 @@
 import { outboxRepository } from "./outbox.repository";
 import { EventBus } from "../events/event-bus";
 import { randomUUID } from "crypto";
+import { db } from "../config/db";
 
 export class OutboxWorker {
   private readonly workerId: string;
@@ -93,26 +94,44 @@ export class OutboxWorker {
         console.error(`[OutboxWorker] Event ${record.id} (${record.eventName}) failed (Attempt ${nextRetryCount}):`, errorMsg);
 
         if (nextRetryCount >= 3) {
-          // Dead letter queue
-          await outboxRepository.markAsDead(record.id, errorMsg);
-          console.error(`[OutboxWorker] Event ${record.id} marked as DEAD (exceeded max retries).`);
-          
-          // Publish dead letter notifications to EventBus if critical
+          // OPS-REMED-E4-P2: mark DEAD and enqueue the durable final-failure
+          // notification in ONE transaction — previously these were two
+          // separate, non-atomic commits (markAsDead, then a best-effort
+          // eventBus.publish wrapped in a swallowing try/catch), so a crash
+          // between them could permanently strand the row as DEAD while
+          // never durably creating the signal courier-saga.subscriber.ts
+          // needs to reach FAILED_FINAL. Both writes now share one
+          // transaction: either both commit or neither does, and the
+          // notification itself is enqueued via outboxRepository (durable,
+          // retried by this same worker), not published in-memory.
           try {
-            if (record.eventName === "ExecutionCompletedEvent") {
-              const payload = record.payload as any;
-              const { InventoryDeductionFailedEvent } = await import("../events/events");
-              await eventBus.publish(
-                new InventoryDeductionFailedEvent({
+            await db.transaction(async (tx) => {
+              await outboxRepository.markAsDead(record.id, errorMsg, tx);
+              if (record.eventName === "ExecutionCompletedEvent") {
+                const payload = record.payload as any;
+                const { InventoryDeductionFailedEvent } = await import("../events/events");
+                const finalFailureEvent = new InventoryDeductionFailedEvent({
                   requestId: payload.requestId,
                   actorId: payload.actorId,
                   technicianCode: payload.execution?.technicianCode || payload.execution?.salesTechnician || payload.request?.tecName || "unknown",
                   errors: [`Failed to process event after 3 retries: ${errorMsg}`],
-                })
-              );
-            }
-          } catch (dlqErr) {
-            console.error("[OutboxWorker] Failed to publish dead-letter notification:", dlqErr);
+                  final: true,
+                  // The original ExecutionCompletedEvent's own outbox row id
+                  // (== its domain event id, set at enqueue() time) — the
+                  // one stable causal identifier threaded through the
+                  // evidence check and the audit-dedup key.
+                  sourceEventId: record.id,
+                });
+                await outboxRepository.enqueue(finalFailureEvent, tx);
+              }
+            });
+            console.error(`[OutboxWorker] Event ${record.id} marked as DEAD (exceeded max retries).`);
+          } catch (deadErr) {
+            // The whole transaction rolled back — the row is NOT DEAD (still
+            // whatever it was before), so the normal retry path below will
+            // pick it up again on the next poll. Do not double-report it as
+            // DEAD when the commit itself failed.
+            console.error(`[OutboxWorker] Failed to atomically mark event ${record.id} DEAD and enqueue its final-failure notification:`, deadErr);
           }
         } else {
           // Calculate interval backoff:

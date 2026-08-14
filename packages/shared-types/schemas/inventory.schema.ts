@@ -271,3 +271,44 @@ export type InsertTechnicianFixedInventoryEntry = z.infer<typeof insertTechnicia
 export type TechnicianFixedInventoryEntry = typeof technicianFixedInventoryEntries.$inferSelect;
 export type InsertTechnicianMovingInventoryEntry = z.infer<typeof insertTechnicianMovingInventoryEntrySchema>;
 export type TechnicianMovingInventoryEntry = typeof technicianMovingInventoryEntries.$inferSelect;
+
+// OPS-REMED-E4-P2: durable, Inventory-owned evidence that a deduction
+// attempt (serialized, general, or mixed) fully completed inside
+// InventoryEngine.deduct()'s own transaction — written as the last
+// statement of that transaction (see inventory.engine.ts), so its mere
+// existence is the ground truth Courier's projection worker converges on.
+// Also doubles as the projection-obligation record for the polling
+// CourierProjectionWorker (lease/fencing/backoff columns below) — one
+// table serves both purposes, no second table introduced.
+export const inventoryDeductionCompletions = pgTable("inventory_deduction_completions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: integer("request_id").notNull().unique(),
+  sourceEventId: varchar("source_event_id").notNull().unique(),
+  generalInventoryDeducted: boolean("general_inventory_deducted").notNull(),
+  serializedItemCount: integer("serialized_item_count").notNull(),
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
+  resultVersion: integer("result_version").notNull().default(1),
+  // Projection-obligation columns (CourierProjectionWorker, A.9/A.10):
+  projectionStatus: text("projection_status").notNull().default("PENDING"),
+  projectionAttemptCount: integer("projection_attempt_count").notNull().default(0),
+  projectionNextAttemptAt: timestamp("projection_next_attempt_at").notNull().defaultNow(),
+  projectionLeaseOwner: varchar("projection_lease_owner"),
+  projectionLeaseToken: varchar("projection_lease_token"),
+  projectionLeaseExpiresAt: timestamp("projection_lease_expires_at"),
+  projectionLastError: text("projection_last_error"),
+  projectedAt: timestamp("projected_at"),
+}, (table) => ({
+  // Two partial indexes matching the two branches of the claim query's
+  // WHERE clause exactly (due pending/retryable work vs. expired claimed
+  // work) — a single composite index would force a wider scan than either
+  // branch needs (OPS-REMED-E4-A.10 §5). No separate index on requestId:
+  // unique() already creates its own index.
+  invDedComplDueIdx: index("inv_ded_compl_due_idx")
+    .on(table.projectionNextAttemptAt)
+    .where(sql`${table.projectionStatus} IN ('PENDING','FAILED_RETRYABLE')`),
+  invDedComplExpiredClaimIdx: index("inv_ded_compl_expired_claim_idx")
+    .on(table.projectionLeaseExpiresAt)
+    .where(sql`${table.projectionStatus} = 'CLAIMED'`),
+}));
+
+export type InventoryDeductionCompletion = typeof inventoryDeductionCompletions.$inferSelect;

@@ -142,6 +142,13 @@ export interface CourierExecution {
   enteredAt: Date | null;
   updatedAt: Date | null;
   version: number;
+  /**
+   * OPS-REMED-E4-P2: expand-phase (P1) nullable projection column, added to
+   * the domain type now that P2 writers exist. Kept as `string | null` (not
+   * a union of literal states) — the database has no CHECK constraint yet
+   * (P4).
+   */
+  custodyClosureStatus: string | null;
 }
 
 export interface CourierPdfReport {

@@ -117,6 +117,7 @@ import { InventoryEngine } from "../application/inventory/inventory.engine";
 import { DevicesServiceAdapter } from "../infrastructure/adapters/DevicesServiceAdapter";
 import { SerializedItemsAdapter } from "../infrastructure/adapters/SerializedItemsAdapter";
 import { DrizzleInventoryTransactionRunner } from "../infrastructure/database/DrizzleInventoryTransactionRunner";
+import { DrizzleDeductionCompletionRecorder } from "../infrastructure/database/DrizzleDeductionCompletionRecorder";
 
 export function createInventoryEngine(): InventoryEngine {
   const repository = new DrizzleCourierRepository();
@@ -124,6 +125,25 @@ export function createInventoryEngine(): InventoryEngine {
     new DevicesServiceAdapter(),
     new SerializedItemsAdapter(),
     repository,
-    new DrizzleInventoryTransactionRunner()
+    new DrizzleInventoryTransactionRunner(),
+    new DrizzleDeductionCompletionRecorder()
   );
+}
+
+/**
+ * OPS-REMED-E4-P2: sanctioned cross-module write capability for
+ * custody_closure_status, exposed via courier/contracts (same sanctioned
+ * seam already used by createInventoryEngine in the opposite direction).
+ * InventorySubscriber (modules/inventory/) calls this directly for the
+ * live-path transitions (PROCESSING/CLOSED_SUCCESS/FAILED_RETRYABLE); no
+ * event round-trip needed for a same-process, same-request write.
+ */
+export async function updateCustodyClosureStatus(
+  requestId: number,
+  fromStates: string[],
+  toState: string
+): Promise<boolean> {
+  const repository = new DrizzleCourierRepository();
+  const row = await repository.updateCustodyClosureStatus(requestId, fromStates, toState);
+  return row !== null;
 }

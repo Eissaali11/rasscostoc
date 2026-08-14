@@ -974,6 +974,31 @@ export class DrizzleCourierRepository implements
     return row ? CourierPdfReportMapper.toDomain(row) : null;
   }
 
+  /**
+   * OPS-REMED-E4-P2: same CAS idiom as claimPdfReportForTransition — exact
+   * positive predecessor-state IN-list, single UPDATE, zero rows on any
+   * invalid/duplicate/late transition (never an error).
+   */
+  async updateCustodyClosureStatus(
+    requestId: number,
+    fromStates: string[],
+    toState: string,
+    tx?: any
+  ): Promise<CourierExecution | null> {
+    const client = this.getClient(tx);
+    const [row] = await client
+      .update(courierExecutions)
+      .set({ custodyClosureStatus: toState })
+      .where(
+        and(
+          eq(courierExecutions.requestId, requestId),
+          inArray(courierExecutions.custodyClosureStatus, fromStates)
+        )
+      )
+      .returning();
+    return row ? CourierExecutionMapper.toDomain(row) : null;
+  }
+
   // ── Serial Lookup Support ──────────────────────────────────────────────────
   async findItemTypeById(itemTypeId: string, tx?: any): Promise<{ id: string; nameAr: string; nameEn: string; category: string } | null> {
     const client = this.getClient(tx);

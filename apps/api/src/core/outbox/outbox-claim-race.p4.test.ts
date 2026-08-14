@@ -46,6 +46,18 @@ describe("ERP-008 Phase 4 — OutboxRepository.getPendingEvents concurrency safe
     expect(idsA.length + idsB.length).toBe(5); // all 5 claimed exactly once, across both
   });
 
+  // OPS-REMED-E4-P2-I.R4: 20 real-PostgreSQL rounds x 2 concurrent
+  // getPendingEvents() transactions each (40 total round-tripped
+  // transactions) measured at 4.3s-4.7s across 10 clean consecutive runs
+  // on a fresh disposable container — comfortably under vitest's default
+  // 5000ms in isolation, but with too little margin under any real
+  // system-load variance (observed 2/5 failures under load in an earlier
+  // diagnostic session, always exactly at the 5000ms boundary, never a
+  // correctness failure — no overlap, no duplicate/missing claim was ever
+  // observed in any run). This explicit timeout adds real margin (max
+  // observed duration is ~31% of this bound) while remaining a genuine
+  // deadlock/hang detector: a real lock-order regression or a leaked
+  // connection would still fail this bound, not silently pass.
   it("repeated concurrent claim attempts (20 rounds) never produce an overlap", async () => {
     const eventBus = EventBus.getInstance();
     for (let i = 0; i < 20; i++) {
@@ -74,5 +86,5 @@ describe("ERP-008 Phase 4 — OutboxRepository.getPendingEvents concurrency safe
     }
 
     expect(anyOverlap).toBe(false);
-  });
+  }, 15000);
 });

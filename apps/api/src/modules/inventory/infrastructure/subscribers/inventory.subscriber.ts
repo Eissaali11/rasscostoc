@@ -7,7 +7,7 @@
 
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionCompletedEvent, InventoryDeductionFailedEvent } from "@core/events/events";
-import { createInventoryEngine } from "../../../courier/contracts";
+import { createInventoryEngine, updateCustodyClosureStatus } from "../../../courier/contracts";
 import { idempotencyService } from "@core/idempotency/idempotency.service";
 import { tracer } from "@core/telemetry/tracer";
 import { db } from "@core/config/db";
@@ -96,6 +96,20 @@ export class InventorySubscriber {
 
         const idempotencyKey = `${event.name}:REQ-${requestId}:InventorySubscriber:v${event.version}`;
 
+        // OPS-REMED-E4-P2: PENDING_DEDUCTION|FAILED_RETRYABLE -> PROCESSING.
+        // Runs once per delivery attempt (including outbox retries — this
+        // IS the mechanism driving FAILED_RETRYABLE back into PROCESSING,
+        // A.3 §6), BEFORE the idempotency gate, so a redelivery that hits
+        // the idempotency PROCESSING-guard still correctly reflects
+        // "processing" in the projection even though deduct() itself is
+        // not re-invoked. A losing/duplicate call affects zero rows —
+        // never an error, never retried on its own.
+        await updateCustodyClosureStatus(
+          requestId,
+          ["PENDING_DEDUCTION", "FAILED_RETRYABLE"],
+          "PROCESSING"
+        );
+
         await idempotencyService.execute(
           idempotencyKey,
           event.id,
@@ -126,6 +140,10 @@ export class InventorySubscriber {
                 referenceNumber: request.incidentNumber ?? String(requestId),
                 vendorType: request.vendorType,
                 notes: `خصم تلقائي — مطابقة تقرير التسليم — طلب رقم: ${requestId}`,
+                // OPS-REMED-E4-P2: event.id equals its own outbox row id
+                // (set at enqueue() time, proven end-to-end A.8 §4) — the
+                // one stable causal identifier for this deduction attempt.
+                sourceEventId: event.id,
               });
 
               // OPS-REMED-E3: a non-empty errors array from a successfully
@@ -142,6 +160,11 @@ export class InventorySubscriber {
                   deductionResult.errors
                 );
 
+                // OPS-REMED-E4-P2: PROCESSING -> FAILED_RETRYABLE. Note
+                // `final` is absent (AttemptFailurePayload) — this is a
+                // per-attempt signal, never the terminal one; that is
+                // OutboxWorker's DEAD block's job alone.
+                await updateCustodyClosureStatus(requestId, ["PROCESSING"], "FAILED_RETRYABLE");
                 await eventBus.publish(
                   new InventoryDeductionFailedEvent({
                     requestId,
@@ -158,6 +181,14 @@ export class InventorySubscriber {
               console.log(
                 `[InventorySubscriber] Inventory successfully deducted for request ${requestId}.`
               );
+              // OPS-REMED-E4-P2: PROCESSING -> CLOSED_SUCCESS. Reached only
+              // after engine.deduct() has already committed its own
+              // transaction, including the durable completion-evidence row
+              // (inventory.engine.ts) — this write is a best-effort, fast
+              // path; if it's lost (crash right here), CourierProjectionWorker
+              // independently converges to the same state using that
+              // already-durable evidence (A.9 §5-§7), no dependency on E5.
+              await updateCustodyClosureStatus(requestId, ["PROCESSING"], "CLOSED_SUCCESS");
               return { success: true };
             } catch (err: any) {
               console.error(
@@ -165,6 +196,7 @@ export class InventorySubscriber {
                 err
               );
 
+              await updateCustodyClosureStatus(requestId, ["PROCESSING"], "FAILED_RETRYABLE");
               await eventBus.publish(
                 new InventoryDeductionFailedEvent({
                   requestId,

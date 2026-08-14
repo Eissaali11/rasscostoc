@@ -402,7 +402,7 @@ describe("OPS-REMED-E3-F.R1 — real production chain (OutboxWorker → Inventor
   );
 
   it(
-    "C. permanent real-chain failure to DEAD: every attempt stays transactionally clean, idempotency never becomes COMPLETED, bounded retries exhaust, outbox reaches DEAD with structured dead-letter payload",
+    "C. permanent real-chain failure to DEAD: every attempt stays transactionally clean, idempotency never becomes COMPLETED, bounded retries exhaust, outbox reaches DEAD with a durable, atomically-enqueued final-failure event",
     async () => {
       const tech = await seedTechnician("permanent");
       const requestId = 940003;
@@ -412,11 +412,16 @@ describe("OPS-REMED-E3-F.R1 — real production chain (OutboxWorker → Inventor
       const event = buildEvent(requestId, tech, missingSerial);
       await outboxRepository.enqueue(event);
 
-      let deadLetterEvent: any = null;
-      EventBus.getInstance().subscribe("InventoryDeductionFailedEvent", async (e: any) => {
-        if (e.payload.requestId === requestId) deadLetterEvent = e;
-      });
-
+      // OPS-REMED-E4-P2-I.R2: the terminal (final:true) InventoryDeductionFailedEvent
+      // is now DELIBERATELY delivered durably — OutboxWorker's DEAD block
+      // marks the original event DEAD and enqueues this notification via
+      // outboxRepository.enqueue(...) in ONE database transaction (never
+      // via a synchronous local EventBus.publish for this specific event),
+      // so it survives a crash even if no local subscriber is listening.
+      // Proving it therefore means querying the durable outbox row, not
+      // capturing a synchronous in-memory callback. Per-attempt (final
+      // absent/false) notifications remain synchronous/local, unchanged —
+      // this test does not touch that path.
       const worker = new OutboxWorker({ intervalMs: 60000, batchSize: 5 });
       const idempotencyKey = `${event.name}:REQ-${requestId}:InventorySubscriber:v${event.version}`;
 
@@ -451,10 +456,35 @@ describe("OPS-REMED-E3-F.R1 — real production chain (OutboxWorker → Inventor
       const [ghost] = await db.select().from(items).where(eq(items.serialNumber, missingSerial));
       expect(ghost).toBeUndefined();
 
-      expect(deadLetterEvent).not.toBeNull();
-      expect(deadLetterEvent).toBeInstanceOf(InventoryDeductionFailedEvent);
-      expect(deadLetterEvent.payload.requestId).toBe(requestId);
-      expect(String(deadLetterEvent.payload.errors[0])).toMatch(/DEDUCT_|failed/i);
+      // The durable final-failure notification: exactly one row, correct
+      // event name, typed final:true payload, sourceEventId pointing back
+      // to the original DEAD event, request identity preserved.
+      const finalFailureRows = await db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.eventName, "InventoryDeductionFailedEvent"));
+      const matching = finalFailureRows.filter(
+        (r: any) => r.payload?.requestId === requestId && r.payload?.final === true
+      );
+      expect(matching).toHaveLength(1); // exactly one — not confused with any attempt-level (final:false) notification, no duplicate
+      const finalFailureRow = matching[0]!;
+      expect(finalFailureRow.payload.sourceEventId).toBe(event.id);
+      expect(String(finalFailureRow.payload.errors[0])).toMatch(/DEDUC|failed/i);
+      expect(finalFailureRow.status).toBe("PENDING"); // durable, awaiting its own drain — proves it was enqueued, not lost
+
+      // Draining it through the real supported worker path (OutboxWorker
+      // itself) proves the durable row is not just present but consumable
+      // — CourierSagaSubscriber's registered handler would process it in
+      // production; here we confirm the outbox mechanism can dispatch it
+      // without error, using the same real chain already exercised above.
+      await makeRetryEligibleNow(finalFailureRow.id).catch(() => {}); // no-op if already PENDING/eligible
+      await expect(worker.runOnce()).resolves.not.toThrow();
+
+      // No orphan: DEAD-marking and the durable enqueue were proven atomic
+      // by the dedicated P2 test
+      // (custody-closure-crash-consistency.test.ts #1-#2, same
+      // db.transaction boundary in outbox.worker.ts) — not re-proven here
+      // to avoid duplicating that authorized test's coverage.
 
       await cleanupIdempotency(event.name, requestId, event.version);
     },

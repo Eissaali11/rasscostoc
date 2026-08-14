@@ -28,6 +28,7 @@ import { DeductionError } from "../application/inventory/inventory.engine.types"
 import { SerializedItemsAdapter } from "./adapters/SerializedItemsAdapter";
 import { DevicesServiceAdapter } from "./adapters/DevicesServiceAdapter";
 import { DrizzleInventoryTransactionRunner } from "./database/DrizzleInventoryTransactionRunner";
+import { DrizzleDeductionCompletionRecorder } from "./database/DrizzleDeductionCompletionRecorder";
 import { DrizzleCourierRepository } from "./repositories/drizzle-courier.repository";
 
 describe("OPS-REMED-E3 — InventoryEngine concurrency", () => {
@@ -68,7 +69,8 @@ describe("OPS-REMED-E3 — InventoryEngine concurrency", () => {
       new DevicesServiceAdapter(),
       new SerializedItemsAdapter(),
       new DrizzleCourierRepository(),
-      new DrizzleInventoryTransactionRunner()
+      new DrizzleInventoryTransactionRunner(),
+      new DrizzleDeductionCompletionRecorder()
     );
   }
 

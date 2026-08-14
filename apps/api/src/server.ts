@@ -47,6 +47,13 @@ async function startServer() {
     readinessManager.setJobsWorkerStarted(true);
     lifecycleCoordinator.register("jobsWorker", () => jobsWorker.stop());
 
+    // OPS-REMED-E4-P2: Start Courier Projection Worker — same in-process
+    // lifecycle pattern as outboxWorker/jobsWorker above.
+    const { courierProjectionWorker } = await import("@modules/courier/infrastructure/jobs/CourierProjectionWorker");
+    courierProjectionWorker.start();
+    readinessManager.setCourierProjectionWorkerStarted(true);
+    lifecycleCoordinator.register("courierProjectionWorker", () => courierProjectionWorker.stop());
+
     lifecycleCoordinator.register("sessionStore", () => closeSessionStore());
     lifecycleCoordinator.register("databasePool", () => closeDatabase());
 

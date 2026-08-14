@@ -36,6 +36,7 @@
  * Dependencies are injected via static factory — concrete adapters live in /infrastructure/adapters/.
  */
 
+import { randomUUID } from "crypto";
 import type { IGeneralInventoryRepository } from "./IGeneralInventoryRepository";
 import type { ISerializedInventoryRepository } from "./ISerializedInventoryRepository";
 import type { DeductionContext, DeductionResult } from "./inventory.engine.types";
@@ -43,6 +44,7 @@ import {
   DeductionError,
   type IInventoryTransactionRunner,
   type InventoryTransactionContext,
+  type IDeductionCompletionRecorder,
 } from "./inventory.engine.types";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierInventoryPort } from "../../domain/repositories/ICourierInventoryPort";
@@ -52,7 +54,9 @@ export class InventoryEngine {
     private readonly generalInventory: IGeneralInventoryRepository,
     private readonly serializedInventory: ISerializedInventoryRepository,
     private readonly inventoryPort: ICourierInventoryPort,
-    private readonly txRunner: IInventoryTransactionRunner
+    private readonly txRunner: IInventoryTransactionRunner,
+    // OPS-REMED-E4-P2: bounded, explicitly authorized extension (A.6 §5).
+    private readonly completionRecorder: IDeductionCompletionRecorder
   ) {}
 
   /**
@@ -146,6 +150,25 @@ export class InventoryEngine {
           transactionCtx
         );
       }
+
+      // OPS-REMED-E4-P2: the LAST statement of this transaction — reached
+      // only if every prior write above succeeded without throwing. Covers
+      // serialized-only, general-only, and mixed deductions uniformly
+      // (unlike items.status='DELIVERED' alone, which is silent for
+      // general-inventory-only requests — the real gap this closes,
+      // A.6 §5). ctx.sourceEventId is optional on DeductionContext for
+      // backward compatibility with any existing caller (same pattern
+      // already established for ctx.pairs) — the real production caller
+      // (InventorySubscriber) always supplies the true causal id; a caller
+      // that does not is still recorded (evidence is never silently
+      // skipped), using a locally generated id that carries no causal
+      // meaning back to any outbox event.
+      await this.completionRecorder.recordCompletion(transactionCtx, {
+        requestId: ctx.requestId,
+        sourceEventId: ctx.sourceEventId ?? randomUUID(),
+        generalInventoryDeducted: result.generalInventoryDeducted,
+        serializedItemCount: result.custodyItemsDeducted.length,
+      });
 
       return result;
     });
