@@ -13,7 +13,12 @@ import { Pool } from "pg";
 import { eq } from "drizzle-orm";
 import { db } from "@core/config/db";
 import { users, itemTypes, items, courierRequests, courierRequestItems, courierExecutions, idempotencyRecords, outboxEvents } from "@shared/schema";
-import { classifyOneRow, runSweep, type ClassificationCounts } from "../../../../../../scripts/backfill-custody-closure-status";
+import {
+  classifyOneRow,
+  runSweep,
+  applyGuardedClassification,
+  type ClassificationCounts,
+} from "../../../../../../scripts/backfill-custody-closure-status";
 
 describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
   let pool: Pool;
@@ -29,7 +34,13 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
   });
 
   function freshCounts(): ClassificationCounts {
-    return { success: 0, failedFinal: 0, notStarted: 0, reconciliationRequired: 0, skippedActiveProcessing: 0 };
+    return {
+      success: 0,
+      failedFinal: 0,
+      reconciliationRequired: 0,
+      skippedActiveProcessing: 0,
+      concurrentAnomalousSkip: 0,
+    };
   }
 
   async function seedRequestWithItem(deliveredStatus: string) {
@@ -74,13 +85,13 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     expect(status).toBe("CLOSED_SUCCESS");
   });
 
-  it("2. resolvable item NOT delivered, no failure evidence -> NOT_STARTED", async () => {
+  it("2. resolvable item NOT delivered, no failure evidence -> RECONCILIATION_REQUIRED", async () => {
     const requestId = await seedRequestWithItem("RECEIVED_BY_TECHNICIAN");
     const { status } = await classifyOneRow(pool, requestId);
-    expect(status).toBe("NOT_STARTED");
+    expect(status).toBe("RECONCILIATION_REQUIRED");
   });
 
-  it("3. no item linkage at all, zero evidence -> NOT_STARTED", async () => {
+  it("3. no item linkage at all, zero evidence -> RECONCILIATION_REQUIRED", async () => {
     const actorId = randomUUID();
     await db.insert(users).values({
       id: actorId,
@@ -95,7 +106,7 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       .values({ customerName: "E4 P2 Legacy None", incidentNumber: `E4-P2-LEGN-${randomUUID().slice(0, 8)}` })
       .returning();
     const { status } = await classifyOneRow(pool, request.id);
-    expect(status).toBe("NOT_STARTED");
+    expect(status).toBe("RECONCILIATION_REQUIRED");
   });
 
   it("4. no item linkage, idempotency FAILED -> FAILED_FINAL", async () => {
@@ -219,5 +230,54 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     expect(counts.success).toBeGreaterThanOrEqual(1);
     const [row] = await db.select().from(courierExecutions).where(eq(courierExecutions.requestId, requestId));
     expect(row!.custodyClosureStatus).toBeNull(); // untouched — dry run
+  });
+
+  // OPS-REMED-E4-P3-I.R1: guarded-update race regression. Exercises the
+  // real UPDATE ... WHERE ... AND custody_closure_status IS NULL path
+  // directly (via applyGuardedClassification, the extracted helper
+  // runSweep itself calls) — no mock, no sleep. Ordering is deterministic
+  // because the test itself performs the "concurrent" write before
+  // invoking the guarded write, rather than racing a background process.
+  it("10. a row claimed by a concurrent (legitimate) writer between classification and the guarded update is never overwritten, and is counted as concurrentAnomalousSkip, not success", async () => {
+    const requestId = await seedRequestWithItem("DELIVERED");
+    const [execRow] = await db
+      .select()
+      .from(courierExecutions)
+      .where(eq(courierExecutions.requestId, requestId));
+    expect(execRow!.custodyClosureStatus).toBeNull();
+
+    // Simulate a concurrent, legitimate P2 writer claiming this exact row
+    // (e.g. InventorySubscriber's PENDING_DEDUCTION|FAILED_RETRYABLE ->
+    // PROCESSING transition) *before* the backfill's own guarded UPDATE
+    // executes for it — deterministic ordering, not a timing race.
+    await db
+      .update(courierExecutions)
+      .set({ custodyClosureStatus: "PROCESSING" })
+      .where(eq(courierExecutions.requestId, requestId));
+
+    const counts = freshCounts();
+    const written = await applyGuardedClassification(
+      pool,
+      { id: execRow!.id, request_id: requestId },
+      "CLOSED_SUCCESS",
+      /* dryRun */ false,
+      counts
+    );
+
+    // The guarded UPDATE must affect zero rows (IS NULL guard no longer
+    // matches), must not overwrite the concurrent writer's real value,
+    // and must be reported as its own anomaly bucket — never silently
+    // folded into a successful classification count.
+    expect(written).toBe(false);
+    expect(counts.concurrentAnomalousSkip).toBe(1);
+    expect(counts.success).toBe(0);
+    expect(counts.failedFinal).toBe(0);
+    expect(counts.reconciliationRequired).toBe(0);
+
+    const [afterRow] = await db
+      .select()
+      .from(courierExecutions)
+      .where(eq(courierExecutions.requestId, requestId));
+    expect(afterRow!.custodyClosureStatus).toBe("PROCESSING"); // unchanged — not overwritten
   });
 });

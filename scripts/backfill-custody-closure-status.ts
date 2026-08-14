@@ -8,10 +8,20 @@
  * Deterministic classification, per row:
  *   - all resolvable request items are DELIVERED       -> CLOSED_SUCCESS
  *   - none resolvable, clear failure evidence exists    -> FAILED_FINAL
- *   - none resolvable, zero evidence of any attempt      -> NOT_STARTED
+ *   - zero evidence of any attempt (no linkage, no idempotency, no
+ *     outbox row)                                        -> RECONCILIATION_REQUIRED
  *   - some but not all DELIVERED / unresolved linkage     -> RECONCILIATION_REQUIRED
  *   - idempotency PROCESSING, no item evidence, stale (>155s) -> RECONCILIATION_REQUIRED
  *   - idempotency PROCESSING, no item evidence, still fresh -> left NULL this pass
+ *
+ * OPS-REMED-E4-P3-A.2/I.R1: zero-evidence legacy rows are NOT classified
+ * PENDING_DEDUCTION or NOT_STARTED. No durable ExecutionCompletedEvent
+ * and no replay/retrigger mechanism exists for a legacy row with zero
+ * evidence — nothing in the system will ever pick such a row up
+ * automatically, so asserting "pending work" would be false. These rows
+ * require explicit human reconciliation, same as any other unresolved
+ * legacy evidence pattern. NOT_STARTED is not a member of the frozen
+ * P2/P4 state model and is never written.
  *
  * Bounded, resumable, deterministic, safe for repeated execution:
  *   - keyset batches (ORDER BY id), stabilization sweeps (not one forward
@@ -20,6 +30,11 @@
  *     inserted lower id; repeated full sweeps close that gap).
  *   - single-runner enforced via a session-level advisory lock.
  *   - dry-run by default; --execute required to write.
+ *   - every non-dry-run write is a guarded compare-and-set
+ *     (`WHERE ... AND custody_closure_status IS NULL`); a concurrent
+ *     writer claiming the row first is detected via a zero-row UPDATE
+ *     result and reported as `concurrentAnomalousSkip`, never silently
+ *     treated as successful classification.
  */
 import "dotenv/config";
 import { Pool } from "pg";
@@ -55,9 +70,14 @@ function assertSafeTarget(url: string, executeFlag: boolean): void {
 export type ClassificationCounts = {
   success: number;
   failedFinal: number;
-  notStarted: number;
   reconciliationRequired: number;
   skippedActiveProcessing: number;
+  // OPS-REMED-E4-P3-I.R1: a row whose guarded UPDATE affected zero rows —
+  // a concurrent writer (a legitimate P2 transition) claimed it between
+  // classification and this run's write. The CAS guard correctly
+  // prevented an overwrite; this count reports the anomaly separately.
+  // Never folded into `success`/`failedFinal`/`reconciliationRequired`.
+  concurrentAnomalousSkip: number;
 };
 
 export async function classifyOneRow(
@@ -111,7 +131,7 @@ export async function classifyOneRow(
       return { status: null, reason: "active PROCESSING — skip this pass" };
     }
     if (!idem && !outbox) {
-      return { status: "NOT_STARTED", reason: "zero evidence of any attempt" };
+      return { status: "RECONCILIATION_REQUIRED", reason: "zero evidence of any attempt" };
     }
     return { status: "RECONCILIATION_REQUIRED", reason: "ambiguous fallback evidence" };
   }
@@ -141,9 +161,54 @@ export async function classifyOneRow(
     if (outbox?.status === "DEAD" || idem?.status === "FAILED") {
       return { status: "FAILED_FINAL", reason: "zero delivered, clear failure evidence" };
     }
-    return { status: "NOT_STARTED", reason: "zero delivered, zero failure evidence" };
+    return { status: "RECONCILIATION_REQUIRED", reason: "zero delivered, zero failure evidence" };
   }
   return { status: "RECONCILIATION_REQUIRED", reason: "partial delivery (legacy-only, should not occur post-E3)" };
+}
+
+/**
+ * OPS-REMED-E4-P3-I.R1: applies one row's classification via the guarded
+ * compare-and-set UPDATE (`WHERE ... AND custody_closure_status IS NULL`)
+ * and updates `counts` accordingly. Extracted from runSweep's loop body
+ * so the guarded-write/concurrent-skip path can be exercised directly
+ * against a real database in a regression test, without changing the
+ * production call sequence in runSweep below (dry-run still counts
+ * immediately; non-dry-run still writes then counts only on success).
+ * Returns true if the row was classified (written, or dry-run), false if
+ * a concurrent writer claimed the row first (concurrentAnomalousSkip).
+ */
+export async function applyGuardedClassification(
+  pool: Pool,
+  row: { id: number; request_id: number },
+  status: string,
+  dryRun: boolean,
+  counts: ClassificationCounts
+): Promise<boolean> {
+  if (!dryRun) {
+    // Guarded compare-and-set write. A zero-row result means a concurrent
+    // writer (a legitimate P2 transition) claimed this row between
+    // classification and this UPDATE — the IS NULL guard correctly
+    // prevented an overwrite. This must be detected and reported as its
+    // own anomaly, never silently counted as successful classification.
+    const updateRes = await pool.query(
+      `UPDATE courier_executions SET custody_closure_status = $1 WHERE id = $2 AND custody_closure_status IS NULL`,
+      [status, row.id]
+    );
+    if ((updateRes.rowCount ?? 0) === 0) {
+      console.warn(
+        `[backfill] execution ${row.id} (request ${row.request_id}) -> CONCURRENT_ANOMALOUS_SKIP ` +
+          `(status changed before guarded update; classification "${status}" discarded, not applied)`
+      );
+      counts.concurrentAnomalousSkip++;
+      return false;
+    }
+  }
+
+  if (status === "CLOSED_SUCCESS") counts.success++;
+  else if (status === "FAILED_FINAL") counts.failedFinal++;
+  else counts.reconciliationRequired++;
+
+  return true;
 }
 
 export async function runSweep(pool: Pool, dryRun: boolean, counts: ClassificationCounts): Promise<number> {
@@ -167,18 +232,9 @@ export async function runSweep(pool: Pool, dryRun: boolean, counts: Classificati
         continue;
       }
       console.log(`[backfill] execution ${row.id} (request ${row.request_id}) -> ${status} (${reason})`);
-      if (status === "CLOSED_SUCCESS") counts.success++;
-      else if (status === "FAILED_FINAL") counts.failedFinal++;
-      else if (status === "NOT_STARTED") counts.notStarted++;
-      else counts.reconciliationRequired++;
 
-      if (!dryRun) {
-        await pool.query(
-          `UPDATE courier_executions SET custody_closure_status = $1 WHERE id = $2 AND custody_closure_status IS NULL`,
-          [status, row.id]
-        );
-      }
-      totalClassified++;
+      const written = await applyGuardedClassification(pool, row, status, dryRun, counts);
+      if (written) totalClassified++;
     }
   }
   return totalClassified;
@@ -193,9 +249,9 @@ async function main(): Promise<void> {
   const counts: ClassificationCounts = {
     success: 0,
     failedFinal: 0,
-    notStarted: 0,
     reconciliationRequired: 0,
     skippedActiveProcessing: 0,
+    concurrentAnomalousSkip: 0,
   };
 
   try {
