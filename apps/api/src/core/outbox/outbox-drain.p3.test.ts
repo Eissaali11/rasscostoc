@@ -308,12 +308,14 @@ describe("[WORKER-ONLY] OutboxWorker retry / backoff / DEAD state machine (not t
       });
       await outboxRepository.enqueue(event);
 
-      let deadLetterEvent: any = null;
-      const eventBus = EventBus.getInstance();
-      eventBus.subscribe("InventoryDeductionFailedEvent", async (e: any) => {
-        if (e.payload.requestId === requestId) deadLetterEvent = e;
-      });
-
+      // OPS-REMED-E4-P2-I.R3: the terminal (final:true) InventoryDeductionFailedEvent
+      // is now DELIBERATELY delivered durably — OutboxWorker's DEAD block
+      // marks the original event DEAD and enqueues this notification via
+      // outboxRepository.enqueue(...) in ONE database transaction, never
+      // via a synchronous local EventBus.publish for this specific event
+      // (see outbox.worker.ts). This obsoletes the old synchronous-capture
+      // assertion below it replaces — production behavior is not reverted
+      // to satisfy it.
       const worker = new OutboxWorker({ intervalMs: 60000, batchSize: 5 });
 
       // The worker's own bounded-retry policy: 3 attempts total, then DEAD.
@@ -332,11 +334,46 @@ describe("[WORKER-ONLY] OutboxWorker retry / backoff / DEAD state machine (not t
       // 2 recorded retry attempts before the terminal one.
       expect(record!.retryCount).toBe(2);
 
-      // The structured failure event carries the request identity and the
-      // underlying structured error content, not a bare generic message.
-      expect(deadLetterEvent).not.toBeNull();
-      expect(deadLetterEvent.payload.requestId).toBe(requestId);
-      expect(String(deadLetterEvent.payload.errors[0])).toMatch(/DEDUCT_|failed/i);
+      // The durable terminal notification: exactly one row, typed
+      // final:true payload, sourceEventId pointing back to the original
+      // DEAD event, request identity preserved — not confused with any
+      // attempt-level (final:false/absent) notification.
+      const allFailureRows = await db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.eventName, "InventoryDeductionFailedEvent"));
+      const terminalMatches = allFailureRows.filter(
+        (r: any) => r.payload?.requestId === requestId && r.payload?.final === true
+      );
+      expect(terminalMatches).toHaveLength(1); // exactly one — proves markAsDead+enqueue committed atomically, not lost, not duplicated
+      const terminalRow = terminalMatches[0]!;
+      expect(terminalRow.payload.sourceEventId).toBe(event.id);
+      expect(String(terminalRow.payload.errors[0])).toMatch(/DEDUC|failed/i);
+      // Not marked published before its own worker delivery — it is
+      // enqueued PENDING, awaiting its own drain cycle, same as any other
+      // durable outbox row.
+      expect(terminalRow.status).toBe("PENDING");
+
+      // Draining it through the real worker path proves it is consumable,
+      // not just present. Atomicity of the markAsDead+enqueue transaction
+      // pair itself is proven by the dedicated, already-authorized P2 test
+      // (custody-closure-crash-consistency.test.ts #1-#2, same
+      // db.transaction boundary in outbox.worker.ts) — not re-proven here
+      // to avoid duplicating that authorized test's coverage.
+      await makeRetryEligibleNow(terminalRow.id);
+      await worker.runOnce();
+      const [drained] = await db.select().from(outboxEvents).where(eq(outboxEvents.id, terminalRow.id));
+      expect(drained!.status).toBe("PUBLISHED");
+
+      // Repeated worker execution does not create a duplicate terminal
+      // event for the same original failure.
+      const stillOne = await db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.eventName, "InventoryDeductionFailedEvent"));
+      expect(
+        stillOne.filter((r: any) => r.payload?.requestId === requestId && r.payload?.final === true)
+      ).toHaveLength(1);
 
       // Zero partial writes across all 3 attempts — no item was created or
       // touched for this serial at all.

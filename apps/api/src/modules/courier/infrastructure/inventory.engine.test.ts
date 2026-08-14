@@ -19,6 +19,7 @@ import { InventoryEngine } from "../application/inventory/inventory.engine";
 import { SerializedItemsAdapter } from "./adapters/SerializedItemsAdapter";
 import { DevicesServiceAdapter } from "./adapters/DevicesServiceAdapter";
 import { DrizzleInventoryTransactionRunner } from "./database/DrizzleInventoryTransactionRunner";
+import { DrizzleDeductionCompletionRecorder } from "./database/DrizzleDeductionCompletionRecorder";
 import { DrizzleCourierRepository } from "./repositories/drizzle-courier.repository";
 import { DeductionError } from "../application/inventory/inventory.engine.types";
 
@@ -75,7 +76,8 @@ describe("OPS-REMED-E3 — InventoryEngine atomic multi-asset deduction", () => 
       new DevicesServiceAdapter(),
       new SerializedItemsAdapter(),
       new DrizzleCourierRepository(),
-      new DrizzleInventoryTransactionRunner()
+      new DrizzleInventoryTransactionRunner(),
+      new DrizzleDeductionCompletionRecorder()
     );
   }
 

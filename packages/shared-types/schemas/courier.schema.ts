@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, serial, real, uuid, jsonb, doublePrecision, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, serial, real, uuid, jsonb, doublePrecision, index, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./organization.schema";
@@ -267,6 +267,22 @@ export type IdempotencyRecord = typeof idempotencyRecords.$inferSelect;
 export type NewIdempotencyRecord = typeof idempotencyRecords.$inferInsert;
 export type CourierExecutionAttempt = typeof courierExecutionAttempts.$inferSelect;
 export type NewCourierExecutionAttempt = typeof courierExecutionAttempts.$inferInsert;
+
+// OPS-REMED-E4-P2: deduplication for the atomic dedup+state-transition+audit
+// operation owned by courier-saga.subscriber.ts. Composite key by
+// (source_event_id, operation_kind) — NOT source_event_id alone — so a
+// FINAL_FAILURE delivery and a later SUCCESS_PROJECTION correction for the
+// SAME original event never collide (A.9 §4 real gap, closed).
+export const courierExecutionAuditDedup = pgTable("courier_execution_audit_dedup", {
+  sourceEventId: varchar("source_event_id").notNull(),
+  operationKind: text("operation_kind").notNull(),
+  eventName: varchar("event_name").notNull(),
+  processedAt: timestamp("processed_at").notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.sourceEventId, table.operationKind] }),
+}));
+
+export type CourierExecutionAuditDedup = typeof courierExecutionAuditDedup.$inferSelect;
 
 
 

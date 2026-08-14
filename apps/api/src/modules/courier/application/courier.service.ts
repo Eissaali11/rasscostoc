@@ -1391,6 +1391,13 @@ export class CourierService {
           ...sanitized,
           requestId,
           enteredBy,
+          // OPS-REMED-E4-P2: initial closure-state write, same transaction
+          // as the execution insert (§4 row 1 of the frozen state model).
+          // Only on a FRESH insert — never on the updateExecution
+          // (optimistic-locked re-save) branch above, which must not reset
+          // an already-in-flight or already-terminal closure state back to
+          // PENDING_DEDUCTION.
+          custodyClosureStatus: "PENDING_DEDUCTION",
         });
       }
 

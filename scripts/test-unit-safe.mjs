@@ -60,6 +60,12 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/courier/infrastructure/pdf-report-approval-transaction.test.ts",
   "apps/api/src/modules/courier/presentation/routes/courier-pdf-approval.routes.test.ts",
   "apps/api/src/modules/courier/infrastructure/migration-p1-expand.smoke.test.ts",
+  "apps/api/src/modules/courier/infrastructure/custody-closure-status-transition.test.ts",
+  "apps/api/src/modules/courier/infrastructure/custody-closure-crash-consistency.test.ts",
+  "apps/api/src/modules/courier/infrastructure/custody-closure-legacy-backfill.test.ts",
+  "apps/api/src/modules/courier/infrastructure/courier-audit-dedup.test.ts",
+  "apps/api/src/modules/courier/infrastructure/inventory-deduction-completion.test.ts",
+  "apps/api/src/modules/courier/infrastructure/jobs/CourierProjectionWorker.test.ts",
 ];
 
 const args = [

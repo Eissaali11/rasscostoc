@@ -82,10 +82,14 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
 
   async function seedItem() {
     const itemTypeId = randomUUID();
+    // OPS-REMED-E4-P2-I.R5: nameAr/nameEn must be unique per row
+    // (item_types_name_ar_unique) — derived from the generated
+    // itemTypeId, not a fixed literal, so repeated invocations within one
+    // suite/process never collide on the constraint.
     await db.insert(itemTypes).values({
       id: itemTypeId,
-      nameAr: "نوع",
-      nameEn: "Type",
+      nameAr: `نوع-${itemTypeId.slice(0, 8)}`,
+      nameEn: `Type-${itemTypeId.slice(0, 8)}`,
       category: "device",
     });
     createdItemTypeIds.push(itemTypeId);
@@ -102,6 +106,13 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
     return itemId;
   }
 
+  // OPS-REMED-E4-P2-I.R5: two genuinely concurrent real-Postgres
+  // transactions racing on the same row occasionally exceed vitest's
+  // default 5000ms under system load, with no correctness failure ever
+  // observed (no overlap/duplicate claim in any run) — same defect class
+  // already diagnosed and fixed for outbox-claim-race.p4.test.ts in R4.
+  // This explicit bound adds real margin while remaining a genuine
+  // deadlock/hang detector.
   it("two genuinely concurrent transfer attempts for the same item: exactly one succeeds, the other is rejected, no contradictory history is written", async () => {
     const technicianA = await seedTechnician("A");
     const technicianB = await seedTechnician("B");
@@ -154,7 +165,7 @@ describe("DB-R9 — DrizzleCourierRepository.transferCustodyToTechnician() concu
       .where(eq(itemHistoryLogs.itemId, itemId));
     expect(historyRows).toHaveLength(1);
     expect(historyRows[0]!.changedById).toBe(itemRow!.currentOwnerId);
-  });
+  }, 15000);
 
   it("single-request success path: a normal, uncontested transfer still succeeds and records history correctly", async () => {
     const technician = await seedTechnician("solo");

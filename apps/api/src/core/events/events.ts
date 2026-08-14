@@ -51,12 +51,35 @@ export class ExecutionCompletedEvent extends BaseDomainEvent<{
   readonly version = 1;
 }
 
-export class InventoryDeductionFailedEvent extends BaseDomainEvent<{
-  requestId: number;
-  actorId: string;
-  technicianCode: string;
-  errors: string[];
-}> {
+/**
+ * OPS-REMED-E4-P2: discriminated payload. `final` absent/false means an
+ * ordinary per-attempt failure (retryable, InventorySubscriber's own
+ * catch); `final: true` means the DEAD-letter, terminal-failure signal
+ * (OutboxWorker's DEAD block), and REQUIRES `sourceEventId` — the causal
+ * id of the original ExecutionCompletedEvent (== its own outbox row id),
+ * used both for the correctable FAILED_FINAL transition's evidence check
+ * and for the (source_event_id, operation_kind) audit-dedup key.
+ * Historical/pre-P2 payloads (neither field present) satisfy the
+ * AttemptFailure shape and are safely treated as non-terminal.
+ */
+export type InventoryDeductionFailedPayload =
+  | {
+      requestId: number;
+      actorId: string;
+      technicianCode: string;
+      errors: string[];
+      final?: false;
+    }
+  | {
+      requestId: number;
+      actorId: string;
+      technicianCode: string;
+      errors: string[];
+      final: true;
+      sourceEventId: string;
+    };
+
+export class InventoryDeductionFailedEvent extends BaseDomainEvent<InventoryDeductionFailedPayload> {
   readonly name = "InventoryDeductionFailedEvent";
   readonly version = 1;
 }

@@ -34,6 +34,18 @@ export interface DeductionContext {
    * caller that has not yet been migrated to supply it.
    */
   pairs?: DevicePair[];
+  /**
+   * OPS-REMED-E4-P2: the causal id of the ExecutionCompletedEvent driving
+   * this deduction attempt (== that event's own outbox row id, set at
+   * enqueue() time — proven identical end-to-end, OPS-REMED-E4-A.8 §4).
+   * Threaded through to the durable completion-evidence row (§5) so it can
+   * later be correlated with the same event's DEAD/final-failure payload,
+   * if any. Required for the P2 write path; optional here only so any
+   * existing/legacy caller that hasn't been updated does not fail to
+   * compile — deduct() itself does not special-case its absence, the
+   * completion recorder simply stores whatever value it is given.
+   */
+  sourceEventId?: string;
 }
 
 export interface DeviceEntry {
@@ -64,6 +76,29 @@ export interface InventoryTransactionContext {
 
 export interface IInventoryTransactionRunner {
   run<T>(work: (ctx: InventoryTransactionContext) => Promise<T>): Promise<T>;
+}
+
+/**
+ * OPS-REMED-E4-P2: bounded, explicitly authorized extension to
+ * InventoryEngine (A.6 §5-§7, A.8 §5). Records durable, Inventory-owned
+ * evidence that a deduction attempt fully completed — written as the LAST
+ * statement inside deduct()'s own transaction, so a rollback of any prior
+ * write also rolls back this row, and its mere existence after commit is
+ * ground truth for Courier's projection worker, independent of anything
+ * Courier itself does afterward. Uses the same opaque
+ * InventoryTransactionContext brand as IInventoryTransactionRunner — no
+ * Drizzle/database type is exposed to InventoryEngine or this file.
+ */
+export interface IDeductionCompletionRecorder {
+  recordCompletion(
+    ctx: InventoryTransactionContext,
+    record: {
+      requestId: number;
+      sourceEventId: string;
+      generalInventoryDeducted: boolean;
+      serializedItemCount: number;
+    }
+  ): Promise<void>;
 }
 
 /**

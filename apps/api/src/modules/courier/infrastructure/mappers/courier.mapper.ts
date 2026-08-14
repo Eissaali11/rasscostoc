@@ -148,6 +148,11 @@ export class CourierExecutionMapper {
       enteredAt: row.enteredAt ? new Date(row.enteredAt) : null,
       updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
       version: row.version ?? 1,
+      // OPS-REMED-E4-P2: `?? null`, not left undefined — the column is a
+      // real, already-migrated (P1) nullable field; a row that has never
+      // been written by P2 code has a real `NULL` in the database, and
+      // that must survive round-tripping as `null`, not be coerced away.
+      custodyClosureStatus: row.custodyClosureStatus ?? null,
     };
   }
 
@@ -180,6 +185,12 @@ export class CourierExecutionMapper {
     if (domain.enteredAt !== undefined) res.enteredAt = domain.enteredAt;
     if (domain.updatedAt !== undefined) res.updatedAt = domain.updatedAt;
     if (domain.version !== undefined) res.version = domain.version;
+    // OPS-REMED-E4-P2: `undefined` stays omitted (preserves the existing
+    // whitelist contract exactly — a caller that never mentions the field
+    // does not accidentally clear it); an explicit `null` is passed through
+    // so a deliberate reset is possible; any real state string is passed
+    // through unchanged. No default is invented here.
+    if (domain.custodyClosureStatus !== undefined) res.custodyClosureStatus = domain.custodyClosureStatus;
     return res;
   }
 }

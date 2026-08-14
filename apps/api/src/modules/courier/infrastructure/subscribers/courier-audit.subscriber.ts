@@ -38,10 +38,17 @@ export class CourierAuditSubscriber {
       }
     );
 
-    // 2. Audit inventory deduction failure
+    // 2. Audit inventory deduction failure (attempt-level only —
+    // OPS-REMED-E4-P2: `final: true` deliveries are handled exclusively by
+    // CourierSagaSubscriber, which performs the dedup+evidence-check+
+    // guarded-transition+audit sequence atomically in one transaction
+    // (A.6 §8, Design A). Two independent subscribers both reacting to the
+    // same terminal event was the exact non-atomicity gap that design
+    // closed — this handler must not duplicate that work.)
     eventBus.subscribe(
       "InventoryDeductionFailedEvent",
       async (event: any) => {
+        if (event.payload?.final === true) return;
         const { requestId, actorId, technicianCode, errors } = event.payload;
         const idempotencyKey = `${event.name}:REQ-${requestId}:CourierAuditSubscriber:v${event.version}`;
 

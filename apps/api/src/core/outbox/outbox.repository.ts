@@ -153,8 +153,15 @@ export class OutboxRepository {
     await this.updateStatsGauges();
   }
 
-  async markAsDead(id: string, error: string): Promise<void> {
-    await db
+  /**
+   * OPS-REMED-E4-P2: accepts an optional transaction so the caller
+   * (OutboxWorker's DEAD block) can mark this row DEAD and enqueue the
+   * durable final-failure notification in ONE atomic transaction — closing
+   * a crash gap where the two used to be separate, non-atomic commits.
+   */
+  async markAsDead(id: string, error: string, tx?: any): Promise<void> {
+    const client = tx || db;
+    await client
       .update(outboxEvents)
       .set({
         status: "DEAD",
@@ -163,7 +170,13 @@ export class OutboxRepository {
         lockedAt: null,
       })
       .where(eq(outboxEvents.id, id));
-    await this.updateStatsGauges();
+    // Stats gauges are a best-effort read-only side effect — skip them
+    // when running inside the caller's transaction to avoid a nested
+    // query racing the still-open transaction; the top-level (non-tx)
+    // caller path still updates them as before.
+    if (!tx) {
+      await this.updateStatsGauges();
+    }
   }
 }
 

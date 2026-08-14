@@ -351,6 +351,20 @@
       "when": 1785826880000,
       "tag": "0049_courier_execution_custody_closure_status_add",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1785826881000,
+      "tag": "0050_inventory_deduction_completions_add",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1785826882000,
+      "tag": "0051_courier_execution_audit_dedup_add",
+      "breakpoints": true
     }
   ]
 }
