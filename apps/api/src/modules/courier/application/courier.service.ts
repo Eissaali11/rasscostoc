@@ -241,6 +241,10 @@ export class CourierService {
           requestId,
           installationStatus: "ASSIGNED",
           enteredBy: actorId,
+          // OPS-REMED-E4-P4-I2: fresh execution row, no deduction has
+          // occurred yet (assignment precedes any installation attempt) —
+          // same initial state as every other live-lifecycle creation path.
+          custodyClosureStatus: "PENDING_DEDUCTION",
         });
       }
 
@@ -270,6 +274,8 @@ export class CourierService {
           requestId,
           installationStatus: "ACCEPTED",
           enteredBy: actorId,
+          // OPS-REMED-E4-P4-I2: fresh execution row, no deduction yet.
+          custodyClosureStatus: "PENDING_DEDUCTION",
         });
       }
 
@@ -494,6 +500,9 @@ export class CourierService {
           installationStatus: newStatus,
           enteredBy: actorId,
           extraField1: stringifiedMetadata,
+          // OPS-REMED-E4-P4-I2: fresh execution row, strictly pre-
+          // installation (receiving progress only) — no deduction yet.
+          custodyClosureStatus: "PENDING_DEDUCTION",
         });
       }
 
@@ -695,6 +704,12 @@ export class CourierService {
             ...sanitized,
             requestId,
             enteredBy,
+            // OPS-REMED-E4-P4-I2: fresh execution row, whether or not this
+            // particular save is a completed installation — deduction is
+            // only ever triggered by the conditional ExecutionCompletedEvent
+            // enqueue further below in this same transaction, never by the
+            // insert itself.
+            custodyClosureStatus: "PENDING_DEDUCTION",
           }
         );
       }
@@ -1600,6 +1615,10 @@ export class CourierService {
           ...merged,
           extractionConfidence: JSON.stringify(confidence),
           enteredBy: uploadedBy,
+          // OPS-REMED-E4-P4-I2: draft AI-extraction merge, pre-approval —
+          // this path never itself publishes ExecutionCompletedEvent; only
+          // the separate completePdfReport approval can trigger deduction.
+          custodyClosureStatus: "PENDING_DEDUCTION",
         });
       }
 
@@ -1739,6 +1758,14 @@ export class CourierService {
             deliveryDate: data.deliveryDate || data.date || null,
             time: data.time || null,
             enteredBy: createdBy,
+            // OPS-REMED-E4-P4-I2: historical/already-happened data imported
+            // after the fact — this path never publishes
+            // ExecutionCompletedEvent, so PENDING_DEDUCTION would falsely
+            // represent these rows as awaiting a deduction event that will
+            // never fire. RECONCILIATION_REQUIRED matches the backfill
+            // script's own definition of ambiguous historical evidence
+            // requiring manual review, which is exactly what this is.
+            custodyClosureStatus: "RECONCILIATION_REQUIRED",
           });
         } catch (execErr) {
           // Non-fatal: log but don't fail the row import

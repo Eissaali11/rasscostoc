@@ -457,16 +457,35 @@ describe("OPS-REMED-E12 — atomic PDF-report approval/rejection transaction", (
       const requestId = await seedRequest("constraint");
       const repo = new DrizzleCourierRepository();
 
-      await repo.insertExecution({ requestId, enteredBy: tech, installationStatus: "Installation Completed - NL" });
+      // OPS-REMED-E4-P4-I1.R1 §7: this is a direct repository-level fixture
+      // exercising unique-constraint translation, not a specific lifecycle
+      // path — PENDING_DEDUCTION is the correct generic fresh-row value
+      // (post-P4 NOT NULL requires an explicit value here regardless).
+      await repo.insertExecution({
+        requestId,
+        enteredBy: tech,
+        installationStatus: "Installation Completed - NL",
+        custodyClosureStatus: "PENDING_DEDUCTION",
+      });
 
       await expect(
-        repo.insertExecution({ requestId, enteredBy: tech, installationStatus: "Installation Completed - NL" })
+        repo.insertExecution({
+          requestId,
+          enteredBy: tech,
+          installationStatus: "Installation Completed - NL",
+          custodyClosureStatus: "PENDING_DEDUCTION",
+        })
       ).rejects.toBeInstanceOf(DuplicateRequestApprovalError);
 
       // An unrelated failure (missing required field / FK violation) must
       // NOT be misclassified as DuplicateRequestApprovalError.
       await expect(
-        repo.insertExecution({ requestId: 999999999, enteredBy: tech, installationStatus: "Installation Completed - NL" })
+        repo.insertExecution({
+          requestId: 999999999,
+          enteredBy: tech,
+          installationStatus: "Installation Completed - NL",
+          custodyClosureStatus: "PENDING_DEDUCTION",
+        })
       ).rejects.not.toBeInstanceOf(DuplicateRequestApprovalError);
     },
     30000
