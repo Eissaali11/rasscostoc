@@ -66,6 +66,9 @@ const DB_DEPENDENT_TEST_FILES = [
   "apps/api/src/modules/courier/infrastructure/courier-audit-dedup.test.ts",
   "apps/api/src/modules/courier/infrastructure/inventory-deduction-completion.test.ts",
   "apps/api/src/modules/courier/infrastructure/jobs/CourierProjectionWorker.test.ts",
+  // OPS-REMED-E4-P4-I1.R1/I2: new DB-dependent test files added this gate.
+  "apps/api/src/modules/courier/infrastructure/migration-p4-constraint.smoke.test.ts",
+  "apps/api/src/modules/courier/infrastructure/custody-closure-production-writers.test.ts",
 ];
 
 const args = [

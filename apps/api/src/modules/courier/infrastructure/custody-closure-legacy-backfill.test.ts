@@ -1,10 +1,21 @@
 /**
  * OPS-REMED-E4-P2 — legacy classification and backfill script proof.
  *
- * Runs only via a real disposable Postgres test database (guarded below).
- * Exercises scripts/backfill-custody-closure-status.ts's exported
- * classifier/sweep functions directly against seeded legacy-shaped rows.
- * Never targets any non-test database (P3-only, not this gate).
+ * OPS-REMED-E4-P4-I1.R1 §6.B: this suite's entire premise is inserting
+ * legacy-shaped rows with a genuinely NULL custody_closure_status — the
+ * exact pre-P2 shape the backfill script exists to classify. Since P4
+ * (migrations 0052-0054) made that column NOT NULL on the shared
+ * isolated-test database, this file now runs against its OWN disposable
+ * database, migrated only through 0051 via
+ * scripts/test-historical-migration-database.mjs — never the shared,
+ * fully-migrated (through 0054) isolated-test database, and never
+ * touching its container. All 12 certified tests, names, and assertions
+ * are preserved unchanged; only the database wiring changed. Several
+ * `courier_executions` inserts intentionally omit `custodyClosureStatus`
+ * (that is the entire point of a legacy row) and are cast `as any` since
+ * the shared Drizzle schema type is now `.notNull()` post-P4 — this
+ * historical database's actual runtime column remains nullable, which is
+ * exactly what's being proven.
  *
  * OPS-REMED-E4-P3-I.R3: one test (12) additionally launches the script as
  * a real, separate Node subprocess — the actual `main()`/direct-invocation
@@ -13,15 +24,17 @@
  * defect that broke every real CLI launch). All other tests continue to
  * exercise the exported functions directly.
  */
-import { describe, expect, it, beforeAll, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
-import { Pool } from "pg";
+import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "@shared/schema";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { eq } from "drizzle-orm";
-import { db } from "@core/config/db";
-import { users, itemTypes, items, courierRequests, courierRequestItems, courierExecutions, idempotencyRecords, outboxEvents } from "@shared/schema";
+import { users, itemTypes, items, courierRequests, courierRequestItems, courierExecutions, idempotencyRecords } from "@shared/schema";
+import { createHistoricalMigrationDatabase } from "../../../../../../scripts/test-historical-migration-database.mjs";
 import {
   classifyOneRow,
   runSweep,
@@ -30,22 +43,36 @@ import {
   type ClassificationCounts,
 } from "../../../../../../scripts/backfill-custody-closure-status";
 
+const { Pool } = pg;
+
 const BACKFILL_SCRIPT_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../../../../../scripts/backfill-custody-closure-status.ts"
 );
 
 describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
-  let pool: Pool;
+  let pool: InstanceType<typeof Pool>;
+  let db: ReturnType<typeof drizzle>;
+  let historicalDatabaseUrl: string;
+  let cleanupHistoricalDatabase: () => void;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     if (!process.env.DATABASE_URL?.includes("test")) {
       throw new Error(
         "Refusing to run: DATABASE_URL does not look like an isolated test database " +
           "(must contain 'test' in the database name). See scripts/test-database.mjs."
       );
     }
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const historical = await createHistoricalMigrationDatabase("0051");
+    historicalDatabaseUrl = historical.databaseUrl;
+    cleanupHistoricalDatabase = historical.cleanup;
+    pool = new Pool({ connectionString: historicalDatabaseUrl });
+    db = drizzle({ client: pool, schema });
+  }, 60_000);
+
+  afterAll(async () => {
+    await pool?.end().catch(() => {});
+    cleanupHistoricalDatabase?.();
   });
 
   afterEach(() => {
@@ -94,7 +121,11 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       serialNumber: serial,
       status: "RECEIVED",
     });
-    await db.insert(courierExecutions).values({ requestId: request.id, enteredBy: actorId });
+    // Legacy pre-P2 shape: no custodyClosureStatus at all — genuinely NULL
+    // on this pre-P4 historical database. Cast `as any` because the
+    // shared Drizzle schema type is now `.notNull()` post-P4; this
+    // database's actual column remains nullable (only through 0051).
+    await db.insert(courierExecutions).values({ requestId: request.id, enteredBy: actorId } as any);
     return request.id;
   }
 
@@ -321,7 +352,7 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       .insert(courierRequests)
       .values({ customerName: "E4 P3 CLI Zero-Evidence", incidentNumber: `E4-P3-CLI-${randomUUID().slice(0, 8)}` })
       .returning();
-    await db.insert(courierExecutions).values({ requestId: zeroEvidenceRequest.id, enteredBy: actorId });
+    await db.insert(courierExecutions).values({ requestId: zeroEvidenceRequest.id, enteredBy: actorId } as any);
 
     // This test file does not isolate the whole `courier_executions` table
     // between tests (test #9's own dry-run row is expected, by design, to
@@ -341,7 +372,7 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const result = await runBackfillCli(/* dryRun */ true, process.env.DATABASE_URL!);
+    const result = await runBackfillCli(/* dryRun */ true, historicalDatabaseUrl);
 
     // Exactly one sweep — the defect this gate corrects allowed dry-run to
     // silently repeat up to MAX_STABILIZATION_SWEEPS (5) times.
@@ -421,7 +452,7 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       .insert(courierRequests)
       .values({ customerName: "E4 P3 Subprocess Zero-Evidence", incidentNumber: `E4-P3-SUB-${randomUUID().slice(0, 8)}` })
       .returning();
-    await db.insert(courierExecutions).values({ requestId: reconciliationRequest.id, enteredBy: actorId });
+    await db.insert(courierExecutions).values({ requestId: reconciliationRequest.id, enteredBy: actorId } as any);
 
     const [{ c: candidateTotalBefore }] = (await pool.query(
       `SELECT count(*)::int AS c FROM courier_executions WHERE custody_closure_status IS NULL`
@@ -440,13 +471,15 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     // no shell, no PATH lookup, no npx package resolution/download.
     // "--import tsx" mirrors the documented direct-invocation form; the
     // real script path is passed literally, not re-resolved by a shell.
+    // DATABASE_URL points at this suite's OWN pre-P4 historical database,
+    // never the shared isolated-test database.
     const result = spawnSync(
       process.execPath,
       ["--import", "tsx", BACKFILL_SCRIPT_PATH],
       {
         env: {
           ...process.env,
-          DATABASE_URL: process.env.DATABASE_URL,
+          DATABASE_URL: historicalDatabaseUrl,
           NODE_ENV: "test",
         },
         encoding: "utf-8",

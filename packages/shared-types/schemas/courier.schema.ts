@@ -124,13 +124,16 @@ export const courierExecutions = pgTable("courier_executions", {
   enteredAt: timestamp("entered_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   version: integer("version").default(1).notNull(),
-  // OPS-REMED-E4-P1: expand-phase nullable projection column. No default,
-  // no NOT NULL, no CHECK, no index — this migration only creates the
-  // storage location. No runtime writer exists yet; the allowed value set
-  // (PENDING_DEDUCTION, PROCESSING, CLOSED_SUCCESS, FAILED_RETRYABLE,
-  // FAILED_FINAL, RECONCILIATION_REQUIRED) is defined and enforced in a
-  // later phase, not here.
-  custodyClosureStatus: text("custody_closure_status"),
+  // OPS-REMED-E4-P4: NOT NULL + allowed-value CHECK constraint, staged
+  // across migrations 0052-0054 (NOT VALID add -> VALIDATE -> SET NOT
+  // NULL), enforced in the database as
+  // courier_executions_custody_closure_status_check. Every writer
+  // (courier.service.ts initial insert, inventory.subscriber.ts,
+  // CourierProjectionWorker.ts, courier-saga.subscriber.ts, and the
+  // one-time legacy backfill script) writes only these six values:
+  // PENDING_DEDUCTION, PROCESSING, CLOSED_SUCCESS, FAILED_RETRYABLE,
+  // FAILED_FINAL, RECONCILIATION_REQUIRED.
+  custodyClosureStatus: text("custody_closure_status").notNull(),
 }, (table) => ({
   // ERP-001 Package A — list/filter/search indexes
   courierExecutionsSnIdx: index("courier_executions_sn_idx").on(table.sn),

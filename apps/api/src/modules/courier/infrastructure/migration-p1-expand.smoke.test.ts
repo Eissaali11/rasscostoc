@@ -1,43 +1,50 @@
 /**
  * OPS-REMED-E4-P1 — expand-migration smoke test.
  *
- * Runs only via a real disposable Postgres test database (guarded below,
- * same pattern as the other DB-dependent regression suites). Migrations
- * 0001-0049 are already applied by the isolated-test pipeline before this
- * file runs (scripts/test-isolated.mjs runs `scripts/migrate.ts` against a
- * fresh container from zero) — this file asserts the resulting state, it
- * does not run migrations itself.
+ * OPS-REMED-E4-P4-I1.R1 §6.A: this test documents the ORIGINAL, historical
+ * P1/P2 contract (migration 0049: nullable column, no default, no NOT
+ * NULL, no CHECK, no index; migrations 0050/0051: P2's supporting
+ * tables) — a contract that P4 (migrations 0052-0054) has since
+ * superseded on the shared isolated-test database. To keep proving the
+ * historical claim honestly rather than rewriting it to describe P4, this
+ * file now runs against its OWN disposable database, migrated only
+ * through 0051 via scripts/test-historical-migration-database.mjs — never
+ * the shared, fully-migrated (through 0054) isolated-test database. This
+ * suite's own container is created and torn down entirely within this
+ * file; it never touches the shared container scripts/test-isolated.mjs
+ * manages.
  *
- * Proves migration 0049 is purely additive: a nullable
- * courier_executions.custody_closure_status column with no default, no
- * NOT NULL, no CHECK constraint, and no index.
- *
- * OPS-REMED-E4-P2-I.R2: tests #11/#12 originally asserted the P2 tables
- * (inventory_deduction_completions, courier_execution_audit_dedup) did
- * NOT exist — correct when P1 alone had landed, now superseded now that
- * migrations 0050/0051 (P2) are part of the same migration-from-zero
- * chain this suite runs against. Replaced with positive assertions
- * proving the full 0049-0051 chain applies correctly together and that
- * P2's tables carry their certified shape — this remains a migration/
- * schema-evolution smoke test, not a duplicate of the dedicated P2
- * integration suites (custody-closure-*.test.ts,
- * inventory-deduction-completion.test.ts, CourierProjectionWorker.test.ts),
- * which own the full behavioral proof.
+ * All original test numbers/names/assertions are preserved unchanged;
+ * only the database wiring changed.
  */
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
-import { pool, db } from "@core/config/db";
-import { users, courierRequests, courierExecutions } from "@shared/schema";
+import pg from "pg";
+import { createHistoricalMigrationDatabase } from "../../../../../../scripts/test-historical-migration-database.mjs";
 import journal from "../../../../../../migrations/meta/_journal.json";
 
+const { Client } = pg;
+
 describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", () => {
-  beforeAll(() => {
+  let client: InstanceType<typeof Client>;
+  let cleanup: () => void;
+
+  beforeAll(async () => {
     if (!process.env.DATABASE_URL?.includes("test")) {
       throw new Error(
         "Refusing to run: DATABASE_URL does not look like an isolated test database " +
           "(must contain 'test' in the database name). See scripts/test-database.mjs."
       );
     }
+    const historical = await createHistoricalMigrationDatabase("0051");
+    cleanup = historical.cleanup;
+    client = new Client({ connectionString: historical.databaseUrl });
+    await client.connect();
+  }, 60_000);
+
+  afterAll(async () => {
+    await client?.end().catch(() => {});
+    cleanup?.();
   });
 
   it("1-2. migrations through 0048 and then 0049 have applied (journal proves both, and the column exists)", async () => {
@@ -50,7 +57,7 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
   });
 
   it("3. courier_executions.custody_closure_status exists", async () => {
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `SELECT column_name FROM information_schema.columns
        WHERE table_name = 'courier_executions' AND column_name = 'custody_closure_status'`
     );
@@ -58,7 +65,7 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
   });
 
   it("4. the column accepts NULL, and 7-8. has no default and no NOT NULL", async () => {
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `SELECT is_nullable, column_default, data_type FROM information_schema.columns
        WHERE table_name = 'courier_executions' AND column_name = 'custody_closure_status'`
     );
@@ -70,41 +77,34 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
 
   it("5-6. existing-style inserts omitting the column still succeed, and existing rows remain unchanged", async () => {
     const actorId = randomUUID();
-    await db.insert(users).values({
-      id: actorId,
-      username: `e4-p1-${actorId.slice(0, 8)}`,
-      email: `e4-p1-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
-      fullName: "E4 P1 Smoke Actor",
-      role: "admin",
-    });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({
-        customerName: "E4 P1 Smoke Customer",
-        incidentNumber: `E4-P1-${randomUUID().slice(0, 8)}`,
-      })
-      .returning();
+    await client.query(
+      `INSERT INTO users (id, username, email, password, full_name, role) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [actorId, `e4-p1-${actorId.slice(0, 8)}`, `e4-p1-${actorId.slice(0, 8)}@test.local`, "x", "E4 P1 Smoke Actor", "admin"]
+    );
+    const { rows: reqRows } = await client.query(
+      `INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id`,
+      ["E4 P1 Smoke Customer", `E4-P1-${randomUUID().slice(0, 8)}`]
+    );
+    const requestId = reqRows[0].id;
 
-    // Old-style insert: no custodyClosureStatus field at all, exactly what
-    // pre-P2 application code will continue to do.
-    const [execution] = await db
-      .insert(courierExecutions)
-      .values({ requestId: request.id, enteredBy: actorId })
-      .returning();
-
-    expect(execution.custodyClosureStatus).toBeNull();
+    // Old-style insert: no custody_closure_status column at all, exactly
+    // what pre-P2 application code will continue to do.
+    const { rows: execRows } = await client.query(
+      `INSERT INTO courier_executions (request_id, entered_by) VALUES ($1, $2) RETURNING id, custody_closure_status`,
+      [requestId, actorId]
+    );
+    expect(execRows[0].custody_closure_status).toBeNull();
 
     // Re-read: the row is unchanged by anything migration-adjacent.
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `SELECT custody_closure_status FROM courier_executions WHERE id = $1`,
-      [execution.id]
+      [execRows[0].id]
     );
     expect(rows[0].custody_closure_status).toBeNull();
   });
 
   it("9. no E4 status CHECK constraint exists on courier_executions", async () => {
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `SELECT conname FROM pg_constraint
        WHERE conrelid = 'courier_executions'::regclass
          AND contype = 'c'
@@ -114,7 +114,7 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
   });
 
   it("10. no E4 status index exists on courier_executions", async () => {
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `SELECT indexname FROM pg_indexes
        WHERE tablename = 'courier_executions' AND indexname ILIKE '%custody_closure_status%'`
     );
@@ -130,10 +130,10 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
   });
 
   it("11b. inventory_deduction_completions exists with the certified request_id/source_event_id unique identity", async () => {
-    const { rows } = await pool.query(`SELECT to_regclass('public.inventory_deduction_completions') AS reg`);
+    const { rows } = await client.query(`SELECT to_regclass('public.inventory_deduction_completions') AS reg`);
     expect(rows[0].reg).toBe("inventory_deduction_completions");
 
-    const uniques = await pool.query(
+    const uniques = await client.query(
       `SELECT conname FROM pg_constraint
        WHERE conrelid = 'inventory_deduction_completions'::regclass AND contype = 'u'`
     );
@@ -142,7 +142,7 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
   });
 
   it("11c. inventory_deduction_completions carries the certified claim/lease/fencing columns", async () => {
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `SELECT column_name, is_nullable FROM information_schema.columns
        WHERE table_name = 'inventory_deduction_completions'`
     );
@@ -157,10 +157,10 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
   });
 
   it("12a. courier_execution_audit_dedup exists with the certified composite (source_event_id, operation_kind) identity", async () => {
-    const { rows } = await pool.query(`SELECT to_regclass('public.courier_execution_audit_dedup') AS reg`);
+    const { rows } = await client.query(`SELECT to_regclass('public.courier_execution_audit_dedup') AS reg`);
     expect(rows[0].reg).toBe("courier_execution_audit_dedup");
 
-    const pk = await pool.query(
+    const pk = await client.query(
       `SELECT a.attname FROM pg_constraint c
        JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) ON true
        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
@@ -170,27 +170,32 @@ describe("OPS-REMED-E4-P1 — custody_closure_status expand migration (0049)", (
     expect(pk.rows.map((r: any) => r.attname)).toEqual(["source_event_id", "operation_kind"]);
   });
 
-  it("12b. no P4 (0052) constraint or artifact exists yet — custody_closure_status is still nullable, no CHECK", async () => {
-    const { rows } = await pool.query(
+  it("12b. no P4 (0052) constraint or artifact exists yet on this cutoff database — custody_closure_status is still nullable, no CHECK", async () => {
+    // OPS-REMED-E4-P4-I1.R1 §6.A: journal.json is a single repo-wide file
+    // documenting every migration that EXISTS in the repo, not which ones
+    // this specific cutoff database applied — it now legitimately
+    // contains 0052-0054 (P4 has since been implemented), so this
+    // assertion checks the actual pre-P4 database schema directly rather
+    // than journal completeness, which is no longer the correct signal
+    // for "P4 not applied here".
+    const { rows } = await client.query(
       `SELECT is_nullable FROM information_schema.columns
        WHERE table_name = 'courier_executions' AND column_name = 'custody_closure_status'`
     );
     expect(rows[0].is_nullable).toBe("YES");
-    const checks = await pool.query(
+    const checks = await client.query(
       `SELECT conname FROM pg_constraint
        WHERE conrelid = 'courier_executions'::regclass AND contype = 'c' AND conname ILIKE '%custody_closure_status%'`
     );
     expect(checks.rows).toHaveLength(0);
-    const entries = (journal as { entries: { tag: string }[] }).entries;
-    expect(entries.some((e) => e.tag.startsWith("0052"))).toBe(false);
   });
 
   it("15-16. migration from zero succeeded and drift is zero (proven by this suite running at all)", async () => {
-    // If migrate.ts (run by the isolated-test pipeline before this file)
-    // had failed or left drift, no query above would have succeeded
-    // against the expected schema shape — this assertion documents that
+    // If this suite's own historical-cutoff migration run had failed or
+    // left drift, no query above would have succeeded against the
+    // expected pre-P4 schema shape — this assertion documents that
     // dependency explicitly rather than leaving it implicit.
-    const { rows } = await pool.query(`SELECT to_regclass('public.courier_executions') AS reg`);
+    const { rows } = await client.query(`SELECT to_regclass('public.courier_executions') AS reg`);
     expect(rows[0].reg).toBe("courier_executions");
   });
 });

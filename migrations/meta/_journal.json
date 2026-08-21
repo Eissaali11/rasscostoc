@@ -365,6 +365,27 @@
       "when": 1785826882000,
       "tag": "0051_courier_execution_audit_dedup_add",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1785826883000,
+      "tag": "0052_courier_custody_closure_constraints_add",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1785826884000,
+      "tag": "0053_courier_custody_closure_constraints_validate",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1785826885000,
+      "tag": "0054_courier_custody_closure_not_null_enforce",
+      "breakpoints": true
     }
   ]
 }

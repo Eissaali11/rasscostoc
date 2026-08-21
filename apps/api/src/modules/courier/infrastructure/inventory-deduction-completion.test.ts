@@ -245,10 +245,14 @@ describe("OPS-REMED-E4-P2 — durable completion evidence and mapper round-trip"
     }
   );
 
-  it("6. an explicit null survives the persistence/domain round trip", async () => {
-    const requestId = await seedExecutionWithStatus(null);
-    const found = await drizzleCourierRepository.findExecutionByRequestId(requestId);
-    expect(found!.custodyClosureStatus).toBeNull();
+  // OPS-REMED-E4-P4-I1.R1 §7/§10: this was originally a pre-P4 mapper
+  // round-trip proof (an explicit null survived unchanged). Since P4
+  // (migrations 0052-0054) made the column NOT NULL, an explicit null can
+  // no longer be persisted at all — the assertion is inverted to document
+  // that new, correct invariant (a production defect, not a stale
+  // fixture, would be silently accepting this insert).
+  it("6. an explicit null is now rejected by the database (post-P4 NOT NULL invariant)", async () => {
+    await expect(seedExecutionWithStatus(null)).rejects.toThrow(/null value in column "custody_closure_status"|violates not-null constraint/i);
   });
 
   it("7. omitted (undefined) custodyClosureStatus on updateExecution does not clear an existing value", async () => {

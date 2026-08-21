@@ -272,6 +272,11 @@ describe("DB-R1 — operational inventory quantity CHECK constraints (Phase C4.6
         paperRollQty: 0,
         stickersQty: 0,
         nulipCardsQty: 0,
+        // OPS-REMED-E4-P4-I1.R1 §7: this fixture tests quantity CHECK
+        // constraints, unrelated to custody lifecycle — PENDING_DEDUCTION
+        // is the correct generic fresh-row value (post-P4 NOT NULL
+        // requires an explicit value regardless).
+        custodyClosureStatus: "PENDING_DEDUCTION",
       })
     ).resolves.not.toThrow();
     createdCourierExecutionRequestIds.push(requestId4);
