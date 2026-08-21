@@ -35,10 +35,27 @@
  *     writer claiming the row first is detected via a zero-row UPDATE
  *     result and reported as `concurrentAnomalousSkip`, never silently
  *     treated as successful classification.
+ *
+ * OPS-REMED-E4-P3-R0/I.R2: dry-run performs exactly one sweep — the
+ * stabilization multi-sweep loop only exists to let --execute discover
+ * rows made newly-eligible by its own prior writes; dry-run never writes,
+ * so `remaining` cannot change between sweeps and repeating would only
+ * re-classify and re-count the same candidates. A dry-run leaving rows
+ * NULL is the correct, expected outcome — never reported as FAILED.
  */
 import "dotenv/config";
-import { Pool } from "pg";
+// OPS-REMED-E4-P3-I.R3: `pg` is a CJS package without a properly declared
+// named-export map — under strict Node ESM (confirmed on Node 22, the
+// project's authoritative/CI-pinned runtime, and Node 24) a runtime
+// `import { Pool } from "pg"` fails module linking with "does not provide
+// an export named 'Pool'" the moment this script is launched directly
+// (outside Vitest's own transform, which silently tolerates it). The
+// default-import + destructure form below is the standard, verified fix
+// for CJS packages under strict ESM interop.
+import pg, { type Pool as PgPool } from "pg";
 import { fileURLToPath } from "url";
+
+const { Pool } = pg;
 
 export const BATCH_SIZE = 500;
 export const MAX_STABILIZATION_SWEEPS = 5;
@@ -81,7 +98,7 @@ export type ClassificationCounts = {
 };
 
 export async function classifyOneRow(
-  pool: Pool,
+  pool: PgPool,
   requestId: number
 ): Promise<{ status: string | null; reason: string }> {
   const itemsRes = await pool.query(
@@ -178,7 +195,7 @@ export async function classifyOneRow(
  * a concurrent writer claimed the row first (concurrentAnomalousSkip).
  */
 export async function applyGuardedClassification(
-  pool: Pool,
+  pool: PgPool,
   row: { id: number; request_id: number },
   status: string,
   dryRun: boolean,
@@ -211,7 +228,7 @@ export async function applyGuardedClassification(
   return true;
 }
 
-export async function runSweep(pool: Pool, dryRun: boolean, counts: ClassificationCounts): Promise<number> {
+export async function runSweep(pool: PgPool, dryRun: boolean, counts: ClassificationCounts): Promise<number> {
   let lastId = 0;
   let totalClassified = 0;
 
@@ -240,9 +257,25 @@ export async function runSweep(pool: Pool, dryRun: boolean, counts: Classificati
   return totalClassified;
 }
 
-async function main(): Promise<void> {
-  const dryRun = !process.argv.includes("--execute");
-  const url = resolveDatabaseUrl();
+export type BackfillRunResult = {
+  dryRun: boolean;
+  sweeps: number;
+  remaining: number;
+  counts: ClassificationCounts;
+  exitCode: number;
+};
+
+/**
+ * OPS-REMED-E4-P3-I.R2: the CLI's full orchestration — extracted from
+ * main() so it can be exercised directly (with an explicit, caller-
+ * supplied url) by an automated regression test, proving the real
+ * default-CLI dry-run/execute control flow rather than only a single
+ * isolated runSweep() call. Returns a result object instead of mutating
+ * process.exitCode directly, so no global exit-code state can leak
+ * between test runs — main() below is the sole place that sets
+ * process.exitCode, taken from this function's returned result.
+ */
+export async function runBackfillCli(dryRun: boolean, url: string): Promise<BackfillRunResult> {
   assertSafeTarget(url, !dryRun);
 
   const pool = new Pool({ connectionString: url });
@@ -269,21 +302,45 @@ async function main(): Promise<void> {
       );
       remaining = remainingRes.rows[0].c;
       console.log(`[backfill] After sweep ${sweep}: ${remaining} row(s) still NULL.`);
-    } while (remaining > 0 && sweep < MAX_STABILIZATION_SWEEPS);
+      // dry-run never writes, so `remaining` can never decrease between
+      // sweeps — repeating would re-classify and re-count the exact same
+      // candidates every pass (proven: unbounded multiplication up to
+      // MAX_STABILIZATION_SWEEPS×, plus duplicate per-row log lines). A
+      // single pass is both sufficient and correct for a preview; only
+      // --execute's real writes can make a second sweep discover
+      // newly-eligible (previously concurrently-inserted) rows, so only
+      // --execute may repeat.
+    } while (!dryRun && remaining > 0 && sweep < MAX_STABILIZATION_SWEEPS);
 
     console.log("[backfill] Classification counts:", counts);
     console.log(`[backfill] Remaining NULL rows after ${sweep} sweep(s): ${remaining}`);
 
-    if (remaining > 0) {
+    let exitCode = 0;
+    if (!dryRun && remaining > 0) {
       console.error(`[backfill] FAILED — ${remaining} row(s) remain unclassified after max sweeps.`);
-      process.exitCode = 1;
+      exitCode = 1;
+    } else if (dryRun) {
+      // A dry-run leaves every candidate row NULL by design — this is the
+      // correct, expected outcome, never a failure.
+      console.log(
+        `[backfill] Dry-run complete — 0 rows written by design; ${remaining} candidate row(s) remain unchanged.`
+      );
     } else {
       console.log("[backfill] Zero-NULL verification: PASS.");
     }
+
+    return { dryRun, sweeps: sweep, remaining, counts, exitCode };
   } finally {
     await pool.query("SELECT pg_advisory_unlock($1)", [ADVISORY_LOCK_KEY]).catch(() => {});
     await pool.end();
   }
+}
+
+async function main(): Promise<void> {
+  const dryRun = !process.argv.includes("--execute");
+  const url = resolveDatabaseUrl();
+  const result = await runBackfillCli(dryRun, url);
+  process.exitCode = result.exitCode;
 }
 
 // Only run as a CLI entry point — importing this module from a test file
