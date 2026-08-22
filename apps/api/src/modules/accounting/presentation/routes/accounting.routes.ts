@@ -5,23 +5,23 @@ import { asyncHandler } from "@core/errors/errorHandler";
 import { AuthorizationError } from "@core/errors/AppError";
 import { accountingService } from "@modules/accounting/infrastructure/accounting.service";
 
-const financeReadRoles = new Set(["admin", "supervisor", "accountant", "finance_manager", "auditor"]);
-const financeWriteRoles = new Set(["admin", "accountant", "finance_manager"]);
-
-function requireFinanceRead(req: Request, _res: Response, next: NextFunction): void {
-  const role = req.user?.role || "";
-  if (!financeReadRoles.has(role)) {
-    return next(new AuthorizationError("ليس لديك صلاحية الوصول لبيانات المحاسبة"));
-  }
-  next();
-}
-
-function requireFinanceWrite(req: Request, _res: Response, next: NextFunction): void {
-  const role = req.user?.role || "";
-  if (!financeWriteRoles.has(role)) {
-    return next(new AuthorizationError("ليس لديك صلاحية تنفيذ عمليات محاسبية"));
-  }
-  next();
+/**
+ * OPS-PERM-S0-A.I1 — accounting is excluded from the operational permissions
+ * program entirely (owner decision, OPS-PERM-D1.R1 §2 Decision B). Every
+ * current operational role — including admin — is denied, unconditionally.
+ * This does NOT check any role allow-list (the previous requireFinanceRead/
+ * requireFinanceWrite implementation did, via financeReadRoles/
+ * financeWriteRoles, which incorrectly permitted "admin" and "supervisor"
+ * for read access) — an allow-list can accidentally admit a newly-added
+ * operational role in the future; this guard cannot, because it never
+ * consults one. Authentication (requireAuth) always runs first, so an
+ * unauthenticated caller still receives the normal 401, never this 403.
+ * No internal-service/background-job/non-human exception is introduced —
+ * OPS-PERM-D1.R1 found no legitimate internal consumer of any accounting
+ * endpoint anywhere in the backend or Portal.
+ */
+function denyAccountingAccess(req: Request, _res: Response, next: NextFunction): void {
+  next(new AuthorizationError("المحاسبة خارج نطاق هذا المشروع التشغيلي"));
 }
 
 const coaCreateSchema = z.object({
@@ -157,7 +157,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/accounting/coa",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (_req: Request, res: Response) => {
       const data = await accountingService.listCoa();
       res.json(data);
@@ -167,7 +167,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/accounting/coa",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = coaCreateSchema.parse(req.body);
       const data = await accountingService.createCoa(body);
@@ -178,7 +178,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.patch(
     "/api/accounting/coa/:id",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = coaUpdateSchema.parse(req.body);
       const data = await accountingService.updateCoa(req.params.id, body);
@@ -189,7 +189,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/accounting/journal-entries",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (_req: Request, res: Response) => {
       const data = await accountingService.listJournalEntries();
       res.json(data);
@@ -199,7 +199,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/accounting/journal-entries",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = journalCreateSchema.parse(req.body);
       const data = await accountingService.createJournalEntry(body, req.user?.id);
@@ -210,7 +210,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/accounting/journal-entries/:id/post",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.postJournalEntry(req.params.id, req.user?.id);
       res.json(data);
@@ -220,7 +220,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/sales/invoices",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (_req: Request, res: Response) => {
       const data = await accountingService.listSalesInvoices();
       res.json(data);
@@ -230,7 +230,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/sales/invoices",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = salesInvoiceCreateSchema.parse(req.body);
       const data = await accountingService.createSalesInvoice(body, req.user?.id);
@@ -241,7 +241,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/sales/invoices/:id",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.getSalesInvoice(req.params.id);
       res.json(data);
@@ -251,7 +251,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/sales/invoices/:id/post",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.postSalesInvoice(req.params.id, req.user?.id);
       res.json(data);
@@ -261,7 +261,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/sales/invoices/:id/credit-note",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.createSalesCreditNote(req.params.id, req.user?.id);
       res.status(201).json(data);
@@ -271,7 +271,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/sales/technicians/performance",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = technicianPerformanceFilterSchema.parse(req.query);
       const data = await accountingService.getTechniciansPerformance(filters);
@@ -282,7 +282,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/sales/technicians/top",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = topTechniciansFilterSchema.parse(req.query);
       const data = await accountingService.getTopTechnicians(filters);
@@ -293,7 +293,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/sales/items/top",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = topItemsFilterSchema.parse(req.query);
       const data = await accountingService.getTopItems(filters);
@@ -304,7 +304,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/purchases/bills",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (_req: Request, res: Response) => {
       const data = await accountingService.listPurchaseBills();
       res.json(data);
@@ -314,7 +314,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/purchases/bills",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = purchaseBillCreateSchema.parse(req.body);
       const data = await accountingService.createPurchaseBill(body, req.user?.id);
@@ -325,7 +325,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/purchases/bills/:id",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.getPurchaseBill(req.params.id);
       res.json(data);
@@ -335,7 +335,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/purchases/bills/:id/post",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.postPurchaseBill(req.params.id, req.user?.id);
       res.json(data);
@@ -345,7 +345,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/purchases/bills/:id/debit-note",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.createPurchaseDebitNote(req.params.id, req.user?.id);
       res.status(201).json(data);
@@ -355,7 +355,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/payments/receipts",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = paymentCreateSchema.parse(req.body);
       const data = await accountingService.createReceipt(body, req.user?.id);
@@ -366,7 +366,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/payments/disbursements",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = paymentCreateSchema.parse(req.body);
       const data = await accountingService.createDisbursement(body, req.user?.id);
@@ -377,7 +377,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/payments/:id/allocate",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const body = paymentAllocationSchema.parse(req.body);
       const data = await accountingService.allocatePayment(req.params.id, body);
@@ -388,7 +388,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/payments",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = listPaymentsFilterSchema.parse(req.query);
       const rows = await accountingService.listPayments();
@@ -400,7 +400,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/payments/:id/allocations",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.listPaymentAllocations(req.params.id);
       res.json(data);
@@ -410,7 +410,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/tax/vat-summary",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = rangeFilterSchema.parse(req.query);
       const data = await accountingService.getVatSummary(filters.from, filters.to);
@@ -421,7 +421,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/tax/vat-transactions",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = rangeFilterSchema.parse(req.query);
       const data = await accountingService.getVatTransactions(filters.from, filters.to);
@@ -432,7 +432,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/einvoice/:sourceType/:sourceId/generate",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const params = einvoiceGenerateSchema.parse(req.params);
       const data = await accountingService.generateEinvoice(params.sourceType, params.sourceId);
@@ -443,7 +443,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/einvoice/:id/submit",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.submitEinvoice(req.params.id);
       res.json(data);
@@ -453,7 +453,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/einvoice/:id/status",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.getEinvoiceStatus(req.params.id);
       res.json(data);
@@ -463,7 +463,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.post(
     "/api/einvoice/:id/retry",
     requireAuth,
-    requireFinanceWrite,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const data = await accountingService.retryEinvoice(req.params.id);
       res.json(data);
@@ -473,7 +473,7 @@ export function registerAccountingRoutes(app: Express): void {
   app.get(
     "/api/einvoice",
     requireAuth,
-    requireFinanceRead,
+    denyAccountingAccess,
     asyncHandler(async (req: Request, res: Response) => {
       const filters = listEinvoiceFilterSchema.parse(req.query);
       const data = await accountingService.listEinvoices(filters);
