@@ -3,6 +3,7 @@ import { pgTable, text, varchar, integer, timestamp, boolean, serial, real, uuid
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./organization.schema";
+import { regions } from "./catalog.schema";
 
 // 1. Cities
 export const courierCities = pgTable("courier_cities", {
@@ -62,6 +63,16 @@ export const courierRequests = pgTable("courier_requests", {
   mobile2: text("mobile2"),
   tecName: text("tec_name"),
   createdBy: varchar("created_by").references(() => users.id),
+  // OPS-PERM-S0-B1-A.I1: canonical operational regional OWNERSHIP —
+  // explicitly NOT derived from createdBy (creator), execution.enteredBy
+  // (mutable/reassignable executor), or the free-text city/cityTec
+  // columns above. Nullable at this stage (legacy rows intentionally
+  // remain unresolved, never guessed/backfilled — see OPS-PERM-S0-B1.D1).
+  // No application writer assigns this column yet; that is later,
+  // separately authorized S0-B1-B work. Immutable-after-create by policy
+  // once writers exist — never intended to be updatable via the general
+  // PUT /requests/:id path.
+  regionId: varchar("region_id").references(() => regions.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   version: integer("version").default(1).notNull(),
@@ -75,6 +86,9 @@ export const courierRequests = pgTable("courier_requests", {
   courierRequestsCityIdx: index("courier_requests_city_idx").on(table.city),
   courierRequestsCustomerNameIdx: index("courier_requests_customer_name_idx").on(table.customerName),
   courierRequestsVendorTypeIdx: index("courier_requests_vendor_type_idx").on(table.vendorType),
+  // OPS-PERM-S0-B1-A.I1: matches listRequests'/exportExcel's own existing
+  // ORDER BY desc(courierRequests.id) — the dominant future query shape.
+  courierRequestsRegionIdIdx: index("courier_requests_region_id_idx").on(table.regionId, table.id.desc()),
 }));
 
 // 5.5. Courier Request Items

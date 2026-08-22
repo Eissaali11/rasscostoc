@@ -1,0 +1,22 @@
+-- OPS-PERM-S0-B1-A.I1 — additive canonical courier-request regional
+-- ownership foundation, file 2 of 2.
+--
+-- Validates the NOT VALID FK added in 0055 against existing rows.
+-- VALIDATE CONSTRAINT takes only a SHARE UPDATE EXCLUSIVE lock — it
+-- blocks concurrent DDL on this table but does NOT block concurrent
+-- reads or writes, unlike a combined ADD CONSTRAINT (which would take
+-- ACCESS EXCLUSIVE for the full scan).
+--
+-- Since every existing row's region_id is NULL (0055 added a nullable
+-- column with no default, and this migration performs no data write),
+-- this validation trivially passes for all legacy rows — a NULL FK value
+-- always satisfies referential integrity, regardless of whether the
+-- referenced table has any rows at all. No repair, deletion, retry, or
+-- exception suppression is needed or present.
+--
+-- Rollback (safe — VALIDATE has no undo, but the constraint itself
+-- remains droppable, which also un-validates it):
+--   ALTER TABLE "courier_requests"
+--     DROP CONSTRAINT IF EXISTS "courier_requests_region_id_regions_id_fk";
+ALTER TABLE "courier_requests"
+  VALIDATE CONSTRAINT "courier_requests_region_id_regions_id_fk";

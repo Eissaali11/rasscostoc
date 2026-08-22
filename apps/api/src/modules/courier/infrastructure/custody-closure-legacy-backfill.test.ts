@@ -17,6 +17,20 @@
  * historical database's actual runtime column remains nullable, which is
  * exactly what's being proven.
  *
+ * OPS-PERM-S0-B1-A.I1: every `courierRequests` insert now uses raw SQL
+ * (via the same `pool` already used elsewhere in this file) instead of
+ * the Drizzle ORM builder. Drizzle's node-postgres insert always lists
+ * every column defined in the current shared schema in its generated
+ * INSERT statement (using `default` for any column omitted from
+ * `.values()`) — confirmed via `.toSQL()` — regardless of what
+ * `.returning()` requests. Since migrations 0055-0056 added
+ * `courier_requests.region_id` to the shared schema, but this suite's
+ * own historical database is cut off at 0051 (before that column
+ * exists), Drizzle's generated statement would always reference
+ * `region_id` and fail with "column region_id does not exist" no matter
+ * what `.returning()` selects. Raw SQL sidesteps schema-driven column
+ * generation entirely. Only `.id` was ever consumed downstream.
+ *
  * OPS-REMED-E4-P3-I.R3: one test (12) additionally launches the script as
  * a real, separate Node subprocess — the actual `main()`/direct-invocation
  * CLI path — to prove it is genuinely operable outside Vitest's own
@@ -99,10 +113,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P2 Legacy",
       role: "admin",
     });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P2 Legacy", incidentNumber: `E4-P2-LEG-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [request] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P2 Legacy", `E4-P2-LEG-${randomUUID().slice(0, 8)}`]
+      );
 
     const itemTypeId = randomUUID();
     await db.insert(itemTypes).values({ id: itemTypeId, nameAr: `نوع-${itemTypeId.slice(0, 8)}`, nameEn: `Type-${itemTypeId.slice(0, 8)}`, category: "device" });
@@ -151,10 +165,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P2 Legacy None",
       role: "admin",
     });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P2 Legacy None", incidentNumber: `E4-P2-LEGN-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [request] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P2 Legacy None", `E4-P2-LEGN-${randomUUID().slice(0, 8)}`]
+      );
     const { status } = await classifyOneRow(pool, request.id);
     expect(status).toBe("RECONCILIATION_REQUIRED");
   });
@@ -169,10 +183,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P2 Legacy FF",
       role: "admin",
     });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P2 Legacy FF", incidentNumber: `E4-P2-LEGFF-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [request] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P2 Legacy FF", `E4-P2-LEGFF-${randomUUID().slice(0, 8)}`]
+      );
     await db.insert(idempotencyRecords).values({
       idempotencyKey: `ExecutionCompletedEvent:REQ-${request.id}:InventorySubscriber:v1`,
       eventId: randomUUID(),
@@ -193,10 +207,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P2 Legacy Fresh",
       role: "admin",
     });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P2 Legacy Fresh", incidentNumber: `E4-P2-LEGFR-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [request] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P2 Legacy Fresh", `E4-P2-LEGFR-${randomUUID().slice(0, 8)}`]
+      );
     await db.insert(idempotencyRecords).values({
       idempotencyKey: `ExecutionCompletedEvent:REQ-${request.id}:InventorySubscriber:v1`,
       eventId: randomUUID(),
@@ -218,10 +232,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P2 Legacy Stale",
       role: "admin",
     });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P2 Legacy Stale", incidentNumber: `E4-P2-LEGST-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [request] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P2 Legacy Stale", `E4-P2-LEGST-${randomUUID().slice(0, 8)}`]
+      );
     await db.insert(idempotencyRecords).values({
       idempotencyKey: `ExecutionCompletedEvent:REQ-${request.id}:InventorySubscriber:v1`,
       eventId: randomUUID(),
@@ -243,10 +257,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P2 Legacy Missing",
       role: "admin",
     });
-    const [request] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P2 Legacy Missing", incidentNumber: `E4-P2-LEGMS-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [request] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P2 Legacy Missing", `E4-P2-LEGMS-${randomUUID().slice(0, 8)}`]
+      );
     await db.insert(courierRequestItems).values({
       requestId: request.id,
       itemType: "POS",
@@ -348,10 +362,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P3 CLI Zero-Evidence",
       role: "admin",
     });
-    const [zeroEvidenceRequest] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P3 CLI Zero-Evidence", incidentNumber: `E4-P3-CLI-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [zeroEvidenceRequest] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P3 CLI Zero-Evidence", `E4-P3-CLI-${randomUUID().slice(0, 8)}`]
+      );
     await db.insert(courierExecutions).values({ requestId: zeroEvidenceRequest.id, enteredBy: actorId } as any);
 
     // This test file does not isolate the whole `courier_executions` table
@@ -448,10 +462,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
       fullName: "E4 P3 Subprocess Zero-Evidence",
       role: "admin",
     });
-    const [reconciliationRequest] = await db
-      .insert(courierRequests)
-      .values({ customerName: "E4 P3 Subprocess Zero-Evidence", incidentNumber: `E4-P3-SUB-${randomUUID().slice(0, 8)}` })
-      .returning();
+    const { rows: [reconciliationRequest] } = await pool.query<{ id: number }>(
+      "INSERT INTO courier_requests (customer_name, incident_number) VALUES ($1, $2) RETURNING id",
+      ["E4 P3 Subprocess Zero-Evidence", `E4-P3-SUB-${randomUUID().slice(0, 8)}`]
+      );
     await db.insert(courierExecutions).values({ requestId: reconciliationRequest.id, enteredBy: actorId } as any);
 
     const [{ c: candidateTotalBefore }] = (await pool.query(
