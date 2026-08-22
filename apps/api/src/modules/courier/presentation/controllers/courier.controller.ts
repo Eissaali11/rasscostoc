@@ -103,7 +103,12 @@ export class CourierController {
 
   createRequest = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
-    const result = await this.service.createRequest(req.body, user.id);
+    // OPS-PERM-S0-B1-B.I1: actor identity comes exclusively from the
+    // authenticated session (req.user), never from req.body.
+    const result = await this.service.createRequest(req.body, user.id, {
+      role: user.role,
+      regionId: user.regionId,
+    });
     res.status(201).json(result);
   });
 
@@ -191,7 +196,10 @@ export class CourierController {
   });
 
   getLookups = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.service.getLookups();
+    const user = req.user!;
+    // OPS-PERM-S0-B1-B.F1.R1: least-privilege technician-directory scope —
+    // actor identity comes exclusively from the authenticated session.
+    const result = await this.service.getLookups({ role: user.role, regionId: user.regionId });
     res.json(result);
   });
 
@@ -431,7 +439,15 @@ export class CourierController {
 
     // Read file buffer from multer (disk or memory storage)
     const buffer = fs.readFileSync(file.path);
-    const result = await this.service.importRawRequests(buffer, user.id);
+    // OPS-PERM-S0-B1-B.I1: targetRegionId travels alongside the file as a
+    // normal multipart form field — validated server-side (Admin-only,
+    // active-region check) inside importRawRequests, never trusted as-is.
+    const result = await this.service.importRawRequests(
+      buffer,
+      user.id,
+      { role: user.role, regionId: user.regionId },
+      req.body?.targetRegionId,
+    );
 
     // Clean up temporary uploaded file
     try {

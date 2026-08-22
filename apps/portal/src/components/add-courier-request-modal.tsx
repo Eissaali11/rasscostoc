@@ -24,6 +24,15 @@ interface Lookups {
   simTypes: { id: number; name: string }[];
   vendorTypes: { id: number; name: string }[];
   technicians: { id: string; code: string; name: string }[];
+  // OPS-PERM-S0-B1-B.P1: already returned by GET /api/courier/lookups
+  // (drizzle-courier.repository.ts getLookups()) — this modal simply did
+  // not declare/consume it before. NOT filtered by regions.isActive here
+  // on purpose: the shared lookups query is left untouched to avoid
+  // affecting courier-pdf-upload.tsx's own (unrelated, filter-only) use of
+  // the same field. Backend-side write validation (findActiveRegionById)
+  // remains the sole authority on region validity regardless of what this
+  // list contains — this select is UX convenience only.
+  regions?: { id: string; name: string; isActive?: boolean }[];
 }
 
 export function AddCourierRequestModal({
@@ -44,6 +53,11 @@ export function AddCourierRequestModal({
     queryFn: () => apiRequest("GET", "/api/courier/lookups").then((r) => r.json()),
     enabled: open
   });
+  // OPS-PERM-S0-B1-B.F1.R2: default-deny semantics — only explicitly
+  // isActive===true regions are offered. UX-only filtering either way; the
+  // server (findActiveRegionById) remains the actual authority regardless
+  // of what this list shows.
+  const activeRegions = (lookups?.regions ?? []).filter((r) => r.isActive === true);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -63,7 +77,12 @@ export function AddCourierRequestModal({
     incidentNumber: "",
     trsm: "",
     pinCode: "",
-    simSn: ""
+    simSn: "",
+    // OPS-PERM-S0-B1-B.P1: the ONLY region-related field this form ever
+    // submits. Named to match the mandatory server-side contract exactly
+    // (courier.service.ts resolveCreateRegionId) — never `regionId`/
+    // `region_id`, which are not valid client ownership fields.
+    targetRegionId: ""
   });
 
   // Reset form when modal opens
@@ -88,14 +107,19 @@ export function AddCourierRequestModal({
         incidentNumber: "",
         trsm: "",
         pinCode: "",
-        simSn: ""
+        simSn: "",
+        targetRegionId: ""
       });
     }
   }, [open]);
 
   const mutation = useMutation({
     mutationFn: (data: typeof form) =>
-      apiRequest("POST", "/api/courier/requests", data).then((r) => r.json()),
+      apiRequest("POST", "/api/courier/requests", data).then(async (r) => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(body?.message || "Request failed");
+        return body;
+      }),
     onSuccess: (newReq) => {
       toast({ title: t('courier.completed_save_successfully'), description: t('courier.completed_request_new_successf_1') });
       queryClient.invalidateQueries({ queryKey: ["/api/courier/requests"] });
@@ -105,8 +129,12 @@ export function AddCourierRequestModal({
         onSuccess(newReq.id);
       }
     },
-    onError: () => {
-      toast({ title: t('courier.error'), description: t('courier.fail_save_verification'), variant: "destructive" });
+    onError: (err: any) => {
+      // OPS-PERM-S0-B1-B.P1: surface the server's own rejection (e.g. an
+      // invalid/stale targetRegionId, or missing region) rather than a
+      // generic message — never silently retry with a different region,
+      // never fall back to submitting without one.
+      toast({ title: t('courier.error'), description: err?.message || t('courier.fail_save_verification'), variant: "destructive" });
     },
   });
 
@@ -122,6 +150,10 @@ export function AddCourierRequestModal({
     }
     if (!form.customerName) {
       toast({ title: t('courier.alert'), description: t('courier.name_customer_3'), variant: "destructive" });
+      return;
+    }
+    if (!form.targetRegionId) {
+      toast({ title: t('courier.alert'), description: "الرجاء اختيار المنطقة", variant: "destructive" });
       return;
     }
     mutation.mutate(form);
@@ -253,6 +285,36 @@ export function AddCourierRequestModal({
                       {lookups?.cities.map((c) => (
                         <option key={c.id} value={c.name_en}>
                           {c.name_ar ? `${c.name_ar} (${c.name_en})` : c.name_en}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    {/* OPS-PERM-S0-B1-B.P1: mandatory canonical region ownership.
+                        This is NOT the free-text city field above — it is the
+                        server-validated targetRegionId the backend requires
+                        for every Admin-created request. The empty default
+                        option is never a valid submission value. */}
+                    <label className="block text-[11px] text-[#6B7280] mb-1 font-medium">
+                      المنطقة <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={form.targetRegionId}
+                      onChange={(e) => handleChange("targetRegionId", e.target.value)}
+                      disabled={lookupsLoading || !activeRegions.length}
+                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#2D3135] outline-none focus:border-[#18B2B0] disabled:opacity-50"
+                    >
+                      <option value="">
+                        {lookupsLoading
+                          ? "جارٍ تحميل المناطق..."
+                          : !activeRegions.length
+                            ? "لا توجد مناطق متاحة"
+                            : "اختر المنطقة"}
+                      </option>
+                      {activeRegions.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
                         </option>
                       ))}
                     </select>

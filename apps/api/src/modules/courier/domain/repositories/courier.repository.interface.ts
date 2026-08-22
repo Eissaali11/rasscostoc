@@ -23,7 +23,7 @@ export interface ICourierRepository {
   deleteRequest(id: number, tx?: any): Promise<boolean>;
   deleteAllRequests(tx?: any): Promise<number>;
   insertAuditLog(logData: any, tx?: any): Promise<void>;
-  getLookups(tx?: any): Promise<any>;
+  getLookups(actor: { role: string; regionId: string | null }, tx?: any): Promise<any>;
   getDashboardStats(): Promise<{
     totalRequests: number;
     statuses: Record<string, number>;

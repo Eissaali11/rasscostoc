@@ -19,6 +19,11 @@ export interface ICourierRequestsRepository {
   deleteAllRequests(tx?: any): Promise<number>;
   existsRequestWithTid(tid: string, tx?: any): Promise<boolean>;
   insertRequestBulk(requests: any[], tx?: any): Promise<CourierRequest[]>;
+  // OPS-PERM-S0-B1-B.I1: server-side region-assignment contract — validates a
+  // region id against the trusted regions table (existence + isActive) before
+  // it is ever allowed to become courier_requests.region_id. Never trust a
+  // client-supplied region id as valid without this check.
+  findActiveRegionById(regionId: string, tx?: any): Promise<{ id: string; name: string } | null>;
 
   // Request Items
   findRequestItems(requestId: number, tx?: any): Promise<CourierRequestItem[]>;
@@ -29,7 +34,7 @@ export interface ICourierRequestsRepository {
   deleteRequestItems(requestId: number, tx?: any): Promise<void>;
   findRequestItemsBySerials(serials: string[], statusFilter?: string, tx?: any): Promise<CourierRequestItem[]>;
   bulkUpdateRequestItems(updates: ItemUpdatePayload[], tx?: any): Promise<void>;
-  getLookups(tx?: any): Promise<any>;
+  getLookups(actor: { role: string; regionId: string | null }, tx?: any): Promise<any>;
 
   // Export & Count (required for async job handler without direct DB access)
   listRequestsForExport(filters: ListFilters): Promise<any[]>;

@@ -72,6 +72,9 @@ const DB_DEPENDENT_TEST_FILES = [
   // OPS-PERM-S0-B0.I1: registerCourierRoutes()'s composition wiring requires
   // DATABASE_URL to construct even though these tests never query it.
   "apps/api/src/modules/courier/presentation/routes/courier-global-delete-admin-only.routes.test.ts",
+  // OPS-PERM-S0-B1-B.F1.R1: real isolated-DB proof of technician-directory
+  // regional scoping — cannot be proven against a mocked repository.
+  "apps/api/src/modules/courier/infrastructure/courier-lookups-technician-scope.routes.test.ts",
 ];
 
 const args = [

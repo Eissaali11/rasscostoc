@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useCourierRenderPerf } from "@/hooks/use-courier-render-perf";
+import { useAuth } from "@/lib/auth";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -63,6 +64,9 @@ interface ListResponse {
 interface LookupsResponse {
   cities: Array<{ id: number; name_en: string; name_ar: string }>;
   vendorTypes: Array<{ id: number; name: string }>;
+  // OPS-PERM-S0-B1-B.P1: already returned by GET /api/courier/lookups —
+  // see add-courier-request-modal.tsx's identical note.
+  regions?: Array<{ id: string; name: string; isActive?: boolean }>;
 }
 
 const PAGE_SIZE = 25;
@@ -70,6 +74,14 @@ const PAGE_SIZE = 25;
 export default function CourierRawDataPage() {
   const { t, dir } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  // OPS-PERM-S0-B1-B.P1 §7: backend remains the sole authority (admin-only
+  // create/import enforced server-side regardless of this flag). This is a
+  // UX guard only — it hides functional controls from roles the backend
+  // already denies, using the existing app-wide useAuth() primitive, so a
+  // non-admin viewer isn't shown a create/import action that will always
+  // fail. It does NOT constitute the permissions center.
+  const isAdmin = user?.role === "admin";
   useCourierRenderPerf("raw_data");
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
@@ -78,6 +90,15 @@ export default function CourierRawDataPage() {
   const [editRow, setEditRow] = useState<RequestRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  // OPS-PERM-S0-B1-B.P1: ONE region for the entire import batch — never
+  // per-row, never derived from the spreadsheet. Matches the mandatory
+  // server-side contract (courier.service.ts resolveBulkImportRegionId).
+  const [importTargetRegionId, setImportTargetRegionId] = useState("");
+  // OPS-PERM-S0-B1-B.P1: mandatory canonical region for the inline
+  // create-request form below (this page has its own separate create flow,
+  // distinct from add-courier-request-modal.tsx). Never used for edit —
+  // region is immutable-after-create.
+  const [createTargetRegionId, setCreateTargetRegionId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
@@ -87,6 +108,9 @@ export default function CourierRawDataPage() {
     queryKey: ["/api/courier/lookups"],
     queryFn: () => apiRequest("GET", "/api/courier/lookups").then((r) => r.json())
   });
+  // OPS-PERM-S0-B1-B.F1.R2: default-deny semantics, same convention as
+  // add-courier-request-modal.tsx — server remains authoritative.
+  const activeRegions = (lookups?.regions ?? []).filter((r) => r.isActive === true);
 
   const { data, isLoading } = useQuery<ListResponse>({
     queryKey: ["/api/courier/requests", q, page, "raw_only"],
@@ -124,6 +148,7 @@ export default function CourierRawDataPage() {
       mobile2: "",
       tecName: ""
     });
+    setCreateTargetRegionId("");
     setShowAdd(true);
   };
 
@@ -134,9 +159,16 @@ export default function CourierRawDataPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    // OPS-PERM-S0-B1-B.P1: only CREATE requires a region — region is
+    // immutable-after-create, so the edit path never touches it, and the
+    // general PUT endpoint independently rejects region fields anyway.
+    if (!editRow && !createTargetRegionId) {
+      toast({ title: t('courier.alert'), description: "الرجاء اختيار المنطقة", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         date: formValues.date,
         installation_type: formValues.installationType,
         incident_number: formValues.incidentNumber,
@@ -161,6 +193,13 @@ export default function CourierRawDataPage() {
         tec_name: formValues.tecName,
         version: editRow ? formValues.version : undefined
       };
+      // OPS-PERM-S0-B1-B.P1: the ONLY region field ever sent, and only on
+      // create — matches the server's exact expected field name
+      // (targetRegionId, camelCase) regardless of this payload's otherwise
+      // snake_case convention. Never regionId/region_id.
+      if (!editRow) {
+        payload.targetRegionId = createTargetRegionId;
+      }
 
       if (editRow) {
         await apiRequest("PUT", `/api/courier/requests/${editRow.id}`, payload);
@@ -199,8 +238,24 @@ export default function CourierRawDataPage() {
   };
 
   const handleImportFile = async (file: File) => {
+    // OPS-PERM-S0-B1-B.P1: the batch must never start without an explicit
+    // region — this is a client-side UX guard only; the server independently
+    // and authoritatively re-validates targetRegionId (findActiveRegionById)
+    // regardless of this check.
+    if (!importTargetRegionId) {
+      toast({ title: t('courier.alert'), description: "الرجاء اختيار منطقة الدفعة قبل الاستيراد", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     setImporting(true);
     const formData = new FormData();
+    // OPS-PERM-S0-B1-B.P1: field ORDER matters for multipart parsers whose
+    // text-field population depends on part order relative to the file part
+    // (see Multer's own documented caveat). targetRegionId is appended
+    // BEFORE file so it is guaranteed available on req.body by the time the
+    // upload middleware hands off to the route handler — proven by the new
+    // courier-requests-import-multipart.routes.test.ts integration test.
+    formData.append("targetRegionId", importTargetRegionId);
     formData.append("file", file);
     try {
       const res = await fetch("/api/courier/requests/import", {
@@ -253,7 +308,31 @@ export default function CourierRawDataPage() {
             {t('courier.submit_data_delivery')}
           </p>
         </div>
+        {/* OPS-PERM-S0-B1-B.P1 §7: create/import are backend-enforced
+            admin-only (courier.service.ts resolveCreateRegionId /
+            resolveBulkImportRegionId). Hiding these controls for non-admin
+            roles is a UX courtesy via the existing useAuth() primitive —
+            the server denies them regardless of whether they are shown. */}
+        {isAdmin && (
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* OPS-PERM-S0-B1-B.P1: ONE region selector for the whole import
+              batch — required before a file may even be chosen. */}
+          <select
+            value={importTargetRegionId}
+            onChange={(e) => setImportTargetRegionId(e.target.value)}
+            disabled={!activeRegions.length}
+            className="courier-input max-w-[180px] disabled:opacity-50"
+            aria-label="منطقة دفعة الاستيراد"
+          >
+            <option value="">
+              {!activeRegions.length ? "لا توجد مناطق متاحة" : "منطقة الدفعة"}
+            </option>
+            {activeRegions.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
           <input
             ref={fileInputRef}
             type="file"
@@ -263,7 +342,7 @@ export default function CourierRawDataPage() {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
+            disabled={importing || !importTargetRegionId}
             className="courier-btn-secondary"
           >
             {importing ? (
@@ -278,6 +357,7 @@ export default function CourierRawDataPage() {
             {t('courier.request_new')}
           </button>
         </div>
+        )}
       </motion.div>
 
       <motion.div
@@ -576,6 +656,32 @@ export default function CourierRawDataPage() {
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-[#18B2B0] mb-3 border-r-2 border-[#18B2B0] pr-2">
                   {t('courier.signed')}
                 </h4>
+                {/* OPS-PERM-S0-B1-B.P1: mandatory canonical region — CREATE
+                    only. Region is immutable-after-create, so this control
+                    is intentionally absent while editing. */}
+                {!editRow && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">
+                      المنطقة <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={createTargetRegionId}
+                      onChange={(e) => setCreateTargetRegionId(e.target.value)}
+                      disabled={!activeRegions.length}
+                      className="courier-input disabled:opacity-50"
+                    >
+                      <option value="">
+                        {!activeRegions.length ? "لا توجد مناطق متاحة" : "اختر المنطقة"}
+                      </option>
+                      {activeRegions.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-[#6B7280] mb-1">{t('courier.city')}</label>

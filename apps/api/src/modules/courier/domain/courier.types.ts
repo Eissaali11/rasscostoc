@@ -92,6 +92,10 @@ export interface CourierRequest {
   mobile2: string | null;
   tecName: string | null;
   createdBy: string | null;
+  // OPS-PERM-S0-B1-B.I1: canonical regional ownership. Only ever set by the
+  // server-side region-assignment contract in courier.service.ts — never
+  // trust this value if it originates from a client-supplied object.
+  regionId: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;
   version: number;

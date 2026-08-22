@@ -34,16 +34,25 @@ export class CourierRequestMapper {
       mobile2: row.mobile2 ?? null,
       tecName: row.tecName ?? null,
       createdBy: row.createdBy ?? null,
+      regionId: row.regionId ?? null,
       createdAt: row.createdAt ? new Date(row.createdAt) : null,
       updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
       version: row.version ?? 1,
     };
   }
 
+  // OPS-PERM-S0-B1-B.I1: toPersistence() is shared by BOTH insertRequest and
+  // updateRequest. regionId IS included here on purpose (it is a legitimate,
+  // server-computed domain field for create), but immutability-on-update is
+  // NOT this mapper's job — the repository's updateRequest() explicitly
+  // strips regionId from its input before ever calling this method, so this
+  // whitelist entry can never be reached from the update path. Do not remove
+  // that repository-level strip merely because this line exists.
   static toPersistence(domain: Partial<CourierRequest>): any {
     if (!domain) return null;
     const res: any = {};
     if (domain.id !== undefined) res.id = domain.id;
+    if (domain.regionId !== undefined) res.regionId = domain.regionId;
     if (domain.date !== undefined) res.date = domain.date;
     if (domain.installationType !== undefined) res.installationType = domain.installationType;
     if (domain.sim !== undefined) res.sim = domain.sim;

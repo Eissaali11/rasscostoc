@@ -63,15 +63,17 @@ export const courierRequests = pgTable("courier_requests", {
   mobile2: text("mobile2"),
   tecName: text("tec_name"),
   createdBy: varchar("created_by").references(() => users.id),
-  // OPS-PERM-S0-B1-A.I1: canonical operational regional OWNERSHIP —
-  // explicitly NOT derived from createdBy (creator), execution.enteredBy
-  // (mutable/reassignable executor), or the free-text city/cityTec
-  // columns above. Nullable at this stage (legacy rows intentionally
-  // remain unresolved, never guessed/backfilled — see OPS-PERM-S0-B1.D1).
-  // No application writer assigns this column yet; that is later,
-  // separately authorized S0-B1-B work. Immutable-after-create by policy
-  // once writers exist — never intended to be updatable via the general
-  // PUT /requests/:id path.
+  // OPS-PERM-S0-B1-A.I1 / OPS-PERM-S0-B1-B.I1: canonical operational
+  // regional OWNERSHIP — explicitly NOT derived from createdBy (creator),
+  // execution.enteredBy (mutable/reassignable executor), or the free-text
+  // city/cityTec columns above. Nullable (legacy rows intentionally remain
+  // unresolved, never guessed/backfilled — see OPS-PERM-S0-B1.D1). Assigned
+  // ONLY by courier.service.ts's server-side region-assignment contract
+  // (createRequest/importRawRequests) — never accepted directly from a
+  // client body; see insertCourierRequestSchema's explicit omission below.
+  // Immutable-after-create: never updatable via the general
+  // PUT /requests/:id path (independently enforced at both the service and
+  // repository layers).
   regionId: varchar("region_id").references(() => regions.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -204,7 +206,13 @@ export const insertCourierCitySchema = createInsertSchema(courierCities);
 export const insertCourierSimTypeSchema = createInsertSchema(courierSimTypes);
 export const insertCourierVendorTypeSchema = createInsertSchema(courierVendorTypes);
 export const insertCourierFailureReasonSchema = createInsertSchema(courierFailureReasons);
-export const insertCourierRequestSchema = createInsertSchema(courierRequests).omit({ id: true, createdAt: true, updatedAt: true });
+// OPS-PERM-S0-B1-B.I1: regionId is explicitly omitted from the CLIENT-FACING
+// insert schema — it is never a valid input field for this exported schema,
+// regardless of whether any current caller uses it. Server-side region
+// assignment (courier.service.ts) sets it separately, after this schema's
+// validation, from the authenticated actor's own identity/an admin-supplied
+// targetRegionId — never from a field named regionId/region_id in the body.
+export const insertCourierRequestSchema = createInsertSchema(courierRequests).omit({ id: true, createdAt: true, updatedAt: true, regionId: true });
 export const insertCourierExecutionSchema = createInsertSchema(courierExecutions).omit({ id: true, enteredAt: true, updatedAt: true });
 export const insertCourierPdfReportSchema = createInsertSchema(courierPdfReports).omit({ id: true, uploadedAt: true });
 export const insertCourierAuditLogSchema = createInsertSchema(courierAuditLogs).omit({ id: true, changedAt: true });
