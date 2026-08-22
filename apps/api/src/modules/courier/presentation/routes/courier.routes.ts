@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import path from "path";
 import { bootstrapCourierModule } from "../../composition/courier.container";
-import { requireAuth, requireAuthOrInternal } from "@core/middlewares/auth.middleware";
+import { requireAuth, requireAuthOrInternal, requireAdmin } from "@core/middlewares/auth.middleware";
 import {
   createExcelUpload,
   uploadErrorHandler,
@@ -48,7 +48,12 @@ export function registerCourierRoutes(app: Express): void {
   app.get("/api/courier/requests/:id", requireAuth, controller.getRequest);
   app.post("/api/courier/requests", requireAuth, controller.createRequest);
   app.put("/api/courier/requests/:id", requireAuth, controller.updateRequest);
-  app.delete("/api/courier/requests/all", requireAuth, controller.deleteAllRequests);
+  // OPS-PERM-S0-B0.I1: global, system-wide destructive operation — a proven
+  // authenticated-but-unauthorized access defect (any operational role could
+  // wipe every courier request). Restricted to Admin only. This changes only
+  // WHO may reach the existing handler; deleteAllRequests's own behavior is
+  // unchanged.
+  app.delete("/api/courier/requests/all", requireAuth, requireAdmin, controller.deleteAllRequests);
   app.delete("/api/courier/requests/:id", requireAuth, controller.deleteRequest);
 
   // Request Items & Two-Phase Custody Acceptance
