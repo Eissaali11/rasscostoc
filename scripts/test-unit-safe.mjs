@@ -75,6 +75,9 @@ const DB_DEPENDENT_TEST_FILES = [
   // OPS-PERM-S0-B1-B.F1.R1: real isolated-DB proof of technician-directory
   // regional scoping — cannot be proven against a mocked repository.
   "apps/api/src/modules/courier/infrastructure/courier-lookups-technician-scope.routes.test.ts",
+  // OPS-PERM-S0-B1-B.MR1.B1: registerCourierRoutes()'s composition wiring
+  // requires DATABASE_URL to construct, same reason as the S0-B0 entry above.
+  "apps/api/src/modules/courier/presentation/routes/courier-import-admin-only.routes.test.ts",
 ];
 
 const args = [

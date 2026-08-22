@@ -37,9 +37,19 @@ export function registerCourierRoutes(app: Express): void {
   // Requests CRUD
   app.get("/api/courier/requests", requireAuth, controller.getRequests);
   app.get("/api/courier/requests/export", requireAuth, controller.exportExcel);
+  // OPS-PERM-S0-B1-B.MR1.B1: Admin authorization intentionally runs BEFORE
+  // Multer's disk upload / magic-byte validation. Bulk import is Admin-only
+  // (courier.service.ts resolveBulkImportRegionId); a non-Admin request must
+  // never reach the point of writing a temp file to disk or invoking Excel
+  // parsing/malware scanning in the first place — that would be authenticated
+  // resource consumption before authorization, not a real access grant, but
+  // still an unnecessary and avoidable attack surface for an unauthorized
+  // actor. This is defense-in-depth: the service layer's own Admin check
+  // remains the authoritative one for any non-HTTP/internal caller.
   app.post(
     "/api/courier/requests/import",
     requireAuth,
+    requireAdmin,
     excelUpload.single("file"),
     validateExcelUploadMiddleware(),
     uploadErrorHandler,

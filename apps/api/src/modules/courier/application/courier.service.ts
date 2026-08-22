@@ -1775,6 +1775,15 @@ export class CourierService {
     actor: { role: string; regionId: string | null },
     targetRegionId?: unknown
   ): Promise<any> {
+    // OPS-PERM-S0-B1-B.MR1.B1: authorize and validate the batch's target
+    // region BEFORE parsing the workbook at all. A non-Admin actor, or an
+    // Admin with a missing/invalid/inactive targetRegionId, must never
+    // reach ExcelJS parsing — parsing an untrusted, already-uploaded file
+    // is real CPU/memory work an unauthorized or invalid request has no
+    // business triggering. Resolved ONCE for the whole batch — never
+    // per-row, never from Excel.
+    const finalRegionId = await this.resolveBulkImportRegionId(actor, targetRegionId);
+
     // ADR-002 Commit 3: parseRawDataWorkbook is now async (ExcelJS has no
     // synchronous buffer reader). It throws a typed SpreadsheetError for
     // invalid/empty files and for formula/error/unsupported cells in mapped
@@ -1782,8 +1791,6 @@ export class CourierService {
     const summary = await parseRawDataWorkbook(buffer);
     const importedList = [];
     const skippedList = [];
-    // Resolved ONCE for the whole batch — never per-row, never from Excel.
-    const finalRegionId = await this.resolveBulkImportRegionId(actor, targetRegionId);
 
     for (const item of summary.imported) {
       const data = item.data;
