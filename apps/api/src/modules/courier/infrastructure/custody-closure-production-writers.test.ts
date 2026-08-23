@@ -24,6 +24,7 @@ import {
   courierPdfReports,
   courierExecutions,
   courierAuditLogs,
+  regions,
 } from "@shared/schema";
 import { CourierService } from "../application/courier.service";
 import { DrizzleCourierRepository } from "./repositories/drizzle-courier.repository";
@@ -228,7 +229,19 @@ describe("OPS-REMED-E4-P4-I2 — production writer custodyClosureStatus initiali
     const buffer = (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
 
     const service = makeService();
-    await service.importRawRequests(buffer, tech);
+    // OPS-PERM-S0-B1-B.D2.OWNER: bulk import is Admin-only with a mandatory
+    // per-batch targetRegionId. This test is about custody-closure status
+    // derivation, not the region contract, so it seeds one real active
+    // region and acts as admin purely to satisfy that contract.
+    const [region] = await db
+      .insert(regions)
+      .values({ name: `P4W-import-region-${randomUUID().slice(0, 8)}` })
+      .returning();
+    try {
+      await service.importRawRequests(buffer, tech, { role: "admin", regionId: null }, region.id);
+    } finally {
+      await db.delete(regions).where(eq(regions.id, region.id)).catch(() => {});
+    }
 
     const [req] = await db.select().from(courierRequests).where(eq(courierRequests.incidentNumber, incident));
     expect(req).toBeTruthy();

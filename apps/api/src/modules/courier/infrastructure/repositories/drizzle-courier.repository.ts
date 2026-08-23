@@ -363,7 +363,15 @@ export class DrizzleCourierRepository implements
       whereClause = and(whereClause, eq(courierRequests.version, expectedVersion)) as any;
     }
 
-    const mappedData = CourierRequestMapper.toPersistence(requestData);
+    // OPS-PERM-S0-B1-B.I1: regional ownership is IMMUTABLE-AFTER-CREATE by
+    // frozen contract. toPersistence() legitimately accepts regionId for the
+    // insert path, so this update path must independently strip it — a
+    // client attempting `PUT /requests/:id` with a regionId/region_id field
+    // must never be able to reassign ownership through the general update
+    // route. Region transfer, if ever authorized, is separate future work
+    // with its own dedicated endpoint and audit trail, never this one.
+    const { regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake, ...safeRequestData } = requestData ?? {};
+    const mappedData = CourierRequestMapper.toPersistence(safeRequestData);
     const [row] = await client
       .update(courierRequests)
       .set({
@@ -396,6 +404,20 @@ export class DrizzleCourierRepository implements
       .returning();
 
     return row ? CourierExecutionMapper.toDomain(row) : null;
+  }
+
+  // OPS-PERM-S0-B1-B.I1: the ONLY trusted source of truth for "is this region
+  // id real and usable" — an id that merely parses as a string is never
+  // sufficient. Enforces regions.is_active so a disabled/retired region can
+  // never become a newly-assigned courier_requests.region_id.
+  async findActiveRegionById(regionId: string, tx?: any): Promise<{ id: string; name: string } | null> {
+    const client = this.getClient(tx);
+    const [row] = await client
+      .select({ id: regions.id, name: regions.name })
+      .from(regions)
+      .where(and(eq(regions.id, regionId), eq(regions.isActive, true)))
+      .limit(1);
+    return row || null;
   }
 
   async insertRequest(requestData: any, tx?: any): Promise<CourierRequest> {
@@ -624,27 +646,72 @@ export class DrizzleCourierRepository implements
     return { rows, total };
   }
 
-  async getLookups(tx?: any): Promise<any> {
+  // OPS-PERM-S0-B1-B.F1.R1: least-privilege technician-directory scoping,
+  // enforced in the DATABASE QUERY itself — never by fetching every
+  // technician and filtering in application memory. See courier.service.ts
+  // getLookups() for the frozen role contract this implements.
+  async getLookups(actor: { role: string; regionId: string | null }, tx?: any): Promise<any> {
     const client = this.getClient(tx);
     const cities = await client.select().from(courierCities);
     const simTypes = await client.select().from(courierSimTypes);
     const vendorTypes = await client.select().from(courierVendorTypes);
     const failureReasons = await client.select().from(courierFailureReasons).orderBy(courierFailureReasons.sortOrder);
 
-    const technicians = await client
-      .select({
-        id: users.id,
-        username: users.username,
-        name: users.fullName,
-        technicianCode: users.technicianCode,
-        regionId: users.regionId,
-      })
-      .from(users)
-      .where(eq(users.role, "technician"));
+    let technicians: any[] = [];
+    if (actor.role === "admin") {
+      technicians = await client
+        .select({
+          id: users.id,
+          username: users.username,
+          name: users.fullName,
+          technicianCode: users.technicianCode,
+          regionId: users.regionId,
+        })
+        .from(users)
+        .where(eq(users.role, "technician"));
+    } else if (actor.role === "supervisor") {
+      // OPS-PERM-S0-B1-B.F1.R2: missing region ALONE is not the only
+      // rejection path — a regionId that is present but points at an
+      // INACTIVE (or nonexistent) region must ALSO yield zero technicians.
+      // Enforced via a single scoped join (not a separate lookup call plus
+      // in-memory filtering): the JOIN condition itself requires
+      // regions.is_active = true, so a stale/retired region can never
+      // silently satisfy this query no matter what actor.regionId holds.
+      if (actor.regionId) {
+        technicians = await client
+          .select({
+            id: users.id,
+            username: users.username,
+            name: users.fullName,
+            technicianCode: users.technicianCode,
+            regionId: users.regionId,
+          })
+          .from(users)
+          .innerJoin(regions, eq(regions.id, users.regionId))
+          .where(
+            and(
+              eq(users.role, "technician"),
+              eq(users.regionId, actor.regionId),
+              eq(regions.id, actor.regionId),
+              eq(regions.isActive, true)
+            )
+          );
+      }
+    }
+    // courier_supervisor / warehouse / technician / viewer: technicians
+    // stays [] — no company-wide (or any) technician-directory visibility
+    // granted by default for these roles.
 
     // صفحة courier/pdf الإدارية تحتاج قائمة المناطق لفلترة تقارير البوت/الرفع اليدوي -
     // تُضاف هنا بدل استدعاء /api/regions منفصل، اتساقًا مع نمط "lookups" الحالي
-    const regionsList = await client.select({ id: regions.id, name: regions.name }).from(regions);
+    // OPS-PERM-S0-B1-B.F1.R1: isActive is now selected alongside id/name —
+    // purely additive (existing consumers destructuring {id, name} are
+    // unaffected); lets NEW region-ownership selectors filter to active-only
+    // client-side without a second query or changing this shape for the
+    // historical PDF-filter consumer, which still receives every region.
+    const regionsList = await client
+      .select({ id: regions.id, name: regions.name, isActive: regions.isActive })
+      .from(regions);
 
     return {
       cities,

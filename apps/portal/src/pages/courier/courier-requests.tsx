@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { AddCourierRequestModal } from "@/components/add-courier-request-modal";
+import { useAuth } from "@/lib/auth";
 import { EditCourierExecutionModal } from "@/components/edit-courier-execution-modal";
 import { CourierRequestDetailModal } from "@/components/courier-request-detail-modal";
 import { motion } from "framer-motion";
@@ -194,6 +195,10 @@ function StatusFilterDropdown({ value, onChange }: { value: string; onChange: (v
 export default function CourierRequestsPage() {
   const { t, dir } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  // OPS-PERM-S0-B1-B.P1 §7: same UX-only courtesy as courier-raw-data.tsx —
+  // backend (courier.service.ts) remains the sole authority.
+  const isAdmin = user?.role === "admin";
   useCourierRenderPerf("verification");
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
@@ -382,9 +387,11 @@ export default function CourierRequestsPage() {
             <Trash2 className="w-3.5 h-3.5" />
             مسح جميع البيانات
           </button>
-          <button onClick={() => setIsAddModalOpen(true)} className="courier-btn-primary em-ripple">
-            {t("courier.add_request_new_2")}
-          </button>
+          {isAdmin && (
+            <button onClick={() => setIsAddModalOpen(true)} className="courier-btn-primary em-ripple">
+              {t("courier.add_request_new_2")}
+            </button>
+          )}
         </div>
       </motion.div>
 

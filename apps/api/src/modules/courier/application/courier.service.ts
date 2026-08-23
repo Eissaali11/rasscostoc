@@ -19,7 +19,7 @@ import { WorkflowDecision } from "./workflow/workflow.types";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
 import { outboxRepository } from "@core/outbox/outbox.repository";
-import { AppError, OptimisticLockException, NotFoundError, ValidationError, PdfReportAlreadyProcessedError, DuplicateRequestApprovalError } from "@core/errors/AppError";
+import { AppError, AuthorizationError, OptimisticLockException, NotFoundError, ValidationError, PdfReportAlreadyProcessedError, DuplicateRequestApprovalError } from "@core/errors/AppError";
 import { AuditLogFormatter, type AuditLogDto } from "./audit-log-formatter";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
@@ -98,10 +98,55 @@ export class CourierService {
     return this.requestsRepo.findRequestWithDetails(id);
   }
 
-  async createRequest(data: any, createdBy: string): Promise<any> {
+  // OPS-PERM-S0-B1-B.I1 / D2.OWNER / D2.OWNER.R1: server-side region-
+  // assignment contract, frozen by explicit owner decision. `actor` must be
+  // the AUTHENTICATED caller's own role/regionId from req.user — never a
+  // value read out of the request body.
+  //
+  // OPS-PERM-S0-B1-B.D2.OWNER.R1: the ONLY authorized request creator is
+  // Admin. Supervisor does NOT create courier requests — this was the
+  // original I1/D2.OWNER draft's mistake (a Supervisor-success branch keyed
+  // on actor.regionId existed here) and has been REMOVED entirely, not just
+  // narrowed. A Supervisor with a perfectly valid regional session is still
+  // denied — region validity was never the gate for this role; creation
+  // authority itself is denied by role.
+  //
+  // - Admin: MUST specify an explicit, server-validated `targetRegionId`.
+  //   Mandatory — no NULL fallback.
+  // - Every other role (supervisor / courier_supervisor / warehouse /
+  //   technician / viewer): NOT AUTHORIZED to create a request at all, by
+  //   explicit owner decision, until a future permissions contract grants
+  //   it. Default deny — this is NOT the same as "no region assigned"; the
+  //   request is never created. Do not infer authorization from route
+  //   reachability, ROLE_ORDER, or the legacy isSupervisor() helper.
+  private async resolveCreateRegionId(
+    actor: { role: string; regionId: string | null },
+    targetRegionId: unknown
+  ): Promise<string> {
+    if (actor.role === "admin") {
+      if (typeof targetRegionId !== "string" || targetRegionId.length === 0) {
+        throw new ValidationError("targetRegionId is required to create a courier request");
+      }
+      const region = await this.requestsRepo.findActiveRegionById(targetRegionId);
+      if (!region) throw new ValidationError("Invalid or inactive target region");
+      return region.id;
+    }
+
+    throw new AuthorizationError("This role is not authorized to create courier requests");
+  }
+
+  async createRequest(data: any, createdBy: string, actor: { role: string; regionId: string | null }): Promise<any> {
+    // OPS-PERM-S0-B1-B.I1: defense-in-depth — strip any client-supplied
+    // region fields before they ever reach the repository, independent of
+    // the input schema already omitting regionId. `targetRegionId` is the
+    // ONLY client-facing field this method consults, and only for Admin.
+    const { regionId: _clientRegionId, region_id: _clientRegionIdSnake, targetRegionId, ...safeData } = data ?? {};
+    const finalRegionId = await this.resolveCreateRegionId(actor, targetRegionId);
+
     const newReq = await this.requestsRepo.insertRequest({
-      ...data,
-      createdBy
+      ...safeData,
+      createdBy,
+      regionId: finalRegionId
     });
 
     await this.dashboardRepo.insertAuditLog({
@@ -115,7 +160,11 @@ export class CourierService {
   }
 
   async updateRequest(id: number, data: any, updatedBy: string): Promise<any> {
-    const { version, ...updateFields } = data;
+    // OPS-PERM-S0-B1-B.I1: region ownership is IMMUTABLE-AFTER-CREATE.
+    // Stripped again here for defense-in-depth even though
+    // DrizzleCourierRepository.updateRequest independently strips it too —
+    // two independent layers must both fail closed for this invariant.
+    const { version, regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake, ...updateFields } = data;
 
     const updatedReq = await this.requestsRepo.updateRequest(id, updateFields, version);
 
@@ -897,8 +946,24 @@ export class CourierService {
     };
   }
 
-  async getLookups(): Promise<any> {
-    return this.requestsRepo.getLookups();
+  // OPS-PERM-S0-B1-B.F1.R1: least-privilege technician-directory contract.
+  // - Admin: full company-wide technician list (existing Admin flows —
+  //   settings management, reports filter, PDF review filter, request
+  //   assignment — genuinely need this).
+  // - Regional Supervisor (role === "supervisor" ONLY — courier_supervisor
+  //   remains a distinct role, never treated as Regional Supervisor):
+  //   ONLY technicians whose regionId matches req.user.regionId. Missing
+  //   or invalid supervisor region yields zero technicians — never a
+  //   cross-region fallback.
+  // - Every other role (courier_supervisor / warehouse / technician /
+  //   viewer): no company-wide technician-directory visibility by default.
+  //   No existing consumer/business flow was found requiring it for these
+  //   roles; if one is discovered later, it requires its own explicit
+  //   contract, not an inferred one here.
+  // Filtering happens in the DATABASE QUERY (repository layer), never by
+  // fetching everything and filtering in application memory.
+  async getLookups(actor: { role: string; regionId: string | null }): Promise<any> {
+    return this.requestsRepo.getLookups(actor);
   }
 
   async getDashboardStats(): Promise<any> {
@@ -1682,7 +1747,43 @@ export class CourierService {
     return this.pdfRepo.findPdfReportById(id);
   }
 
-  async importRawRequests(buffer: Buffer, createdBy: string): Promise<any> {
+  // OPS-PERM-S0-B1-B.D2.OWNER §5: bulk import is authorized for Admin ONLY.
+  // Every batch requires exactly one explicit, server-validated
+  // targetRegionId (mandatory — no NULL fallback, no per-row derivation).
+  // Never derived from spreadsheet columns/row data: parseRawDataWorkbook's
+  // output is never consulted for region ownership, by design.
+  // supervisor / courier_supervisor / warehouse / technician / viewer are
+  // NOT authorized for bulk import at all under this contract.
+  private async resolveBulkImportRegionId(
+    actor: { role: string; regionId: string | null },
+    targetRegionId: unknown
+  ): Promise<string> {
+    if (actor.role !== "admin") {
+      throw new AuthorizationError("Only Admin may perform a bulk import of courier requests");
+    }
+    if (typeof targetRegionId !== "string" || targetRegionId.length === 0) {
+      throw new ValidationError("targetRegionId is required for every bulk import batch");
+    }
+    const region = await this.requestsRepo.findActiveRegionById(targetRegionId);
+    if (!region) throw new ValidationError("Invalid or inactive target region for import batch");
+    return region.id;
+  }
+
+  async importRawRequests(
+    buffer: Buffer,
+    createdBy: string,
+    actor: { role: string; regionId: string | null },
+    targetRegionId?: unknown
+  ): Promise<any> {
+    // OPS-PERM-S0-B1-B.MR1.B1: authorize and validate the batch's target
+    // region BEFORE parsing the workbook at all. A non-Admin actor, or an
+    // Admin with a missing/invalid/inactive targetRegionId, must never
+    // reach ExcelJS parsing — parsing an untrusted, already-uploaded file
+    // is real CPU/memory work an unauthorized or invalid request has no
+    // business triggering. Resolved ONCE for the whole batch — never
+    // per-row, never from Excel.
+    const finalRegionId = await this.resolveBulkImportRegionId(actor, targetRegionId);
+
     // ADR-002 Commit 3: parseRawDataWorkbook is now async (ExcelJS has no
     // synchronous buffer reader). It throws a typed SpreadsheetError for
     // invalid/empty files and for formula/error/unsupported cells in mapped
@@ -1730,6 +1831,7 @@ export class CourierService {
         mobile2: data.mobile2,
         tecName: data.tecName,
         createdBy,
+        regionId: finalRegionId,
         createdAt: new Date(),
         updatedAt: new Date()
       });

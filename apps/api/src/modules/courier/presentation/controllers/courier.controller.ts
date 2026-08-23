@@ -37,6 +37,22 @@ const RegisterDrivePdfSchema = z.object({
   buffer: z.undefined({ invalid_type_error: "Buffer payload is prohibited on this endpoint" }).optional(),
 });
 
+// OPS-PERM-S0-B1-B.MR1.B1.R1: removes a temporary bulk-import upload file.
+// A missing file (ENOENT) is treated as already-cleaned and ignored —
+// idempotent, since some other path (e.g. upload-policy's own validation
+// failure) may have already removed it. Any OTHER error (EPERM, EACCES,
+// EBUSY, disk I/O failure, ...) is a REAL cleanup failure and is thrown,
+// never silently swallowed — callers decide what that means for the
+// response (see importExcel below).
+function removeTempImportFileOrThrow(filePath: string): void {
+  try {
+    fs.unlinkSync(filePath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") return;
+    throw err;
+  }
+}
+
 export class CourierController {
   constructor(private readonly service: CourierService) {}
 
@@ -103,7 +119,12 @@ export class CourierController {
 
   createRequest = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
-    const result = await this.service.createRequest(req.body, user.id);
+    // OPS-PERM-S0-B1-B.I1: actor identity comes exclusively from the
+    // authenticated session (req.user), never from req.body.
+    const result = await this.service.createRequest(req.body, user.id, {
+      role: user.role,
+      regionId: user.regionId,
+    });
     res.status(201).json(result);
   });
 
@@ -191,7 +212,10 @@ export class CourierController {
   });
 
   getLookups = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.service.getLookups();
+    const user = req.user!;
+    // OPS-PERM-S0-B1-B.F1.R1: least-privilege technician-directory scope —
+    // actor identity comes exclusively from the authenticated session.
+    const result = await this.service.getLookups({ role: user.role, regionId: user.regionId });
     res.json(result);
   });
 
@@ -429,17 +453,53 @@ export class CourierController {
     const file = req.file;
     if (!file) throw new ValidationError("No Excel file uploaded");
 
-    // Read file buffer from multer (disk or memory storage)
-    const buffer = fs.readFileSync(file.path);
-    const result = await this.service.importRawRequests(buffer, user.id);
-
-    // Clean up temporary uploaded file
+    // OPS-PERM-S0-B1-B.MR1.B1.R2: the temporary disk file is read into
+    // memory and then REMOVED BEFORE any business logic runs — not after.
+    // An earlier version cleaned up only after service.importRawRequests()
+    // had already completed (successfully or not), which meant a rare
+    // disk-cleanup failure occurring AFTER a successful import could still
+    // reach the client as a failure response, even though the batch had
+    // already been persisted. That is exactly the ambiguous-outcome
+    // problem RFC 9110 warns about for a non-idempotent POST: the caller
+    // cannot tell whether retrying would duplicate the import or not.
+    // Once `buffer` holds the bytes, the disk file serves no further
+    // purpose — removing it here means a cleanup failure aborts the
+    // request BEFORE the service (and therefore before any database
+    // mutation) is ever invoked. No temp file exists anywhere during
+    // service.importRawRequests()'s execution.
+    let buffer: Buffer;
     try {
-      fs.unlinkSync(file.path);
-    } catch (e) {
-      // Ignore cleanup error
+      buffer = fs.readFileSync(file.path);
+    } catch (readError) {
+      try {
+        removeTempImportFileOrThrow(file.path);
+      } catch (cleanupError) {
+        // A cleanup failure here never replaces the read error — it is
+        // only logged for operational visibility.
+        console.error(
+          "[CourierController.importExcel] temp file cleanup failed after a read error " +
+            "(the read error below is still the one propagated to the client)",
+          { path: file.path, cleanupError }
+        );
+      }
+      throw readError;
     }
 
+    // The read succeeded — remove the temp file now, BEFORE calling the
+    // service. If this throws, the service is never called and no
+    // business mutation occurs; the cleanup error itself is what
+    // propagates (never a false success).
+    removeTempImportFileOrThrow(file.path);
+
+    // OPS-PERM-S0-B1-B.I1: targetRegionId travels alongside the file as a
+    // normal multipart form field — validated server-side (Admin-only,
+    // active-region check) inside importRawRequests, never trusted as-is.
+    const result = await this.service.importRawRequests(
+      buffer,
+      user.id,
+      { role: user.role, regionId: user.regionId },
+      req.body?.targetRegionId,
+    );
     res.json(result);
   });
 
