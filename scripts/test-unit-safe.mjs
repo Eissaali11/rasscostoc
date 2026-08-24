@@ -78,6 +78,9 @@ const DB_DEPENDENT_TEST_FILES = [
   // OPS-PERM-S0-B1-B.MR1.B1: registerCourierRoutes()'s composition wiring
   // requires DATABASE_URL to construct, same reason as the S0-B0 entry above.
   "apps/api/src/modules/courier/presentation/routes/courier-import-admin-only.routes.test.ts",
+  // OPS-PERM-S0-B1-C.I1A: real-DB proof that no current write path can set
+  // assigned_to_user_id — cannot be proven against a mocked repository.
+  "apps/api/src/modules/courier/infrastructure/repositories/courier-request-assigned-to-user-id-containment.test.ts",
 ];
 
 const args = [

@@ -140,7 +140,23 @@ export class CourierService {
     // region fields before they ever reach the repository, independent of
     // the input schema already omitting regionId. `targetRegionId` is the
     // ONLY client-facing field this method consults, and only for Admin.
-    const { regionId: _clientRegionId, region_id: _clientRegionIdSnake, targetRegionId, ...safeData } = data ?? {};
+    //
+    // OPS-PERM-S0-B1-C.I1A.R2: assignedToUserId is likewise stripped here,
+    // explicitly, at this application boundary — not relying solely on the
+    // shared insert schema (whose omission is a type/contract-level
+    // safeguard, not a proven runtime validation call on this HTTP path) or
+    // on CourierRequestMapper.toPersistence's allowlist (which independently
+    // does not include it either). Current request assignment is
+    // server-controlled current-state ownership with no writer as of
+    // I1A/R2 — it must never flow from generic create input, even if the
+    // mapper's allowlist is ever expanded for an unrelated future field.
+    // A dedicated, separately-authorized assignment/dispatch operation is
+    // the only future path allowed to set it (see OPS-PERM-S0-B1-C.F2 §3).
+    const {
+      regionId: _clientRegionId, region_id: _clientRegionIdSnake, targetRegionId,
+      assignedToUserId: _clientAssignedToUserId, assigned_to_user_id: _clientAssignedToUserIdSnake,
+      ...safeData
+    } = data ?? {};
     const finalRegionId = await this.resolveCreateRegionId(actor, targetRegionId);
 
     const newReq = await this.requestsRepo.insertRequest({
@@ -164,7 +180,16 @@ export class CourierService {
     // Stripped again here for defense-in-depth even though
     // DrizzleCourierRepository.updateRequest independently strips it too —
     // two independent layers must both fail closed for this invariant.
-    const { version, regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake, ...updateFields } = data;
+    // OPS-PERM-S0-B1-C.I1A.R4: assignedToUserId is server-controlled current
+    // assignment (see courier.schema.ts) — the same two-layer contract
+    // applies: this generic update path may never write it, regardless of
+    // what the repository layer already independently blocks.
+    const {
+      version,
+      regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake,
+      assignedToUserId: _ignoredAssignedToUserId, assigned_to_user_id: _ignoredAssignedToUserIdSnake,
+      ...updateFields
+    } = data;
 
     const updatedReq = await this.requestsRepo.updateRequest(id, updateFields, version);
 

@@ -370,7 +370,18 @@ export class DrizzleCourierRepository implements
     // must never be able to reassign ownership through the general update
     // route. Region transfer, if ever authorized, is separate future work
     // with its own dedicated endpoint and audit trail, never this one.
-    const { regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake, ...safeRequestData } = requestData ?? {};
+    //
+    // OPS-PERM-S0-B1-C.I1A: the same containment applies to the current
+    // field-assignee — PUT /requests/:id is a general request-field update,
+    // not an assignment API. No assignment writer exists yet (I1A is schema
+    // foundation only); when one is built, it must be its own dedicated,
+    // authorized operation with its own audit trail, never reachable through
+    // this generic update path.
+    const {
+      regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake,
+      assignedToUserId: _ignoredAssignedToUserId, assigned_to_user_id: _ignoredAssignedToUserIdSnake,
+      ...safeRequestData
+    } = requestData ?? {};
     const mappedData = CourierRequestMapper.toPersistence(safeRequestData);
     const [row] = await client
       .update(courierRequests)

@@ -1,0 +1,78 @@
+-- OPS-PERM-S0-B1-C.I1A — canonical courier-request field-assignment
+-- foundation. Schema-only. No index, no FK validation, no writer, no
+-- backfill, no read-authorization change.
+--
+-- Adds a nullable assigned_to_user_id column to courier_requests plus its
+-- FK (added NOT VALID). This is purely additive storage; no application
+-- code writes to this column yet (no assignment writer exists as of
+-- I1A — see OPS-PERM-S0-B1-C.F2/F2.R1/F2.R2), and no existing row is
+-- touched.
+--
+-- This column represents the canonical CURRENT FIELD ASSIGNEE (0..1) —
+-- explicitly NOT derived from courierRequestItems.technicianId (item
+-- scanner), courier_executions.enteredBy (last lifecycle actor, rewritten
+-- at every step), courier_executions.salesTechnician/technicianCode
+-- (free-text report labels, no FK), or items.currentOwnerId (inventory
+-- custody). See OPS-PERM-S0-B1-C.F1/F2 for the full evidence trail on why
+-- none of those qualify as a stable request-assignment authority.
+--
+-- ============================================================
+-- LOCK / OPERATIONAL BEHAVIOR — PostgreSQL 16 (per OPS-PERM-S0-B1-C.F2.R2,
+-- corrected in F2.R2's review):
+-- ============================================================
+--
+-- ADD COLUMN "assigned_to_user_id" varchar (no default):
+--   - Does NOT rewrite existing table rows (no default value to backfill).
+--   - DOES acquire ACCESS EXCLUSIVE on courier_requests — this is a
+--     separate fact from "no rewrite" and must not be conflated with it.
+--     ACCESS EXCLUSIVE blocks ALL concurrent access to the table (reads
+--     and writes) for the duration this lock is held.
+--   - Under StockPro's Drizzle migration runner (drizzle-orm 0.39.1,
+--     PgDialect.migrate — session.transaction(...) wraps every pending
+--     migration file in ONE transaction), this lock is held until that
+--     entire wrapping transaction commits — not merely until this
+--     statement finishes. If additional migrations are pending in the
+--     same `db:migrate` invocation, the lock persists for their combined
+--     duration too. A deployment preflight must confirm this migration is
+--     the ONLY pending migration before applying it to a populated
+--     database (see OPS-PERM-S0-B1-C.F2.R2 §E).
+--
+-- ADD CONSTRAINT ... FOREIGN KEY ... NOT VALID:
+--   - Skips the row-scan of existing courier_requests rows (NOT VALID).
+--   - Acquires SHARE ROW EXCLUSIVE on BOTH courier_requests and users —
+--     this conflicts with the ROW EXCLUSIVE mode ordinary INSERT/UPDATE/
+--     DELETE statements take, so it will block ordinary writes to either
+--     table for its (brief, scan-free) duration.
+--   - NOT VALID does NOT disable enforcement of subsequent writes: any
+--     INSERT/UPDATE setting assigned_to_user_id to a value after this
+--     migration is immediately FK-checked against users.id, even though
+--     historical rows have not yet been scanned/validated.
+--   - Referential action: NO ACTION (PostgreSQL default, omitted
+--     ON DELETE) — matching the identical, already-established choice for
+--     courier_requests.region_id (see 0055). Assignment must not
+--     disappear silently as a side effect of a users-table operation.
+--     (In practice StockPro's user "delete" is a soft deactivation —
+--     UPDATE users SET is_active = false — real row deletion from users
+--     does not occur in current application code, so this FK's ON DELETE
+--     behavior is a defense-in-depth guarantee, not a live operational
+--     path today.)
+--
+-- Explicitly NOT included in this migration (deferred to later,
+-- separately-authorized gates per OPS-PERM-S0-B1-C.F2.R2 §L/§T):
+--   - VALIDATE CONSTRAINT (deferred to its own later migration/epoch).
+--   - CREATE INDEX on assigned_to_user_id (deferred; deployment method —
+--     plain CREATE INDEX in a controlled window vs. an out-of-band
+--     CREATE INDEX CONCURRENTLY script — requires real deployment-scale
+--     evidence not available in this gate).
+--   - Any assignment writer, read-scope enforcement, or lifecycle
+--     mutation-authorization change.
+--
+-- Rollback (safe at any point before a later VALIDATE):
+--   ALTER TABLE "courier_requests"
+--     DROP CONSTRAINT IF EXISTS "courier_requests_assigned_to_user_id_users_id_fk";
+--   ALTER TABLE "courier_requests" DROP COLUMN IF EXISTS "assigned_to_user_id";
+ALTER TABLE "courier_requests" ADD COLUMN IF NOT EXISTS "assigned_to_user_id" varchar;
+
+ALTER TABLE "courier_requests"
+  ADD CONSTRAINT "courier_requests_assigned_to_user_id_users_id_fk"
+  FOREIGN KEY ("assigned_to_user_id") REFERENCES "users"("id") NOT VALID;
