@@ -140,7 +140,22 @@ export class CourierService {
     // region fields before they ever reach the repository, independent of
     // the input schema already omitting regionId. `targetRegionId` is the
     // ONLY client-facing field this method consults, and only for Admin.
-    const { regionId: _clientRegionId, region_id: _clientRegionIdSnake, targetRegionId, ...safeData } = data ?? {};
+    //
+    // assignedToUserId (the current field assignee) is likewise stripped
+    // here, explicitly, at this application boundary — not relying solely
+    // on the shared insert schema's omission (a type/contract-level
+    // safeguard, distinct from HTTP-level input validation) or on
+    // CourierRequestMapper.toPersistence's allowlist (which independently
+    // excludes it too). Request assignment is server-controlled state with
+    // no assignment-writing operation in this codebase — it must never flow
+    // from generic create input, even if the mapper's allowlist is later
+    // expanded for an unrelated field. Only a dedicated, separately
+    // authorized assignment/dispatch operation may set it.
+    const {
+      regionId: _clientRegionId, region_id: _clientRegionIdSnake, targetRegionId,
+      assignedToUserId: _clientAssignedToUserId, assigned_to_user_id: _clientAssignedToUserIdSnake,
+      ...safeData
+    } = data ?? {};
     const finalRegionId = await this.resolveCreateRegionId(actor, targetRegionId);
 
     const newReq = await this.requestsRepo.insertRequest({
@@ -164,7 +179,17 @@ export class CourierService {
     // Stripped again here for defense-in-depth even though
     // DrizzleCourierRepository.updateRequest independently strips it too —
     // two independent layers must both fail closed for this invariant.
-    const { version, regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake, ...updateFields } = data;
+    // assignedToUserId is server-controlled current assignment state — the
+    // same two-layer contract applies: this generic update path may never
+    // write it, regardless of what the repository layer already
+    // independently blocks. Assignment changes belong to a dedicated,
+    // separately authorized and audited operation, never this generic path.
+    const {
+      version,
+      regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake,
+      assignedToUserId: _ignoredAssignedToUserId, assigned_to_user_id: _ignoredAssignedToUserIdSnake,
+      ...updateFields
+    } = data;
 
     const updatedReq = await this.requestsRepo.updateRequest(id, updateFields, version);
 
