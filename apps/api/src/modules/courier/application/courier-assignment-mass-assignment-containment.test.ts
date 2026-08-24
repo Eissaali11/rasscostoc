@@ -1,35 +1,30 @@
 /**
- * OPS-PERM-S0-B1-C.I1A / I1A.R2 / I1A.R4 — mass-assignment containment for
- * the new canonical field-assignment column,
- * courier_requests.assigned_to_user_id, across both CREATE and generic
- * UPDATE (I1A.R4 added the UPDATE half — I1A.R3's independent review found
- * CREATE was covered at the service layer but UPDATE was only covered at
- * the repository layer, an asymmetry versus the regionId precedent, which
- * this file's third describe block below now closes).
+ * Mass-assignment containment for the canonical field-assignment column,
+ * courier_requests.assigned_to_user_id, across both request creation and
+ * generic request update.
  *
- * No assignment writer exists as of I1A (see OPS-PERM-S0-B1-C.F2/F2.R1/
- * F2.R2) — the ONLY acceptable value for this column, for every request
- * created through current production code, is NULL.
+ * No assignment-writing operation exists anywhere in this codebase — the
+ * ONLY acceptable value for this column, for every request created or
+ * updated through current production code, is NULL (or whatever value was
+ * already present, for update). Reassignment is intentionally reserved for
+ * a future, dedicated, separately authorized operation.
  *
  * Two independent claims are proven here, deliberately kept separate:
  *
  * 1. The shared client-facing insert schema (insertCourierRequestSchema)
  *    structurally omits assignedToUserId. This is a real, useful
  *    type/contract-level guarantee shared with any consumer of this schema
- *    — but OPS-PERM-S0-B1-C.I1A.R1's independent review found NO proven
- *    runtime call to insertCourierRequestSchema.parse() on the actual
- *    POST /api/courier/requests HTTP path (the controller passes req.body
- *    straight through to CourierService.createRequest). This schema is
- *    therefore NOT claimed here to be the current HTTP-runtime validation
- *    boundary for that endpoint — see claim 2 below for the boundary that
- *    actually runs on that path.
+ *    — it is not, by itself, evidence that a schema-parse call runs on the
+ *    HTTP request path (the controller passes req.body straight through to
+ *    CourierService.createRequest). See claim 2 below for the boundary
+ *    that actually executes on every real request.
  *
- * 2. CourierService.createRequest() itself explicitly strips
- *    assignedToUserId/assigned_to_user_id before ever building the
- *    repository payload (OPS-PERM-S0-B1-C.I1A.R2) — mirroring the
- *    identical, already-proven containment for regionId/region_id
+ * 2. CourierService.createRequest() and CourierService.updateRequest()
+ *    each explicitly strip assignedToUserId/assigned_to_user_id before
+ *    ever building the repository payload — mirroring the identical,
+ *    already-proven containment for regionId/region_id
  *    (courier-service-region-writer-contract.test.ts). This IS the actual
- *    runtime boundary that executes on every real create request,
+ *    runtime boundary that executes on every real create/update request,
  *    independent of whichever schema validation may or may not run before
  *    it in a given deployment.
  *
@@ -44,7 +39,7 @@ import { describe, expect, it, vi } from "vitest";
 import { insertCourierRequestSchema } from "@shared/schemas/courier.schema";
 import { CourierService } from "./courier.service";
 
-describe("OPS-PERM-S0-B1-C.I1A — insertCourierRequestSchema mass-assignment containment", () => {
+describe("insertCourierRequestSchema mass-assignment containment", () => {
   it("1. a client body containing assignedToUserId does not produce that field in the parsed result", () => {
     const parsed = insertCourierRequestSchema.parse({
       customerName: "Test Customer",
@@ -64,20 +59,20 @@ describe("OPS-PERM-S0-B1-C.I1A — insertCourierRequestSchema mass-assignment co
 
   it("3. insertCourierRequestSchema's shape explicitly omits assignedToUserId (schema-level proof, not just this one input)", () => {
     // zod's .omit() removes the key from the object schema's shape itself.
-    // NOTE (OPS-PERM-S0-B1-C.I1A.R2 terminology correction): by default a
-    // Zod object schema STRIPS unrecognized keys during .parse() — it does
-    // not throw/reject them unless the schema is built with .strict(). This
-    // schema is not .strict(), so tests 1-2 above pass because the field is
-    // silently dropped, not because parsing an unknown key is an error. This
-    // test proves the STRUCTURAL guarantee (the field is not part of the
-    // schema's defined shape at all, by design), which is a stronger,
-    // input-independent proof than any single stripped-input example.
+    // By default a Zod object schema STRIPS unrecognized keys during
+    // .parse() — it does not throw/reject them unless the schema is built
+    // with .strict(). This schema is not .strict(), so tests 1-2 above pass
+    // because the field is silently dropped, not because parsing an
+    // unknown key is an error. This test proves the STRUCTURAL guarantee
+    // (the field is not part of the schema's defined shape at all, by
+    // design), which is a stronger, input-independent proof than any
+    // single stripped-input example.
     const shape = (insertCourierRequestSchema as any)._def.schema?.shape ?? (insertCourierRequestSchema as any).shape;
     expect(shape).not.toHaveProperty("assignedToUserId");
   });
 });
 
-describe("OPS-PERM-S0-B1-C.I1A.R2 — CourierService.createRequest application-boundary containment", () => {
+describe("CourierService.createRequest assignment containment", () => {
   // A precise fake repository is appropriate here: this test proves an
   // APPLICATION-layer forwarding/containment claim (what createRequest
   // passes to its repository dependency), not PostgreSQL persistence
@@ -127,7 +122,7 @@ describe("OPS-PERM-S0-B1-C.I1A.R2 — CourierService.createRequest application-b
   });
 });
 
-describe("OPS-PERM-S0-B1-C.I1A.R4 — CourierService.updateRequest application-boundary containment", () => {
+describe("CourierService.updateRequest assignment containment", () => {
   // Same rationale as the createRequest suite above: this proves the
   // APPLICATION-layer forwarding claim for the generic update path, as a
   // second, independent layer alongside DrizzleCourierRepository.updateRequest's
@@ -169,7 +164,7 @@ describe("OPS-PERM-S0-B1-C.I1A.R4 — CourierService.updateRequest application-b
     expect(versionArg).toBe(1);
   });
 
-  it("8. updateRequest region immutability is unregressed by this remediation (regionId still stripped alongside assignedToUserId)", async () => {
+  it("8. updateRequest strips regionId and assignedToUserId together without regressing region immutability", async () => {
     const { service, requestsRepo } = makeService();
     await service.updateRequest(
       1,

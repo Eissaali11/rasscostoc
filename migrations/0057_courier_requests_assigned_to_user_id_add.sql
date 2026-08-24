@@ -1,24 +1,22 @@
--- OPS-PERM-S0-B1-C.I1A — canonical courier-request field-assignment
--- foundation. Schema-only. No index, no FK validation, no writer, no
--- backfill, no read-authorization change.
+-- Canonical courier-request field-assignment foundation. Schema-only. No
+-- index, no FK validation, no writer, no backfill, no read-authorization
+-- change.
 --
 -- Adds a nullable assigned_to_user_id column to courier_requests plus its
 -- FK (added NOT VALID). This is purely additive storage; no application
--- code writes to this column yet (no assignment writer exists as of
--- I1A — see OPS-PERM-S0-B1-C.F2/F2.R1/F2.R2), and no existing row is
--- touched.
+-- code writes to this column yet, and no existing row is touched.
 --
 -- This column represents the canonical CURRENT FIELD ASSIGNEE (0..1) —
 -- explicitly NOT derived from courierRequestItems.technicianId (item
 -- scanner), courier_executions.enteredBy (last lifecycle actor, rewritten
 -- at every step), courier_executions.salesTechnician/technicianCode
 -- (free-text report labels, no FK), or items.currentOwnerId (inventory
--- custody). See OPS-PERM-S0-B1-C.F1/F2 for the full evidence trail on why
--- none of those qualify as a stable request-assignment authority.
+-- custody). None of these qualify as a stable request-assignment authority
+-- because each records a transient action or an unrelated concept, not a
+-- persisted, stable current-assignee state.
 --
 -- ============================================================
--- LOCK / OPERATIONAL BEHAVIOR — PostgreSQL 16 (per OPS-PERM-S0-B1-C.F2.R2,
--- corrected in F2.R2's review):
+-- LOCK / OPERATIONAL BEHAVIOR — PostgreSQL 16:
 -- ============================================================
 --
 -- ADD COLUMN "assigned_to_user_id" varchar (no default):
@@ -27,47 +25,49 @@
 --     separate fact from "no rewrite" and must not be conflated with it.
 --     ACCESS EXCLUSIVE blocks ALL concurrent access to the table (reads
 --     and writes) for the duration this lock is held.
---   - Under StockPro's Drizzle migration runner (drizzle-orm 0.39.1,
---     PgDialect.migrate — session.transaction(...) wraps every pending
---     migration file in ONE transaction), this lock is held until that
---     entire wrapping transaction commits — not merely until this
---     statement finishes. If additional migrations are pending in the
---     same `db:migrate` invocation, the lock persists for their combined
---     duration too. A deployment preflight must confirm this migration is
---     the ONLY pending migration before applying it to a populated
---     database (see OPS-PERM-S0-B1-C.F2.R2 §E).
+--   - StockPro's Drizzle migration runner wraps every pending migration
+--     file in ONE transaction, so this lock is held until that entire
+--     wrapping transaction commits — not merely until this statement
+--     finishes. If additional migrations are pending in the same
+--     `db:migrate` invocation, the lock persists for their combined
+--     duration too. Before executing this migration against a populated
+--     operational database, verify the expected pending migration set and
+--     fail closed if any unexpected migration is also pending.
 --
 -- ADD CONSTRAINT ... FOREIGN KEY ... NOT VALID:
---   - Skips the row-scan of existing courier_requests rows (NOT VALID).
+--   - Skips the row-scan of existing courier_requests rows (NOT VALID);
+--     subsequent writes remain fully FK-enforced regardless.
 --   - Acquires SHARE ROW EXCLUSIVE on BOTH courier_requests and users —
 --     this conflicts with the ROW EXCLUSIVE mode ordinary INSERT/UPDATE/
---     DELETE statements take, so it will block ordinary writes to either
---     table for its (brief, scan-free) duration.
---   - NOT VALID does NOT disable enforcement of subsequent writes: any
---     INSERT/UPDATE setting assigned_to_user_id to a value after this
---     migration is immediately FK-checked against users.id, even though
---     historical rows have not yet been scanned/validated.
+--     DELETE statements take, so it blocks ordinary writes to either table
+--     for the duration this lock is held; that duration is scan-free (no
+--     row-by-row historical check) but is not guaranteed to be short under
+--     all runtime conditions (lock queueing, concurrent load).
 --   - Referential action: NO ACTION (PostgreSQL default, omitted
---     ON DELETE) — matching the identical, already-established choice for
---     courier_requests.region_id (see 0055). Assignment must not
---     disappear silently as a side effect of a users-table operation.
---     (In practice StockPro's user "delete" is a soft deactivation —
---     UPDATE users SET is_active = false — real row deletion from users
---     does not occur in current application code, so this FK's ON DELETE
---     behavior is a defense-in-depth guarantee, not a live operational
---     path today.)
+--     ON DELETE) — matching the identical choice already used for
+--     courier_requests.region_id. Assignment must not disappear silently
+--     as a side effect of a users-table operation. (In practice StockPro's
+--     user "delete" is a soft deactivation — UPDATE users SET
+--     is_active = false — real row deletion from users does not occur in
+--     current application code, so this FK's ON DELETE behavior is a
+--     defense-in-depth guarantee, not a live operational path today.)
 --
--- Explicitly NOT included in this migration (deferred to later,
--- separately-authorized gates per OPS-PERM-S0-B1-C.F2.R2 §L/§T):
---   - VALIDATE CONSTRAINT (deferred to its own later migration/epoch).
---   - CREATE INDEX on assigned_to_user_id (deferred; deployment method —
---     plain CREATE INDEX in a controlled window vs. an out-of-band
---     CREATE INDEX CONCURRENTLY script — requires real deployment-scale
---     evidence not available in this gate).
+-- Explicitly NOT included in this migration:
+--   - VALIDATE CONSTRAINT (deferred to its own later, separately deployed
+--     migration).
+--   - CREATE INDEX on assigned_to_user_id (deferred; whether a plain
+--     CREATE INDEX in a controlled maintenance window or an out-of-band
+--     CREATE INDEX CONCURRENTLY operation is appropriate depends on the
+--     table's actual size/write-traffic at deployment time).
 --   - Any assignment writer, read-scope enforcement, or lifecycle
 --     mutation-authorization change.
 --
--- Rollback (safe at any point before a later VALIDATE):
+-- Manual rollback statements (below) are only safe to run before any
+-- downstream application code or data depends on this column's presence;
+-- like the forward statements above, the DROP operations below also
+-- acquire DDL locks subject to the same StockPro-migrator transaction-
+-- lifetime behavior described above — they are not exempt from that cost
+-- merely because they undo an addition:
 --   ALTER TABLE "courier_requests"
 --     DROP CONSTRAINT IF EXISTS "courier_requests_assigned_to_user_id_users_id_fk";
 --   ALTER TABLE "courier_requests" DROP COLUMN IF EXISTS "assigned_to_user_id";

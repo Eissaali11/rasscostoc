@@ -1,7 +1,6 @@
 /**
- * OPS-PERM-S0-B1-C.I1A — CourierRequestMapper.toPersistence() mass-
- * assignment containment for assignedToUserId, the new canonical
- * field-assignment column.
+ * CourierRequestMapper.toPersistence() mass-assignment containment for
+ * assignedToUserId, the canonical current-field-assignee column.
  *
  * The application-layer client-facing insert-schema containment proof for
  * the same column lives separately in
@@ -14,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { CourierRequestMapper } from "./courier.mapper";
 
-describe("OPS-PERM-S0-B1-C.I1A — CourierRequestMapper.toPersistence mass-assignment containment", () => {
+describe("CourierRequestMapper assignment containment", () => {
   it("1. toPersistence() never emits assignedToUserId even when present on the input domain object", () => {
     const persisted = CourierRequestMapper.toPersistence({
       customerName: "Test Customer",

@@ -141,17 +141,16 @@ export class CourierService {
     // the input schema already omitting regionId. `targetRegionId` is the
     // ONLY client-facing field this method consults, and only for Admin.
     //
-    // OPS-PERM-S0-B1-C.I1A.R2: assignedToUserId is likewise stripped here,
-    // explicitly, at this application boundary — not relying solely on the
-    // shared insert schema (whose omission is a type/contract-level
-    // safeguard, not a proven runtime validation call on this HTTP path) or
-    // on CourierRequestMapper.toPersistence's allowlist (which independently
-    // does not include it either). Current request assignment is
-    // server-controlled current-state ownership with no writer as of
-    // I1A/R2 — it must never flow from generic create input, even if the
-    // mapper's allowlist is ever expanded for an unrelated future field.
-    // A dedicated, separately-authorized assignment/dispatch operation is
-    // the only future path allowed to set it (see OPS-PERM-S0-B1-C.F2 §3).
+    // assignedToUserId (the current field assignee) is likewise stripped
+    // here, explicitly, at this application boundary — not relying solely
+    // on the shared insert schema's omission (a type/contract-level
+    // safeguard, distinct from HTTP-level input validation) or on
+    // CourierRequestMapper.toPersistence's allowlist (which independently
+    // excludes it too). Request assignment is server-controlled state with
+    // no assignment-writing operation in this codebase — it must never flow
+    // from generic create input, even if the mapper's allowlist is later
+    // expanded for an unrelated field. Only a dedicated, separately
+    // authorized assignment/dispatch operation may set it.
     const {
       regionId: _clientRegionId, region_id: _clientRegionIdSnake, targetRegionId,
       assignedToUserId: _clientAssignedToUserId, assigned_to_user_id: _clientAssignedToUserIdSnake,
@@ -180,10 +179,11 @@ export class CourierService {
     // Stripped again here for defense-in-depth even though
     // DrizzleCourierRepository.updateRequest independently strips it too —
     // two independent layers must both fail closed for this invariant.
-    // OPS-PERM-S0-B1-C.I1A.R4: assignedToUserId is server-controlled current
-    // assignment (see courier.schema.ts) — the same two-layer contract
-    // applies: this generic update path may never write it, regardless of
-    // what the repository layer already independently blocks.
+    // assignedToUserId is server-controlled current assignment state — the
+    // same two-layer contract applies: this generic update path may never
+    // write it, regardless of what the repository layer already
+    // independently blocks. Assignment changes belong to a dedicated,
+    // separately authorized and audited operation, never this generic path.
     const {
       version,
       regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake,

@@ -75,30 +75,31 @@ export const courierRequests = pgTable("courier_requests", {
   // PUT /requests/:id path (independently enforced at both the service and
   // repository layers).
   regionId: varchar("region_id").references(() => regions.id),
-  // OPS-PERM-S0-B1-C.I1A: canonical CURRENT FIELD ASSIGNEE — the single
-  // authoritative answer to "which Courier/Technician user is this request
-  // currently assigned to". Explicitly NOT derived from and NOT a substitute
-  // for any of: courierRequestItems.technicianId (records who scanned an
-  // item, not who is assigned), courierExecutions.enteredBy (records who
-  // performed the last lifecycle action, rewritten by every step, never a
-  // stable owner), courierExecutions.salesTechnician/technicianCode
-  // (free-text report labels, no FK), or items.currentOwnerId (physical
-  // inventory custody, unrelated to request-level assignment). See
-  // OPS-PERM-S0-B1-C.F1/F2 for the full evidence trail on why none of those
-  // qualify as an assignment authority.
+  // Canonical CURRENT FIELD ASSIGNEE — the single authoritative answer to
+  // "which Courier/Technician user is this request currently assigned to".
+  // Explicitly NOT derived from and NOT a substitute for any of:
+  // courierRequestItems.technicianId (records who scanned an item, not who
+  // is assigned), courierExecutions.enteredBy (records who performed the
+  // last lifecycle action, rewritten by every step, never a stable owner),
+  // courierExecutions.salesTechnician/technicianCode (free-text report
+  // labels, no FK), or items.currentOwnerId (physical inventory custody,
+  // unrelated to request-level assignment). None of these qualify as an
+  // assignment authority because each records a transient action or an
+  // unrelated concept, not a persisted, stable current-assignee state.
   //
   // Cardinality: 0..1 — a request has at most one current assignee. NULL
   // means UNASSIGNED; it must never be interpreted as "assigned to every
   // technician", "assigned to whoever is in the request's region", or
-  // "assigned to the last actor". No legacy row is backfilled with a guessed
-  // value (see OPS-PERM-S0-B1-C.F2 §8).
+  // "assigned to the last actor". No legacy row is backfilled with a
+  // guessed value — an unknown assignment stays unknown rather than being
+  // inferred.
   //
-  // Reassignment is a deliberate, separately-authorized write operation
-  // (not yet implemented as of I1A) — it is never set implicitly by a
-  // Courier/Technician calling a lifecycle endpoint (accept/scan/start/etc.).
-  // Server-controlled only: explicitly omitted from insertCourierRequestSchema
-  // below and from the general update's persistence allowlist — a client can
-  // never set or change this value directly.
+  // Reassignment is a deliberate, separately-authorized write operation —
+  // it is never set implicitly by a Courier/Technician calling a lifecycle
+  // endpoint (accept/scan/start/etc.). Server-controlled only: explicitly
+  // omitted from insertCourierRequestSchema below and from the general
+  // update's persistence allowlist — a client can never set or change this
+  // value directly.
   assignedToUserId: varchar("assigned_to_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -238,13 +239,15 @@ export const insertCourierFailureReasonSchema = createInsertSchema(courierFailur
 // validation, from the authenticated actor's own identity/an admin-supplied
 // targetRegionId — never from a field named regionId/region_id in the body.
 //
-// OPS-PERM-S0-B1-C.I1A: assignedToUserId is likewise explicitly omitted — a
-// client body field named assignedToUserId/assigned_to_user_id must never be
-// able to set who a request is assigned to at create time (OWASP Mass
-// Assignment). No assignment writer exists yet as of I1A; every newly
-// created request persists assignedToUserId = NULL regardless of request
-// body content, until a future, separately-authorized assignment operation
-// sets it.
+// assignedToUserId is likewise intentionally absent from this client-facing
+// schema — a client body field named assignedToUserId/assigned_to_user_id
+// must never be able to set who a request is assigned to at create time.
+// This omission is a type/contract-level safeguard shared with any consumer
+// of this schema; the actual enforcement on the create/update HTTP paths is
+// the explicit strip in courier.service.ts (see createRequest/updateRequest)
+// and CourierRequestMapper.toPersistence's allowlist — every request
+// persists assignedToUserId = NULL regardless of request body content,
+// until a dedicated, separately authorized assignment operation sets it.
 export const insertCourierRequestSchema = createInsertSchema(courierRequests).omit({ id: true, createdAt: true, updatedAt: true, regionId: true, assignedToUserId: true });
 export const insertCourierExecutionSchema = createInsertSchema(courierExecutions).omit({ id: true, enteredAt: true, updatedAt: true });
 export const insertCourierPdfReportSchema = createInsertSchema(courierPdfReports).omit({ id: true, uploadedAt: true });

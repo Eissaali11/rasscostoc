@@ -371,12 +371,12 @@ export class DrizzleCourierRepository implements
     // route. Region transfer, if ever authorized, is separate future work
     // with its own dedicated endpoint and audit trail, never this one.
     //
-    // OPS-PERM-S0-B1-C.I1A: the same containment applies to the current
-    // field-assignee — PUT /requests/:id is a general request-field update,
-    // not an assignment API. No assignment writer exists yet (I1A is schema
-    // foundation only); when one is built, it must be its own dedicated,
-    // authorized operation with its own audit trail, never reachable through
-    // this generic update path.
+    // The same containment applies to the current field-assignee —
+    // PUT /requests/:id is a general request-field update, not an
+    // assignment API. The current assignee is immutable through this
+    // generic method. Assignment/reassignment must go through a dedicated,
+    // authorized operation with its own audit trail, never reachable
+    // through this generic update path.
     const {
       regionId: _ignoredRegionId, region_id: _ignoredRegionIdSnake,
       assignedToUserId: _ignoredAssignedToUserId, assigned_to_user_id: _ignoredAssignedToUserIdSnake,
