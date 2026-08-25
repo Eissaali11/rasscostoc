@@ -70,6 +70,13 @@ export function registerCourierRoutes(app: Express): void {
   app.get("/api/courier/requests/:requestId/items", requireAuth, controller.getRequestItems);
   app.post("/api/courier/requests/:requestId/items", requireAuth, controller.assignRequestItems);
   app.post("/api/courier/requests/:requestId/accept", requireAuth, controller.acceptRequest);
+  // Dedicated Assignment Writer — the only production
+  // route authorized to set courier_requests.assigned_to_user_id. Actor
+  // role/region/relationship eligibility is fully re-validated server-side
+  // inside CourierService.assignRequest; requireAuth here only proves the
+  // caller is an authenticated identity, not that they are authorized to
+  // assign anything.
+  app.post("/api/courier/requests/:id/assign", requireAuth, controller.assignRequest);
   app.post("/api/courier/requests/:requestId/scan", requireAuth, controller.scanRequestItem);
   app.post("/api/courier/requests/:requestId/confirm-receiving", requireAuth, controller.confirmReceiving);
   app.post("/api/courier/requests/:requestId/start-task", requireAuth, controller.startTask);

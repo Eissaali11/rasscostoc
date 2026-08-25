@@ -6,6 +6,25 @@ import { ensureDevicesInExtractedJson } from "../../application/ai-engine/courie
 import fs from "fs";
 import path from "path";
 import { z } from "zod";
+import { assignCourierRequestCommandSchema } from "@shared/schema";
+
+// courier_requests.id is a PostgreSQL serial (int4).
+// Other route :id parameters in this controller are parsed with a bare
+// Number(...) cast, which silently accepts scientific notation, leading
+// zeros, and other syntactically-numeric-but-not-canonical forms. The
+// Assignment Writer is a security-sensitive write path and is frozen to the
+// stricter ASCII-decimal-digits-only lexical contract instead of reusing
+// that looser existing convention.
+function parseStrictCourierRequestId(raw: string): number {
+  if (!/^[1-9]\d*$/.test(raw)) {
+    throw new ValidationError("Invalid request ID");
+  }
+  const id = Number(raw);
+  if (id > 2147483647) {
+    throw new ValidationError("Invalid request ID");
+  }
+  return id;
+}
 
 /**
  * Hotfix scope: JSON-only registration of a Google Drive-hosted PDF. Zero
@@ -181,6 +200,18 @@ export class CourierController {
     const requestId = Number(req.params.requestId);
     if (isNaN(requestId)) throw new ValidationError("Invalid request ID");
     const result = await this.service.acceptRequest(requestId, user.id);
+    res.json(result);
+  });
+
+  // Assignment Writer HTTP entry point. Presentation
+  // layer owns only HTTP parsing/validation/mapping here — every
+  // authorization and business-eligibility decision happens inside
+  // CourierService.assignRequest.
+  assignRequest = asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user!;
+    const requestId = parseStrictCourierRequestId(req.params.id);
+    const command = assignCourierRequestCommandSchema.parse(req.body);
+    const result = await this.service.assignRequest(requestId, user.id, command);
     res.json(result);
   });
 

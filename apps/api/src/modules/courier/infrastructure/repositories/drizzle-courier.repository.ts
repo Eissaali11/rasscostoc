@@ -17,6 +17,7 @@ import {
   inventoryTransactions,
   itemHistoryLogs,
   regions,
+  supervisorTechnicians,
 } from "@shared/schema";
 import { eq, and, or, sql, desc, count, inArray, ilike } from "drizzle-orm";
 import type { ICourierRepository } from "../../domain/repositories/courier.repository.interface";
@@ -33,7 +34,10 @@ import type {
   CourierPdfReport,
   PdfReportFilters,
   ListFilters,
-  ItemUpdatePayload
+  ItemUpdatePayload,
+  AssignmentUserSnapshot,
+  AssignmentRegionSnapshot,
+  AssignmentRequestSnapshot,
 } from "../../domain/courier.types";
 import {
   CourierRequestMapper,
@@ -429,6 +433,124 @@ export class DrizzleCourierRepository implements
       .where(and(eq(regions.id, regionId), eq(regions.isActive, true)))
       .limit(1);
     return row || null;
+  }
+
+  // Locks the actor and target users rows in one
+  // deterministically ordered statement (ORDER BY id) so any two concurrent
+  // transactions that both need to lock this pair of users rows always
+  // request their locks in the same order, regardless of which user is
+  // "actor" and which is "target" in either call. FOR SHARE is sufficient
+  // here — these rows are read-only prerequisites for this operation (their
+  // role/region/active state must not change before commit) and FOR SHARE
+  // already blocks UPDATE/DELETE while still permitting unrelated FOR KEY
+  // SHARE activity (e.g. FK existence checks from other flows) on the same
+  // rows, unlike FOR UPDATE which would conflict with that unnecessarily.
+  async lockAssignmentActorAndTarget(
+    actorId: string,
+    targetId: string,
+    tx?: any
+  ): Promise<{ actor: AssignmentUserSnapshot | null; target: AssignmentUserSnapshot | null }> {
+    const client = this.getClient(tx);
+    const rows = await client
+      .select({
+        id: users.id,
+        role: users.role,
+        regionId: users.regionId,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(inArray(users.id, [actorId, targetId]))
+      .orderBy(users.id)
+      .for("share");
+
+    const byId = new Map<string, AssignmentUserSnapshot>(
+      rows.map((row: AssignmentUserSnapshot) => [row.id, row])
+    );
+    return {
+      actor: byId.get(actorId) ?? null,
+      target: byId.get(targetId) ?? null,
+    };
+  }
+
+  // Locks the exact supervisor_technicians relationship row (if one exists)
+  // so a concurrent removeTechnicianFromSupervisor DELETE against that same
+  // row must wait until this transaction commits or rolls back — the
+  // assignment can only ever commit while the relationship it authorized
+  // itself against was still valid.
+  async lockAssignmentSupervisorTechnicianRelation(
+    supervisorId: string,
+    technicianId: string,
+    tx?: any
+  ): Promise<boolean> {
+    const client = this.getClient(tx);
+    const [row] = await client
+      .select({ id: supervisorTechnicians.id })
+      .from(supervisorTechnicians)
+      .where(
+        and(
+          eq(supervisorTechnicians.supervisorId, supervisorId),
+          eq(supervisorTechnicians.technicianId, technicianId)
+        )
+      )
+      .for("share");
+    return !!row;
+  }
+
+  // Same FOR SHARE reasoning as lockAssignmentActorAndTarget — a region row
+  // is a read-only eligibility prerequisite for this operation, never
+  // mutated by it.
+  async lockAssignmentRegion(regionId: string, tx?: any): Promise<AssignmentRegionSnapshot | null> {
+    const client = this.getClient(tx);
+    const [row] = await client
+      .select({ id: regions.id, isActive: regions.isActive })
+      .from(regions)
+      .where(eq(regions.id, regionId))
+      .for("share");
+    return row ?? null;
+  }
+
+  // Unlike the prerequisite locks above, this row IS mutated by the
+  // operation, so FOR UPDATE is used rather than FOR SHARE.
+  async lockAssignmentRequest(requestId: number, tx?: any): Promise<AssignmentRequestSnapshot | null> {
+    const client = this.getClient(tx);
+    const [row] = await client
+      .select({
+        id: courierRequests.id,
+        regionId: courierRequests.regionId,
+        assignedToUserId: courierRequests.assignedToUserId,
+        version: courierRequests.version,
+      })
+      .from(courierRequests)
+      .where(eq(courierRequests.id, requestId))
+      .for("update");
+    return row ?? null;
+  }
+
+  // Compare-and-set assignment write. Returns null (no row matched) when the
+  // row's version no longer equals expectedVersion at the moment of the
+  // write — the caller is responsible for translating that into the
+  // OptimisticLockException the client sees. The row is already held under
+  // lockAssignmentRequest's FOR UPDATE lock by the time this runs, so this
+  // condition should only ever be reached defensively; the version compare
+  // still exists to detect a client acting on a stale read, which row
+  // locking alone does not express.
+  async updateAssignmentWithVersion(
+    requestId: number,
+    assignedToUserId: string,
+    expectedVersion: number,
+    tx?: any
+  ): Promise<{ version: number } | null> {
+    const client = this.getClient(tx);
+    const [row] = await client
+      .update(courierRequests)
+      .set({
+        assignedToUserId,
+        updatedAt: new Date(),
+        version: sql`version + 1`,
+      })
+      .where(and(eq(courierRequests.id, requestId), eq(courierRequests.version, expectedVersion)))
+      .returning({ version: courierRequests.version });
+    return row ?? null;
   }
 
   async insertRequest(requestData: any, tx?: any): Promise<CourierRequest> {

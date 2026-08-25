@@ -19,7 +19,9 @@ import { WorkflowDecision } from "./workflow/workflow.types";
 import { EventBus } from "@core/events/event-bus";
 import { ExecutionSavedEvent, ExecutionCompletedEvent } from "@core/events/events";
 import { outboxRepository } from "@core/outbox/outbox.repository";
-import { AppError, AuthorizationError, OptimisticLockException, NotFoundError, ValidationError, PdfReportAlreadyProcessedError, DuplicateRequestApprovalError } from "@core/errors/AppError";
+import { AppError, AuthenticationError, AuthorizationError, OptimisticLockException, NotFoundError, ValidationError, PdfReportAlreadyProcessedError, DuplicateRequestApprovalError } from "@core/errors/AppError";
+import { ROLES } from "@shared/roles";
+import type { AssignCourierRequestCommand } from "@shared/schema";
 import { AuditLogFormatter, type AuditLogDto } from "./audit-log-formatter";
 import { SerialRecognitionService } from "@core/serial/serial-recognition.service";
 import type { ICourierRequestsRepository } from "../domain/repositories/ICourierRequestsRepository";
@@ -412,6 +414,145 @@ export class CourierService {
     });
 
     return this.getRequestById(requestId);
+  }
+
+  /**
+   * Assignment Writer.
+   *
+   * The only production path authorized to set
+   * courier_requests.assigned_to_user_id to a non-null value. Every fact
+   * used to decide eligibility (actor role/region/active state, target
+   * role/region/active state, the Supervisor-technician relationship, the
+   * request's own region) is re-read and row-locked fresh inside this one
+   * transaction — actorId is only an identity pointer, never trusted as
+   * proof of current role/region/active state.
+   *
+   * Lock acquisition order is fixed and never conditionally reversed:
+   * users -> supervisor_technicians relation -> regions -> courier_requests.
+   */
+  async assignRequest(
+    requestId: number,
+    actorId: string,
+    command: AssignCourierRequestCommand
+  ): Promise<{ requestId: number; assignedToUserId: string; version: number; changed: boolean }> {
+    if (actorId === command.assignedToUserId) {
+      throw new ValidationError("Cannot assign a request to the acting user");
+    }
+
+    return this.uow.execute(async (ctx) => {
+      // Uniform 400 for every kind of target ineligibility — the caller
+      // must never be able to distinguish "doesn't exist" from "wrong role"
+      // from "no supervisor relationship" etc.
+      const targetIneligible = () => new ValidationError("Assignment target is not eligible");
+
+      // 1. users — actor + target, single deterministically ordered lock.
+      const { actor, target } = await ctx.requestsRepository.lockAssignmentActorAndTarget(
+        actorId,
+        command.assignedToUserId
+      );
+
+      if (!actor || !actor.isActive) {
+        throw new AuthenticationError("Authentication required");
+      }
+      if (actor.role !== ROLES.ADMIN && actor.role !== ROLES.SUPERVISOR) {
+        // Includes technician, warehouse, viewer, and the legacy
+        // courier_supervisor role — none of these are Regional Supervisor.
+        throw new AuthorizationError("ليس لديك الصلاحيات الكافية");
+      }
+
+      const targetBasicallyEligible =
+        !!target && target.role === ROLES.TECHNICIAN && target.isActive && !!target.regionId;
+
+      if (actor.role === ROLES.SUPERVISOR) {
+        if (!actor.regionId) {
+          throw new AuthorizationError("ليس لديك الصلاحيات الكافية");
+        }
+        if (!targetBasicallyEligible || target!.regionId !== actor.regionId) {
+          throw targetIneligible();
+        }
+
+        // 2. supervisor_technicians — exact relationship, Supervisor only.
+        const hasRelation = await ctx.requestsRepository.lockAssignmentSupervisorTechnicianRelation(
+          actor.id,
+          target!.id
+        );
+        if (!hasRelation) {
+          throw targetIneligible();
+        }
+
+        // 3. regions — actor.regionId === target.regionId here, so this is
+        // one shared row; its inactivity is an actor-authority failure.
+        const sharedRegion = await ctx.requestsRepository.lockAssignmentRegion(actor.regionId);
+        if (!sharedRegion || !sharedRegion.isActive) {
+          throw new AuthorizationError("ليس لديك الصلاحيات الكافية");
+        }
+      } else {
+        // Admin: cross-region authority, no supervisor_technicians
+        // requirement, but the target must still meet the organizational
+        // data-integrity floor.
+        if (!targetBasicallyEligible) {
+          throw targetIneligible();
+        }
+
+        // 3. regions — target's own region.
+        const targetRegion = await ctx.requestsRepository.lockAssignmentRegion(target!.regionId!);
+        if (!targetRegion || !targetRegion.isActive) {
+          throw targetIneligible();
+        }
+      }
+
+      // 4. courier_requests — the row actually mutated by this operation.
+      const request = await ctx.requestsRepository.lockAssignmentRequest(requestId);
+      if (!request) {
+        throw new NotFoundError("Courier request not found");
+      }
+      if (actor.role === ROLES.SUPERVISOR && request.regionId !== actor.regionId) {
+        // Concealed as NotFoundError — a Supervisor must not be able to
+        // distinguish "does not exist" from "exists in another region".
+        throw new NotFoundError("Courier request not found");
+      }
+
+      if (request.version !== command.version) {
+        throw new OptimisticLockException("courier_requests", requestId, command.version, request.version);
+      }
+
+      if (request.assignedToUserId === command.assignedToUserId) {
+        // Same assignee + current version: success, no-op. No version bump,
+        // no audit row — nothing actually changed.
+        return {
+          requestId,
+          assignedToUserId: command.assignedToUserId,
+          version: request.version,
+          changed: false,
+        };
+      }
+
+      const updated = await ctx.requestsRepository.updateAssignmentWithVersion(
+        requestId,
+        command.assignedToUserId,
+        command.version
+      );
+      if (!updated) {
+        throw new OptimisticLockException("courier_requests", requestId, command.version, undefined);
+      }
+
+      await ctx.dashboardRepository.insertAuditLog({
+        tableName: "requests",
+        recordId: requestId,
+        fieldName: "assignedToUserId",
+        oldValue: request.assignedToUserId,
+        newValue: command.assignedToUserId,
+        action: request.assignedToUserId ? "reassign" : "assign",
+        changedBy: actor.id,
+      });
+
+      return {
+        requestId,
+        assignedToUserId: command.assignedToUserId,
+        version: updated.version,
+        changed: true,
+      };
+    });
   }
 
   async scanRequestItem(

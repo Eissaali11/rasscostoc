@@ -30,6 +30,35 @@ export interface ItemUpdatePayload {
   simSerial?: string;
 }
 
+/**
+ * Assignment Writer lock snapshots.
+ *
+ * These carry only the fields assignment authorization policy needs — never
+ * a raw ORM row — so the application layer never depends on a Drizzle type.
+ * Each is produced by a repository method whose name says explicitly that it
+ * acquires a transaction-scoped row lock (see ICourierRequestsRepository);
+ * none of these values may be trusted unless they were read inside the same
+ * transaction as the eventual assignment write.
+ */
+export interface AssignmentUserSnapshot {
+  id: string;
+  role: string;
+  regionId: string | null;
+  isActive: boolean;
+}
+
+export interface AssignmentRegionSnapshot {
+  id: string;
+  isActive: boolean;
+}
+
+export interface AssignmentRequestSnapshot {
+  id: number;
+  regionId: string | null;
+  assignedToUserId: string | null;
+  version: number;
+}
+
 /** Snapshot of the serial lookup result returned by the serial engine. */
 export interface SerialLookupResult {
   found: boolean;
