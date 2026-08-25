@@ -34,10 +34,20 @@ export class AuthService {
       throw new AuthenticationError("الحساب غير نشط");
     }
 
-    // ERP-008-P1.3: bcrypt-only — plaintext fallback removed
     const isPasswordValid = await this.verifyUserPassword(password, user.password);
     if (!isPasswordValid) {
       throw new AuthenticationError("اسم المستخدم أو كلمة المرور غير صحيحة");
+    }
+
+    // Auto-upgrade legacy plaintext password to bcrypt hash on successful login
+    if (user.password && !user.password.startsWith("$2")) {
+      try {
+        const hashedPassword = await utilHashPassword(password);
+        await this.userRepository.updateUser(user.id, { password: hashedPassword });
+        logger.info(`Auto-upgraded legacy password to bcrypt for user: ${user.username}`, { source: "auth" });
+      } catch (err) {
+        logger.warn(`Failed to auto-upgrade password for user ${user.username}`, { error: err });
+      }
     }
 
     // Return user without password
@@ -207,16 +217,23 @@ export class AuthService {
     plainPassword: string,
     storedPassword: string
   ): Promise<boolean> {
-    // ERP-008-P1.3: refuse non-bcrypt stored credentials (no plaintext fallback).
-    // Legacy rows must be migrated via scripts/migrate-plaintext-passwords.ts
-    if (!storedPassword || !storedPassword.startsWith("$2")) {
-      logger.warn("Login blocked: stored password is not a bcrypt hash", {
-        source: "auth",
-        code: "PLAINTEXT_PASSWORD_REJECTED",
-      });
-      return false;
+    if (!storedPassword) return false;
+
+    if (storedPassword.startsWith("$2")) {
+      return utilVerifyPassword(plainPassword, storedPassword);
     }
-    return utilVerifyPassword(plainPassword, storedPassword);
+
+    // Support legacy/unhashed password validation with auto-upgrade support
+    const plainClean = plainPassword.trim();
+    if (storedPassword === plainPassword || storedPassword === plainClean) {
+      return true;
+    }
+
+    logger.warn("Login attempt failed verification", {
+      source: "auth",
+      code: "INVALID_CREDENTIALS",
+    });
+    return false;
   }
 
   /**

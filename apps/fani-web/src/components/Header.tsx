@@ -25,6 +25,16 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
 }) => {
+  const initials = (() => {
+    const str = user?.name || user?.username || '';
+    if (!str) return 'ف';
+    const parts = str.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return str.substring(0, 2).toUpperCase();
+  })();
+
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
       <div className="max-w-[1920px] mx-auto px-6 py-3.5 flex items-center justify-between gap-6">
@@ -74,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
             title="اضغط لتسجيل الخروج"
           >
             <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-xs border-2 border-slate-200 shadow-2xs overflow-hidden">
-              <span className="text-xs">ع ق</span>
+              <span className="text-xs">{initials}</span>
             </div>
           </button>
 

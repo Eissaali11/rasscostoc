@@ -145,6 +145,21 @@ class ApiClient {
       return { success: false, message: err.message || 'خطأ في المسح' };
     }
   }
+
+  async getTransferById(id: string): Promise<any | null> {
+    return this.getTransferDetails(id);
+  }
+
+  async acceptTransferBatch(id: string, items?: any[]): Promise<{ success: boolean; message?: string }> {
+    if (items && items.length > 0) {
+      for (const item of items) {
+        if (item.serialNumber) {
+          await this.scanItem(item.serialNumber, id, item.itemTypeId);
+        }
+      }
+    }
+    return this.acceptTransfer(id);
+  }
 }
 
 export const api = new ApiClient();

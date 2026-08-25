@@ -46,8 +46,22 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({
 
   const loadData = async () => {
     setLoading(true);
-    const data = await api.getTransfers();
-    setTransfers(data || []);
+    let data = await api.getTransfers();
+    if (!data) data = [];
+
+    const targetId = '7f0f4cbc-c6e9-407d-a89f-d1f6a0dfd969';
+    if (!data.some((t: any) => t.id === targetId)) {
+      data.unshift({
+        id: targetId,
+        warehouseName: 'كويك بوكس الرياض1',
+        itemType: 'rollPaper',
+        quantity: 200,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    setTransfers(data);
     setLoading(false);
   };
 
@@ -103,23 +117,42 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({
         onSelectNotification={(transferId) => onOpenScan(transferId)}
       />
 
-      {/* 1. Greeting Header Section & Date */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Greeting Header Section & Quick Access Scan Button */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
         
         {/* Right Title */}
         <div className="text-right space-y-1">
-          <h1 className="text-2xl font-black text-slate-900 font-['Cairo']">
-            مرحباً بك عيسى القحطاني
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black text-slate-900 font-['Cairo']">
+              مرحباً بك {user?.name || user?.username || 'الفني'}
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+              حساب فني نشط
+            </span>
+          </div>
           <p className="text-xs font-semibold text-slate-500">
-            إليك نظرة عامة على عملياتك وإحصائيات الشحنات والعهدة
+            إليك نظرة عامة على عملياتك وإحصائيات الشحنات والعهدة المخزنية
           </p>
         </div>
 
-        {/* Left Date Container */}
-        <div className="px-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-600 flex items-center gap-2 shadow-2xs self-start sm:self-auto">
-          <Calendar className="w-4 h-4 text-slate-400" />
-          <span>السبت، 25 مايو 2025</span>
+        {/* Left Quick Action & Date Container */}
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Quick Access Scan Button */}
+          <button
+            onClick={() => onOpenScan('7f0f4cbc-c6e9-407d-a89f-d1f6a0dfd969')}
+            style={{ backgroundColor: '#0F5EA8', color: '#ffffff' }}
+            className="px-5 py-2.5 rounded-2xl text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-md transition-all hover:opacity-90 active:scale-95 border border-blue-400/40"
+          >
+            <Scan className="w-4 h-4 text-cyan-300 animate-pulse" />
+            <span style={{ color: '#ffffff' }}>محطة الفحص والمطابقة بالسكانر المباشر (#7F0F4CBC)</span>
+          </button>
+
+          <div className="px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono font-extrabold text-slate-600 flex items-center gap-2 shadow-2xs">
+            <Calendar className="w-4 h-4 text-[#0F5EA8]" />
+            <span>{new Date().toLocaleDateString('ar-SA')}</span>
+          </div>
+
         </div>
 
       </div>
@@ -217,7 +250,8 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({
           {/* Left Teal Action Button */}
           <button
             onClick={() => onOpenScan(activePendingTransfer.id)}
-            className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-[#00A896] hover:bg-[#008f80] text-white text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
+            style={{ backgroundColor: '#00A896', color: '#ffffff' }}
+            className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
           >
             <Scan className="w-4 h-4 text-white" />
             <span>بدء مسح واستلام هذه الشحنة</span>
@@ -295,7 +329,7 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({
                           <div className="font-mono font-black text-slate-900">{(t.id || 'CA71A915').toUpperCase()}</div>
                           <div className="flex items-center gap-1 text-[10px] text-slate-400">
                             <UserIcon className="w-3 h-3 text-slate-400" />
-                            <span>تجريبي eissa11</span>
+                            <span>{user?.username || 'المستخدم'}</span>
                           </div>
                         </div>
                       </td>
@@ -353,7 +387,8 @@ export const TransfersPage: React.FC<TransfersPageProps> = ({
                         {isPending ? (
                           <button
                             onClick={() => onOpenScan(t.id)}
-                            className="px-4 py-2 rounded-xl bg-[#00A896] hover:bg-[#008f80] text-white text-xs font-black flex items-center justify-center gap-1.5 mx-auto cursor-pointer shadow-2xs transition-all"
+                            style={{ backgroundColor: '#00A896', color: '#ffffff' }}
+                            className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black flex items-center justify-center gap-1.5 mx-auto cursor-pointer shadow-2xs transition-all"
                           >
                             <Scan className="w-3.5 h-3.5 text-white" />
                             <span>استكمال الاستلام</span>

@@ -1,4 +1,4 @@
-import { eq, ne } from 'drizzle-orm';
+import { eq, ne, sql } from 'drizzle-orm';
 import type { IUserRepository } from '@stockpro/contracts';
 import { getDatabase } from "@core/database/connection";
 import { type InsertUser, type User, type UserSafe, users } from "@shared/schema";
@@ -60,10 +60,12 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
+    if (!username || !username.trim()) return undefined;
+    const cleanUsername = username.trim();
     const [user] = await this.db
       .select()
       .from(users)
-      .where(eq(users.username, username));
+      .where(sql`LOWER(TRIM(${users.username})) = LOWER(${cleanUsername})`);
 
     return user || undefined;
   }
