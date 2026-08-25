@@ -39,27 +39,33 @@ export const App: React.FC = () => {
   }, []);
 
   const checkAuth = async () => {
-    const savedUser = localStorage.getItem('fani_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (_) {}
-    }
+    // Verify session with API first — do NOT pre-load user from localStorage
+    // to avoid showing a stale/expired session (e.g. old eissa11 session)
     const me = await api.getMe();
     if (me) {
       setUser(me);
+      localStorage.setItem('fani_user', JSON.stringify(me));
+    } else {
+      // No valid session — clear any stale data
+      localStorage.removeItem('fani_auth_token');
+      localStorage.removeItem('fani_user');
+      setUser(null);
     }
     setLoading(false);
 
-    const transfers = await api.getTransfers();
-    if (transfers) {
-      const p = transfers.filter((t: any) => t.status === 'pending' || t.status === 'PENDING').length;
-      setPendingCount(p > 0 ? p : 3);
+    if (me) {
+      const transfers = await api.getTransfers();
+      if (transfers) {
+        const p = transfers.filter((t: any) => t.status === 'pending' || t.status === 'PENDING').length;
+        setPendingCount(p > 0 ? p : 3);
+      }
     }
   };
 
   const handleLogout = () => {
     api.logout();
+    localStorage.clear();
+    sessionStorage.clear();
     setUser(null);
     window.location.hash = '#/login';
   };
