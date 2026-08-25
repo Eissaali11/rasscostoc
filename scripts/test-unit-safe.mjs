@@ -81,6 +81,15 @@ const DB_DEPENDENT_TEST_FILES = [
   // OPS-PERM-S0-B1-C.I1A: real-DB proof that no current write path can set
   // assigned_to_user_id — cannot be proven against a mocked repository.
   "apps/api/src/modules/courier/infrastructure/repositories/courier-request-assigned-to-user-id-containment.test.ts",
+  // OPS-PERM-S0-B1-C.I1B: registerCourierRoutes()'s composition wiring
+  // requires DATABASE_URL to construct, same reason as the S0-B0/B1-B
+  // entries above, even though these HTTP-layer tests only exercise input
+  // validation and never reach the database themselves.
+  "apps/api/src/modules/courier/presentation/routes/courier-assignment.routes.test.ts",
+  // OPS-PERM-S0-B1-C.I1B: real-DB proof of the Assignment Writer's
+  // concurrency/atomicity/locking contract — cannot be proven against a
+  // mocked repository.
+  "apps/api/src/modules/courier/infrastructure/repositories/courier-assignment-writer-concurrency.test.ts",
 ];
 
 const args = [

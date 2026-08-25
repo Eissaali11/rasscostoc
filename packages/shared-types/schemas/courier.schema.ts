@@ -253,6 +253,36 @@ export const insertCourierExecutionSchema = createInsertSchema(courierExecutions
 export const insertCourierPdfReportSchema = createInsertSchema(courierPdfReports).omit({ id: true, uploadedAt: true });
 export const insertCourierAuditLogSchema = createInsertSchema(courierAuditLogs).omit({ id: true, changedAt: true });
 
+// Strict command contract for the dedicated Assignment
+// Writer endpoint (POST /api/courier/requests/:id/assign). Unlike
+// insertCourierRequestSchema above (which silently strips unknown keys and
+// is never meant to carry assignment authority), this schema uses
+// `.strict()` so any unexpected key — including authorization-relevant
+// fields a caller might try to smuggle in (actorId, role, regionId,
+// warehouseId, permissions, or the snake_case assigned_to_user_id) — fails
+// validation with a 400 instead of being silently dropped.
+//
+// assignedToUserId is a REFERENCE to an existing user identity, not a
+// new-identity creation field: users.id storage is a legacy-compatible
+// unbounded varchar (some rows may predate the current UUID-generation
+// default), so this field cannot yet be constrained to UUID format without
+// risking rejection of a technician whose id predates that convention. The
+// max(128) bound is an explicit Owner-selected compatibility ceiling for
+// this reference boundary, not a value derived from the database column
+// (which has no declared length) or from a UUID-format assumption.
+//
+// Passing this schema is never sufficient authorization by itself — the
+// supplied assignedToUserId must still resolve, inside the same
+// transaction, to a locked, currently-active technician satisfying every
+// role/region/relationship requirement enforced by
+// CourierService.assignRequest.
+export const assignCourierRequestCommandSchema = z.object({
+  assignedToUserId: z.string().min(1).max(128),
+  version: z.number().int().positive().max(2147483647),
+}).strict();
+
+export type AssignCourierRequestCommand = z.infer<typeof assignCourierRequestCommandSchema>;
+
 // 9. Outbox Events Table
 export const outboxEvents = pgTable("outbox_events", {
   id: uuid("id").primaryKey().defaultRandom(),

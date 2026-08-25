@@ -1,5 +1,10 @@
 import type { CourierRequest, CourierRequestItem } from "../courier.types";
 import type { ListFilters, ItemUpdatePayload } from "../courier.types";
+import type {
+  AssignmentUserSnapshot,
+  AssignmentRegionSnapshot,
+  AssignmentRequestSnapshot,
+} from "../courier.types";
 
 export interface ICourierRequestsRepository {
   findRequestById(id: number, tx?: any): Promise<CourierRequest | null>;
@@ -24,6 +29,35 @@ export interface ICourierRequestsRepository {
   // it is ever allowed to become courier_requests.region_id. Never trust a
   // client-supplied region id as valid without this check.
   findActiveRegionById(regionId: string, tx?: any): Promise<{ id: string; name: string } | null>;
+
+  // Row-locking primitives for the Assignment Writer.
+  // Each name communicates that it acquires a transaction-scoped row lock —
+  // callers must never mistake these for ordinary unlocked reads, and must
+  // only call them from inside the same uow.execute(...) transaction as the
+  // eventual updateAssignmentWithVersion call. Lock acquisition order is
+  // fixed: users -> supervisor_technicians relation -> regions ->
+  // courier_requests.
+  lockAssignmentActorAndTarget(
+    actorId: string,
+    targetId: string,
+    tx?: any
+  ): Promise<{ actor: AssignmentUserSnapshot | null; target: AssignmentUserSnapshot | null }>;
+  lockAssignmentSupervisorTechnicianRelation(
+    supervisorId: string,
+    technicianId: string,
+    tx?: any
+  ): Promise<boolean>;
+  lockAssignmentRegion(regionId: string, tx?: any): Promise<AssignmentRegionSnapshot | null>;
+  lockAssignmentRequest(requestId: number, tx?: any): Promise<AssignmentRequestSnapshot | null>;
+  // Compare-and-set assignment write. Returns null when no row matched
+  // (id, version) — i.e. the version has moved since it was last read — so
+  // the caller can translate that into an OptimisticLockException.
+  updateAssignmentWithVersion(
+    requestId: number,
+    assignedToUserId: string,
+    expectedVersion: number,
+    tx?: any
+  ): Promise<{ version: number } | null>;
 
   // Request Items
   findRequestItems(requestId: number, tx?: any): Promise<CourierRequestItem[]>;
