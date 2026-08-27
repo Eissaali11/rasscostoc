@@ -4,14 +4,16 @@ import { UserManagementUseCase } from "@modules/identity/application/users/use-c
 import { DrizzleStockFixedInventoryRepository } from "@modules/inventory/infrastructure/database/DrizzleStockFixedInventoryRepository";
 import { SystemLogsRepository } from "@modules/inventory/infrastructure/database/SystemLogsRepository";
 import { UserRepository } from "@modules/identity/infrastructure/database/UserRepository";
+import { DrizzleIdentityUnitOfWork } from "@modules/identity/infrastructure/repositories/DrizzleIdentityUnitOfWork";
 
 class StockFixedInventoryContainer {
   private readonly repository = new DrizzleStockFixedInventoryRepository();
   private readonly usersRepository = new UserRepository();
   private readonly systemLogsRepository = new SystemLogsRepository();
+  private readonly identityUnitOfWork = new DrizzleIdentityUnitOfWork();
 
   readonly stockFixedInventoryUseCase = new StockFixedInventoryUseCase(this.repository);
-  readonly userManagementUseCase = new UserManagementUseCase(this.usersRepository);
+  readonly userManagementUseCase = new UserManagementUseCase(this.usersRepository, this.identityUnitOfWork);
   readonly createSystemLogUseCase = new CreateSystemLogUseCase(this.systemLogsRepository);
 }
 

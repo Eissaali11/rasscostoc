@@ -45,6 +45,7 @@ export class SupervisorRepository implements ISupervisorRepository {
         department: users.department,
         permissions: users.permissions,
         isActive: users.isActive,
+        authGeneration: users.authGeneration,
         fcmToken: users.fcmToken,
         telegramUserId: users.telegramUserId,
         createdAt: users.createdAt,

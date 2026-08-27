@@ -2,16 +2,29 @@ import { eq, and } from 'drizzle-orm';
 import { getDatabase } from "@core/database/connection";
 import { refreshTokens, type RefreshToken } from "@shared/schema";
 import type { IRefreshTokenRepository } from "@stockpro/contracts";
+import type { IdentityDbClient } from "./DrizzleUserRepository";
 
 export class DrizzleRefreshTokenRepository implements IRefreshTokenRepository {
-  private get db() {
-    return getDatabase();
+  /**
+   * Pass a transaction handle (the `tx` from db.transaction(async (tx) => ...))
+   * to bind this repository instance to that transaction — required whenever
+   * its writes must be atomic with writes made through another repository
+   * (see DrizzleIdentityUnitOfWork). Omit to use the global connection.
+   */
+  constructor(private readonly dbClient: IdentityDbClient = getDatabase()) {}
+
+  private get db(): IdentityDbClient {
+    return this.dbClient;
   }
 
   /**
-   * Create a new refresh token record
+   * Create a new refresh token record. authGeneration is the issuing
+   * authentication event's snapshot of the user's current auth generation —
+   * it must never be re-read from the database at call time, so that a row
+   * created after a deactivation's revocation sweep still carries the stale
+   * pre-deactivation generation and fails the next refresh's comparison.
    */
-  async create(token: string, userId: string, expiry: Date): Promise<RefreshToken> {
+  async create(token: string, userId: string, expiry: Date, authGeneration: number): Promise<RefreshToken> {
     const [record] = await this.db
       .insert(refreshTokens)
       .values({
@@ -19,6 +32,7 @@ export class DrizzleRefreshTokenRepository implements IRefreshTokenRepository {
         userId,
         expiry,
         isRevoked: false,
+        authGeneration,
       })
       .returning();
     return record;
@@ -32,6 +46,20 @@ export class DrizzleRefreshTokenRepository implements IRefreshTokenRepository {
       .select()
       .from(refreshTokens)
       .where(eq(refreshTokens.token, token));
+    return record || undefined;
+  }
+
+  /**
+   * Locks the refresh-token row so a concurrent refresh of the same token
+   * cannot also pass validation before this transaction commits. Must be
+   * called from within a transaction.
+   */
+  async getByTokenForUpdate(token: string): Promise<RefreshToken | undefined> {
+    const [record] = await this.db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.token, token))
+      .for("update");
     return record || undefined;
   }
 

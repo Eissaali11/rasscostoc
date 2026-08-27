@@ -407,6 +407,13 @@
       "when": 1785826888000,
       "tag": "0057_courier_requests_assigned_to_user_id_add",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1787840000000,
+      "tag": "0058_users_refresh_tokens_auth_generation_add",
+      "breakpoints": true
     }
   ]
 }

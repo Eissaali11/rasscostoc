@@ -4,10 +4,12 @@
  * Signs a real JWT with the test-time JWT_SECRET so `requireAuth`
  * (apps/api/src/core/middlewares/auth.middleware.ts) verifies it exactly as
  * it would a production token — no vi.mock of the auth middleware needed.
- * getFreshAuthUser() swallows DB errors and falls back to the JWT payload
- * (auth.middleware.ts:88-90), so this works against route-level test apps
- * that never touch a database, and still works unchanged against a real
- * isolated DB in integration/http suites.
+ * requireAuth resolves the fresh DB state authoritatively (I2A) — a signed
+ * token whose user does not exist, is inactive, or has been revoked by
+ * credential-generation mismatch is rejected, never trusted from the token's
+ * own claims. Tests against a real isolated DB (integration/http suites) rely
+ * on this; route-level test apps that never touch a database will see the
+ * fresh-DB lookup fail closed rather than fall back to the token.
  */
 import jwt from "jsonwebtoken";
 import request from "supertest";
@@ -23,6 +25,8 @@ export interface TestAuthUser {
   employeeCode?: string | null;
   technicianCode?: string | null;
   permissions?: string[];
+  /** Omit to test pre-migration-compatibility tokens (no claim at all, treated as generation 0). */
+  authGeneration?: number;
 }
 
 const DEFAULT_TEST_USERS: Record<TestRole, TestAuthUser> = {
@@ -46,19 +50,19 @@ function requireTestJwtSecret(): string {
 /** Signs a valid JWT for the given fixture user, matching auth.middleware.ts's expected payload shape. */
 export function signTestToken(user: TestAuthUser = DEFAULT_TEST_USERS.technician): string {
   const secret = requireTestJwtSecret();
-  return jwt.sign(
-    {
-      userId: user.id,
-      role: user.role,
-      username: user.username,
-      regionId: user.regionId ?? null,
-      employeeCode: user.employeeCode ?? null,
-      technicianCode: user.technicianCode ?? null,
-      permissions: user.permissions ?? [],
-    },
-    secret,
-    { expiresIn: "1h" }
-  );
+  const payload: Record<string, unknown> = {
+    userId: user.id,
+    role: user.role,
+    username: user.username,
+    regionId: user.regionId ?? null,
+    employeeCode: user.employeeCode ?? null,
+    technicianCode: user.technicianCode ?? null,
+    permissions: user.permissions ?? [],
+  };
+  if (user.authGeneration !== undefined) {
+    payload.authGeneration = user.authGeneration;
+  }
+  return jwt.sign(payload, secret, { expiresIn: "1h" });
 }
 
 /** A supertest agent pre-authenticated as `role` via a real, verifiable Bearer JWT. */

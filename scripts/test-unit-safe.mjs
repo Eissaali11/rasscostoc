@@ -90,6 +90,27 @@ const DB_DEPENDENT_TEST_FILES = [
   // concurrency/atomicity/locking contract — cannot be proven against a
   // mocked repository.
   "apps/api/src/modules/courier/infrastructure/repositories/courier-assignment-writer-concurrency.test.ts",
+  // OPS-PERM-S0-B1-C.I2A: real-DB proof of the auth_generation migration's
+  // pre-migration-compatibility defaults — cannot be proven against a mocked
+  // repository.
+  "apps/api/src/core/tests/database/migration-0058-compatibility.test.ts",
+  // OPS-PERM-S0-B1-C.I2A: real-Postgres proof of the refresh/deactivation
+  // concurrency, transaction-rollback, and audit-atomicity contract —
+  // same reason as the courier-assignment-writer-concurrency entry above.
+  "apps/api/src/modules/identity/infrastructure/repositories/auth-refresh-deactivation-concurrency.test.ts",
+  // OPS-PERM-S0-B1-C.I2A: real-Postgres proof that an account already
+  // inactive before migration 0058 cannot have its pre-migration credentials
+  // revived by a later reactivation — spins its own historical-cutoff
+  // database, same technique as custody-closure-legacy-backfill.test.ts.
+  "apps/api/src/modules/identity/infrastructure/database/migration-0058-historical-inactive-bootstrap.test.ts",
+  // OPS-PERM-S0-B1-C.I2A: real-Postgres proof that Backup Restore's identity
+  // transition and validation cannot be exercised against a mocked
+  // repository — needs the real app, real routes, and a real transaction.
+  "apps/api/src/modules/inventory/infrastructure/system/use-cases/ImportSystemBackup.security-transition.test.ts",
+  // OPS-PERM-S0-B1-C.I2A: real-Postgres proof that DrizzleUserRepository
+  // itself (not merely the TypeScript type layer) cannot persist isActive/
+  // authGeneration through its ordinary update/create methods.
+  "apps/api/src/modules/identity/infrastructure/database/DrizzleUserRepository.security-state-containment.test.ts",
 ];
 
 const args = [

@@ -494,4 +494,391 @@ describe("PHASE B1.5 — security test foundation", () => {
       }
     });
   });
+
+  // ==================================================================
+  // I2A — Active-account authentication / credential invalidation lifecycle
+  // ==================================================================
+  describe("I2A: active-account authentication invariant", () => {
+    async function makeUser(overrides: Partial<{ isActive: boolean; role: string }> = {}) {
+      const { users, regions } = await import("@shared/schema");
+      const regionId = randomUUID();
+      await db.insert(regions).values({ id: regionId, name: `I2A Test Region ${randomUUID()}` });
+      const id = randomUUID();
+      const username = `i2a.${randomUUID()}`;
+      await db.insert(users).values({
+        id,
+        username,
+        email: `${username}@test.invalid`,
+        fullName: "I2A Test User",
+        password: await hashPassword("I2ATestPassword!1"),
+        role: overrides.role ?? "technician",
+        regionId,
+        isActive: overrides.isActive ?? true,
+      });
+      return { id, username, password: "I2ATestPassword!1" };
+    }
+
+    it("an active user's JWT authenticates", async () => {
+      const u = await makeUser();
+      const token = signTestToken({ id: u.id, role: "technician", username: u.username, authGeneration: 0 });
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(200);
+    });
+
+    it("deactivating the account makes the SAME still-unexpired JWT fail on the very next request", async () => {
+      const u = await makeUser();
+      const token = signTestToken({ id: u.id, role: "technician", username: u.username, authGeneration: 0 });
+      expect((await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`)).status).toBe(200);
+
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("a JWT with no authGeneration claim (pre-migration) is treated as generation 0 and works while the account remains generation 0", async () => {
+      const u = await makeUser();
+      const token = signTestToken({ id: u.id, role: "technician", username: u.username }); // no authGeneration
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(200);
+    });
+
+    it("reactivating the account does NOT revive a pre-deactivation JWT — old credential lineage stays permanently dead", async () => {
+      const u = await makeUser();
+      const token = signTestToken({ id: u.id, role: "technician", username: u.username, authGeneration: 0 });
+
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+      await db.update(users).set({ isActive: true }).where(eq(users.id, u.id)); // reactivate, generation stays 1
+
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("reactivation requires a fresh login — the new token is bound to the post-reactivation generation and works", async () => {
+      const u = await makeUser();
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+      await db.update(users).set({ isActive: true }).where(eq(users.id, u.id));
+
+      const loginRes = await request(app).post("/api/auth/login").send({ username: u.username, password: u.password });
+      expect(loginRes.status).toBe(200);
+
+      const meRes = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${loginRes.body.token}`);
+      expect(meRes.status).toBe(200);
+    });
+
+    it("a refresh token issued before deactivation cannot mint a new credential after deactivation", async () => {
+      const u = await makeUser();
+      const loginRes = await request(app).post("/api/auth/login").send({ username: u.username, password: u.password });
+      const refreshToken = loginRes.body.refreshToken;
+
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+
+      const refreshRes = await request(app).post("/api/auth/refresh").send({ refreshToken });
+      expect(refreshRes.status).toBe(401);
+    });
+
+    it("a refresh token issued before deactivation still cannot mint a credential after a later reactivation (generation mismatch, not merely revocation)", async () => {
+      const u = await makeUser();
+      const loginRes = await request(app).post("/api/auth/login").send({ username: u.username, password: u.password });
+      const refreshToken = loginRes.body.refreshToken;
+
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+      await db.update(users).set({ isActive: true }).where(eq(users.id, u.id));
+
+      const refreshRes = await request(app).post("/api/auth/refresh").send({ refreshToken });
+      expect(refreshRes.status).toBe(401);
+    });
+
+    it("generic PATCH /api/users/:id with isActive=false actually deactivates (routes through the canonical transition, not a bare writer)", async () => {
+      const u = await makeUser();
+      const token = signTestToken({ id: u.id, role: "technician", username: u.username, authGeneration: 0 });
+      const adminToken = signTestToken(DEFAULT_TEST_USERS_LOCAL_ADMIN());
+
+      const patchRes = await request(app)
+        .patch(`/api/users/${u.id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ isActive: false });
+      expect(patchRes.status).toBe(200);
+
+      // The credential issued before this PATCH must now be rejected — proving
+      // the PATCH path actually invoked full invalidation, not a bare UPDATE.
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("PATCH with ordinary fields + isActive=false persists both atomically", async () => {
+      const u = await makeUser();
+      const adminToken = signTestToken(DEFAULT_TEST_USERS_LOCAL_ADMIN());
+
+      const patchRes = await request(app)
+        .patch(`/api/users/${u.id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ fullName: "Renamed By PATCH", isActive: false });
+      expect(patchRes.status).toBe(200);
+      expect(patchRes.body.fullName).toBe("Renamed By PATCH");
+      expect(patchRes.body.isActive).toBe(false);
+    });
+
+    it("a PATCH containing authGeneration does not alter the persisted generation", async () => {
+      const u = await makeUser();
+      const adminToken = signTestToken(DEFAULT_TEST_USERS_LOCAL_ADMIN());
+
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ authGeneration: 5 }).where(eq(users.id, u.id));
+
+      const patchRes = await request(app)
+        .patch(`/api/users/${u.id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ authGeneration: 0, fullName: "Should Not Reset Generation" });
+      expect(patchRes.status).toBe(200);
+
+      const [row] = await db.select({ authGeneration: users.authGeneration }).from(users).where(eq(users.id, u.id));
+      expect(row.authGeneration).toBe(5);
+    });
+
+    it("a POST creating a new user ignores a client-supplied authGeneration", async () => {
+      const adminToken = signTestToken(DEFAULT_TEST_USERS_LOCAL_ADMIN());
+      const username = `i2a.create.${randomUUID()}`;
+
+      const createRes = await request(app)
+        .post("/api/users")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          username,
+          email: `${username}@test.invalid`,
+          password: "CreateTest!1",
+          fullName: "New User",
+          role: "technician",
+          authGeneration: 999,
+        });
+      expect(createRes.status).toBe(201);
+
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db.select({ authGeneration: users.authGeneration }).from(users).where(eq(users.id, createRes.body.id));
+      expect(row.authGeneration).toBe(0);
+    });
+
+    function DEFAULT_TEST_USERS_LOCAL_ADMIN() {
+      return { id: admin.id, role: "admin" as const, username: "sec.admin", authGeneration: 0 };
+    }
+  });
+
+  // ==================================================================
+  // I2A — Remaining credential-type and boundary coverage
+  // ==================================================================
+  describe("I2A: legacy bearer sessions, Express legacy sessions, internal-service, and Telegram boundaries", () => {
+    const TEST_INTERNAL_SERVICE_KEY = "i2a-security-foundation-test-internal-service-key-not-for-production";
+
+    beforeAll(() => {
+      process.env.INTERNAL_SERVICE_KEY = TEST_INTERNAL_SERVICE_KEY;
+    });
+
+    async function makeUser(overrides: Partial<{ isActive: boolean; role: string }> = {}) {
+      const { users, regions } = await import("@shared/schema");
+      const regionId = randomUUID();
+      await db.insert(regions).values({ id: regionId, name: `I2A Boundary Test Region ${randomUUID()}` });
+      const id = randomUUID();
+      const username = `i2a.boundary.${randomUUID()}`;
+      await db.insert(users).values({
+        id,
+        username,
+        email: `${username}@test.invalid`,
+        fullName: "I2A Boundary Test User",
+        password: await hashPassword("I2ABoundaryTest!1"),
+        role: overrides.role ?? "technician",
+        regionId,
+        isActive: overrides.isActive ?? true,
+      });
+      return { id, username };
+    }
+
+    it("the leads route succeeds against a real, active, authoritative user via the real requireAuth middleware", async () => {
+      const u = await makeUser();
+      const token = signTestToken({ id: u.id, role: "technician", username: u.username, authGeneration: 0 });
+      const res = await request(app).get("/api/leads/discovery/check-access").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body.allowed).toBe(true);
+    });
+
+    it("a legacy bearer_sessions token (no production writer, test-inserted directly) authenticates while the account is active", async () => {
+      const { bearerSessions } = await import("@shared/schema");
+      const u = await makeUser();
+      const token = randomUUID().replace(/-/g, "");
+      await db.insert(bearerSessions).values({
+        token,
+        userId: u.id,
+        role: "technician",
+        username: u.username,
+        regionId: null,
+        expiry: Date.now() + 1000 * 60 * 60,
+      });
+
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(200);
+    });
+
+    it("the SAME legacy bearer_sessions token is rejected once the account is deactivated", async () => {
+      const { bearerSessions, users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const u = await makeUser();
+      const token = randomUUID().replace(/-/g, "");
+      await db.insert(bearerSessions).values({
+        token,
+        userId: u.id,
+        role: "technician",
+        username: u.username,
+        regionId: null,
+        expiry: Date.now() + 1000 * 60 * 60,
+      });
+      expect((await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`)).status).toBe(200);
+
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("the SAME legacy bearer_sessions token remains rejected after reactivation", async () => {
+      const { bearerSessions } = await import("@shared/schema");
+      const u = await makeUser();
+      const token = randomUUID().replace(/-/g, "");
+      await db.insert(bearerSessions).values({
+        token,
+        userId: u.id,
+        role: "technician",
+        username: u.username,
+        regionId: null,
+        expiry: Date.now() + 1000 * 60 * 60,
+      });
+
+      // Deactivation must run through the REAL canonical transition (not a
+      // raw column update) so the bearer_sessions row is actually deleted —
+      // that physical deletion, not a generation check, is this credential
+      // type's security boundary, per the frozen I2A design.
+      const adminToken = signTestToken({ id: admin.id, role: "admin", username: "sec.admin", authGeneration: 0 });
+      await request(app).patch(`/api/users/${u.id}`).set("Authorization", `Bearer ${adminToken}`).send({ isActive: false });
+      await request(app).patch(`/api/users/${u.id}`).set("Authorization", `Bearer ${adminToken}`).send({ isActive: true });
+
+      const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("an Express legacy session lacking authGeneration in its stored JSON is accepted while the account is generation 0", async () => {
+      const { getPool } = await import("../../database/connection");
+      const u = await makeUser();
+      const { sign: signCookie } = await import("cookie-signature");
+      const sid = randomUUID();
+      const sessSecret = process.env.SESSION_SECRET!;
+      const signedCookie = "s%3A" + encodeURIComponent(signCookie(sid, sessSecret));
+
+      await getPool().query(
+        `INSERT INTO "session" (sid, sess, expire) VALUES ($1, $2::json, now() + interval '1 day')`,
+        [
+          sid,
+          JSON.stringify({
+            cookie: { originalMaxAge: 86400000, expires: new Date(Date.now() + 86400000).toISOString(), httpOnly: true, path: "/" },
+            user: { id: u.id, role: "technician", username: u.username, regionId: null },
+          }),
+        ]
+      );
+
+      const res = await request(app).get("/api/auth/me").set("Cookie", `sessionId=${signedCookie}`);
+      expect(res.status).toBe(200);
+    });
+
+    it("the SAME legacy Express session (no authGeneration) is rejected after deactivation and remains rejected after reactivation", async () => {
+      const { getPool } = await import("../../database/connection");
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const u = await makeUser();
+      const { sign: signCookie } = await import("cookie-signature");
+      const sid = randomUUID();
+      const sessSecret = process.env.SESSION_SECRET!;
+      const signedCookie = "s%3A" + encodeURIComponent(signCookie(sid, sessSecret));
+
+      await getPool().query(
+        `INSERT INTO "session" (sid, sess, expire) VALUES ($1, $2::json, now() + interval '1 day')`,
+        [
+          sid,
+          JSON.stringify({
+            cookie: { originalMaxAge: 86400000, expires: new Date(Date.now() + 86400000).toISOString(), httpOnly: true, path: "/" },
+            user: { id: u.id, role: "technician", username: u.username, regionId: null },
+          }),
+        ]
+      );
+
+      await db.update(users).set({ isActive: false, authGeneration: 1 }).where(eq(users.id, u.id));
+      expect((await request(app).get("/api/auth/me").set("Cookie", `sessionId=${signedCookie}`)).status).toBe(401);
+
+      await db.update(users).set({ isActive: true }).where(eq(users.id, u.id));
+      const res = await request(app).get("/api/auth/me").set("Cookie", `sessionId=${signedCookie}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("requireAdminOrInternal grants access with a valid x-internal-service-key and no human session at all", async () => {
+      const res = await request(app)
+        .get("/api/observability/ready")
+        .set("x-internal-service-key", TEST_INTERNAL_SERVICE_KEY);
+      expect(res.status).not.toBe(401);
+      expect(res.status).not.toBe(403);
+    });
+
+    it("requireAdminOrInternal rejects a request with no internal key and no session", async () => {
+      const res = await request(app).get("/api/observability/ready");
+      expect(res.status).toBe(401);
+    });
+
+    it("requireAuthOrInternal's Telegram sub-path (which requires the internal key alongside a linked technician id) accepts an active linked technician", async () => {
+      const { users } = await import("@shared/schema");
+      const u = await makeUser();
+      const telegramId = `tg-${randomUUID()}`;
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ telegramUserId: telegramId }).where(eq(users.id, u.id));
+
+      // /api/courier/serial-lookup is registered twice in courier.routes.ts —
+      // an earlier requireAuth-only registration shadows the
+      // requireAuthOrInternal one for the same path+method, so it can never
+      // reach the Telegram sub-path under test. /api/courier/sim-link is
+      // registered exactly once, with requireAuthOrInternal, and reaches it.
+      const res = await request(app)
+        .post("/api/courier/sim-link")
+        .set("x-internal-service-key", TEST_INTERNAL_SERVICE_KEY)
+        .set("x-telegram-user-id", telegramId)
+        .send({ simSerial: "0000000000000" });
+
+      // The auth boundary must not reject this — any 401 here would be an auth
+      // failure; a non-401/403 status (whatever the route's own business logic
+      // returns for this payload) proves the Telegram sub-path authenticated.
+      expect(res.status).not.toBe(401);
+      expect(res.status).not.toBe(403);
+    });
+
+    it("requireAuthOrInternal's Telegram sub-path rejects the same identity once the linked technician is deactivated", async () => {
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const u = await makeUser();
+      const telegramId = `tg-${randomUUID()}`;
+      await db.update(users).set({ telegramUserId: telegramId, isActive: false }).where(eq(users.id, u.id));
+
+      const res = await request(app)
+        .post("/api/courier/sim-link")
+        .set("x-internal-service-key", TEST_INTERNAL_SERVICE_KEY)
+        .set("x-telegram-user-id", telegramId)
+        .send({ simSerial: "0000000000000" });
+
+      expect(res.status).toBe(401);
+    });
+  });
 });

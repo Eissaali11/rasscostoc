@@ -9,15 +9,17 @@ import { AuthService } from "./auth.service";
 import type { IIdentityService, LoginCredentials, LoginResult, RefreshResult, SafeUser } from "./contracts/IIdentityService";
 import { hasRoleOrAbove } from "@shared/roles";
 import type { IUserRepository, IRefreshTokenRepository } from "@stockpro/contracts";
+import type { IIdentityUnitOfWork } from "../domain/repositories/IIdentityUnitOfWork";
 
 export class IdentityService implements IIdentityService {
   private readonly authService: AuthService;
 
   constructor(
     userRepository: IUserRepository,
-    refreshTokenRepository: IRefreshTokenRepository
+    refreshTokenRepository: IRefreshTokenRepository,
+    identityUnitOfWork: IIdentityUnitOfWork
   ) {
-    this.authService = new AuthService(userRepository, refreshTokenRepository);
+    this.authService = new AuthService(userRepository, refreshTokenRepository, identityUnitOfWork);
   }
 
   async login(credentials: LoginCredentials, session?: any): Promise<LoginResult> {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, text, varchar, timestamp, boolean, bigint } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, bigint, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users, type UserSafe } from "./organization.schema";
 
@@ -26,6 +26,12 @@ export const refreshTokens = pgTable("refresh_tokens", {
   expiry: timestamp("expiry").notNull(),
   isRevoked: boolean("is_revoked").notNull().default(false),
   replacedBy: text("replaced_by"),
+  // Snapshot of users.auth_generation at the moment this token's authentication
+  // event was authenticated (login or a prior rotation). Compared against the
+  // user's *current* generation on every refresh so a token whose lineage began
+  // before a deactivation can never mint a credential valid after it, even if
+  // the row was physically inserted after the deactivation's revocation sweep.
+  authGeneration: integer("auth_generation").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

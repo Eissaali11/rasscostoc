@@ -127,7 +127,12 @@ export class SystemController {
       return;
     }
 
-    const imported = await this.importSystemBackupUseCase.execute(backup);
+    const restoreActor = req.user!;
+    const imported = await this.importSystemBackupUseCase.execute(backup, {
+      id: restoreActor.id,
+      username: restoreActor.username,
+      role: restoreActor.role,
+    });
 
     // Log the restore operation
     const restorePayload = JSON.stringify(backup);

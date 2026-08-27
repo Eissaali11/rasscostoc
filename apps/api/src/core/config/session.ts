@@ -16,6 +16,12 @@ declare module "express-session" {
       role: string;
       username: string;
       regionId: string | null;
+      // Snapshot of users.auth_generation at the moment this session's
+      // authentication event was authenticated. Compared against the fresh
+      // DB value on every request so a deactivation permanently invalidates
+      // this session, including across a later reactivation — physical row
+      // deletion at deactivation time is cleanup, not the security boundary.
+      authGeneration?: number;
     };
   }
 }
