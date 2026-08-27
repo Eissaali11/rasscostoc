@@ -20,6 +20,12 @@ export const users = pgTable("users", {
   department: text("department"),
   permissions: text("permissions"), // JSON string representation of custom permissions
   isActive: boolean("is_active").notNull().default(true),
+  // Monotonically incremented on every deactivation only; never decremented or
+  // reset on reactivation. Binds every issued credential (JWT, refresh token,
+  // Express session) to the account state at the moment it was authenticated,
+  // so a deactivation permanently invalidates every credential issued before it,
+  // even ones created mid-flight or reused after a later reactivation.
+  authGeneration: integer("auth_generation").notNull().default(0),
   fcmToken: text("fcm_token"),
   // ربط حساب الفني برقم مستخدمه في تيليجرام (بوت توثيق التركيب) - يُستخدم لتحديد هوية
   // الفني الفعلي عند رفع تقارير courier/pdf عبر البوت بدل حساب خدمة عام واحد.
@@ -212,10 +218,17 @@ export const warehouseTransfers = pgTable("warehouse_transfers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// OPS-PERM-S0-B1-C.I2A: authGeneration is server-managed credential-revocation
+// state — no legitimate client create/update request ever supplies it. Omitting
+// it here (rather than relying on call-site discipline) means it is absent
+// from InsertUser at the type level, and any unrecognized "authGeneration" key
+// in an incoming request body is silently stripped by this schema before the
+// request ever reaches application code.
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  authGeneration: true,
 }).extend({
   role: z.enum(["admin", "supervisor", "technician", "viewer", "courier_supervisor", "warehouse"]),
 });

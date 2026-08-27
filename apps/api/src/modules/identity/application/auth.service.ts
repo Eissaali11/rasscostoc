@@ -11,11 +11,13 @@ import * as jwt from "@server/utils/jwt";
 import { hashPassword as utilHashPassword, verifyPassword as utilVerifyPassword } from "@server/utils/password";
 import type { IUserRepository, IRefreshTokenRepository } from "@stockpro/contracts";
 import { JWT_SECRET, JWT_ACCESS_EXPIRES_IN, JWT_REFRESH_EXPIRES_DAYS } from "@core/config/jwt.config";
+import type { IIdentityUnitOfWork } from "../domain/repositories/IIdentityUnitOfWork";
 
 export class AuthService {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly refreshTokenRepository: IRefreshTokenRepository
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
+    private readonly identityUnitOfWork: IIdentityUnitOfWork
   ) {}
 
   /**
@@ -43,6 +45,14 @@ export class AuthService {
     // Return user without password
     const { password: _, ...userSafe } = user;
 
+    // Single, immutable snapshot of the account's credential generation for this
+    // authentication event. Every credential issued below carries exactly this
+    // value — never a value re-read later — so a concurrent deactivation cannot
+    // retroactively upgrade an already-authenticated login to a newer generation,
+    // and a credential physically persisted after a deactivation's revocation
+    // sweep still carries the stale generation and fails the next comparison.
+    const authGeneration = user.authGeneration;
+
     // Generate JWT Access Token
     const accessToken = jwt.sign(
       {
@@ -53,6 +63,7 @@ export class AuthService {
         employeeCode: user.employeeCode || null,
         technicianCode: user.technicianCode || null,
         permissions: user.permissions ? JSON.parse(user.permissions) : [],
+        authGeneration,
       },
       JWT_SECRET,
       { expiresIn: JWT_ACCESS_EXPIRES_IN }
@@ -66,7 +77,8 @@ export class AuthService {
     await this.refreshTokenRepository.create(
       refreshTokenString,
       user.id,
-      refreshTokenExpiry
+      refreshTokenExpiry,
+      authGeneration
     );
 
     // Store in Express Session (PostgreSQL-backed) - PRIMARY METHOD for web fallback
@@ -79,6 +91,7 @@ export class AuthService {
         employeeCode: user.employeeCode || null,
         technicianCode: user.technicianCode || null,
         permissions: user.permissions ? JSON.parse(user.permissions) : [],
+        authGeneration,
       };
     }
 
@@ -94,64 +107,97 @@ export class AuthService {
   }
 
   /**
-   * Refresh token rotation (RTR) - issues new JWT and new Refresh Token
+   * Refresh token rotation (RTR) - issues new JWT and new Refresh Token.
+   *
+   * Every check that decides whether to issue a new credential runs inside one
+   * transaction, against row-locked, freshly-read state — never against the
+   * pre-transaction lookup below, which exists only to locate which rows to
+   * lock. This closes two races that a lock-only design (locking just the
+   * users row) cannot: (1) a deactivation committing between this method's
+   * start and its transaction, which must be observed by a fresh in-tx reread
+   * of the token's revocation state, not the stale pre-tx read; and (2) two
+   * concurrent refreshes of the same token, which the token row's own
+   * FOR UPDATE serializes so only the first can succeed.
    */
   async refresh(tokenString: string): Promise<RefreshResult> {
-    const record = await this.refreshTokenRepository.getByToken(tokenString);
-    if (!record) {
+    // Not security-authoritative — used only to fail fast before opening a
+    // transaction when the token obviously doesn't exist.
+    const preCheck = await this.refreshTokenRepository.getByToken(tokenString);
+    if (!preCheck) {
       throw new AuthenticationError("رمز التحديث غير صالح");
     }
 
-    // Check if token is revoked
-    if (record.isRevoked) {
-      // Threat detected! Token reuse means token was compromised.
-      // Revoke all refresh tokens for this user immediately as a precaution.
-      await this.refreshTokenRepository.revokeAllForUser(record.userId);
-      logger.warn(`Security alert: Revoked refresh token reuse detected for user ${record.userId}. All active sessions invalidated.`, { source: "auth" });
-      throw new AuthenticationError("تم الكشف عن محاولة إعادة استخدام رمز ملغى. تم إلغاء جميع الجلسات لدواعي الأمان.");
-    }
+    return this.identityUnitOfWork.execute(async (ctx) => {
+      const lockedUser = await ctx.lockUserForUpdate(preCheck.userId);
+      const record = await ctx.refreshTokenRepository.getByTokenForUpdate(tokenString);
 
-    // Check if token is expired
-    if (new Date() > new Date(record.expiry)) {
-      throw new AuthenticationError("انتهت صلاحية رمز التحديث، الرجاء تسجيل الدخول مرة أخرى");
-    }
+      if (!record || record.userId !== preCheck.userId) {
+        throw new AuthenticationError("رمز التحديث غير صالح");
+      }
 
-    // Fetch user details
-    const user = await this.userRepository.getUser(record.userId);
-    if (!user || !user.isActive) {
-      throw new AuthenticationError("المستخدم غير موجود أو غير نشط");
-    }
+      if (record.isRevoked) {
+        // Threat detected! Token reuse means token was compromised.
+        // Revoke all refresh tokens for this user immediately as a precaution.
+        await ctx.refreshTokenRepository.revokeAllForUser(record.userId);
+        logger.warn(`Security alert: Revoked refresh token reuse detected for user ${record.userId}. All active sessions invalidated.`, { source: "auth" });
+        throw new AuthenticationError("تم الكشف عن محاولة إعادة استخدام رمز ملغى. تم إلغاء جميع الجلسات لدواعي الأمان.");
+      }
 
-    // Generate new Access Token
-    const newAccessToken = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        username: user.username,
-        regionId: user.regionId || null,
-        employeeCode: user.employeeCode || null,
-        technicianCode: user.technicianCode || null,
-        permissions: user.permissions ? JSON.parse(user.permissions) : [],
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_ACCESS_EXPIRES_IN }
-    );
+      if (new Date() > new Date(record.expiry)) {
+        throw new AuthenticationError("انتهت صلاحية رمز التحديث، الرجاء تسجيل الدخول مرة أخرى");
+      }
 
-    // Generate new Refresh Token (Rotation)
-    const newRefreshTokenString = crypto.randomBytes(32).toString("hex");
-    const newRefreshTokenExpiry = new Date(Date.now() + JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
+      if (!lockedUser || !lockedUser.isActive) {
+        throw new AuthenticationError("المستخدم غير موجود أو غير نشط");
+      }
 
-    // Revoke old token and link to new one in transaction-like sequence
-    await this.refreshTokenRepository.revoke(tokenString, newRefreshTokenString);
-    await this.refreshTokenRepository.create(newRefreshTokenString, user.id, newRefreshTokenExpiry);
+      // The credential's own generation must match the account's CURRENT
+      // generation, not merely "not revoked" — a row created after a
+      // deactivation's revocation sweep was never revoked, but it was born
+      // carrying the stale pre-deactivation generation and must still fail.
+      if (record.authGeneration !== lockedUser.authGeneration) {
+        throw new AuthenticationError("انتهت صلاحية الجلسة، الرجاء تسجيل الدخول مرة أخرى");
+      }
 
-    logger.info(`Session token rotated for user: ${user.username}`, { source: "auth" });
+      const user = await ctx.userRepository.getUser(record.userId);
+      if (!user) {
+        throw new AuthenticationError("المستخدم غير موجود أو غير نشط");
+      }
 
-    return {
-      success: true,
-      token: newAccessToken,
-      refreshToken: newRefreshTokenString,
-    };
+      const newAccessToken = jwt.sign(
+        {
+          userId: user.id,
+          role: user.role,
+          username: user.username,
+          regionId: user.regionId || null,
+          employeeCode: user.employeeCode || null,
+          technicianCode: user.technicianCode || null,
+          permissions: user.permissions ? JSON.parse(user.permissions) : [],
+          authGeneration: lockedUser.authGeneration,
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_ACCESS_EXPIRES_IN }
+      );
+
+      const newRefreshTokenString = crypto.randomBytes(32).toString("hex");
+      const newRefreshTokenExpiry = new Date(Date.now() + JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
+
+      await ctx.refreshTokenRepository.revoke(tokenString, newRefreshTokenString);
+      await ctx.refreshTokenRepository.create(
+        newRefreshTokenString,
+        user.id,
+        newRefreshTokenExpiry,
+        lockedUser.authGeneration
+      );
+
+      logger.info(`Session token rotated for user: ${user.username}`, { source: "auth" });
+
+      return {
+        success: true,
+        token: newAccessToken,
+        refreshToken: newRefreshTokenString,
+      };
+    });
   }
 
   /**

@@ -166,7 +166,11 @@ export class UsersController {
       updates.password = await hashPassword(updates.password);
     }
 
-    const updatedUser = await usersContainer.userManagementUseCase.update(req.params.id, updates);
+    const updatedUser = await usersContainer.userManagementUseCase.update(req.params.id, updates, {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    });
 
     // Log the activity
     await this.logActivity({
@@ -198,7 +202,11 @@ export class UsersController {
       throw new NotFoundError("User not found");
     }
 
-    const deleted = await usersContainer.userManagementUseCase.softDelete(req.params.id);
+    const deleted = await usersContainer.userManagementUseCase.softDelete(req.params.id, {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    });
     if (!deleted) {
       throw new NotFoundError("User not found");
     }
@@ -234,7 +242,11 @@ export class UsersController {
       return;
     }
 
-    const count = await usersContainer.userManagementUseCase.updateAllStatus(isActive, user.id);
+    const count = await usersContainer.userManagementUseCase.updateAllStatus(isActive, user.id, {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    });
 
     // Log the activity
     await this.logActivity({

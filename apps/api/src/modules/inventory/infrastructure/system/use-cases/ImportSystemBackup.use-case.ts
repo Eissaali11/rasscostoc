@@ -2,6 +2,12 @@ import { getDatabase } from "@core/database/connection";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "@server/utils/password";
+import { ValidationError } from "@core/errors/AppError";
+import {
+  applyCanonicalStatusTransition,
+  buildIdentityTransactionalContext,
+  type StatusTransitionActor,
+} from "@modules/identity/presentation/http/identity.api";
 import {
   inventoryItems,
   itemTypes,
@@ -88,6 +94,34 @@ export class ImportSystemBackupUseCase {
     return "accessories";
   }
 
+  /** Rejects a backup user entry that isn't itself a plain record — a raw
+   * `null`/string/array element would otherwise reach later field access as
+   * an uncaught TypeError (a 500), not a deliberate validation failure. */
+  private validateUserRecord(row: unknown): Record<string, unknown> {
+    if (row === null || typeof row !== "object" || Array.isArray(row)) {
+      throw new ValidationError(`Invalid user record in backup data: ${JSON.stringify(row)}`);
+    }
+    return row as Record<string, unknown>;
+  }
+
+  /** Distinguishes an absent `isActive` key (preserve the account's current
+   * status / use the normal creation default) from one present but not a
+   * genuine boolean (reject) — a distinction `value: unknown` alone cannot
+   * express, since `undefined` would be indistinguishable from an explicit
+   * `null`. isActive is a security transition request, not an ordinary
+   * business toggle, so a malformed value here fails the whole restore
+   * rather than silently defaulting to `true`. */
+  private parseRestoredActiveState(userRecord: Record<string, unknown>): boolean | undefined {
+    if (!Object.prototype.hasOwnProperty.call(userRecord, "isActive")) {
+      return undefined;
+    }
+    const value = userRecord.isActive;
+    if (typeof value === "boolean") {
+      return value;
+    }
+    throw new ValidationError(`Invalid isActive value in backup user record: ${JSON.stringify(value)}`);
+  }
+
   private async normalizeImportedPassword(password: unknown): Promise<string> {
     const raw = this.asString(password);
     if (!raw) {
@@ -99,7 +133,7 @@ export class ImportSystemBackupUseCase {
     return hashPassword(raw);
   }
 
-  async execute(backup: { data?: Record<string, unknown> }): Promise<ImportSummary> {
+  async execute(backup: { data?: Record<string, unknown> }, actor: StatusTransitionActor): Promise<ImportSummary> {
     const db = getDatabase();
     const summary: ImportSummary = {
       users: 0,
@@ -172,10 +206,11 @@ export class ImportSystemBackupUseCase {
       }
 
       for (const row of importedUsers) {
-        const user = row as Record<string, unknown>;
+        const user = this.validateUserRecord(row);
         const id = this.asString(user.id) ?? randomUUID();
         const username = this.asString(user.username);
         if (!username) continue;
+        const resolvedActiveState = this.parseRestoredActiveState(user);
 
         const [existingById] = await tx
           .select({ id: users.id })
@@ -216,6 +251,14 @@ export class ImportSystemBackupUseCase {
 
         const password = await this.normalizeImportedPassword(user.password);
 
+        // OPS-PERM-S0-B1-C.I2A: isActive is deliberately excluded from this
+        // payload. A restored account's active/inactive transition must
+        // route through the same canonical transition every live action
+        // uses (generation bump, credential invalidation, audit) — never a
+        // bare column write — or a restore could silently deactivate an
+        // account without invalidating its credentials, leaving them valid
+        // again the moment a later restore (or any reactivation) flips
+        // isActive back without ever bumping generation.
         const userPayload = {
           username: resolvedUsername,
           email: resolvedEmail,
@@ -225,7 +268,6 @@ export class ImportSystemBackupUseCase {
           city: this.asString(user.city),
           role: this.normalizeRole(user.role),
           regionId: this.asString(user.regionId),
-          isActive: this.asBoolean(user.isActive, true),
         };
 
         if (existingById || existingByUsername) {
@@ -236,12 +278,33 @@ export class ImportSystemBackupUseCase {
               updatedAt: new Date(),
             })
             .where(eq(users.id, targetUserId));
+
+          if (resolvedActiveState !== undefined) {
+            const [currentState] = await tx
+              .select({ isActive: users.isActive })
+              .from(users)
+              .where(eq(users.id, targetUserId))
+              .limit(1);
+            if (currentState && currentState.isActive !== resolvedActiveState) {
+              await applyCanonicalStatusTransition(
+                buildIdentityTransactionalContext(tx),
+                targetUserId,
+                resolvedActiveState,
+                actor
+              );
+            }
+          }
         } else {
           await tx
             .insert(users)
             .values({
               id: targetUserId,
               ...userPayload,
+              // A genuinely new account has no prior credential lineage to
+              // protect — its initial state may come directly from the
+              // backup, and its generation always starts at 0 (the
+              // repository/schema default; never restorable from a backup).
+              isActive: resolvedActiveState ?? true,
               createdAt: this.asDate(user.createdAt),
               updatedAt: this.asDate(user.updatedAt),
             });

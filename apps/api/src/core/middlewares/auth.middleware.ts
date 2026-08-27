@@ -57,9 +57,42 @@ type AuthUser = {
 };
 
 /**
- * Fetch fresh user data from DB via Drizzle Repository (no raw SQL)
+ * Outcome of resolving a credential's claimed user identity against the
+ * authoritative current database state. NOT_FOUND and LOOKUP_FAILURE are kept
+ * distinct on purpose — a database error must never be treated as "no such
+ * user" and must never fall back to trusting the credential's own claims.
+ * Every requireAuth branch below must reject on every variant except
+ * FOUND_ACTIVE.
  */
-async function getFreshAuthUser(userId: string): Promise<AuthUser | null> {
+type AuthResolution =
+  | { kind: "FOUND_ACTIVE"; user: AuthUser; authGeneration: number }
+  | { kind: "FOUND_INACTIVE" }
+  | { kind: "NOT_FOUND" }
+  | { kind: "LOOKUP_FAILURE"; error: unknown };
+
+/**
+ * Thrown when the authoritative user lookup itself fails (a database/
+ * infrastructure error), never when it merely finds no active match. Callers
+ * must let this propagate to the global error handler as a genuine server
+ * error — never wrap it as an AuthenticationError, and never treat a request
+ * that hit this path as authenticated.
+ */
+class AuthInfrastructureError extends Error {
+  constructor(cause: unknown) {
+    super("Authentication service temporarily unavailable");
+    this.name = "AuthInfrastructureError";
+    this.cause = cause as Error | undefined;
+  }
+}
+
+/**
+ * Resolves a user id to its authoritative current state: existence,
+ * active-state, and credential generation, plus the identity fields used to
+ * populate req.user. Never merges its result with data taken from the
+ * presented credential — callers must treat this as the single source of
+ * truth for every request.
+ */
+async function resolveAuthState(userId: string): Promise<AuthResolution> {
   try {
     const db = getDatabase();
     const [row] = await db
@@ -71,25 +104,32 @@ async function getFreshAuthUser(userId: string): Promise<AuthUser | null> {
         employeeCode: users.employeeCode,
         technicianCode: users.technicianCode,
         permissions: users.permissions,
+        isActive: users.isActive,
+        authGeneration: users.authGeneration,
       })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!row) return null;
+    if (!row) return { kind: "NOT_FOUND" };
+    if (!row.isActive) return { kind: "FOUND_INACTIVE" };
 
     return {
-      id: row.id,
-      role: row.role,
-      username: row.username,
-      regionId: row.regionId ?? null,
-      employeeCode: row.employeeCode ?? null,
-      technicianCode: row.technicianCode ?? null,
-      permissions: row.permissions ? JSON.parse(row.permissions) : [],
+      kind: "FOUND_ACTIVE",
+      authGeneration: row.authGeneration,
+      user: {
+        id: row.id,
+        role: row.role,
+        username: row.username,
+        regionId: row.regionId ?? null,
+        employeeCode: row.employeeCode ?? null,
+        technicianCode: row.technicianCode ?? null,
+        permissions: row.permissions ? JSON.parse(row.permissions) : [],
+      },
     };
   } catch (error) {
     console.error("Auth user refresh error:", error);
-    return null;
+    return { kind: "LOOKUP_FAILURE", error };
   }
 }
 
@@ -101,17 +141,17 @@ class PostgresSessionStore implements SessionStore {
         `SELECT user_id AS "userId", role, username, region_id AS "regionId", expiry FROM bearer_sessions WHERE token = $1`,
         [token]
       );
-      
+
       if (result.rows && result.rows.length > 0) {
         const row = result.rows[0];
         const now = Date.now();
-        
+
         // Check if session has expired
         if (Number(row.expiry) < now) {
           await this.delete(token);
           return null;
         }
-        
+
         return {
           userId: row.userId,
           role: row.role,
@@ -187,50 +227,66 @@ export async function requireAuth(
       try {
         // Attempt JWT verification first
         const decoded = jwt.verify(token, JWT_SECRET);
-        const fallbackUser: AuthUser = {
-          id: decoded.userId,
-          role: decoded.role,
-          username: decoded.username,
-          regionId: decoded.regionId ?? null,
-          employeeCode: decoded.employeeCode ?? null,
-          technicianCode: decoded.technicianCode ?? null,
-          permissions: Array.isArray(decoded.permissions) ? decoded.permissions : [],
-        };
 
-        const freshUser = await getFreshAuthUser(decoded.userId);
-        req.user = freshUser || fallbackUser;
+        // Missing claim (pre-migration token) is interpreted as generation 0.
+        const claimedGeneration = typeof decoded.authGeneration === "number" ? decoded.authGeneration : 0;
+        const resolution = await resolveAuthState(decoded.userId);
 
+        if (resolution.kind === "LOOKUP_FAILURE") {
+          // The lookup itself failed — this is an infrastructure fault, not an
+          // authentication decision. Fail closed via the generic server-error
+          // path, never as a credential-invalid 401, and never installing the
+          // token's own stale claims into req.user.
+          throw new AuthInfrastructureError(resolution.error);
+        }
+        if (resolution.kind !== "FOUND_ACTIVE") {
+          // NOT_FOUND and FOUND_INACTIVE fail closed with the same
+          // externally-visible message — no enumeration of why.
+          throw new AuthenticationError("Session expired");
+        }
+        if (resolution.authGeneration !== claimedGeneration) {
+          // The account was deactivated (and possibly reactivated) since this
+          // token was signed — its lineage is permanently invalid.
+          throw new AuthenticationError("Session expired");
+        }
+
+        req.user = resolution.user;
         return next();
       } catch (jwtError) {
-        // Fallback to legacy database-backed session token lookup
+        // A genuine JWT verification failure (bad signature, malformed,
+        // expired) falls through to the legacy bearer-session lookup below.
+        // An AuthenticationError or AuthInfrastructureError thrown by the
+        // block above (inactive/missing/generation-mismatched, or a lookup
+        // failure) must NOT fall through to that fallback — it is already a
+        // final, authoritative rejection.
+        if (jwtError instanceof AuthenticationError || jwtError instanceof AuthInfrastructureError) {
+          throw jwtError;
+        }
+
         const session = await sessionStore.get(token);
         if (session) {
-          const fallbackUser: AuthUser = {
-            id: session.userId,
-            role: session.role,
-            username: session.username,
-            regionId: session.regionId ?? null,
-            employeeCode: null,
-            technicianCode: null,
-            permissions: [],
-          };
+          const resolution = await resolveAuthState(session.userId);
+          if (resolution.kind === "LOOKUP_FAILURE") {
+            throw new AuthInfrastructureError(resolution.error);
+          }
+          if (resolution.kind !== "FOUND_ACTIVE") {
+            throw new AuthenticationError("Session expired");
+          }
 
-          const freshUser = await getFreshAuthUser(session.userId);
-          req.user = freshUser || fallbackUser;
+          req.user = resolution.user;
 
           if (
-            freshUser &&
-            (freshUser.role !== session.role ||
-              freshUser.username !== session.username ||
-              freshUser.regionId !== session.regionId)
+            resolution.user.role !== session.role ||
+            resolution.user.username !== session.username ||
+            resolution.user.regionId !== session.regionId
           ) {
             await sessionStore.set(
               token,
               {
-                userId: freshUser.id,
-                role: freshUser.role,
-                username: freshUser.username,
-                regionId: freshUser.regionId,
+                userId: resolution.user.id,
+                role: resolution.user.role,
+                username: resolution.user.username,
+                regionId: resolution.user.regionId,
                 expiry: session.expiry,
               },
               session.expiry
@@ -239,19 +295,34 @@ export async function requireAuth(
 
           return next();
         }
+
+        throw new AuthenticationError("Session expired");
       }
     }
 
     // 2. Fallback to Express Session (PostgreSQL-backed cookie)
     const sessionObj = (req as any).session;
     if (sessionObj && sessionObj.user) {
-      const sessionUser = sessionObj.user as AuthUser;
-      const freshUser = sessionUser?.id ? await getFreshAuthUser(sessionUser.id) : null;
-      req.user = freshUser || sessionUser;
-
-      if (req.user) {
-        sessionObj.user = req.user;
+      const sessionUser = sessionObj.user as AuthUser & { authGeneration?: number };
+      if (!sessionUser?.id) {
+        throw new AuthenticationError("Session expired");
       }
+
+      const claimedGeneration = typeof sessionUser.authGeneration === "number" ? sessionUser.authGeneration : 0;
+      const resolution = await resolveAuthState(sessionUser.id);
+
+      if (resolution.kind === "LOOKUP_FAILURE") {
+        throw new AuthInfrastructureError(resolution.error);
+      }
+      if (resolution.kind !== "FOUND_ACTIVE") {
+        throw new AuthenticationError("Session expired");
+      }
+      if (resolution.authGeneration !== claimedGeneration) {
+        throw new AuthenticationError("Session expired");
+      }
+
+      req.user = resolution.user;
+      sessionObj.user = { ...resolution.user, authGeneration: resolution.authGeneration };
 
       return next();
     }

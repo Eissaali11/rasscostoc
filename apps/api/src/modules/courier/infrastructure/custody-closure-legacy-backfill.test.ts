@@ -47,7 +47,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { eq } from "drizzle-orm";
-import { users, itemTypes, items, courierRequests, courierRequestItems, courierExecutions, idempotencyRecords } from "@shared/schema";
+import { itemTypes, items, courierRequests, courierRequestItems, courierExecutions, idempotencyRecords } from "@shared/schema";
 import { createHistoricalMigrationDatabase } from "../../../../../../scripts/test-historical-migration-database.mjs";
 import {
   classifyOneRow,
@@ -103,13 +103,38 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     };
   }
 
+  // OPS-PERM-S0-B1-C.I2A.I0.C1.E3: this database is intentionally migrated
+  // only through 0051, and this insert must reflect exactly the users
+  // table shape that actually existed at that cutoff — never the current
+  // shared Drizzle `users` schema, which now includes columns (e.g.
+  // migration 0058's authGeneration) added long after 0051. Using
+  // `db.insert(users)` here would have Drizzle generate an INSERT
+  // referencing every column in the *current* schema (confirmed via
+  // `.toSQL()`, same reasoning already documented above for
+  // `courierRequests`), which does not exist on this historical database.
+  // Raw parameterized SQL naming only the columns proven (by directly
+  // introspecting a disposable 0051-cutoff database's
+  // information_schema.columns) to exist at that cutoff sidesteps this
+  // entirely, with no risk of interpolating unparameterized values.
+  async function insertLegacyUser(fields: {
+    id: string;
+    username: string;
+    email: string;
+    fullName: string;
+    role: string;
+  }) {
+    await pool.query(
+      `INSERT INTO users (id, username, email, password, full_name, role) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [fields.id, fields.username, fields.email, "x", fields.fullName, fields.role]
+    );
+  }
+
   async function seedRequestWithItem(deliveredStatus: string) {
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p2-legacy-${actorId.slice(0, 8)}`,
       email: `e4p2-legacy-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P2 Legacy",
       role: "admin",
     });
@@ -157,11 +182,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
 
   it("3. no item linkage at all, zero evidence -> RECONCILIATION_REQUIRED", async () => {
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p2-legacy-none-${actorId.slice(0, 8)}`,
       email: `e4p2-legacy-none-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P2 Legacy None",
       role: "admin",
     });
@@ -175,11 +199,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
 
   it("4. no item linkage, idempotency FAILED -> FAILED_FINAL", async () => {
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p2-legacy-ff-${actorId.slice(0, 8)}`,
       email: `e4p2-legacy-ff-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P2 Legacy FF",
       role: "admin",
     });
@@ -199,11 +222,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
 
   it("5. idempotency PROCESSING, fresh (< 155s) -> null (skip this pass)", async () => {
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p2-legacy-fresh-${actorId.slice(0, 8)}`,
       email: `e4p2-legacy-fresh-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P2 Legacy Fresh",
       role: "admin",
     });
@@ -224,11 +246,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
 
   it("6. idempotency PROCESSING, stale (> 155s) -> RECONCILIATION_REQUIRED", async () => {
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p2-legacy-stale-${actorId.slice(0, 8)}`,
       email: `e4p2-legacy-stale-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P2 Legacy Stale",
       role: "admin",
     });
@@ -249,11 +270,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
 
   it("7. missing item linkage for a resolvable-shaped row -> RECONCILIATION_REQUIRED", async () => {
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p2-legacy-miss-${actorId.slice(0, 8)}`,
       email: `e4p2-legacy-miss-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P2 Legacy Missing",
       role: "admin",
     });
@@ -354,11 +374,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     const deliveredRequestId = await seedRequestWithItem("DELIVERED");
 
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p3-cli-${actorId.slice(0, 8)}`,
       email: `e4p3-cli-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P3 CLI Zero-Evidence",
       role: "admin",
     });
@@ -454,11 +473,10 @@ describe("OPS-REMED-E4-P2 — legacy classification and backfill", () => {
     const successRequestId = await seedRequestWithItem("DELIVERED");
 
     const actorId = randomUUID();
-    await db.insert(users).values({
+    await insertLegacyUser({
       id: actorId,
       username: `e4p3-subproc-${actorId.slice(0, 8)}`,
       email: `e4p3-subproc-${actorId.slice(0, 8)}@test.local`,
-      password: "x",
       fullName: "E4 P3 Subprocess Zero-Evidence",
       role: "admin",
     });

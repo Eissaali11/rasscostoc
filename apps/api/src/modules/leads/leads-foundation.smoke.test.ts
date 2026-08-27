@@ -21,7 +21,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import {
   createTestApp,
-  createAuthenticatedRequest,
   createUnauthenticatedRequest,
   createUserFixture,
 } from "../../core/testing/foundation";
@@ -43,19 +42,24 @@ describe("PHASE B1.1 — backend test foundation smoke", () => {
     expect((app as any)._router?.stack?.length ?? (app as any).router?.stack?.length).toBeGreaterThan(0);
   });
 
-  it("an unauthenticated request is rejected (401)", async () => {
+  // OPS-PERM-S0-B1-C.I2A.I0.C1.E3: this smoke test's only job is to prove
+  // the Leads route is protected — not to characterize what happens to a
+  // *signed* credential, since that outcome now genuinely depends on
+  // whether an authoritative database is reachable from this process
+  // (LOOKUP_FAILURE -> 500 with none, NOT_FOUND -> 401 with a real one
+  // migrated database). That distinction is owned elsewhere and must not
+  // leak back into this DB-availability-agnostic foundation smoke:
+  //   - LOOKUP_FAILURE (no DB / infrastructure failure) -> 500:
+  //     apps/api/src/core/middlewares/auth.middleware.lookup-failure.test.ts
+  //   - a real active user's authenticated request succeeding against a
+  //     real database: apps/api/src/core/tests/security/security-foundation.test.ts
+  // This test asserts only the one thing that is true identically in both
+  // environments: a request carrying no credential at all is rejected
+  // before any authoritative lookup is even attempted.
+  it("an unauthenticated request is rejected (401), identically with or without a reachable database", async () => {
     const app = createTestApp({ registerRoutes: registerLeadDiscoveryAuditRoutes });
     const res = await createUnauthenticatedRequest(app).get("/api/leads/discovery/check-access");
     expect(res.status).toBe(401);
-  });
-
-  it("an authenticated request succeeds (real JWT verified by the real requireAuth middleware)", async () => {
-    const app = createTestApp({ registerRoutes: registerLeadDiscoveryAuditRoutes });
-    const res = await createAuthenticatedRequest(app, "technician").get(
-      "/api/leads/discovery/check-access"
-    );
-    expect(res.status).toBe(200);
-    expect(res.body.allowed).toBe(true);
   });
 
   it("fixture factories produce valid, overridable shapes", () => {
