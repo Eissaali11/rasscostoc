@@ -41,12 +41,24 @@ function toMinimalUserView(user: any) {
   };
 }
 
+/**
+ * OPS-PERM-S1-F1.R2.SR1 — GET /api/users/:id is a generic identity-directory
+ * read, not a scoped operational endpoint. It must stay narrow: an admin may
+ * read any user, and a user may always read their own record; every other
+ * actor (including supervisor) is denied here regardless of region —
+ * subordinate operational reads belong to the already-scoped Supervisor
+ * endpoints (e.g. GET /api/supervisor/users/:userId), which independently
+ * enforce region membership. Widening this endpoint to a same-region
+ * directory API was never an intended contract and must not be reintroduced
+ * as a side effect of a future permission grant.
+ */
 function canReadUser(
   actor: Express.Request["user"],
   target: { id: string; regionId: string | null },
 ): boolean {
   if (!actor) return false;
-  return true;
+  if (isAdmin(actor.role)) return true;
+  return actor.id === target.id;
 }
 
 export class UsersController {

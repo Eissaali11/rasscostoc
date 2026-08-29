@@ -111,6 +111,10 @@ const DB_DEPENDENT_TEST_FILES = [
   // itself (not merely the TypeScript type layer) cannot persist isActive/
   // authGeneration through its ordinary update/create methods.
   "apps/api/src/modules/identity/infrastructure/database/DrizzleUserRepository.security-state-containment.test.ts",
+  // OPS-PERM-S1-F1.R2.SR1: real-Postgres proof of object-level authorization
+  // for GET /api/users/:id and the supervisor assignment read endpoints —
+  // needs the real app, real routes, and a real authenticated request chain.
+  "apps/api/src/core/tests/security/object-level-authorization.test.ts",
 ];
 
 const args = [
