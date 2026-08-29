@@ -1,9 +1,30 @@
-import type { Express } from "express";
+import type { Express, NextFunction, Request, Response } from "express";
 import { requireAuth, requireAdmin } from "@core/middlewares/auth.middleware";
+import { AuthorizationError } from "@core/errors/AppError";
+import { isAdmin } from "@shared/roles";
 import { supervisorAssignmentsContainer } from "@server/composition/supervisor-assignments.container";
 
+/**
+ * OPS-PERM-S1-F1.R2.SR1 — these two GET endpoints return a supervisor's
+ * assignment relationships (which technicians/warehouses they manage) keyed
+ * entirely by a client-supplied :supervisorId. Object-level authorization
+ * must confirm the caller IS that supervisor (or an admin) before this
+ * relationship data is returned — a coarse role check alone (e.g.
+ * requireSupervisor) is not sufficient, since it does not verify the caller
+ * owns the specific supervisorId in the URL. Any other supervisor, and every
+ * non-admin/non-owning role, is denied regardless of region — this is a
+ * narrow identity check, not a scope policy in its own right.
+ */
+function requireOwnSupervisorAssignmentsOrAdmin(req: Request, _res: Response, next: NextFunction): void {
+  const actor = req.user!;
+  if (isAdmin(actor.role) || actor.id === req.params.supervisorId) {
+    return next();
+  }
+  next(new AuthorizationError("لا يمكنك الوصول إلى ارتباطات مشرف آخر"));
+}
+
 export function registerSupervisorAssignmentsRoutes(app: Express) {
-  
+
   // ===================== Supervisor Technician Assignments =====================
   
   app.post("/api/supervisors/:supervisorId/technicians/:technicianId", requireAuth, requireAdmin, async (req, res) => {
@@ -35,7 +56,7 @@ export function registerSupervisorAssignmentsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/supervisors/:supervisorId/technicians", requireAuth, async (req, res) => {
+  app.get("/api/supervisors/:supervisorId/technicians", requireAuth, requireOwnSupervisorAssignmentsOrAdmin, async (req, res) => {
     try {
       const technicianIds = await supervisorAssignmentsContainer.supervisorAssignmentsUseCase.getTechnicianIdsBySupervisor(
         req.params.supervisorId
@@ -78,7 +99,7 @@ export function registerSupervisorAssignmentsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/supervisors/:supervisorId/warehouses", requireAuth, async (req, res) => {
+  app.get("/api/supervisors/:supervisorId/warehouses", requireAuth, requireOwnSupervisorAssignmentsOrAdmin, async (req, res) => {
     try {
       const warehouseIds = await supervisorAssignmentsContainer.supervisorAssignmentsUseCase.getWarehouseIdsBySupervisor(
         req.params.supervisorId
