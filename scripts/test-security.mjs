@@ -116,6 +116,10 @@ try {
   const test = run(process.platform === "win32" ? "npx.cmd" : "npx", [
     "vitest", "run",
     "apps/api/src/core/tests/security/security-foundation.test.ts",
+    // OPS-PERM-S1-F1.R2-SR2/SR3 — warehouse scope authorization. DB-backed and
+    // real-HTTP, exactly like the foundation suite above, so it belongs to the
+    // same disposable-container runner rather than the DB-free safe subset.
+    "apps/api/src/core/tests/security/warehouse-scope-authorization.test.ts",
   ], {
     env: {
       ...process.env,

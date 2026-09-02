@@ -1,9 +1,11 @@
 import { eq, and } from "drizzle-orm";
 import { getDatabase } from "@core/database/connection";
+import { ValidationError, NotFoundError, ConflictError } from "@core/errors/AppError";
 import {
   supervisorTechnicians,
   supervisorWarehouses,
   users,
+  warehouses,
   UserSafe,
   SupervisorTechnician,
   InsertSupervisorTechnician,
@@ -102,6 +104,50 @@ export class SupervisorRepository implements ISupervisorRepository {
   }
 
   async assignWarehouseToSupervisor(supervisorId: string, warehouseId: string): Promise<SupervisorWarehouse> {
+    // OPS-PERM-S1-F1.R2.SR2 Defect B: Regional assignment invariant.
+    // A supervisor can only be assigned to a warehouse if their regionId
+    // matches the warehouse's regionId. Both must be non-null.
+
+    // Load supervisor and warehouse in parallel
+    const [supervisor, warehouse] = await Promise.all([
+      this.db
+        .select({ regionId: users.regionId })
+        .from(users)
+        .where(eq(users.id, supervisorId)),
+      this.db
+        .select({ regionId: warehouses.regionId })
+        .from(warehouses)
+        .where(eq(warehouses.id, warehouseId)),
+    ]);
+
+    if (!supervisor || supervisor.length === 0) {
+      throw new NotFoundError("المشرف غير موجود");
+    }
+
+    if (!warehouse || warehouse.length === 0) {
+      throw new NotFoundError("المستودع غير موجود");
+    }
+
+    const supervisorRegion = supervisor[0].regionId;
+    const warehouseRegion = warehouse[0].regionId;
+
+    // Both regions must be present AND equal. A null on either side is
+    // "unknown scope" and fails closed — it must never be treated as a match
+    // with the other null. These are typed ValidationErrors (400), not bare
+    // Errors: the route maps AppError.statusCode directly, so a new invariant
+    // added here can never degrade into an uncontrolled 500.
+    if (!supervisorRegion) {
+      throw new ValidationError("المشرف لم يتم تعيينه إلى منطقة");
+    }
+
+    if (!warehouseRegion) {
+      throw new ValidationError("المستودع لم يتم تعيينه إلى منطقة");
+    }
+
+    if (supervisorRegion !== warehouseRegion) {
+      throw new ValidationError("لا يمكن تعيين مشرف من منطقة مختلفة إلى مستودع بمنطقة أخرى");
+    }
+
     // Check if relationship already exists
     const [existing] = await this.db
       .select()
@@ -112,7 +158,7 @@ export class SupervisorRepository implements ISupervisorRepository {
       ));
 
     if (existing) {
-      throw new Error("Warehouse is already assigned to this supervisor");
+      throw new ConflictError("المستودع مرتبط بالفعل بهذا المشرف");
     }
 
     const [assignment] = await this.db

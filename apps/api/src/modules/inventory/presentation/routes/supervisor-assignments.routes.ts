@@ -1,6 +1,6 @@
 import type { Express, NextFunction, Request, Response } from "express";
 import { requireAuth, requireAdmin } from "@core/middlewares/auth.middleware";
-import { AuthorizationError } from "@core/errors/AppError";
+import { AuthorizationError, AppError } from "@core/errors/AppError";
 import { isAdmin } from "@shared/roles";
 import { supervisorAssignmentsContainer } from "@server/composition/supervisor-assignments.container";
 
@@ -78,6 +78,16 @@ export function registerSupervisorAssignmentsRoutes(app: Express) {
       );
       res.status(201).json(assignment);
     } catch (error) {
+      // OPS-PERM-S1-F1.R2.SR2 Defect B — map the domain error by TYPE, never by
+      // message text. An earlier revision matched on Arabic substrings and
+      // silently turned the two null-region invariants into uncontrolled 500s;
+      // the security suite caught it. AppError carries its own statusCode, so
+      // any invariant added to the writer later is mapped correctly for free.
+      if (error instanceof AppError) {
+        console.error("Warehouse assignment rejected:", error.name, error.message);
+        return res.status(error.statusCode).json({ message: error.message });
+      }
+
       console.error("Error assigning warehouse to supervisor:", error);
       res.status(500).json({ message: "Failed to assign warehouse" });
     }
