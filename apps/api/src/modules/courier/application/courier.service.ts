@@ -254,10 +254,23 @@ export class CourierService {
     limit: number;
     latestUpdate: AuditLogDto | null;
   }> {
+    // OPS-PERM-S1-F2 — users.permissions is legacy free-text profile storage and
+    // is NOT an authorization authority.
+    //
+    // The removed third disjunct granted the sensitive audit fields (ipAddress,
+    // deviceId) to any actor whose users.permissions array happened to contain
+    // the string "audit:sensitive". That column is written from arbitrary
+    // extraProfile JSON by the user create/update path, so a profile field could
+    // confer a security capability — a capability no permissions UI would show.
+    //
+    // Sensitive access is now decided solely by the explicit role ceiling that
+    // already existed. Note the comparison is exact: `courier_supervisor` is a
+    // distinct legacy role and does NOT match "supervisor", so it gains nothing
+    // here. A missing, malformed, or free-text permissions value now has zero
+    // authorization effect.
     const allowSensitive =
       requestingUser?.role === "admin" ||
-      requestingUser?.role === "supervisor" ||
-      (Array.isArray(requestingUser?.permissions) && requestingUser.permissions.includes("audit:sensitive"));
+      requestingUser?.role === "supervisor";
 
     const { rows, total } = await (this.requestsRepo as any).getAuditLogsForRecord(requestId, options);
 
