@@ -1,48 +1,18 @@
 import type { Express } from "express";
-import { z } from "zod";
-import { requireAuth } from "@core/middlewares/auth.middleware";
-import { inventoryEntriesContainer } from "@server/composition/inventory-entries.container";
 
 /**
- * Warehouse Inventory Entries Routes - مدخلات مخزون المستودعات (< 100 lines)
- * مجال المسؤولية: إدارة قيود المخزون في المستودعات
+ * OPS-PERM-S1-F1.R2-SR2 Defect D: Neutralized duplicate route registration.
+ *
+ * The routes `/api/warehouses/:warehouseId/inventory-entries` (GET/POST)
+ * are now registered and protected via warehouses.routes.ts and the
+ * WarehousesController's getInventoryEntries and upsertInventoryEntry
+ * methods, which enforce warehouse-scope authorization.
+ *
+ * This file previously registered the same routes with inline handlers
+ * that bypassed authorization. To prevent route shadowing and ensure only
+ * the protected variants are reachable, this function is now a no-op.
  */
-export function registerWarehouseInventoryEntriesRoutes(app: Express): void {
-
-  // عرض قيود مخزون المستودع
-  app.get("/api/warehouses/:warehouseId/inventory-entries", requireAuth, async (req, res) => {
-    try {
-      const entries = await inventoryEntriesContainer.inventoryEntriesUseCase.getWarehouseEntries(req.params.warehouseId);
-      res.json(entries);
-    } catch (error) {
-      console.error("Error fetching warehouse inventory entries:", error);
-      res.status(500).json({ message: "Failed to fetch inventory entries" });
-    }
-  });
-
-  // إنشاء أو تحديث قيد مخزون في المستودع
-  app.post("/api/warehouses/:warehouseId/inventory-entries", requireAuth, async (req, res) => {
-    try {
-      const schema = z.object({
-        itemTypeId: z.string(),
-        boxes: z.number().min(0),
-        units: z.number().min(0)
-      });
-
-      const data = schema.parse(req.body);
-      const entry = await inventoryEntriesContainer.inventoryEntriesUseCase.upsertWarehouseEntry(req.params.warehouseId, {
-        itemTypeId: data.itemTypeId,
-        boxes: data.boxes,
-        units: data.units,
-      });
-      
-      res.json(entry);
-    } catch (error) {
-      console.error("Error upserting warehouse inventory entry:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update inventory entry" });
-    }
-  });
+export function registerWarehouseInventoryEntriesRoutes(_app: Express): void {
+  // Intentionally empty: routes are now registered via warehouses.routes.ts
+  // with proper authorization guards in place.
 }

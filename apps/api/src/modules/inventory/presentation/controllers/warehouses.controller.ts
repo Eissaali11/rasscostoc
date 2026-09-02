@@ -7,6 +7,8 @@ import type { IWarehouseRepository } from "../../application/warehouse/contracts
 import type { IWarehouseInventoryRepository } from "../../application/warehouse/contracts/IWarehouseInventoryRepository";
 import type { ISystemLogsRepository } from "../../application/system-logs/contracts/ISystemLogsRepository";
 import type { GetSupervisorWarehousesUseCase } from "../../application/warehouses/use-cases/GetSupervisorWarehouses.use-case";
+import { warehouseScopeContainer } from "@server/composition/warehouse-scope.container";
+import { AuthorizeWarehouseScopeError } from "../../application/warehouse/use-cases/AuthorizeWarehouseScope.use-case";
 
 export class WarehousesController {
   constructor(
@@ -39,15 +41,46 @@ export class WarehousesController {
   });
 
   /**
+   * OPS-PERM-S1-F1.R2.SR2 — single warehouse-scope gate for all warehouse-keyed
+   * reads and mutations. Loads the warehouse (authoritative region source), resolves
+   * the actor's supervisor_warehouses relation rows, and defers to the pure policy.
+   * Fails closed: null on either region side denies; region mismatch on relation +
+   * region disallows; missing relation denies.
+   *
+   * Returns the loaded warehouse on allow, or null after having already sent the
+   * denial response.
+   */
+  private authorizeWarehouseScope = async (req: Request, res: Response) => {
+    const user = req.user!;
+    const warehouseId = req.params.warehouseId || req.params.id;
+
+    try {
+      return await warehouseScopeContainer.authorizeWarehouseScopeUseCase.execute({
+        actor: { id: user.id, role: user.role, regionId: user.regionId },
+        warehouseId,
+      });
+    } catch (error) {
+      if (error instanceof AuthorizeWarehouseScopeError) {
+        res.status(error.statusCode).json({ message: error.message });
+        return null;
+      }
+      throw error;
+    }
+  };
+
+  /**
    * GET /api/warehouses/:id
    * Get single warehouse with inventory
    */
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const warehouse = await this.warehouseRepository.getWarehouse(req.params.id);
-    if (!warehouse) {
+    const warehouse = await this.authorizeWarehouseScope(req, res);
+    if (!warehouse) return;
+
+    const fullWarehouse = await this.warehouseRepository.getWarehouse(warehouse.id);
+    if (!fullWarehouse) {
       throw new NotFoundError("Warehouse not found");
     }
-    res.json(warehouse);
+    res.json(fullWarehouse);
   });
 
   /**
@@ -143,7 +176,10 @@ export class WarehousesController {
    * Get warehouse inventory
    */
   getInventory = asyncHandler(async (req: Request, res: Response) => {
-    const inventory = await this.warehouseRepository.getWarehouseInventory(req.params.warehouseId);
+    const warehouse = await this.authorizeWarehouseScope(req, res);
+    if (!warehouse) return;
+
+    const inventory = await this.warehouseRepository.getWarehouseInventory(warehouse.id);
     res.json(inventory);
   });
 
@@ -153,9 +189,12 @@ export class WarehousesController {
    */
   updateInventory = asyncHandler(async (req: Request, res: Response) => {
     const user = req.user!;
+    const warehouse = await this.authorizeWarehouseScope(req, res);
+    if (!warehouse) return;
+
     const updates = req.body;
     const inventory = await this.warehouseRepository.updateWarehouseInventory(
-      req.params.warehouseId,
+      warehouse.id,
       updates
     );
 
@@ -164,10 +203,10 @@ export class WarehousesController {
       userId: user.id,
       userName: user.username,
       userRole: user.role,
-      regionId: null,
+      regionId: warehouse.regionId,
       action: "update",
       entityType: "warehouse",
-      entityId: req.params.warehouseId,
+      entityId: warehouse.id,
       entityName: "مخزون المستودع",
       description: `تم تحديث مخزون المستودع`,
       severity: "info",
@@ -182,7 +221,10 @@ export class WarehousesController {
    * Get warehouse inventory entries (dynamic)
    */
   getInventoryEntries = asyncHandler(async (req: Request, res: Response) => {
-    const entries = await this.warehouseInventoryRepository.getWarehouseInventoryEntries(req.params.warehouseId);
+    const warehouse = await this.authorizeWarehouseScope(req, res);
+    if (!warehouse) return;
+
+    const entries = await this.warehouseInventoryRepository.getWarehouseInventoryEntries(warehouse.id);
     res.json(entries);
   });
 
@@ -191,6 +233,9 @@ export class WarehousesController {
    * Upsert warehouse inventory entry
    */
   upsertInventoryEntry = asyncHandler(async (req: Request, res: Response) => {
+    const warehouse = await this.authorizeWarehouseScope(req, res);
+    if (!warehouse) return;
+
     const schema = z.object({
       itemTypeId: z.string(),
       boxes: z.number().min(0),
@@ -198,7 +243,7 @@ export class WarehousesController {
     });
     const data = schema.parse(req.body);
     const entry = await this.warehouseInventoryRepository.upsertWarehouseInventoryEntry(
-      req.params.warehouseId,
+      warehouse.id,
       data.itemTypeId,
       data.boxes,
       data.units

@@ -2,24 +2,45 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "@core/errors/errorHandler";
 import type { WarehouseTransferService } from "../../infrastructure/services/warehouse-transfer.service";
 import { inventoryContainer } from "@server/composition/inventory.container";
+import { warehouseScopeContainer } from "@server/composition/warehouse-scope.container";
+import { AuthorizeWarehouseTransferMutationError } from "@modules/inventory/application/warehouse/use-cases/AuthorizeWarehouseTransferMutation.use-case";
 
 export class WarehouseTransferController {
   constructor(
     private readonly warehouseTransferService: WarehouseTransferService
   ) {}
 
+  /**
+   * OPS-PERM-S1-F1.R2.SR2/SR3 — single authorization gate for every transfer
+   * mutation. This controller performs NO role logic of its own: the entire
+   * decision (admin / supervisor warehouse-scope / technician-own, deny
+   * everything else) lives in the seam's pure policy, so a role added to the
+   * system later cannot silently inherit an authorization path here.
+   *
+   * Returns the loaded transfer on allow, or null after having already sent the
+   * denial response.
+   */
+  private authorizeTransferMutation = async (req: Request, res: Response) => {
+    const user = req.user!;
+
+    try {
+      return await warehouseScopeContainer.authorizeWarehouseTransferMutationUseCase.execute({
+        actor: { id: user.id, role: user.role, regionId: user.regionId },
+        transferId: req.params.id,
+      });
+    } catch (error) {
+      if (error instanceof AuthorizeWarehouseTransferMutationError) {
+        res.status(error.statusCode).json({ message: error.message });
+        return null;
+      }
+      throw error;
+    }
+  };
+
   updateStatus = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const transfer = await this.warehouseTransferService.getWarehouseTransferById(id);
-
-    if (!transfer) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
-    }
-
-    const user = req.user!;
-    if (user.role !== "admin" && user.role !== "supervisor" && transfer.technicianId !== user.id) {
-      return res.status(403).json({ message: "غير مصرح لك بتحديث حالة هذا الطلب" });
-    }
+    const transfer = await this.authorizeTransferMutation(req, res);
+    if (!transfer) return;
 
     const status = String(req.body?.status || "").toLowerCase();
     if (status === "approved" || status === "accepted") {
@@ -42,16 +63,8 @@ export class WarehouseTransferController {
 
   accept = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const transfer = await this.warehouseTransferService.getWarehouseTransferById(id);
-
-    if (!transfer) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
-    }
-
-    const user = req.user!;
-    if (user.role !== "admin" && user.role !== "supervisor" && transfer.technicianId !== user.id) {
-      return res.status(403).json({ message: "غير مصرح لك بقبول هذا الطلب" });
-    }
+    const transfer = await this.authorizeTransferMutation(req, res);
+    if (!transfer) return;
 
     const result = await inventoryContainer.acceptWarehouseTransferUseCase.execute({
       transferId: id,
@@ -61,16 +74,8 @@ export class WarehouseTransferController {
 
   reject = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const transfer = await this.warehouseTransferService.getWarehouseTransferById(id);
-
-    if (!transfer) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
-    }
-
-    const user = req.user!;
-    if (user.role !== "admin" && user.role !== "supervisor" && transfer.technicianId !== user.id) {
-      return res.status(403).json({ message: "غير مصرح لك برفض هذا الطلب" });
-    }
+    const transfer = await this.authorizeTransferMutation(req, res);
+    if (!transfer) return;
 
     const { reason } = req.body;
     const result = await inventoryContainer.rejectWarehouseTransferUseCase.execute({
@@ -89,14 +94,8 @@ export class WarehouseTransferController {
       return res.status(400).json({ message: "الرقم التسلسلي مطلوب" });
     }
 
-    const transfer = await this.warehouseTransferService.getWarehouseTransferById(transferId);
-    if (!transfer) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
-    }
-
-    if (user.role !== "admin" && user.role !== "supervisor" && transfer.technicianId !== user.id) {
-      return res.status(403).json({ message: "غير مصرح لك بمسح الأرقام التسلسلية لهذا الطلب" });
-    }
+    const transfer = await this.authorizeTransferMutation(req, res);
+    if (!transfer) return;
 
     if (transfer.status !== "accepted") {
       return res.status(400).json({ message: "يجب قبول الطلب أولاً قبل بدء المسح" });
@@ -115,14 +114,8 @@ export class WarehouseTransferController {
     const user = req.user!;
     const transferId = req.params.id;
 
-    const transfer = await this.warehouseTransferService.getWarehouseTransferById(transferId);
-    if (!transfer) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
-    }
-
-    if (user.role !== "admin" && user.role !== "supervisor" && transfer.technicianId !== user.id) {
-      return res.status(403).json({ message: "غير مصرح لك بتأكيد استلام هذا الطلب" });
-    }
+    const transfer = await this.authorizeTransferMutation(req, res);
+    if (!transfer) return;
 
     if (transfer.status !== "accepted") {
       return res.status(400).json({ message: "الطلب يجب أن يكون مقبولاً ليتم تأكيد استلامه" });
