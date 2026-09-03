@@ -46,7 +46,8 @@
     "logs": "System Audit Logs",
     "backup": "Backup Management",
     "item-types": "Item Types Management",
-    "ai-engine-settings": "AI Engine Settings"
+    "ai-engine-settings": "AI Engine Settings",
+    "permissions-center": "Permissions Center"
   },
   "titles": {
     "home": "Home",
@@ -98,7 +99,120 @@
     "backup": "Backup Management",
     "item_types": "Item Types",
     "item_type_details": "Item Type Details",
-    "ai_engine_settings": "AI Connection Settings"
+    "ai_engine_settings": "AI Connection Settings",
+    "permissions_center": "Permissions Center"
+  },
+  "permissions_center": {
+    "subtitle": "Manage supervisor permissions per page and action, layered on top of the role's default template and within its hard ceiling",
+    "scope_note": "Current scope: Admin can manage permissions for Supervisor-role employees only. Other roles remain governed by their existing path and are not shown here.",
+    "search_placeholder": "Search a supervisor by name, username, or email",
+    "supervisors_heading": "Supervisors",
+    "supervisors_count": "{count} supervisor(s)",
+    "no_supervisors": "There are no Supervisor-role users in the system yet",
+    "no_supervisors_search": "No supervisors match your search",
+    "select_supervisor": "Select a supervisor",
+    "select_supervisor_hint": "Pick a supervisor from the list to view and edit their permissions",
+    "inactive_badge": "Inactive",
+    "active_badge": "Active",
+    "no_region": "No region",
+    "loading_employees": "Loading users...",
+    "loading_snapshot": "Loading supervisor permissions...",
+    "loading_audit": "Loading change history...",
+    "retry": "Retry",
+    "inactive_account_warning": "This supervisor's account is currently inactive — no permission below will take effect, regardless of its state here, until the account is reactivated.",
+    "no_region_warning": "This supervisor has no assigned region — region-scoped permissions will not actually take effect until a region is assigned from the User Management page.",
+    "tabs": {
+      "permissions": "Permissions",
+      "audit": "Change History"
+    },
+    "table": {
+      "page": "Page",
+      "action": "Action",
+      "default": "Default",
+      "assigned": "Assigned",
+      "effective": "Effective"
+    },
+    "default_granted": "Granted by default",
+    "default_not_granted": "Not granted by default",
+    "not_available_for_role": "Not available for this role",
+    "not_available_hint": "This permission is beyond the Supervisor role's hard ceiling and cannot be granted from this panel.",
+    "toggle": {
+      "grant": "Grant",
+      "default": "Default",
+      "revoke": "Revoke"
+    },
+    "effective_allowed": "Allowed",
+    "effective_denied": "Denied",
+    "confirm_dialog": {
+      "grant_title": "Confirm granting this permission",
+      "revoke_title": "Confirm revoking this permission",
+      "reset_title": "Confirm resetting to default",
+      "grant_description": "\"{permission}\" will be explicitly granted to this supervisor, regardless of their role's default template.",
+      "revoke_description": "\"{permission}\" will be explicitly revoked from this supervisor, even if it is granted by default for their role.",
+      "reset_description": "Any recorded override for \"{permission}\" will be removed, falling back to the Supervisor role's default template.",
+      "reason_label": "Reason for this change (optional, saved to the audit log)",
+      "reason_placeholder": "e.g. covering leave, temporary added responsibility...",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "grant_success": "Permission granted successfully",
+      "revoke_success": "Permission revoked successfully",
+      "reset_success": "Permission reset to default",
+      "write_error": "Could not apply this change"
+    },
+    "audit": {
+      "empty": "No change history for this supervisor yet",
+      "date": "Date",
+      "permission": "Permission",
+      "from": "From",
+      "to": "To",
+      "reason": "Reason",
+      "changed_by": "By",
+      "no_reason": "No reason recorded"
+    },
+    "pages": {
+      "courier_requests": "Courier Requests",
+      "warehouse_inventory": "Warehouse Inventory",
+      "warehouse_transfers": "Warehouse Transfers",
+      "reports_operational": "Operational Reports"
+    },
+    "actions": {
+      "view": "View",
+      "create": "Create",
+      "update": "Update",
+      "approve": "Approve",
+      "transfer": "Transfer"
+    },
+    "sources": {
+      "admin": "Admin (system-wide)",
+      "role-template": "Role default template",
+      "override": "Direct admin override"
+    },
+    "reasons": {
+      "actor-inactive": "Account is inactive",
+      "unknown-role": "Unknown role",
+      "role-ceiling": "Beyond this role's hard ceiling",
+      "no-grant": "Not currently granted",
+      "explicit-deny": "Explicitly revoked by admin",
+      "scope-unresolved": "Permission scope could not be resolved",
+      "scope-mismatch": "Resource scope does not match the user's scope",
+      "actor-region-missing": "This supervisor has no assigned region",
+      "resource-region-missing": "Resource region is not set",
+      "not-own-resource": "Resource is not owned by this user"
+    },
+    "scopes": {
+      "GLOBAL": "Global",
+      "REGION": "Region-level",
+      "WAREHOUSE": "Warehouse-level",
+      "RELATION": "Relation-based",
+      "SELF": "Self only"
+    },
+    "override_values": {
+      "grant": "Grant",
+      "revoke": "Revoke",
+      "reset": "Default (no override)"
+    }
   },
   "ai_engine_settings": {
     "subtitle": "Add an API key and select provider/model for scanned PDF extraction",
