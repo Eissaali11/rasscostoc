@@ -3,9 +3,11 @@ import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "@server/utils/password";
 import { ValidationError } from "@core/errors/AppError";
+import { wouldBatchLeaveZeroActiveAdmins, LastActiveAdminError } from "@core/authorization/last-active-admin.guard";
 import {
-  applyCanonicalStatusTransition,
   buildIdentityTransactionalContext,
+  computeMembershipDiff,
+  applyMembershipMutation,
   type StatusTransitionActor,
 } from "@modules/identity/presentation/http/identity.api";
 import {
@@ -205,6 +207,22 @@ export class ImportSystemBackupUseCase {
         summary.regions += 1;
       }
 
+      // OPS-PERM-S1-F4-R3 — every existing user this restore proposes to change
+      // membership-relevant state (role and/or isActive) for. Collected here,
+      // not written yet: the whole restore's combined effect on active-Admin
+      // membership must be validated as ONE set before any of it is applied
+      // (see wouldBatchLeaveZeroActiveAdmins's own doc comment for why a
+      // row-at-a-time check — even one that sees prior rows' committed state
+      // within the same transaction — is not equivalent and can miss the
+      // combined effect, or wrongly reject a batch that is only safe once
+      // every row is considered together).
+      const pendingMembershipChanges: Array<{
+        targetUserId: string;
+        current: { isActive: boolean; role: string };
+        currentAuthGeneration: number;
+        proposed: { isActive?: boolean; role: string };
+      }> = [];
+
       for (const row of importedUsers) {
         const user = this.validateUserRecord(row);
         const id = this.asString(user.id) ?? randomUUID();
@@ -250,23 +268,21 @@ export class ImportSystemBackupUseCase {
         }
 
         const password = await this.normalizeImportedPassword(user.password);
+        const proposedRole = this.normalizeRole(user.role);
 
-        // OPS-PERM-S0-B1-C.I2A: isActive is deliberately excluded from this
-        // payload. A restored account's active/inactive transition must
-        // route through the same canonical transition every live action
-        // uses (generation bump, credential invalidation, audit) — never a
-        // bare column write — or a restore could silently deactivate an
-        // account without invalidating its credentials, leaving them valid
-        // again the moment a later restore (or any reactivation) flips
-        // isActive back without ever bumping generation.
-        const userPayload = {
+        // OPS-PERM-S0-B1-C.I2A / R3: isActive AND role are deliberately excluded from this
+        // payload. Both are security-relevant admin-membership state, restored only through
+        // the same canonical transition every live action uses (generation bump, credential
+        // invalidation, audit, last-active-admin protection) — never a bare column write, or a
+        // restore could silently change either without any of those guarantees (exactly the
+        // proven OPS-PERM-S1-F4-R2/R1 bypass this payload split closes for role).
+        const ordinaryPayload = {
           username: resolvedUsername,
           email: resolvedEmail,
           password,
           fullName: this.asString(user.fullName) ?? resolvedUsername,
           profileImage: this.asString(user.profileImage),
           city: this.asString(user.city),
-          role: this.normalizeRole(user.role),
           regionId: this.asString(user.regionId),
         };
 
@@ -274,36 +290,38 @@ export class ImportSystemBackupUseCase {
           await tx
             .update(users)
             .set({
-              ...userPayload,
+              ...ordinaryPayload,
               updatedAt: new Date(),
             })
             .where(eq(users.id, targetUserId));
 
-          if (resolvedActiveState !== undefined) {
-            const [currentState] = await tx
-              .select({ isActive: users.isActive })
-              .from(users)
-              .where(eq(users.id, targetUserId))
-              .limit(1);
-            if (currentState && currentState.isActive !== resolvedActiveState) {
-              await applyCanonicalStatusTransition(
-                buildIdentityTransactionalContext(tx),
-                targetUserId,
-                resolvedActiveState,
-                actor
-              );
-            }
+          const [currentState] = await tx
+            .select({ isActive: users.isActive, role: users.role, authGeneration: users.authGeneration })
+            .from(users)
+            .where(eq(users.id, targetUserId))
+            .limit(1);
+
+          if (currentState) {
+            pendingMembershipChanges.push({
+              targetUserId,
+              current: { isActive: currentState.isActive, role: currentState.role },
+              currentAuthGeneration: currentState.authGeneration,
+              proposed: { isActive: resolvedActiveState, role: proposedRole },
+            });
           }
         } else {
           await tx
             .insert(users)
             .values({
               id: targetUserId,
-              ...userPayload,
+              ...ordinaryPayload,
+              role: proposedRole,
               // A genuinely new account has no prior credential lineage to
               // protect — its initial state may come directly from the
               // backup, and its generation always starts at 0 (the
               // repository/schema default; never restorable from a backup).
+              // A brand-new row can only ever ADD to the active-Admin count,
+              // never remove from it, so it never needs the batch check below.
               isActive: resolvedActiveState ?? true,
               createdAt: this.asDate(user.createdAt),
               updatedAt: this.asDate(user.updatedAt),
@@ -313,6 +331,49 @@ export class ImportSystemBackupUseCase {
         importedUserIdMap.set(id, targetUserId);
 
         summary.users += 1;
+      }
+
+      // OPS-PERM-S1-F4-R3 — validate and apply the WHOLE restore batch's
+      // effect on active-Admin membership as one set, before writing any of
+      // it, using the exact same diff classification and advisory lock the
+      // canonical single-row transition (R2) uses — never a second,
+      // incompatible protection scheme.
+      const identityCtx = buildIdentityTransactionalContext(tx);
+      const membershipChanges = pendingMembershipChanges
+        .map((p) => ({ ...p, diff: computeMembershipDiff(p.current, p.proposed) }))
+        .filter((p) => p.diff.activeChanging || p.diff.roleChanging);
+
+      const touchesAdminMembership = membershipChanges.some((p) => p.diff.wasActiveAdmin || p.diff.willBeActiveAdmin);
+
+      if (touchesAdminMembership) {
+        // Acquire the SAME transaction-scoped advisory lock every other
+        // admin-membership-changing transaction acquires (R2), before reading
+        // the authoritative roster — serializes this restore against every
+        // other concurrent transaction (a PATCH-based demotion, a plain
+        // deactivate, or another concurrent restore) capable of the same.
+        await identityCtx.acquireAdminMembershipLock();
+
+        const currentAdminRows = await tx
+          .select({ id: users.id, isActive: users.isActive })
+          .from(users)
+          .where(eq(users.role, "admin"));
+        const currentActiveAdminIds = new Set(currentAdminRows.filter((r) => r.isActive).map((r) => r.id));
+
+        const proposedFinalActiveAdminByUserId = new Map(
+          membershipChanges.map((p) => [p.targetUserId, p.diff.willBeActiveAdmin] as const)
+        );
+
+        if (wouldBatchLeaveZeroActiveAdmins(currentActiveAdminIds, proposedFinalActiveAdminByUserId)) {
+          // Thrown inside the still-open restore transaction — the ENTIRE
+          // restore (this batch's membership changes, every ordinary field
+          // update above, and every other section of the backup) rolls back
+          // atomically. No partial mutation, no audit row for any of it.
+          throw new LastActiveAdminError();
+        }
+      }
+
+      for (const p of membershipChanges) {
+        await applyMembershipMutation(identityCtx, p.targetUserId, { ...p.diff, currentAuthGeneration: p.currentAuthGeneration }, actor);
       }
 
       for (const row of importedItemTypes) {

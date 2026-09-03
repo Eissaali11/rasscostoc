@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { NodePgDatabase, NodePgTransaction } from "drizzle-orm/node-postgres";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
-import type { IUserRepository, OrdinaryUserFieldUpdate, UserAuthState } from '@stockpro/contracts';
+import type { IUserRepository, OrdinaryUserFieldUpdate, UserAuthState, UserSecurityState } from '@stockpro/contracts';
 import { getDatabase } from "@core/database/connection";
 import { type InsertUser, type User, type UserSafe, users } from "@shared/schema";
 import * as schema from "@shared/schema";
@@ -18,9 +18,14 @@ export type IdentityDbClient = NodePgDatabase<typeof schema> | IdentityDbTransac
 /**
  * The only fields an ordinary field update may ever persist. Enforced as an
  * explicit allowlist copy (never a blind object spread) so that `isActive`/
- * `authGeneration` cannot reach the generated UPDATE statement even from a
- * runtime caller that bypassed TypeScript entirely — the type system alone is
- * not treated as the security boundary here.
+ * `authGeneration`/`role` cannot reach the generated UPDATE statement even
+ * from a runtime caller that bypassed TypeScript entirely — the type system
+ * alone is not treated as the security boundary here.
+ *
+ * OPS-PERM-S1-F4-R2: `role` was removed from this list. Like isActive, a role
+ * change can remove the system's last active Admin — it now persists only
+ * through updateUserRole(), reachable solely via IdentityTransactionalContext
+ * inside the canonical admin-membership transition (UserManagement.use-case.ts).
  */
 const ORDINARY_FIELD_KEYS = [
   "username",
@@ -29,7 +34,6 @@ const ORDINARY_FIELD_KEYS = [
   "fullName",
   "profileImage",
   "city",
-  "role",
   "regionId",
   "employeeCode",
   "technicianCode",
@@ -282,15 +286,17 @@ export class DrizzleUserRepository implements IUserRepository {
 
   /**
    * Locks the user row (SELECT ... FOR UPDATE) and returns its current
-   * isActive/authGeneration state. Not part of IUserRepository — reachable
-   * only through IdentityTransactionalContext (see
+   * isActive/authGeneration/role state — role is read atomically under the
+   * SAME lock (OPS-PERM-S1-F4-R2), not via a second, separately-timed query.
+   * Not part of IUserRepository — reachable only through
+   * IdentityTransactionalContext (see
    * DrizzleIdentityUnitOfWork.buildIdentityTransactionalContext), so a bare
    * IUserRepository holder can never perform this transaction-scoped,
    * security-state-relevant read.
    */
-  async lockUserForUpdate(id: string): Promise<UserAuthState | undefined> {
+  async lockUserForUpdate(id: string): Promise<UserSecurityState | undefined> {
     const [row] = await this.db
-      .select({ isActive: users.isActive, authGeneration: users.authGeneration })
+      .select({ isActive: users.isActive, authGeneration: users.authGeneration, role: users.role })
       .from(users)
       .where(eq(users.id, id))
       .for("update");
@@ -309,6 +315,22 @@ export class DrizzleUserRepository implements IUserRepository {
       .set({
         isActive: state.isActive,
         authGeneration: state.authGeneration,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id));
+  }
+
+  /**
+   * OPS-PERM-S1-F4-R2 — persistence primitive for a role transition: sets
+   * `role` in one statement. Not part of IUserRepository — same containment
+   * reasoning as updateUserState above. The only place `role` can be
+   * persisted at all, now that it is absent from ORDINARY_FIELD_KEYS.
+   */
+  async updateUserRole(id: string, role: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({
+        role,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id));

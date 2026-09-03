@@ -27,6 +27,7 @@ import { UserManagementUseCase, type StatusTransitionActor } from "../../applica
 import { DrizzleUserRepository, type IdentityDbTransaction } from "../database/DrizzleUserRepository";
 import { DrizzleRefreshTokenRepository } from "../database/DrizzleRefreshTokenRepository";
 import { DrizzleIdentityUnitOfWork } from "./DrizzleIdentityUnitOfWork";
+import { ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY } from "../../../../core/authorization/last-active-admin.guard";
 import type {
   IIdentityUnitOfWork,
   IdentityTransactionalContext,
@@ -121,6 +122,10 @@ class PausingIdentityUnitOfWork implements IIdentityUnitOfWork {
         refreshTokenRepository,
         lockUserForUpdate: pausingLock,
         updateUserState: (id, state) => realUserRepository.updateUserState(id, state),
+        updateUserRole: (id, role) => realUserRepository.updateUserRole(id, role),
+        acquireAdminMembershipLock: async () => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY})`);
+        },
         async deleteBearerSessionsForUser(userId: string) {
           await tx.delete(bearerSessions).where(eq(bearerSessions.userId, userId));
         },
@@ -207,6 +212,10 @@ class FaultAfterAuditIdentityUnitOfWork implements IIdentityUnitOfWork {
         refreshTokenRepository,
         lockUserForUpdate: (id) => userRepository.lockUserForUpdate(id),
         updateUserState: (id, state) => userRepository.updateUserState(id, state),
+        updateUserRole: (id, role) => userRepository.updateUserRole(id, role),
+        acquireAdminMembershipLock: async () => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY})`);
+        },
         async deleteBearerSessionsForUser(userId: string) {
           await tx.delete(bearerSessions).where(eq(bearerSessions.userId, userId));
         },
@@ -249,6 +258,10 @@ class FaultAfterOrdinaryUpdateIdentityUnitOfWork implements IIdentityUnitOfWork 
         lockUserForUpdate: (id) => realUserRepository.lockUserForUpdate(id),
         updateUserState: async () => {
           throw new Error("controlled test failure after ordinary field write");
+        },
+        updateUserRole: (id, role) => realUserRepository.updateUserRole(id, role),
+        acquireAdminMembershipLock: async () => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY})`);
         },
         async deleteBearerSessionsForUser(userId: string) {
           await tx.delete(bearerSessions).where(eq(bearerSessions.userId, userId));
@@ -296,6 +309,10 @@ class FaultOnNthUpdateIdentityUnitOfWork implements IIdentityUnitOfWork {
             throw new Error(`controlled test failure on call ${callCount}`);
           }
           return realUserRepository.updateUserState(id, state);
+        },
+        updateUserRole: (id, role) => realUserRepository.updateUserRole(id, role),
+        acquireAdminMembershipLock: async () => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY})`);
         },
         async deleteBearerSessionsForUser(userId: string) {
           await tx.delete(bearerSessions).where(eq(bearerSessions.userId, userId));

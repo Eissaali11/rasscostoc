@@ -100,4 +100,29 @@ describe("DrizzleUserRepository: runtime security-state write containment", () =
     expect(updated.isActive).toBe(true);
     expect(updated.authGeneration).toBe(0);
   });
+
+  it("E. OPS-PERM-S1-F4-R2 — updateUser ignores a runtime payload containing role — persisted role is unchanged", async () => {
+    const created = await makeUser({ role: "technician" });
+    expect(created.role).toBe("technician");
+
+    // Simulates an untyped caller passing a raw object that TypeScript's
+    // OrdinaryUserFieldUpdate would never permit post-R2 (role is now excluded
+    // exactly like isActive/authGeneration — see IUserRepository.ts).
+    const unsafePayload = { role: "admin", fullName: "Renamed Once More" } as any;
+    const updated = await repo.updateUser(created.id, unsafePayload);
+
+    expect(updated.fullName).toBe("Renamed Once More");
+    expect(updated.role).toBe("technician");
+    const [row] = await db.select({ role: users.role }).from(users).where(eq(users.id, created.id));
+    expect(row.role).toBe("technician");
+  });
+
+  it("F. OPS-PERM-S1-F4-R2 — updateUserRole is the only path that persists a role change", async () => {
+    const created = await makeUser({ role: "technician" });
+
+    await repo.updateUserRole(created.id, "supervisor");
+
+    const [row] = await db.select({ role: users.role }).from(users).where(eq(users.id, created.id));
+    expect(row.role).toBe("supervisor");
+  });
 });

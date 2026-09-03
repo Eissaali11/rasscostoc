@@ -108,6 +108,16 @@ const DB_DEPENDENT_TEST_FILES = [
   // transition and validation cannot be exercised against a mocked
   // repository — needs the real app, real routes, and a real transaction.
   "apps/api/src/modules/inventory/infrastructure/system/use-cases/ImportSystemBackup.security-transition.test.ts",
+  // OPS-PERM-S1-F4-R3: same reason as ImportSystemBackup.security-transition.test.ts
+  // above — real production app + real Postgres, proving restore now participates in
+  // the last-active-admin invariant (including real concurrency scenarios).
+  "apps/api/src/modules/inventory/infrastructure/system/use-cases/ImportSystemBackup.admin-invariant.test.ts",
+  // OPS-PERM-S1-F4-R2: real-Postgres proof of the last-active-admin advisory-
+  // lock concurrency protection — the whole point of this file is proving two
+  // real, concurrently-committed transactions can't both remove an active
+  // Admin; that can't be simulated against a mocked repository, same reason
+  // as auth-refresh-deactivation-concurrency.test.ts above.
+  "apps/api/src/modules/identity/infrastructure/repositories/last-active-admin-concurrency.test.ts",
   // OPS-PERM-S0-B1-C.I2A: real-Postgres proof that DrizzleUserRepository
   // itself (not merely the TypeScript type layer) cannot persist isActive/
   // authGeneration through its ordinary update/create methods.

@@ -20,7 +20,15 @@ const CONTAINER_NAME = `stockpro-security-foundation-test-${Date.now()}`;
 const DB_USER = "security_foundation_test";
 const DB_PASS = "security_foundation_test";
 const DB_NAME = "security_foundation_test_db";
-const DB_HOST = "localhost";
+// 127.0.0.1, not "localhost": on this host "localhost" resolves to ::1 first
+// and Node's Happy-Eyeballs fallback to the real IPv4-only listener stalls
+// long enough to surface as a deterministic ECONNRESET during migration —
+// the exact failure mode diagnosed and fixed the same way in
+// scripts/test-isolated.mjs (see that file's OPS-REMED-E4-P3-H.D1/H.IPV4-I1
+// comments for the full diagnostic). Out-of-scope for OPS-PERM-S1-F4-R3
+// itself, but this script is one of R3's required final gates and was 100%
+// reproducing the failure (not merely flaky) before this one-line fix.
+const DB_HOST = "127.0.0.1";
 let PORT;
 
 function run(cmd, args, opts = {}) {
