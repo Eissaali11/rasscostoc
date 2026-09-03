@@ -8,6 +8,8 @@ import type {
 } from "../../domain/repositories/IIdentityUnitOfWork";
 import { DrizzleUserRepository, type IdentityDbTransaction } from "../database/DrizzleUserRepository";
 import { DrizzleRefreshTokenRepository } from "../database/DrizzleRefreshTokenRepository";
+import { ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY } from "@core/authorization/last-active-admin.guard";
+import { UserManagementUseCase } from "../../application/users/use-cases/UserManagement.use-case";
 
 /**
  * Builds an IdentityTransactionalContext bound to an already-open
@@ -31,6 +33,18 @@ export function buildIdentityTransactionalContext(tx: IdentityDbTransaction): Id
 
     async updateUserState(id, state) {
       return userRepository.updateUserState(id, state);
+    },
+
+    async updateUserRole(id, role) {
+      return userRepository.updateUserRole(id, role);
+    },
+
+    async acquireAdminMembershipLock(): Promise<void> {
+      // Transaction-scoped — auto-released on commit or rollback. See the
+      // interface doc comment (IIdentityUnitOfWork.ts) and
+      // ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY's own doc comment for why this is
+      // the mechanism that makes the last-active-admin check concurrency-safe.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ADMIN_MEMBERSHIP_ADVISORY_LOCK_KEY})`);
     },
 
     async deleteBearerSessionsForUser(userId: string): Promise<void> {
@@ -70,4 +84,21 @@ export class DrizzleIdentityUnitOfWork implements IIdentityUnitOfWork {
     const database = getDatabase();
     return database.transaction(async (tx) => work(buildIdentityTransactionalContext(tx)));
   }
+}
+
+/**
+ * OPS-PERM-S1-F4-R3 — a fully-wired UserManagementUseCase, for another
+ * module's real-Postgres concurrency proof that needs to drive a genuine
+ * PATCH-path mutation (deactivateUser/update) concurrently with its own
+ * operation (see ImportSystemBackup.admin-invariant.test.ts §8-10).
+ * Lives here — infrastructure/repositories/, this module's own internal
+ * composition — and is re-exported only through identity.api.ts (the sole
+ * cross-module surface), never as a raw concrete repository/use-case export:
+ * this file (not the presentation/http/*.api.ts re-export) is the one place
+ * within the identity module allowed to reach into infrastructure/database/
+ * (.dependency-cruiser.cjs's controller-should-not-depend-on-repository-or-drizzle
+ * restricts presentation/ specifically, not infrastructure/).
+ */
+export function createUserManagementUseCase(): UserManagementUseCase {
+  return new UserManagementUseCase(new DrizzleUserRepository(), new DrizzleIdentityUnitOfWork());
 }

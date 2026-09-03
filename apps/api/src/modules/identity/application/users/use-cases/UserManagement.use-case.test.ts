@@ -7,11 +7,12 @@ type MockRepo = {
   [K in keyof IUserRepository]: ReturnType<typeof vi.fn>;
 } & {
   // Not part of IUserRepository (see IIdentityUnitOfWork.ts) — kept here only
-  // as convenient vi.fn() instances that createMockUow's context exposes at
-  // its own top level, exactly where applyCanonicalStatusTransition actually
-  // calls them, so every existing assertion below keeps working unchanged.
+  // as convenient vi.fn() instances that applyCanonicalMembershipTransition
+  // actually calls, so every existing assertion below keeps working unchanged.
   lockUserForUpdate: ReturnType<typeof vi.fn>;
   updateUserState: ReturnType<typeof vi.fn>;
+  // OPS-PERM-S1-F4-R2
+  updateUserRole: ReturnType<typeof vi.fn>;
 };
 
 function createMockRepo(): MockRepo {
@@ -25,6 +26,7 @@ function createMockRepo(): MockRepo {
     updateUser: vi.fn(),
     lockUserForUpdate: vi.fn(),
     updateUserState: vi.fn(),
+    updateUserRole: vi.fn(),
   };
 }
 
@@ -62,6 +64,17 @@ function typeContainmentProofs() {
   // deactivate/reactivate feature. This line must compile with no error.
   const _commandWithActive: UserUpdateCommand = { isActive: true };
   void _commandWithActive;
+
+  // 6. OPS-PERM-S1-F4-R2 — OrdinaryUserFieldUpdate cannot represent role.
+  // @ts-expect-error role is a security transition (last-active-admin invariant), not an ordinary field
+  const _ordinaryWithRole: OrdinaryUserFieldUpdate = { role: "admin" };
+  void _ordinaryWithRole;
+
+  // 7. OPS-PERM-S1-F4-R2 — UserUpdateCommand MAY represent role — the
+  // canonical PATCH intent must remain representable, or this fix would
+  // silently disable role changes entirely. This line must compile with no error.
+  const _commandWithRole: UserUpdateCommand = { role: "viewer" };
+  void _commandWithRole;
 }
 void typeContainmentProofs;
 
@@ -91,11 +104,16 @@ function createMockUow(repo: MockRepo) {
         refreshTokenRepository,
         // Relocated off IUserRepository (see IIdentityUnitOfWork.ts) — exposed
         // here at the context's own top level, exactly where
-        // applyCanonicalStatusTransition calls them, while still being the
-        // same repo.lockUserForUpdate/repo.updateUserState vi.fn() instances
-        // every test below configures and asserts on.
+        // applyCanonicalMembershipTransition calls them, while still being the
+        // same repo.lockUserForUpdate/repo.updateUserState/repo.updateUserRole
+        // vi.fn() instances every test below configures and asserts on.
         lockUserForUpdate: repo.lockUserForUpdate,
         updateUserState: repo.updateUserState,
+        updateUserRole: repo.updateUserRole,
+        // OPS-PERM-S1-F4-R2: no-op here — the real Postgres advisory-lock
+        // acquisition is proven separately in
+        // infrastructure/repositories/last-active-admin-concurrency.test.ts.
+        acquireAdminMembershipLock: vi.fn(async () => {}),
         deleteBearerSessionsForUser: vi.fn(),
         deleteExpressSessionsForUser: vi.fn(),
         writeAudit: vi.fn(),
@@ -269,6 +287,64 @@ describe('UserManagementUseCase', () => {
       ).rejects.toThrow('lock failed');
 
       expect(uow.execute).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('role-change containment (OPS-PERM-S1-F4-R2)', () => {
+    it('a PATCH carrying role never reaches updateUser as a raw field — it routes through the canonical transition inside one UoW transaction', async () => {
+      const repo = createMockRepo();
+      const uow = createMockUow(repo);
+      const useCase = new UserManagementUseCase(repo, uow as any);
+      repo.updateUser.mockResolvedValue(undefined);
+      repo.lockUserForUpdate.mockResolvedValue({ isActive: true, authGeneration: 0, role: 'supervisor' });
+      repo.getUser.mockResolvedValue(safeUserFixture({ role: 'admin' }));
+
+      const result = await useCase.update('u-1', { role: 'admin' }, actorFixture);
+
+      expect(uow.execute).toHaveBeenCalledTimes(1);
+      expect(repo.updateUser).not.toHaveBeenCalled();
+      expect(repo.updateUserRole).toHaveBeenCalledWith('u-1', 'admin');
+      expect(result.role).toBe('admin');
+    });
+
+    it('a mixed PATCH (ordinary fields + role) persists both inside the SAME UoW transaction', async () => {
+      const repo = createMockRepo();
+      const uow = createMockUow(repo);
+      const useCase = new UserManagementUseCase(repo, uow as any);
+      repo.updateUser.mockResolvedValue(undefined);
+      repo.lockUserForUpdate.mockResolvedValue({ isActive: true, authGeneration: 0, role: 'supervisor' });
+      repo.getUser.mockResolvedValue(safeUserFixture({ role: 'viewer' }));
+
+      const result = await useCase.update('u-1', { fullName: 'New Name', role: 'viewer' }, actorFixture);
+
+      expect(uow.execute).toHaveBeenCalledTimes(1);
+      expect(repo.updateUser).toHaveBeenCalledWith('u-1', { fullName: 'New Name' });
+      expect(repo.updateUserRole).toHaveBeenCalledWith('u-1', 'viewer');
+      expect(result.role).toBe('viewer');
+    });
+
+    it('demoting the sole active admin via a bare role PATCH is blocked — the exact R1 bypass, now closed', async () => {
+      const repo = createMockRepo();
+      const uow = createMockUow(repo);
+      const useCase = new UserManagementUseCase(repo, uow as any);
+      repo.lockUserForUpdate.mockResolvedValue({ isActive: true, authGeneration: 0, role: 'admin' });
+      repo.getUsersByRole.mockResolvedValue([{ id: 'the-admin', isActive: true }]);
+
+      await expect(useCase.update('the-admin', { role: 'viewer' }, actorFixture)).rejects.toThrow();
+
+      expect(repo.updateUserRole).not.toHaveBeenCalled();
+    });
+
+    it('a role PATCH equal to the current role is a no-op — no ordinary write needed either', async () => {
+      const repo = createMockRepo();
+      const uow = createMockUow(repo);
+      const useCase = new UserManagementUseCase(repo, uow as any);
+      repo.lockUserForUpdate.mockResolvedValue({ isActive: true, authGeneration: 0, role: 'technician' });
+      repo.getUser.mockResolvedValue(safeUserFixture({ role: 'technician' }));
+
+      await useCase.update('u-1', { role: 'technician' }, actorFixture);
+
+      expect(repo.updateUserRole).not.toHaveBeenCalled();
     });
   });
 

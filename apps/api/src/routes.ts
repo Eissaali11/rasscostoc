@@ -5,6 +5,7 @@ import { registerIdentityRoutes } from "@modules/identity/presentation/routes/in
 import { registerInventoryRoutes } from "@modules/inventory/presentation/routes/index";
 import { registerAccountingRoutes } from "@modules/accounting/presentation/routes/accounting.routes";
 import { registerCourierRoutes } from "@modules/courier/presentation/routes/courier.routes";
+import { registerPermissionsRoutes } from "@modules/permissions/presentation/routes/permissions.routes";
 import { registerAiEngineSettingsRoutes } from "@modules/ai-engine-settings/ai-engine-settings.routes";
 import { readinessManager } from "@core/telemetry/readiness";
 import { metrics } from "@core/telemetry/metrics";
@@ -95,6 +96,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register identity routes
   registerIdentityRoutes(app);
+
+  // Register Permission Engine / Permissions Center routes (OPS-PERM-S1-F4)
+  registerPermissionsRoutes(app);
 
   // Register inventory routes
   registerInventoryRoutes(app);

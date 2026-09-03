@@ -9,5 +9,6 @@ export * from "./api-types";
 export * from "./relations.schema";
 export * from "./serialized_items.schema";
 export * from "./courier.schema";
+export * from "./permissions.schema";
 
 
